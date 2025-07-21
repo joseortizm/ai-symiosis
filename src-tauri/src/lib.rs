@@ -7,22 +7,32 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn list_notes() -> Result<Vec<String>, String> {
-    const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
-    match fs::read_dir(NOTES_DIR) {
-        Ok(entries) => {
-            let files = entries
-                .filter_map(|entry| {
-                    entry.ok().and_then(|e| {
-                        e.path()
-                            .file_name()
-                            .and_then(|n| n.to_str().map(String::from))
-                    })
-                })
-                .collect();
-            Ok(files)
+fn list_notes(query: Option<&str>) -> Result<Vec<String>, String> {
+    if let Some(query) = query {
+        if query.is_empty() {
+            return Ok(Vec::new());
         }
-        Err(e) => Err(e.to_string()),
+        const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
+        match fs::read_dir(NOTES_DIR) {
+            Ok(entries) => {
+                let files = entries
+                    .filter_map(|entry| {
+                        entry.ok().and_then(|e| {
+                            e.path()
+                                .file_name()
+                                .and_then(|n| n.to_str().map(String::from))
+                        })
+                    })
+                    .filter(|file_name| {
+                        file_name.to_lowercase().contains(&query.to_lowercase())
+                    })
+                    .collect();
+                Ok(files)
+            }
+            Err(e) => Err(e.to_string()),
+        }
+    } else {
+        Ok(Vec::new())
     }
 }
 

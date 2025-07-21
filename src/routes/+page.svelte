@@ -2,16 +2,24 @@
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
 
-  let notes = $state([]);
+  let filteredNotes = $state([]);
   let selectedNote = $state(null);
   let selectedIndex = $state(-1);
   let searchInput = $state('');
+  let searchElement;
 
-  onMount(async () => {
+  onMount(() => {
+    searchElement.focus();
+  });
+
+  $effect(async () => {
     try {
-      const fetchedNotes = await invoke("list_notes");
-      notes = fetchedNotes;
-      if (notes.length > 0) {
+      filteredNotes = await invoke("list_notes", { query: searchInput });
+      if (filteredNotes.length === 0) {
+        selectedIndex = -1;
+      } else if (selectedIndex >= filteredNotes.length) {
+        selectedIndex = filteredNotes.length - 1;
+      } else if (selectedIndex === -1 && filteredNotes.length > 0) {
         selectedIndex = 0;
       }
     } catch (e) {
@@ -20,8 +28,8 @@
   });
 
   $effect(() => {
-    if (notes.length > 0 && selectedIndex !== -1) {
-      selectedNote = notes[selectedIndex];
+    if (filteredNotes.length > 0 && selectedIndex !== -1) {
+      selectedNote = filteredNotes[selectedIndex];
     } else {
       selectedNote = null;
     }
@@ -32,8 +40,7 @@
   }
 
   function handleKeydown(event) {
-    if (event.target.tagName === 'INPUT') return;
-    if (notes.length === 0) return;
+    if (filteredNotes.length === 0) return;
 
     switch (event.key) {
       case 'ArrowUp':
@@ -44,7 +51,7 @@
       case 'ArrowDown':
       case 'j':
         event.preventDefault();
-        selectedIndex = Math.min(notes.length - 1, selectedIndex + 1);
+        selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
         break;
     }
   }
@@ -53,9 +60,9 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <main class="container">
-  <input type="text" bind:value={searchInput} placeholder="Search..." class="search-input">
+  <input type="text" bind:value={searchInput} placeholder="Search..." class="search-input" bind:this={searchElement}>
   <ul>
-    {#each notes as note, index}
+    {#each filteredNotes as note, index}
       <li>
         <button class:selected={note === selectedNote} onclick={() => selectNote(note, index)}>
           {note}
