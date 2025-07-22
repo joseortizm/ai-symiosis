@@ -349,19 +349,19 @@ onMount(() => {
 
   <div class="note-preview">
     {#if selectedNote}
-      <div class="note-header">
-        <h3>{selectedNote}</h3>
-      </div>
       <div class="note-content"
-           bind:this={noteContentElement}
-           tabindex="0"
-           onfocus={() => isNoteContentFocused = true}
-           onblur={() => isNoteContentFocused = false}>
-        {#if lastQuery.trim()}
-          <div class="note-text">{@html highlightedContent}</div>
-        {:else}
-          <pre class="note-text-plain">{noteContent}</pre>
-        {/if}
+        bind:this={noteContentElement}
+        tabindex="0"
+        onfocus={() => isNoteContentFocused = true}
+        onblur={() => isNoteContentFocused = false}
+        onclick={(event) => {
+          const target = event.target;
+          if (target.tagName === 'A') {
+            event.preventDefault();
+            invoke("open_external_link", { url: target.href });
+          }
+        }}>
+        <div class="note-text">{@html highlightedContent}</div>
       </div>
     {:else}
       <div class="no-selection">
@@ -463,23 +463,78 @@ onMount(() => {
 }
 
 .note-text {
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9em;
-  line-height: 1.6;
   color: #ebdbb2;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95em;
+  line-height: 1.6;
+  white-space: normal;
 }
 
-.note-text-plain {
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9em;
-  line-height: 1.6;
+.note-text h1,
+.note-text h2,
+.note-text h3,
+.note-text h4 {
+  margin: 1em 0 0.5em;
+  font-weight: bold;
+  color: #fabd2f;
+}
+
+.note-text h1 { font-size: 1.5em; }
+.note-text h2 { font-size: 1.3em; }
+.note-text h3 { font-size: 1.15em; }
+
+.note-text p {
+  margin: 0.5em 0;
+}
+
+.note-text a {
+  color: #83a598;
+  text-decoration: underline;
+  word-break: break-word;
+}
+
+.note-text a:hover {
+  color: #b8bb26;
+}
+
+.note-text code {
+  background: #3c3836;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95em;
+  color: #d3869b;
+}
+
+.note-text pre {
+  background: #3c3836;
+  padding: 1em;
+  overflow-x: auto;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
   color: #ebdbb2;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.note-text ul,
+.note-text ol {
+  margin: 0.5em 0 0.5em 1.2em;
+  padding-left: 1em;
+}
+
+.note-text blockquote {
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 3px solid #504945;
+  color: #a89984;
+  font-style: italic;
+}
+
+.note-text hr {
+  border: none;
+  border-top: 1px solid #504945;
+  margin: 1em 0;
 }
 
 .highlight {
