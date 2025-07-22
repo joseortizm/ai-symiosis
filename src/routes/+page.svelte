@@ -8,7 +8,7 @@
   let searchInput = $state('');
   let noteContent = $state('');
   let searchElement;
-  let noteListElement;
+  let noteListElement = $state();
   let isSearchInputFocused = $state(false);
   let isLoading = $state(false);
 

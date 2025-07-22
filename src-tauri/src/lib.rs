@@ -28,8 +28,8 @@ fn list_notes(query: &str) -> Result<Vec<String>, String> {
         results.sort();
     } else {
         let mut scored_results = Vec::new();
+        let query_lower = query.to_lowercase();
 
-        // Only search filenames for better performance
         for entry in WalkDir::new(NOTES_DIR).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 if let Some(file_name) = entry.path().file_name().and_then(|n| n.to_str()) {
@@ -38,16 +38,63 @@ fn list_notes(query: &str) -> Result<Vec<String>, String> {
                         continue;
                     }
 
-                    // Search in filename with minimum score threshold
+                    let mut best_score = 0;
+                    let mut match_found = false;
+
+                    // First, try filename fuzzy matching (highest priority)
                     if let Some(match_result) = best_match(query, file_name) {
                         let score = match_result.score();
-                        // More lenient scoring for better results
                         if score > 10 || (query.len() <= 2 && score > 3) {
-                            scored_results.push(NoteResult {
-                                filename: file_name.to_string(),
-                                score,
-                            });
+                            best_score = score * 3; // Boost filename matches
+                            match_found = true;
                         }
+                    }
+
+                    // If no good filename match, search content
+                    if !match_found {
+                        if let Ok(content) = fs::read_to_string(entry.path()) {
+                            let content_lower = content.to_lowercase();
+
+                            // Simple substring search for exact matches (very fast)
+                            if content_lower.contains(&query_lower) {
+                                // Calculate a simple score based on number of matches and position
+                                let matches = content_lower.matches(&query_lower).count();
+                                let first_match_pos = content_lower.find(&query_lower).unwrap_or(content.len());
+
+                                // Score: more matches = higher score, earlier position = higher score
+                                let position_score = if first_match_pos < 100 { 20 } else if first_match_pos < 500 { 10 } else { 5 };
+                                best_score = ((matches * 15) + position_score) as isize;
+                                match_found = true;
+                            }
+                            // Fallback to fuzzy search on content for partial matches (only if query is substantial)
+                            else if query.len() > 3 {
+                                // Only search first 2000 chars for performance
+                                let search_content = if content.len() > 2000 {
+                                    let mut end = 2000;
+                                    while end > 0 && !content.is_char_boundary(end) {
+                                        end -= 1;
+                                    }
+                                    &content[..end]
+                                } else {
+                                    &content
+                                };
+
+                                if let Some(match_result) = best_match(query, search_content) {
+                                    let score = match_result.score();
+                                    if score > 25 {
+                                        best_score = score / 3; // Reduce fuzzy content match scores
+                                        match_found = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if match_found {
+                        scored_results.push(NoteResult {
+                            filename: file_name.to_string(),
+                            score: best_score,
+                        });
                     }
                 }
             }
