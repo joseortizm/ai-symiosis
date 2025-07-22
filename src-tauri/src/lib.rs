@@ -1,13 +1,12 @@
 use std::fs;
-use std::path::{Path, PathBuf};
-use fuzzy_matcher::FuzzyMatcher;
-use fuzzy_matcher::skim::SkimMatcherV2;
+use std::path::Path;
+use nucleo_matcher::{Matcher, Config, Utf32Str};
 use walkdir::WalkDir;
 
 #[derive(serde::Serialize)]
 struct NoteResult {
     filename: String,
-    score: i64,
+    score: u16,
 }
 
 const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
@@ -41,18 +40,25 @@ fn collect_all_notes() -> Result<Vec<String>, String> {
     Ok(notes)
 }
 
-fn score_filename(query: &str, filename: &str) -> Option<i64> {
-    let matcher = SkimMatcherV2::default();
-    matcher.fuzzy_match(filename, query).and_then(|score| {
+fn score_filename(query: &str, filename: &str) -> Option<u16> {
+    let mut matcher = Matcher::new(Config::DEFAULT);
+    let mut haystack_buf = Vec::new();
+    let mut needle_buf = Vec::new();
+    let haystack = Utf32Str::new(filename, &mut haystack_buf);
+    let needle = Utf32Str::new(query, &mut needle_buf);
+    
+    matcher.fuzzy_match(haystack, needle).and_then(|score| {
         if score > 10 || (query.len() <= 2 && score > 3) {
             Some(score * 3) // Boost for filename match
+        } else if score > 0 {
+            Some(score)
         } else {
             None
         }
     })
 }
 
-fn score_content(query: &str, content: &str) -> Option<i64> {
+fn score_content(query: &str, content: &str) -> Option<u16> {
     let content_lower = content.to_lowercase();
     let query_lower = query.to_lowercase();
 
@@ -64,11 +70,16 @@ fn score_content(query: &str, content: &str) -> Option<i64> {
             100..=499 => 10,
             _ => 5,
         };
-        Some((matches * 15 + position_score) as i64)
+        Some((matches * 15 + position_score) as u16)
     } else if query.len() > 3 {
         let snippet = content.char_indices().take_while(|&(i, _)| i < 2000).map(|(_, c)| c).collect::<String>();
-        let matcher = SkimMatcherV2::default();
-        matcher.fuzzy_match(&snippet, query).and_then(|score| {
+        let mut matcher = Matcher::new(Config::DEFAULT);
+        let mut haystack_buf = Vec::new();
+        let mut needle_buf = Vec::new();
+        let haystack = Utf32Str::new(&snippet, &mut haystack_buf);
+        let needle = Utf32Str::new(query, &mut needle_buf);
+        
+        matcher.fuzzy_match(haystack, needle).and_then(|score| {
             if score > 25 {
                 Some(score / 3) // Lower weight for fuzzy content
             } else {
