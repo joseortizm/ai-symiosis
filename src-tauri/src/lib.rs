@@ -120,6 +120,15 @@ fn open_note(note_name: &str) -> Result<(), String> {
     open::that(&note_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_note_content(note_name: &str) -> Result<String, String> {
+    const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
+    let note_path = std::path::Path::new(NOTES_DIR).join(note_name);
+
+    fs::read_to_string(&note_path)
+        .map_err(|e| format!("Failed to read file: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
