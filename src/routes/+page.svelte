@@ -9,9 +9,12 @@ let searchInput = $state('');
 let noteContent = $state('');
 let searchElement;
 let noteListElement = $state();
+let noteContentElement = $state();
 let isSearchInputFocused = $state(false);
+let isNoteContentFocused = $state(false);
 let isLoading = $state(false);
 let lastQuery = $state('');
+let highlightedContent = $state('');
 
 // Performance optimizations
 let searchAbortController = null;
@@ -23,7 +26,35 @@ onMount(() => {
   loadNotesImmediate('');
 });
 
-// Function to scroll selected item into view
+// Function to highlight search terms in content
+function highlightSearchTerms(content, query) {
+  if (!query.trim()) {
+    return content;
+  }
+
+  // Escape special regex characters in the query
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\// Function to scroll selected item into view');
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  
+  // Replace matches with highlighted spans
+  return content.replace(regex, '<mark class="highlight">$1</mark>');
+}
+
+// Function to scroll to first search match in note content
+function scrollToFirstMatch() {
+  if (noteContentElement && lastQuery.trim()) {
+    // Use setTimeout to ensure DOM is updated
+    setTimeout(() => {
+      const firstMatch = noteContentElement.querySelector('.highlight');
+      if (firstMatch) {
+        firstMatch.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }, 100);
+  }
+}
 function scrollToSelected() {
   if (noteListElement && selectedIndex >= 0) {
     const selectedButton = noteListElement.children[selectedIndex]?.querySelector('button');
@@ -129,6 +160,7 @@ $effect(() => {
 $effect(async () => {
   if (!selectedNote) {
     noteContent = '';
+    highlightedContent = '';
     return;
   }
 
@@ -146,11 +178,17 @@ $effect(async () => {
     // Check if this request was cancelled
     if (!currentController.signal.aborted) {
       noteContent = content;
+      highlightedContent = highlightSearchTerms(content, lastQuery);
+      // Scroll to first match after content is loaded
+      requestAnimationFrame(() => {
+        scrollToFirstMatch();
+      });
     }
   } catch (e) {
     if (!currentController.signal.aborted) {
       console.error("Failed to load note content:", e);
       noteContent = `Error loading note: ${e}`;
+      highlightedContent = noteContent;
     }
   }
 });
@@ -166,12 +204,9 @@ function handleKeydown(event) {
     switch (event.key) {
       case 'Enter':
         event.preventDefault();
-        if (filteredNotes.length > 0) {
-          if (selectedIndex === -1) selectedIndex = 0;
-          // Open the selected note
-          if (selectedNote) {
-            invoke('open_note', { noteName: selectedNote });
-          }
+        if (filteredNotes.length > 0 && selectedNote) {
+          // Focus on note content instead of opening
+          noteContentElement?.focus();
         }
         return;
       case 'ArrowUp':
@@ -205,27 +240,64 @@ function handleKeydown(event) {
     }
   }
 
+  // Handle note content navigation
+  if (isNoteContentFocused) {
+    switch (event.key) {
+      case 'ArrowUp':
+      case 'k':
+        event.preventDefault();
+        noteContentElement.scrollBy({ top: -50, behavior: 'smooth' });
+        return;
+      case 'ArrowDown':
+      case 'j':
+        event.preventDefault();
+        noteContentElement.scrollBy({ top: 50, behavior: 'smooth' });
+        return;
+      case 'p':
+        if (event.ctrlKey) {
+          event.preventDefault();
+          noteContentElement.scrollBy({ top: -50, behavior: 'smooth' });
+          return;
+        }
+        break;
+      case 'n':
+        if (event.ctrlKey) {
+          event.preventDefault();
+          noteContentElement.scrollBy({ top: 50, behavior: 'smooth' });
+          return;
+        }
+        break;
+      case 'Escape':
+        event.preventDefault();
+        searchElement.focus();
+        return;
+    }
+  }
+
   if (filteredNotes.length === 0) return;
 
-  switch (event.key) {
-    case 'ArrowUp':
-    case 'k':
-      event.preventDefault();
-      selectedIndex = Math.max(0, selectedIndex - 1);
-      break;
-    case 'ArrowDown':
-    case 'j':
-      event.preventDefault();
-      selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
-      break;
-    case 'Enter':
-      if (selectedNote) {
-        invoke('open_note', { noteName: selectedNote });
-      }
-      break;
-    case 'Escape':
-      searchElement.focus();
-      break;
+  // Global navigation when not in search or note content
+  if (!isSearchInputFocused && !isNoteContentFocused) {
+    switch (event.key) {
+      case 'ArrowUp':
+      case 'k':
+        event.preventDefault();
+        selectedIndex = Math.max(0, selectedIndex - 1);
+        break;
+      case 'ArrowDown':
+      case 'j':
+        event.preventDefault();
+        selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
+        break;
+      case 'Enter':
+        if (selectedNote) {
+          noteContentElement?.focus();
+        }
+        break;
+      case 'Escape':
+        searchElement.focus();
+        break;
+    }
   }
 }
 
@@ -280,8 +352,16 @@ onMount(() => {
       <div class="note-header">
         <h3>{selectedNote}</h3>
       </div>
-      <div class="note-content">
-        <pre>{noteContent}</pre>
+      <div class="note-content" 
+           bind:this={noteContentElement} 
+           tabindex="0" 
+           onfocus={() => isNoteContentFocused = true}
+           onblur={() => isNoteContentFocused = false}>
+        {#if lastQuery.trim()}
+          <div class="note-text">{@html highlightedContent}</div>
+        {:else}
+          <pre class="note-text-plain">{noteContent}</pre>
+        {/if}
       </div>
     {:else}
       <div class="no-selection">
@@ -372,9 +452,17 @@ onMount(() => {
   /* Enable hardware acceleration */
   transform: translateZ(0);
   will-change: scroll-position;
+  /* Make it focusable */
+  outline: none;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
 }
 
-.note-content pre {
+.note-content:focus {
+  border-color: #83a598;
+}
+
+.note-text {
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -382,6 +470,24 @@ onMount(() => {
   font-size: 0.9em;
   line-height: 1.6;
   color: #ebdbb2;
+}
+
+.note-text-plain {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9em;
+  line-height: 1.6;
+  color: #ebdbb2;
+}
+
+.highlight {
+  background-color: #fabd2f;
+  color: #282828;
+  padding: 0.1em 0.2em;
+  border-radius: 3px;
+  font-weight: 500;
 }
 
 .no-selection {
