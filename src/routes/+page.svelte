@@ -1,7 +1,7 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
-  
+
   let filteredNotes = $state([]);
   let selectedNote = $state(null);
   let selectedIndex = $state(-1);
@@ -31,7 +31,7 @@
     try {
       isLoading = true;
       filteredNotes = await invoke("list_notes", { query });
-      
+
       // Reset selection when notes change
       if (filteredNotes.length === 0) {
         selectedIndex = -1;
@@ -172,8 +172,8 @@
         <ul bind:this={noteListElement} tabindex="-1">
           {#each filteredNotes as note, index}
             <li>
-              <button 
-                class:selected={index === selectedIndex} 
+              <button
+                class:selected={index === selectedIndex}
                 onclick={() => selectNote(note, index)}
               >
                 {note}
@@ -187,9 +187,6 @@
 
   <div class="note-preview">
     {#if selectedNote}
-      <div class="note-header">
-        <h3>{selectedNote}</h3>
-      </div>
       <div class="note-content">
         <pre>{noteContent}</pre>
       </div>

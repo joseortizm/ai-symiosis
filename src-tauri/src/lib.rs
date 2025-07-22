@@ -59,10 +59,17 @@ fn list_notes(query: &str) -> Result<Vec<String>, String> {
                             if content_lower.contains(&query_lower) {
                                 // Calculate a simple score based on number of matches and position
                                 let matches = content_lower.matches(&query_lower).count();
-                                let first_match_pos = content_lower.find(&query_lower).unwrap_or(content.len());
+                                let first_match_pos =
+                                    content_lower.find(&query_lower).unwrap_or(content.len());
 
                                 // Score: more matches = higher score, earlier position = higher score
-                                let position_score = if first_match_pos < 100 { 20 } else if first_match_pos < 500 { 10 } else { 5 };
+                                let position_score = if first_match_pos < 100 {
+                                    20
+                                } else if first_match_pos < 500 {
+                                    10
+                                } else {
+                                    5
+                                };
                                 best_score = ((matches * 15) + position_score) as isize;
                                 match_found = true;
                             }
@@ -102,7 +109,9 @@ fn list_notes(query: &str) -> Result<Vec<String>, String> {
 
         // Sort by score (descending) then by filename
         scored_results.sort_by(|a, b| {
-            b.score.cmp(&a.score).then_with(|| a.filename.cmp(&b.filename))
+            b.score
+                .cmp(&a.score)
+                .then_with(|| a.filename.cmp(&b.filename))
         });
 
         // Limit results to prevent UI freezing
@@ -140,7 +149,11 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![list_notes, open_note, get_note_content]) // Fixed: Added get_note_content
+        .invoke_handler(tauri::generate_handler![
+            list_notes,
+            open_note,
+            get_note_content
+        ]) // Fixed: Added get_note_content
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
