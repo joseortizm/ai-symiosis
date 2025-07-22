@@ -7,6 +7,8 @@
   let selectedIndex = $state(-1);
   let searchInput = $state('');
   let searchElement;
+  let noteListElement; // Reference to the ul element
+  let isSearchInputFocused = $state(false); // New state variable
 
   onMount(() => {
     searchElement.focus();
@@ -40,6 +42,18 @@
   }
 
   function handleKeydown(event) {
+    if (isSearchInputFocused) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (filteredNotes.length > 0) {
+          selectedIndex = 0; // Select the first item
+        }
+        // Optionally, focus the list element if needed, but setting selectedIndex might be enough
+        // noteListElement.focus(); // This would require the ul to be focusable
+      }
+      return; // Do not process other shortcuts when search is focused
+    }
+
     if (filteredNotes.length === 0) return;
 
     switch (event.key) {
@@ -65,7 +79,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <main class="container">
-  <input type="text" bind:value={searchInput} placeholder="Search..." class="search-input" bind:this={searchElement}>
+  <input type="text" bind:value={searchInput} placeholder="Search..." class="search-input" bind:this={searchElement} onfocus={() => isSearchInputFocused = true} onblur={() => isSearchInputFocused = false}>
   <ul>
     {#each filteredNotes as note, index}
       <li>
