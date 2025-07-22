@@ -35,7 +35,7 @@ function highlightSearchTerms(content, query) {
   // Escape special regex characters in the query
   const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\// Function to scroll selected item into view');
   const regex = new RegExp(`(${escapedQuery})`, 'gi');
-  
+
   // Replace matches with highlighted spans
   return content.replace(regex, '<mark class="highlight">$1</mark>');
 }
@@ -352,9 +352,9 @@ onMount(() => {
       <div class="note-header">
         <h3>{selectedNote}</h3>
       </div>
-      <div class="note-content" 
-           bind:this={noteContentElement} 
-           tabindex="0" 
+      <div class="note-content"
+           bind:this={noteContentElement}
+           tabindex="0"
            onfocus={() => isNoteContentFocused = true}
            onblur={() => isNoteContentFocused = false}>
         {#if lastQuery.trim()}

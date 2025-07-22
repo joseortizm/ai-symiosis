@@ -1,8 +1,39 @@
+use comrak::{markdown_to_html, ComrakOptions};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use std::fs;
 use std::path::Path;
 use std::sync::{LazyLock, Mutex};
 use walkdir::WalkDir;
+
+#[tauri::command]
+fn get_note_content(note_name: &str) -> Result<String, String> {
+    let cache = NOTES_CACHE.lock().map_err(|e| e.to_string())?;
+    if let Some(cached_note) = cache.iter().find(|n| n.filename == note_name) {
+        return Ok(render_note(&cached_note.filename, &cached_note.content));
+    }
+    drop(cache);
+
+    let note_path = Path::new(NOTES_DIR).join(note_name);
+    if !note_path.exists() {
+        return Err(format!("File does not exist: {}", note_name));
+    }
+
+    let content = fs::read_to_string(&note_path)
+        .map_err(|e| format!("Failed to read file '{}': {}", note_name, e))?;
+
+    Ok(render_note(note_name, &content))
+}
+
+fn render_note(filename: &str, content: &str) -> String {
+    let is_markdown = filename.ends_with(".md") || filename.ends_with(".markdown");
+
+    if is_markdown {
+        markdown_to_html(content, &ComrakOptions::default())
+    } else {
+        // Wrap plain text in a <pre> tag to preserve formatting
+        format!("<pre>{}</pre>", html_escape::encode_text(content))
+    }
+}
 
 #[derive(serde::Serialize, Clone)]
 struct NoteResult {
@@ -20,7 +51,8 @@ const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
 
 // Global cache for notes - reuse across searches
 // Use Mutex to allow mutation
-static NOTES_CACHE: LazyLock<Mutex<Vec<CachedNote>>> = LazyLock::new(|| Mutex::new(load_all_notes_into_cache()));
+static NOTES_CACHE: LazyLock<Mutex<Vec<CachedNote>>> =
+    LazyLock::new(|| Mutex::new(load_all_notes_into_cache()));
 
 // --- Helper Functions ---
 
@@ -58,10 +90,7 @@ fn load_all_notes_into_cache() -> Vec<CachedNote> {
 
 fn collect_all_notes() -> Result<Vec<String>, String> {
     let cache = NOTES_CACHE.lock().map_err(|e| e.to_string())?;
-    Ok(cache
-        .iter()
-        .map(|note| note.filename.clone())
-        .collect())
+    Ok(cache.iter().map(|note| note.filename.clone()).collect())
 }
 
 // Reuse buffers and matcher for better performance
@@ -208,26 +237,6 @@ fn list_notes(query: &str) -> Result<Vec<String>, String> {
 fn open_note(note_name: &str) -> Result<(), String> {
     let note_path = Path::new(NOTES_DIR).join(note_name);
     open::that(&note_path).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn get_note_content(note_name: &str) -> Result<String, String> {
-    // Try cache first for better performance
-    let cache = NOTES_CACHE.lock().map_err(|e| e.to_string())?;
-    if let Some(cached_note) = cache.iter().find(|n| n.filename == note_name) {
-        return Ok(cached_note.content.clone());
-    }
-    drop(cache); // Release the lock
-
-    // Fallback to file system
-    let note_path = Path::new(NOTES_DIR).join(note_name);
-
-    if !note_path.exists() {
-        return Err(format!("File does not exist: {}", note_name));
-    }
-
-    fs::read_to_string(&note_path)
-        .map_err(|e| format!("Failed to read file '{}': {}", note_name, e))
 }
 
 #[tauri::command]
