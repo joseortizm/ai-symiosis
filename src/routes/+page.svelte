@@ -47,9 +47,8 @@
         event.preventDefault();
         if (filteredNotes.length > 0) {
           selectedIndex = 0; // Select the first item
+          noteListElement.focus(); // Focus the list element
         }
-        // Optionally, focus the list element if needed, but setting selectedIndex might be enough
-        // noteListElement.focus(); // This would require the ul to be focusable
       }
       return; // Do not process other shortcuts when search is focused
     }
@@ -80,7 +79,7 @@
 
 <main class="container">
   <input type="text" bind:value={searchInput} placeholder="Search..." class="search-input" bind:this={searchElement} onfocus={() => isSearchInputFocused = true} onblur={() => isSearchInputFocused = false}>
-  <ul>
+  <ul bind:this={noteListElement} tabindex="-1">
     {#each filteredNotes as note, index}
       <li>
         <button class:selected={note === selectedNote} onclick={() => selectNote(note, index)}>
