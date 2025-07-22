@@ -23,6 +23,19 @@ onMount(() => {
   loadNotesImmediate('');
 });
 
+// Function to scroll selected item into view
+function scrollToSelected() {
+  if (noteListElement && selectedIndex >= 0) {
+    const selectedButton = noteListElement.children[selectedIndex]?.querySelector('button');
+    if (selectedButton) {
+      selectedButton.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }
+}
+
 // Optimized debounced search - only trigger if query actually changed
 let searchTimeout;
 function debounceSearch(query) {
@@ -63,22 +76,13 @@ async function loadNotesImmediate(query) {
 
     // Only update if notes actually changed to prevent flashing
     if (JSON.stringify(newNotes) !== JSON.stringify(filteredNotes)) {
-      const prevSelectedNote = selectedNote;
       filteredNotes = newNotes;
 
-      // Smart selection preservation
+      // Reset selection to top when search results change
       if (newNotes.length === 0) {
         selectedIndex = -1;
       } else {
-        // Try to maintain selection of the same note
-        const prevIndex = prevSelectedNote ? newNotes.findIndex(note => note === prevSelectedNote) : -1;
-        if (prevIndex !== -1) {
-          selectedIndex = prevIndex;
-        } else if (selectedIndex >= newNotes.length) {
-          selectedIndex = Math.max(0, newNotes.length - 1);
-        } else if (selectedIndex === -1 && newNotes.length > 0) {
-          selectedIndex = 0;
-        }
+        selectedIndex = 0; // Always select first item
       }
     }
   } catch (e) {
@@ -108,6 +112,16 @@ $effect(() => {
   // Only update if actually changed
   if (newSelectedNote !== selectedNote) {
     selectedNote = newSelectedNote;
+  }
+});
+
+// Scroll to selected item when selection changes
+$effect(() => {
+  if (selectedIndex >= 0) {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      scrollToSelected();
+    });
   }
 });
 
@@ -318,6 +332,8 @@ onMount(() => {
   /* Enable hardware acceleration */
   transform: translateZ(0);
   will-change: scroll-position;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
 }
 
 .loading, .no-notes {
