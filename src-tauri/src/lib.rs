@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::{Path, PathBuf};
 use sublime_fuzzy::best_match;
 use walkdir::WalkDir;
 
@@ -8,134 +9,136 @@ struct NoteResult {
     score: isize,
 }
 
-#[tauri::command]
-fn list_notes(query: &str) -> Result<Vec<String>, String> {
-    const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
-    let mut results = Vec::new();
+const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
 
-    if query.is_empty() {
-        // Return all files when no query
-        for entry in WalkDir::new(NOTES_DIR).into_iter().filter_map(|e| e.ok()) {
-            if entry.file_type().is_file() {
-                if let Some(file_name) = entry.path().file_name().and_then(|n| n.to_str()) {
-                    // Skip system files
-                    if !file_name.starts_with('.') {
-                        results.push(file_name.to_string());
-                    }
-                }
-            }
-        }
-        results.sort();
+// --- Helper Functions ---
+
+fn is_visible_note(path: &Path) -> bool {
+    if let Some(path_str) = path.to_str() {
+        !path_str.contains("/.") && !path_str.starts_with('.')
     } else {
-        let mut scored_results = Vec::new();
-        let query_lower = query.to_lowercase();
+        false
+    }
+}
 
-        for entry in WalkDir::new(NOTES_DIR).into_iter().filter_map(|e| e.ok()) {
-            if entry.file_type().is_file() {
-                if let Some(file_name) = entry.path().file_name().and_then(|n| n.to_str()) {
-                    // Skip system files
-                    if file_name.starts_with('.') {
-                        continue;
-                    }
+fn collect_all_notes() -> Result<Vec<String>, String> {
+    let mut notes = Vec::new();
 
-                    let mut best_score = 0;
-                    let mut match_found = false;
-
-                    // First, try filename fuzzy matching (highest priority)
-                    if let Some(match_result) = best_match(query, file_name) {
-                        let score = match_result.score();
-                        if score > 10 || (query.len() <= 2 && score > 3) {
-                            best_score = score * 3; // Boost filename matches
-                            match_found = true;
-                        }
-                    }
-
-                    // If no good filename match, search content
-                    if !match_found {
-                        if let Ok(content) = fs::read_to_string(entry.path()) {
-                            let content_lower = content.to_lowercase();
-
-                            // Simple substring search for exact matches (very fast)
-                            if content_lower.contains(&query_lower) {
-                                // Calculate a simple score based on number of matches and position
-                                let matches = content_lower.matches(&query_lower).count();
-                                let first_match_pos =
-                                    content_lower.find(&query_lower).unwrap_or(content.len());
-
-                                // Score: more matches = higher score, earlier position = higher score
-                                let position_score = if first_match_pos < 100 {
-                                    20
-                                } else if first_match_pos < 500 {
-                                    10
-                                } else {
-                                    5
-                                };
-                                best_score = ((matches * 15) + position_score) as isize;
-                                match_found = true;
-                            }
-                            // Fallback to fuzzy search on content for partial matches (only if query is substantial)
-                            else if query.len() > 3 {
-                                // Only search first 2000 chars for performance
-                                let search_content = if content.len() > 2000 {
-                                    let mut end = 2000;
-                                    while end > 0 && !content.is_char_boundary(end) {
-                                        end -= 1;
-                                    }
-                                    &content[..end]
-                                } else {
-                                    &content
-                                };
-
-                                if let Some(match_result) = best_match(query, search_content) {
-                                    let score = match_result.score();
-                                    if score > 25 {
-                                        best_score = score / 3; // Reduce fuzzy content match scores
-                                        match_found = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if match_found {
-                        scored_results.push(NoteResult {
-                            filename: file_name.to_string(),
-                            score: best_score,
-                        });
+    for entry in WalkDir::new(NOTES_DIR).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            if let Ok(relative) = entry.path().strip_prefix(NOTES_DIR) {
+                if is_visible_note(relative) {
+                    if let Some(s) = relative.to_str() {
+                        notes.push(s.to_string());
                     }
                 }
             }
         }
-
-        // Sort by score (descending) then by filename
-        scored_results.sort_by(|a, b| {
-            b.score
-                .cmp(&a.score)
-                .then_with(|| a.filename.cmp(&b.filename))
-        });
-
-        // Limit results to prevent UI freezing
-        scored_results.truncate(50);
-
-        // Extract just the filenames
-        results = scored_results.into_iter().map(|r| r.filename).collect();
     }
 
-    Ok(results)
+    notes.sort();
+    Ok(notes)
+}
+
+fn score_filename(query: &str, filename: &str) -> Option<isize> {
+    best_match(query, filename).and_then(|m| {
+        let score = m.score();
+        if score > 10 || (query.len() <= 2 && score > 3) {
+            Some(score * 3) // Boost for filename match
+        } else {
+            None
+        }
+    })
+}
+
+fn score_content(query: &str, content: &str) -> Option<isize> {
+    let content_lower = content.to_lowercase();
+    let query_lower = query.to_lowercase();
+
+    if content_lower.contains(&query_lower) {
+        let matches = content_lower.matches(&query_lower).count();
+        let first_match = content_lower.find(&query_lower).unwrap_or(content.len());
+        let position_score = match first_match {
+            0..=99 => 20,
+            100..=499 => 10,
+            _ => 5,
+        };
+        Some((matches * 15 + position_score) as isize)
+    } else if query.len() > 3 {
+        let snippet = content.char_indices().take_while(|&(i, _)| i < 2000).map(|(_, c)| c).collect::<String>();
+        best_match(query, &snippet).and_then(|m| {
+            let score = m.score();
+            if score > 25 {
+                Some(score / 3) // Lower weight for fuzzy content
+            } else {
+                None
+            }
+        })
+    } else {
+        None
+    }
+}
+
+fn search_notes(query: &str) -> Result<Vec<String>, String> {
+    let mut results = Vec::new();
+
+    for entry in WalkDir::new(NOTES_DIR).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if !entry.file_type().is_file() {
+            continue;
+        }
+
+        let file_name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) if !name.starts_with('.') => name,
+            _ => continue,
+        };
+
+        let mut score = score_filename(query, file_name);
+
+        if score.is_none() {
+            if let Ok(content) = fs::read_to_string(path) {
+                score = score_content(query, &content);
+            }
+        }
+
+        if let Some(score) = score {
+            if let Ok(relative) = path.strip_prefix(NOTES_DIR) {
+                if let Some(s) = relative.to_str() {
+                    results.push(NoteResult {
+                        filename: s.to_string(),
+                        score,
+                    });
+                }
+            }
+        }
+    }
+
+    results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.filename.cmp(&b.filename)));
+    results.truncate(50);
+
+    Ok(results.into_iter().map(|r| r.filename).collect())
+}
+
+// --- Tauri Commands ---
+
+#[tauri::command]
+fn list_notes(query: &str) -> Result<Vec<String>, String> {
+    if query.trim().is_empty() {
+        collect_all_notes()
+    } else {
+        search_notes(query)
+    }
 }
 
 #[tauri::command]
 fn open_note(note_name: &str) -> Result<(), String> {
-    const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
-    let note_path = std::path::Path::new(NOTES_DIR).join(note_name);
-
+    let note_path = Path::new(NOTES_DIR).join(note_name);
     open::that(&note_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn get_note_content(note_name: &str) -> Result<String, String> {
-    const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
-    let note_path = std::path::Path::new(NOTES_DIR).join(note_name);
+    let note_path = Path::new(NOTES_DIR).join(note_name);
 
     if !note_path.exists() {
         return Err(format!("File does not exist: {}", note_name));
@@ -145,6 +148,8 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
         .map_err(|e| format!("Failed to read file '{}': {}", note_name, e))
 }
 
+// --- App Entrypoint ---
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -153,7 +158,7 @@ pub fn run() {
             list_notes,
             open_note,
             get_note_content
-        ]) // Fixed: Added get_note_content
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
