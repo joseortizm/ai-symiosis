@@ -1,12 +1,13 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use sublime_fuzzy::best_match;
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use walkdir::WalkDir;
 
 #[derive(serde::Serialize)]
 struct NoteResult {
     filename: String,
-    score: isize,
+    score: i64,
 }
 
 const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
@@ -40,9 +41,9 @@ fn collect_all_notes() -> Result<Vec<String>, String> {
     Ok(notes)
 }
 
-fn score_filename(query: &str, filename: &str) -> Option<isize> {
-    best_match(query, filename).and_then(|m| {
-        let score = m.score();
+fn score_filename(query: &str, filename: &str) -> Option<i64> {
+    let matcher = SkimMatcherV2::default();
+    matcher.fuzzy_match(filename, query).and_then(|score| {
         if score > 10 || (query.len() <= 2 && score > 3) {
             Some(score * 3) // Boost for filename match
         } else {
@@ -51,7 +52,7 @@ fn score_filename(query: &str, filename: &str) -> Option<isize> {
     })
 }
 
-fn score_content(query: &str, content: &str) -> Option<isize> {
+fn score_content(query: &str, content: &str) -> Option<i64> {
     let content_lower = content.to_lowercase();
     let query_lower = query.to_lowercase();
 
@@ -63,11 +64,11 @@ fn score_content(query: &str, content: &str) -> Option<isize> {
             100..=499 => 10,
             _ => 5,
         };
-        Some((matches * 15 + position_score) as isize)
+        Some((matches * 15 + position_score) as i64)
     } else if query.len() > 3 {
         let snippet = content.char_indices().take_while(|&(i, _)| i < 2000).map(|(_, c)| c).collect::<String>();
-        best_match(query, &snippet).and_then(|m| {
-            let score = m.score();
+        let matcher = SkimMatcherV2::default();
+        matcher.fuzzy_match(&snippet, query).and_then(|score| {
             if score > 25 {
                 Some(score / 3) // Lower weight for fuzzy content
             } else {
