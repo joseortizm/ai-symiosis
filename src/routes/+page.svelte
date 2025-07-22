@@ -1,6 +1,7 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
+  
   let filteredNotes = $state([]);
   let selectedNote = $state(null);
   let selectedIndex = $state(-1);
@@ -9,14 +10,29 @@
   let searchElement;
   let noteListElement;
   let isSearchInputFocused = $state(false);
+  let isLoading = $state(false);
 
   onMount(() => {
     searchElement.focus();
+    // Load initial notes
+    loadNotes('');
   });
 
-  $effect(async () => {
+  // Debounced search to improve performance
+  let searchTimeout;
+  function debounceSearch(query) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      loadNotes(query);
+    }, 150);
+  }
+
+  async function loadNotes(query) {
     try {
-      filteredNotes = await invoke("list_notes", { query: searchInput });
+      isLoading = true;
+      filteredNotes = await invoke("list_notes", { query });
+      
+      // Reset selection when notes change
       if (filteredNotes.length === 0) {
         selectedIndex = -1;
       } else if (selectedIndex >= filteredNotes.length) {
@@ -25,10 +41,19 @@
         selectedIndex = 0;
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load notes:', e);
+      filteredNotes = [];
+    } finally {
+      isLoading = false;
     }
+  }
+
+  // Watch search input changes
+  $effect(() => {
+    debounceSearch(searchInput);
   });
 
+  // Update selected note when index changes
   $effect(() => {
     if (filteredNotes.length > 0 && selectedIndex !== -1) {
       selectedNote = filteredNotes[selectedIndex];
@@ -44,7 +69,7 @@
         noteContent = await invoke("get_note_content", { noteName: selectedNote });
       } catch (e) {
         console.error("Failed to load note content:", e);
-        noteContent = "Failed to load note content.";
+        noteContent = `Error loading note: ${e}`;
       }
     } else {
       noteContent = '';
@@ -62,7 +87,10 @@
           event.preventDefault();
           if (filteredNotes.length > 0) {
             selectedIndex = 0;
-            noteListElement.focus();
+            // Open the selected note
+            if (selectedNote) {
+              invoke('open_note', { noteName: selectedNote });
+            }
           }
           return;
         case 'ArrowUp':
@@ -114,6 +142,9 @@
           invoke('open_note', { noteName: selectedNote });
         }
         break;
+      case 'Escape':
+        searchElement.focus();
+        break;
     }
   }
 </script>
@@ -124,40 +155,49 @@
   <input
     type="text"
     bind:value={searchInput}
-    placeholder="Search..."
+    placeholder="Search notes..."
     class="search-input"
     bind:this={searchElement}
     onfocus={() => isSearchInputFocused = true}
     onblur={() => isSearchInputFocused = false}
   >
 
-  <div class="content-area">
+  <div class="notes-list-container">
     <div class="notes-list">
-      <ul bind:this={noteListElement} tabindex="-1">
-        {#each filteredNotes as note, index}
-          <li>
-            <button class:selected={note === selectedNote} onclick={() => selectNote(note, index)}>
-              {note}
-            </button>
-          </li>
-        {/each}
-      </ul>
-    </div>
-
-    <div class="note-preview">
-      {#if selectedNote}
-        <div class="note-header">
-          <h3>{selectedNote}</h3>
-        </div>
-        <div class="note-content">
-          <pre>{noteContent}</pre>
-        </div>
+      {#if isLoading}
+        <div class="loading">Loading...</div>
+      {:else if filteredNotes.length === 0}
+        <div class="no-notes">No notes found</div>
       {:else}
-        <div class="no-selection">
-          <p>Select a note to preview its content</p>
-        </div>
+        <ul bind:this={noteListElement} tabindex="-1">
+          {#each filteredNotes as note, index}
+            <li>
+              <button 
+                class:selected={index === selectedIndex} 
+                onclick={() => selectNote(note, index)}
+              >
+                {note}
+              </button>
+            </li>
+          {/each}
+        </ul>
       {/if}
     </div>
+  </div>
+
+  <div class="note-preview">
+    {#if selectedNote}
+      <div class="note-header">
+        <h3>{selectedNote}</h3>
+      </div>
+      <div class="note-content">
+        <pre>{noteContent}</pre>
+      </div>
+    {:else}
+      <div class="no-selection">
+        <p>Select a note to preview its content</p>
+      </div>
+    {/if}
   </div>
 </main>
 
@@ -177,45 +217,56 @@
     color: #ebdbb2;
     border: 1px solid #504945;
     border-radius: 8px;
-    font-size: 1.5em;
-    padding: 0.8em;
+    font-size: 1.2em;
+    padding: 0.6em;
     margin: 0.5em;
+    flex-shrink: 0;
   }
 
   .search-input:focus {
     outline: none;
     border-color: #83a598;
+    box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
   }
 
-  .content-area {
-    display: flex;
+  .notes-list-container {
     flex: 1;
     min-height: 0;
+    border-bottom: 2px solid #504945;
   }
 
   .notes-list {
-    flex: 0 0 40%;
-    border-right: 1px solid #504945;
+    height: 100%;
     overflow-y: auto;
   }
 
+  .loading, .no-notes {
+    padding: 2em;
+    text-align: center;
+    color: #928374;
+    font-style: italic;
+  }
+
   .note-preview {
-    flex: 1;
+    flex: 1.2;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
   }
 
   .note-header {
-    padding: 1em;
+    padding: 0.8em 1em;
     border-bottom: 1px solid #504945;
     background-color: #3c3836;
+    flex-shrink: 0;
   }
 
   .note-header h3 {
     margin: 0;
     color: #fe8019;
-    font-size: 1.2em;
+    font-size: 1.1em;
+    font-weight: 500;
   }
 
   .note-content {
@@ -229,8 +280,9 @@
     white-space: pre-wrap;
     word-wrap: break-word;
     font-family: 'Inter', sans-serif;
-    font-size: 0.95em;
+    font-size: 0.9em;
     line-height: 1.6;
+    color: #ebdbb2;
   }
 
   .no-selection {
@@ -254,14 +306,15 @@
 
   button {
     width: 100%;
-    padding: 0.8em 1.2em;
+    padding: 0.6em 1em;
     cursor: pointer;
     border: none;
     border-bottom: 1px solid #3c3836;
     background: none;
     color: #ebdbb2;
     text-align: left;
-    font-size: 1em;
+    font-size: 0.95em;
+    transition: background-color 0.1s ease;
   }
 
   button:hover {
@@ -269,7 +322,43 @@
   }
 
   .selected {
-    background-color: #504945;
+    background-color: #504945 !important;
     color: #fe8019;
+  }
+
+  /* Custom scrollbar for notes list */
+  .notes-list::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .notes-list::-webkit-scrollbar-track {
+    background: #282828;
+  }
+
+  .notes-list::-webkit-scrollbar-thumb {
+    background: #504945;
+    border-radius: 4px;
+  }
+
+  .notes-list::-webkit-scrollbar-thumb:hover {
+    background: #665c54;
+  }
+
+  /* Custom scrollbar for note content */
+  .note-content::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .note-content::-webkit-scrollbar-track {
+    background: #282828;
+  }
+
+  .note-content::-webkit-scrollbar-thumb {
+    background: #504945;
+    border-radius: 4px;
+  }
+
+  .note-content::-webkit-scrollbar-thumb:hover {
+    background: #665c54;
   }
 </style>
