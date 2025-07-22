@@ -53,6 +53,11 @@
         event.preventDefault();
         selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
         break;
+      case 'Enter':
+        if (selectedNote) {
+          invoke('open_note', { noteName: selectedNote });
+        }
+        break;
     }
   }
 </script>
@@ -78,19 +83,28 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    text-align: center;
+    background-color: #282828;
+    color: #ebdbb2;
+    font-family: 'Inter', sans-serif;
   }
   .search-input {
-    padding: 0.5em;
+    background-color: #3c3836;
+    color: #ebdbb2;
+    border: 1px solid #504945;
+    border-radius: 8px;
+    font-size: 1.5em;
+    padding: 0.8em;
     margin: 0.5em;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: #83a598;
   }
   ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    overflow-y: auto; /* Make list scrollable */
+    overflow-y: auto;
     flex-grow: 1;
   }
   li {
@@ -98,15 +112,18 @@
   }
   button {
     width: 100%;
-    padding: 0.5em;
+    padding: 0.8em 1.2em;
     cursor: pointer;
     border: none;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #3c3836;
     background: none;
+    color: #ebdbb2;
     text-align: left;
+    font-size: 1em;
   }
   .selected {
-    background-color: #ddd;
+    background-color: #504945;
+    color: #fe8019;
   }
 </style>
 

@@ -3413,6 +3413,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
+name = "sublime_fuzzy"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba2ca2f999a70398612702f7af4f346fe82a5b53252f96358b5e16e8728f7862"
+
+[[package]]
 name = "swift-rs"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3427,11 +3433,14 @@ dependencies = [
 name = "symiosis"
 version = "0.1.0"
 dependencies = [
+ "open",
  "serde",
  "serde_json",
+ "sublime_fuzzy",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
+ "walkdir",
 ]
 
 [[package]]
