@@ -1,6 +1,19 @@
 <script>
 import { invoke } from "@tauri-apps/api/core";
 import { onMount } from "svelte";
+import { EditorView, basicSetup } from "codemirror";
+import { markdown } from "@codemirror/lang-markdown";
+import { javascript } from "@codemirror/lang-javascript";
+import { python } from "@codemirror/lang-python";
+import { rust } from "@codemirror/lang-rust";
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { json } from "@codemirror/lang-json";
+import { xml } from "@codemirror/lang-xml";
+import { sql } from "@codemirror/lang-sql";
+import { keymap } from "@codemirror/view";
+import { indentWithTab } from "@codemirror/commands";
+import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 
 let filteredNotes = $state([]);
 let selectedNote = $state(null);
@@ -19,7 +32,8 @@ let highlightedContent = $state('');
 // Edit mode state
 let isEditMode = $state(false);
 let editContent = $state('');
-let editTextarea = $state();
+let editContainer = $state();
+let editorView = null;
 
 // Performance optimizations
 let searchAbortController = null;
@@ -215,11 +229,9 @@ async function enterEditMode() {
       isEditMode = true;
       editContent = rawContent;
       
-      // Focus on textarea after it's rendered
+      // Create CodeMirror editor after DOM update
       requestAnimationFrame(() => {
-        if (editTextarea) {
-          editTextarea.focus();
-        }
+        createCodeMirrorEditor();
       });
     } catch (e) {
       console.error("Failed to load raw note content:", e);
@@ -227,20 +239,229 @@ async function enterEditMode() {
   }
 }
 
+function createCodeMirrorEditor() {
+  if (!editContainer) return;
+  
+  // Destroy existing editor if it exists
+  if (editorView) {
+    editorView.destroy();
+    editorView = null;
+  }
+
+  // Gruvbox Dark theme
+  const gruvboxTheme = EditorView.theme({
+    "&": {
+      color: "#fbf1c7",
+      backgroundColor: "#282828",
+      height: "100%"
+    },
+    ".cm-content": {
+      padding: "16px",
+      minHeight: "100%",
+      caretColor: "#fbf1c7",
+      fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+      fontSize: "14px",
+      lineHeight: "1.5"
+    },
+    ".cm-focused": {
+      outline: "none"
+    },
+    ".cm-editor": {
+      height: "100%"
+    },
+    ".cm-scroller": {
+      fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+      height: "100%"
+    },
+    ".cm-cursor": {
+      borderColor: "#fbf1c7"
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: "#504945 !important"
+    },
+    ".cm-focused .cm-selectionBackground": {
+      backgroundColor: "#504945 !important"
+    },
+    ".cm-activeLine": {
+      backgroundColor: "#32302f"
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "#32302f"
+    },
+    ".cm-gutters": {
+      backgroundColor: "#32302f",
+      color: "#a89984",
+      border: "none"
+    },
+    ".cm-lineNumbers": {
+      color: "#a89984"
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      padding: "0 8px 0 8px"
+    },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "#504945",
+      border: "none",
+      color: "#fbf1c7"
+    },
+    ".cm-searchMatch": {
+      backgroundColor: "#fabd2f",
+      color: "#282828"
+    },
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "#fe8019",
+      color: "#282828"
+    }
+  });
+
+  // Gruvbox syntax highlighting
+  const gruvboxHighlighting = syntaxHighlighting(HighlightStyle.define([
+    // Comments
+    { tag: "comment", color: "#928374", fontStyle: "italic" },
+    
+    // Keywords
+    { tag: "keyword", color: "#fb4934" },
+    { tag: "controlKeyword", color: "#fb4934" },
+    { tag: "operatorKeyword", color: "#fb4934" },
+    
+    // Strings
+    { tag: "string", color: "#b8bb26" },
+    { tag: "special(string)", color: "#fabd2f" },
+    
+    // Numbers
+    { tag: "number", color: "#d3869b" },
+    { tag: "integer", color: "#d3869b" },
+    { tag: "float", color: "#d3869b" },
+    
+    // Functions
+    { tag: "function(variableName)", color: "#8ec07c" },
+    { tag: "function(propertyName)", color: "#8ec07c" },
+    
+    // Variables
+    { tag: "variableName", color: "#fbf1c7" },
+    { tag: "propertyName", color: "#83a598" },
+    
+    // Types
+    { tag: "typeName", color: "#fabd2f" },
+    { tag: "className", color: "#fabd2f" },
+    
+    // Operators
+    { tag: "operator", color: "#fe8019" },
+    { tag: "punctuation", color: "#fbf1c7" },
+    
+    // Markdown specific
+    { tag: "heading1", color: "#fb4934", fontWeight: "bold", fontSize: "1.6em" },
+    { tag: "heading2", color: "#fabd2f", fontWeight: "bold", fontSize: "1.4em" },
+    { tag: "heading3", color: "#b8bb26", fontWeight: "bold", fontSize: "1.2em" },
+    { tag: "heading4", color: "#83a598", fontWeight: "bold", fontSize: "1.1em" },
+    { tag: "heading5", color: "#d3869b", fontWeight: "bold" },
+    { tag: "heading6", color: "#8ec07c", fontWeight: "bold" },
+    
+    { tag: "strong", color: "#fe8019", fontWeight: "bold" },
+    { tag: "emphasis", color: "#d3869b", fontStyle: "italic" },
+    { tag: "strikethrough", textDecoration: "line-through", color: "#928374" },
+    { tag: "link", color: "#83a598", textDecoration: "underline" },
+    { tag: "monospace", color: "#d3869b", backgroundColor: "#3c3836", padding: "2px 4px", borderRadius: "3px" },
+    { tag: "url", color: "#8ec07c" },
+    { tag: "quote", color: "#a89984", fontStyle: "italic" },
+    { tag: "list", color: "#fe8019" },
+    
+    // Code blocks
+    { tag: "meta", color: "#928374" },
+    { tag: "invalid", color: "#fb4934", backgroundColor: "#cc241d" }
+  ]));
+
+  // Determine language based on file extension
+  function getLanguageExtension(filename) {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'js':
+      case 'jsx':
+      case 'ts':
+      case 'tsx':
+        return javascript();
+      case 'py':
+        return python();
+      case 'rs':
+        return rust();
+      case 'html':
+      case 'htm':
+        return html();
+      case 'css':
+        return css();
+      case 'json':
+        return json();
+      case 'xml':
+        return xml();
+      case 'sql':
+        return sql();
+      case 'md':
+      case 'markdown':
+      default:
+        return markdown();
+    }
+  }
+
+  // Custom key bindings
+  const customKeymap = keymap.of([
+    indentWithTab,
+    {
+      key: "Ctrl-s",
+      run: () => {
+        saveNote();
+        return true;
+      }
+    },
+    {
+      key: "Escape",
+      run: () => {
+        exitEditMode();
+        searchElement?.focus();
+        return true;
+      }
+    }
+  ]);
+
+  editorView = new EditorView({
+    doc: editContent,
+    extensions: [
+      basicSetup,
+      getLanguageExtension(selectedNote || ''),
+      gruvboxTheme,
+      gruvboxHighlighting,
+      customKeymap,
+      EditorView.lineWrapping,
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          editContent = update.state.doc.toString();
+        }
+      })
+    ],
+    parent: editContainer
+  });
+
+  // Focus the editor
+  editorView.focus();
+}
+
 function exitEditMode() {
+  if (editorView) {
+    editorView.destroy();
+    editorView = null;
+  }
   isEditMode = false;
-  // You might want to save changes here
-  // For now, just exit edit mode
 }
 
 async function saveNote() {
   if (!selectedNote || !editContent) return;
   
   try {
-    // You'll need to implement a save_note command in your Rust backend
+    // Get current content from editor if it exists
+    const contentToSave = editorView ? editorView.state.doc.toString() : editContent;
+    
     await invoke("save_note", { 
       noteName: selectedNote, 
-      content: editContent 
+      content: contentToSave 
     });
     
     // Refresh the note content after saving
@@ -249,6 +470,10 @@ async function saveNote() {
     highlightedContent = highlightSearchTerms(content, lastQuery);
     
     isEditMode = false;
+    if (editorView) {
+      editorView.destroy();
+      editorView = null;
+    }
   } catch (e) {
     console.error("Failed to save note:", e);
   }
@@ -410,6 +635,7 @@ onMount(() => {
   return () => {
     if (searchAbortController) searchAbortController.abort();
     if (contentAbortController) contentAbortController.abort();
+    if (editorView) editorView.destroy();
     clearTimeout(searchTimeout);
   };
 });
@@ -462,12 +688,7 @@ onMount(() => {
               <button onclick={exitEditMode} class="cancel-btn">Cancel (Esc)</button>
             </div>
           </div>
-          <textarea
-            bind:value={editContent}
-            bind:this={editTextarea}
-            class="edit-textarea"
-            placeholder="Start typing..."
-          ></textarea>
+          <div bind:this={editContainer} class="editor-container"></div>
         </div>
       {:else}
         <div class="note-content"
@@ -608,17 +829,29 @@ onMount(() => {
   background-color: #665c54;
 }
 
-.edit-textarea {
+.editor-container {
   flex: 1;
-  padding: 1em;
-  background-color: #32302f;
-  color: #fbf1c7;
-  border: none;
-  outline: none;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.95em;
-  line-height: 1.6;
-  resize: none;
+  height: 100%;
+  background-color: #282828;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-container:focus-within {
+  border-color: #83a598;
+}
+
+/* Ensure CodeMirror takes full height */
+.editor-container :global(.cm-editor) {
+  height: 100% !important;
+}
+
+.editor-container :global(.cm-scroller) {
+  height: 100% !important;
+  overflow-y: auto !important;
 }
 
 .note-content {
@@ -773,20 +1006,20 @@ button:hover {
 }
 
 /* Custom scrollbar optimizations */
-.notes-list::-webkit-scrollbar, .note-content::-webkit-scrollbar, .edit-textarea::-webkit-scrollbar {
+.notes-list::-webkit-scrollbar, .note-content::-webkit-scrollbar, .editor-container::-webkit-scrollbar {
   width: 8px;
 }
 
-.notes-list::-webkit-scrollbar-track, .note-content::-webkit-scrollbar-track, .edit-textarea::-webkit-scrollbar-track {
+.notes-list::-webkit-scrollbar-track, .note-content::-webkit-scrollbar-track, .editor-container::-webkit-scrollbar-track {
   background: #282828;
 }
 
-.notes-list::-webkit-scrollbar-thumb, .note-content::-webkit-scrollbar-thumb, .edit-textarea::-webkit-scrollbar-thumb {
+.notes-list::-webkit-scrollbar-thumb, .note-content::-webkit-scrollbar-thumb, .editor-container::-webkit-scrollbar-thumb {
   background: #504945;
   border-radius: 4px;
 }
 
-.notes-list::-webkit-scrollbar-thumb:hover, .note-content::-webkit-scrollbar-thumb:hover, .edit-textarea::-webkit-scrollbar-thumb:hover {
+.notes-list::-webkit-scrollbar-thumb:hover, .note-content::-webkit-scrollbar-thumb:hover, .editor-container::-webkit-scrollbar-thumb:hover {
   background: #665c54;
 }
 </style>
