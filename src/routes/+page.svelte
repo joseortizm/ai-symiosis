@@ -207,20 +207,23 @@ function selectNote(note, index) {
   }
 }
 
-function enterEditMode() {
-  if (selectedNote && noteContent) {
-    isEditMode = true;
-    // Extract plain text from HTML content for editing
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = noteContent;
-    editContent = tempDiv.textContent || tempDiv.innerText || '';
-    
-    // Focus on textarea after it's rendered
-    requestAnimationFrame(() => {
-      if (editTextarea) {
-        editTextarea.focus();
-      }
-    });
+async function enterEditMode() {
+  if (selectedNote) {
+    try {
+      // Get raw content for editing (not rendered HTML)
+      const rawContent = await invoke("get_note_raw_content", { noteName: selectedNote });
+      isEditMode = true;
+      editContent = rawContent;
+      
+      // Focus on textarea after it's rendered
+      requestAnimationFrame(() => {
+        if (editTextarea) {
+          editTextarea.focus();
+        }
+      });
+    } catch (e) {
+      console.error("Failed to load raw note content:", e);
+    }
   }
 }
 

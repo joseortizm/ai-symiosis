@@ -240,6 +240,25 @@ fn open_note(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn get_note_raw_content(note_name: &str) -> Result<String, String> {
+    let cache = NOTES_CACHE.lock().map_err(|e| e.to_string())?;
+    if let Some(cached_note) = cache.iter().find(|n| n.filename == note_name) {
+        return Ok(cached_note.content.clone());
+    }
+    drop(cache);
+
+    let note_path = Path::new(NOTES_DIR).join(note_name);
+    if !note_path.exists() {
+        return Err(format!("File does not exist: {}", note_name));
+    }
+
+    let content = fs::read_to_string(&note_path)
+        .map_err(|e| format!("Failed to read file '{}': {}", note_name, e))?;
+
+    Ok(content)
+}
+
+#[tauri::command]
 fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     let note_path = Path::new(NOTES_DIR).join(note_name);
 
@@ -287,8 +306,8 @@ pub fn run() {
             open_note,
             get_note_content,
             refresh_cache,
+            get_note_raw_content,
             save_note
-
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
