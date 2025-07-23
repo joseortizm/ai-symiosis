@@ -240,6 +240,36 @@ fn open_note(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn save_note(note_name: &str, content: &str) -> Result<(), String> {
+    let note_path = Path::new(NOTES_DIR).join(note_name);
+
+    // Ensure the parent directory exists
+    if let Some(parent) = note_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+
+    // Write the content to the file
+    fs::write(&note_path, content)
+        .map_err(|e| format!("Failed to write file '{}': {}", note_name, e))?;
+
+    // Update the cache with the new content
+    let mut cache = NOTES_CACHE.lock().map_err(|e| e.to_string())?;
+    if let Some(cached_note) = cache.iter_mut().find(|n| n.filename == note_name) {
+        cached_note.content = content.to_string();
+    } else {
+        // If note doesn't exist in cache, add it
+        cache.push(CachedNote {
+            filename: note_name.to_string(),
+            content: content.to_string(),
+        });
+        // Re-sort the cache
+        cache.sort_by(|a, b| a.filename.cmp(&b.filename));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn refresh_cache() -> Result<(), String> {
     let mut cache = NOTES_CACHE.lock().map_err(|e| e.to_string())?;
     *cache = load_all_notes_into_cache();
@@ -256,7 +286,9 @@ pub fn run() {
             list_notes,
             open_note,
             get_note_content,
-            refresh_cache
+            refresh_cache,
+            save_note
+
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -16,6 +16,11 @@ let isLoading = $state(false);
 let lastQuery = $state('');
 let highlightedContent = $state('');
 
+// Edit mode state
+let isEditMode = $state(false);
+let editContent = $state('');
+let editTextarea = $state();
+
 // Performance optimizations
 let searchAbortController = null;
 let contentAbortController = null;
@@ -33,7 +38,7 @@ function highlightSearchTerms(content, query) {
   }
 
   // Escape special regex characters in the query
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\// Function to scroll selected item into view');
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`(${escapedQuery})`, 'gi');
 
   // Replace matches with highlighted spans
@@ -55,6 +60,7 @@ function scrollToFirstMatch() {
     }, 100);
   }
 }
+
 function scrollToSelected() {
   if (noteListElement && selectedIndex >= 0) {
     const selectedButton = noteListElement.children[selectedIndex]?.querySelector('button');
@@ -143,6 +149,8 @@ $effect(() => {
   // Only update if actually changed
   if (newSelectedNote !== selectedNote) {
     selectedNote = newSelectedNote;
+    // Exit edit mode when switching notes
+    isEditMode = false;
   }
 });
 
@@ -199,16 +207,87 @@ function selectNote(note, index) {
   }
 }
 
+function enterEditMode() {
+  if (selectedNote && noteContent) {
+    isEditMode = true;
+    // Extract plain text from HTML content for editing
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = noteContent;
+    editContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Focus on textarea after it's rendered
+    requestAnimationFrame(() => {
+      if (editTextarea) {
+        editTextarea.focus();
+      }
+    });
+  }
+}
+
+function exitEditMode() {
+  isEditMode = false;
+  // You might want to save changes here
+  // For now, just exit edit mode
+}
+
+async function saveNote() {
+  if (!selectedNote || !editContent) return;
+  
+  try {
+    // You'll need to implement a save_note command in your Rust backend
+    await invoke("save_note", { 
+      noteName: selectedNote, 
+      content: editContent 
+    });
+    
+    // Refresh the note content after saving
+    const content = await invoke("get_note_content", { noteName: selectedNote });
+    noteContent = content;
+    highlightedContent = highlightSearchTerms(content, lastQuery);
+    
+    isEditMode = false;
+  } catch (e) {
+    console.error("Failed to save note:", e);
+  }
+}
+
 function handleKeydown(event) {
   if (isSearchInputFocused) {
     switch (event.key) {
       case 'Enter':
         event.preventDefault();
         if (filteredNotes.length > 0 && selectedNote) {
-          // Focus on note content instead of opening
-          noteContentElement?.focus();
+          // Enter edit mode directly
+          enterEditMode();
         }
         return;
+      case 'o':
+        if (event.ctrlKey) {
+          event.preventDefault();
+          if (selectedNote) {
+            invoke("open_note", { noteName: selectedNote });
+          }
+          return;
+        }
+        break;
+      case 'u':
+        if (event.ctrlKey) {
+          event.preventDefault();
+          if (noteContentElement) {
+            noteContentElement.scrollBy({ top: -200, behavior: 'smooth' });
+          }
+          return;
+        }
+        break;
+      case 'd':
+        if (event.ctrlKey) {
+          event.preventDefault();
+          if (noteContentElement) {
+            noteContentElement.scrollBy({ top: 200, behavior: 'smooth' });
+          }
+          return;
+        }
+        break;
       case 'ArrowUp':
         if (event.ctrlKey) {
           event.preventDefault();
@@ -240,8 +319,26 @@ function handleKeydown(event) {
     }
   }
 
+  // Handle edit mode
+  if (isEditMode) {
+    switch (event.key) {
+      case 'Escape':
+        event.preventDefault();
+        exitEditMode();
+        searchElement.focus();
+        return;
+      case 's':
+        if (event.ctrlKey) {
+          event.preventDefault();
+          saveNote();
+          return;
+        }
+        break;
+    }
+  }
+
   // Handle note content navigation
-  if (isNoteContentFocused) {
+  if (isNoteContentFocused && !isEditMode) {
     switch (event.key) {
       case 'ArrowUp':
       case 'k':
@@ -271,13 +368,17 @@ function handleKeydown(event) {
         event.preventDefault();
         searchElement.focus();
         return;
+      case 'e':
+        event.preventDefault();
+        enterEditMode();
+        return;
     }
   }
 
   if (filteredNotes.length === 0) return;
 
   // Global navigation when not in search or note content
-  if (!isSearchInputFocused && !isNoteContentFocused) {
+  if (!isSearchInputFocused && !isNoteContentFocused && !isEditMode) {
     switch (event.key) {
       case 'ArrowUp':
       case 'k':
@@ -291,7 +392,7 @@ function handleKeydown(event) {
         break;
       case 'Enter':
         if (selectedNote) {
-          noteContentElement?.focus();
+          enterEditMode();
         }
         break;
       case 'Escape':
@@ -317,7 +418,7 @@ onMount(() => {
   <input
     type="text"
     bind:value={searchInput}
-    placeholder="Search notes..."
+    placeholder="Search notes... (Enter: edit, Ctrl+O: open, Ctrl+U/D: scroll)"
     class="search-input"
     bind:this={searchElement}
     onfocus={() => isSearchInputFocused = true}
@@ -349,23 +450,42 @@ onMount(() => {
 
   <div class="note-preview">
     {#if selectedNote}
-      <div class="note-content"
-        bind:this={noteContentElement}
-        tabindex="0"
-        onfocus={() => isNoteContentFocused = true}
-        onblur={() => isNoteContentFocused = false}
-        onclick={(event) => {
-          const target = event.target;
-          if (target.tagName === 'A') {
-            event.preventDefault();
-            invoke("open_external_link", { url: target.href });
-          }
-        }}>
-        <div class="note-text">{@html highlightedContent}</div>
-      </div>
+      {#if isEditMode}
+        <div class="edit-mode">
+          <div class="edit-header">
+            <h3>Editing: {selectedNote}</h3>
+            <div class="edit-controls">
+              <button onclick={saveNote} class="save-btn">Save (Ctrl+S)</button>
+              <button onclick={exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            </div>
+          </div>
+          <textarea
+            bind:value={editContent}
+            bind:this={editTextarea}
+            class="edit-textarea"
+            placeholder="Start typing..."
+          ></textarea>
+        </div>
+      {:else}
+        <div class="note-content"
+          bind:this={noteContentElement}
+          tabindex="0"
+          onfocus={() => isNoteContentFocused = true}
+          onblur={() => isNoteContentFocused = false}
+          onclick={(event) => {
+            const target = event.target;
+            if (target.tagName === 'A') {
+              event.preventDefault();
+              invoke("open_external_link", { url: target.href });
+            }
+          }}>
+          <div class="note-text">{@html highlightedContent}</div>
+        </div>
+      {/if}
     {:else}
       <div class="no-selection">
         <p>Select a note to preview its content</p>
+        <p class="help-text">Press Enter to edit, E to edit when focused, Ctrl+O to open externally</p>
       </div>
     {/if}
   </div>
@@ -409,10 +529,8 @@ onMount(() => {
 .notes-list {
   height: 100%;
   overflow-y: auto;
-  /* Enable hardware acceleration */
   transform: translateZ(0);
   will-change: scroll-position;
-  /* Smooth scrolling */
   scroll-behavior: smooth;
 }
 
@@ -431,31 +549,85 @@ onMount(() => {
   min-height: 0;
 }
 
-.note-header {
+.edit-mode {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #32302f;
+}
+
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 0.8em 1em;
   border-bottom: 1px solid #504945;
   background-color: #3c3836;
   flex-shrink: 0;
 }
 
-.note-header h3 {
+.edit-header h3 {
   margin: 0;
   color: #fe8019;
   font-size: 1.1em;
   font-weight: 500;
 }
 
+.edit-controls {
+  display: flex;
+  gap: 0.5em;
+}
+
+.save-btn, .cancel-btn {
+  padding: 0.4em 0.8em;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.save-btn {
+  background-color: #b8bb26;
+  color: #282828;
+}
+
+.save-btn:hover {
+  background-color: #98971a;
+}
+
+.cancel-btn {
+  background-color: #504945;
+  color: #ebdbb2;
+}
+
+.cancel-btn:hover {
+  background-color: #665c54;
+}
+
+.edit-textarea {
+  flex: 1;
+  padding: 1em;
+  background-color: #32302f;
+  color: #fbf1c7;
+  border: none;
+  outline: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95em;
+  line-height: 1.6;
+  resize: none;
+}
+
 .note-content {
   flex: 1;
   padding: 1em;
   overflow-y: auto;
-  /* Enable hardware acceleration */
   transform: translateZ(0);
   will-change: scroll-position;
-  /* Make it focusable */
   outline: none;
   border: 2px solid transparent;
   transition: border-color 0.2s ease;
+  background-color: #32302f;
 }
 
 .note-content:focus {
@@ -463,7 +635,7 @@ onMount(() => {
 }
 
 .note-text {
-  color: #ebdbb2;
+  color: #fbf1c7;
   font-family: 'Inter', sans-serif;
   font-size: 0.95em;
   line-height: 1.6;
@@ -512,7 +684,7 @@ onMount(() => {
   overflow-x: auto;
   border-radius: 6px;
   font-family: 'JetBrains Mono', monospace;
-  color: #ebdbb2;
+  color: #fbf1c7;
   margin: 1em 0;
   font-size: 0.9em;
 }
@@ -527,7 +699,7 @@ onMount(() => {
   margin: 1em 0;
   padding-left: 1em;
   border-left: 3px solid #504945;
-  color: #a89984;
+  color: #d5c4a1;
   font-style: italic;
 }
 
@@ -548,23 +720,29 @@ onMount(() => {
 .no-selection {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #928374;
   font-style: italic;
+  text-align: center;
+}
+
+.help-text {
+  font-size: 0.9em;
+  margin-top: 0.5em;
+  color: #665c54;
 }
 
 ul {
   list-style: none;
   padding: 0;
   margin: 0;
-  /* Optimize for frequent updates */
   contain: content;
 }
 
 li {
   margin: 0;
-  /* Optimize rendering */
   contain: layout;
 }
 
@@ -579,7 +757,6 @@ button {
   text-align: left;
   font-size: 0.95em;
   transition: background-color 0.1s ease;
-  /* Optimize button rendering */
   contain: layout;
 }
 
@@ -593,20 +770,20 @@ button:hover {
 }
 
 /* Custom scrollbar optimizations */
-.notes-list::-webkit-scrollbar, .note-content::-webkit-scrollbar {
+.notes-list::-webkit-scrollbar, .note-content::-webkit-scrollbar, .edit-textarea::-webkit-scrollbar {
   width: 8px;
 }
 
-.notes-list::-webkit-scrollbar-track, .note-content::-webkit-scrollbar-track {
+.notes-list::-webkit-scrollbar-track, .note-content::-webkit-scrollbar-track, .edit-textarea::-webkit-scrollbar-track {
   background: #282828;
 }
 
-.notes-list::-webkit-scrollbar-thumb, .note-content::-webkit-scrollbar-thumb {
+.notes-list::-webkit-scrollbar-thumb, .note-content::-webkit-scrollbar-thumb, .edit-textarea::-webkit-scrollbar-thumb {
   background: #504945;
   border-radius: 4px;
 }
 
-.notes-list::-webkit-scrollbar-thumb:hover, .note-content::-webkit-scrollbar-thumb:hover {
+.notes-list::-webkit-scrollbar-thumb:hover, .note-content::-webkit-scrollbar-thumb:hover, .edit-textarea::-webkit-scrollbar-thumb:hover {
   background: #665c54;
 }
 </style>
