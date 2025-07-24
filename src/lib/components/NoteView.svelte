@@ -120,7 +120,7 @@
   }
   .note-content {
     flex: 1;
-    padding: 2em;
+    padding: 0em 2em 2em 2em;
     overflow-y: auto;
     outline: none;
     border: 2px solid transparent;
@@ -143,7 +143,7 @@
   .note-text :global(h4),
   .note-text :global(h5),
   .note-text :global(h6) {
-    color: #e5c07b; /* A nice gold */
+    color: #f0f0f0;
     margin-top: 1.5em;
     margin-bottom: 0.5em;
     font-weight: 600;
