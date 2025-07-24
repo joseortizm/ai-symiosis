@@ -138,7 +138,6 @@
       const customKeymap = keymap.of([
         indentWithTab,
         { key: "Ctrl-s", run: () => { onSave(); return true; } },
-        { key: "Ctrl-c", run: () => { onExit(); return true; } }
       ]);
 
       const extensions = [
