@@ -96,6 +96,12 @@
         },
         ".cm-lineNumbers": {
           color: "#a89984"
+        },
+          ".cm-fat-cursor": {
+          backgroundColor: "#fe8019 !important"
+        },
+        ".cm-animate-fat-cursor": {
+          backgroundColor: "#fe8019 !important"
         }
       });
 
