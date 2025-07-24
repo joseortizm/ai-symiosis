@@ -10,7 +10,7 @@
   let selectedIndex = $state(-1);
   let searchInput = $state('');
   let noteContent = $state('');
-  let searchElement;
+  let searchElement = $state(); // Fixed: made this reactive
   let noteListElement = $state();
   let noteContentElement = $state();
   let isSearchInputFocused = $state(false);
@@ -74,7 +74,8 @@
     try {
       isLoading = true;
       lastQuery = query;
-      const newNotes = await invoke("list_notes", { query });
+      // Fixed: Use the correct function name that matches your Rust code
+      const newNotes = await invoke("search_notes", { query });
       if (currentController.signal.aborted) {
         return;
       }
@@ -159,11 +160,18 @@
   async function enterEditMode() {
     if (selectedNote) {
       try {
+        // You'll need to add this function to your Rust code or modify get_note_content
+        // For now, let's try to get the raw content another way
         const rawContent = await invoke("get_note_raw_content", { noteName: selectedNote });
         isEditMode = true;
         editContent = rawContent;
       } catch (e) {
         console.error("Failed to load raw note content:", e);
+        // Fallback: try to extract text from HTML content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = noteContent;
+        editContent = tempDiv.textContent || tempDiv.innerText || '';
+        isEditMode = true;
       }
     }
   }

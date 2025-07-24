@@ -124,9 +124,25 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
 
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     let notes_dir = get_notes_dir();
+    // println!("Loading notes from directory: {}", notes_dir.display());
+
+    // Check if directory exists
+    if !notes_dir.exists() {
+        println!(
+            "Notes directory doesn't exist, creating: {}",
+            notes_dir.display()
+        );
+        if let Err(e) = fs::create_dir_all(&notes_dir) {
+            eprintln!("Failed to create notes directory: {}", e);
+            return Ok(());
+        }
+    }
+
     conn.execute("DELETE FROM notes", [])?;
 
     let tx = conn.transaction()?;
+    let mut note_count = 0;
+
     for entry in WalkDir::new(&notes_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let path = entry.path();
@@ -150,19 +166,60 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
                 })
                 .unwrap_or(0);
 
+            println!("Loading note: {} (size: {} bytes)", filename, content.len());
+
             tx.execute(
                 "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
                 params![filename, content, modified],
             )?;
+            note_count += 1;
         }
     }
+
+    // println!("Loaded {} notes into database", note_count);
     tx.commit()
+}
+
+#[tauri::command]
+fn list_all_notes() -> Result<Vec<String>, String> {
+    let db_path = get_database_path();
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT filename FROM notes ORDER BY modified DESC")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    let mut results = Vec::new();
+    for r in rows {
+        if let Ok(filename) = r {
+            results.push(filename);
+        }
+    }
+
+    // println!("list_all_notes returned {} files", results.len());
+    Ok(results)
 }
 
 #[tauri::command]
 fn search_notes(query: &str) -> Result<Vec<String>, String> {
     let db_path = get_database_path();
+    println!(
+        "Searching notes with query: '{}' in database: {}",
+        query,
+        db_path.display()
+    );
+
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    // First, let's check how many notes are in the database
+    let mut count_stmt = conn
+        .prepare("SELECT COUNT(*) FROM notes")
+        .map_err(|e| e.to_string())?;
+    let note_count: i64 = count_stmt.query_row([], |row| row.get(0)).unwrap_or(0);
+    // println!("Total notes in database: {}", note_count);
+
     let mut stmt = conn
         .prepare("SELECT filename FROM notes WHERE notes MATCH ? ORDER BY rank LIMIT ?")
         .map_err(|e| e.to_string())?;
@@ -172,6 +229,8 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
     } else {
         query.replace('"', "")
     };
+
+    println!("Using search pattern: '{}'", pattern);
 
     let rows = stmt
         .query_map(params![pattern, APP_CONFIG.max_search_results], |row| {
@@ -184,6 +243,8 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
             results.push(filename);
         }
     }
+
+    println!("Search returned {} results", results.len());
     Ok(results)
 }
 
@@ -195,6 +256,16 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
     }
     let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
     Ok(render_note(note_name, &content))
+}
+
+#[tauri::command]
+fn get_note_raw_content(note_name: &str) -> Result<String, String> {
+    let note_path = get_notes_dir().join(note_name);
+    if !note_path.exists() {
+        return Err(format!("Note not found: {}", note_name));
+    }
+    let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
+    Ok(content) // Return raw content without rendering
 }
 
 fn render_note(filename: &str, content: &str) -> String {
@@ -256,8 +327,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             search_notes,
             get_note_content,
+            get_note_raw_content,
             save_note,
-            refresh_cache
+            refresh_cache,
+            list_all_notes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
