@@ -31,7 +31,7 @@
 
 <style>
 .notes-list-container {
-  flex: 1;
+  flex: 0.4;
   min-height: 0;
   border-bottom: 2px solid #504945;
 }

@@ -63,14 +63,13 @@
 </div>
 
 <style>
-  /* Sleek, modern, and beautiful dark theme */
   .note-preview {
     flex: 1.2;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    background-color: #282c34; /* atom-one-dark background */
+    background-color: #282c34;
   }
   .edit-mode {
     flex: 1;
@@ -89,7 +88,7 @@
   }
   .edit-header h3 {
     margin: 0;
-    color: #61afef; /* A nice blue */
+    color: #61afef;
     font-size: 1.1em;
     font-weight: 500;
   }
@@ -106,7 +105,7 @@
     transition: background-color 0.2s ease;
   }
   .save-btn {
-    background-color: #98c379; /* A nice green */
+    background-color: #98c379;
     color: #282c34;
   }
   .save-btn:hover {
@@ -131,7 +130,7 @@
     border-color: #61afef;
   }
   .note-text {
-    color: #abb2bf; /* Light gray text */
+    color: #abb2bf;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     font-size: 1em;
     line-height: 1.7;
