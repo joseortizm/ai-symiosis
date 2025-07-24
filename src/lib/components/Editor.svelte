@@ -14,6 +14,7 @@
   import { sql } from '@codemirror/lang-sql';
   import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
   import { tags } from '@lezer/highlight';
+  import { vim } from "@replit/codemirror-vim";
 
   export let value;
   export let filename;
@@ -137,10 +138,11 @@
       const customKeymap = keymap.of([
         indentWithTab,
         { key: "Ctrl-s", run: () => { onSave(); return true; } },
-        { key: "Escape", run: () => { onExit(); return true; } }
+        { key: "Ctrl-c", run: () => { onExit(); return true; } }
       ]);
 
       const extensions = [
+        vim(), // Vim keymap
         basicSetup,
         getLanguageExtension(filename),
         gruvboxTheme,

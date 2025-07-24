@@ -15,11 +15,11 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
 
     let note_path = Path::new(NOTES_DIR).join(note_name);
     if !note_path.exists() {
-        return Err(format!("File does not exist: {}", note_name));
+        return Err(format!("File does not exist: {note_name}"));
     }
 
     let content = fs::read_to_string(&note_path)
-        .map_err(|e| format!("Failed to read file '{}': {}", note_name, e))?;
+        .map_err(|e| format!("Failed to read file '{note_name}': {e}"))?;
 
     Ok(render_note(note_name, &content))
 }

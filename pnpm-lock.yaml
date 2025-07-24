@@ -50,6 +50,9 @@ importers:
       '@lezer/highlight':
         specifier: ^1.2.1
         version: 1.2.1
+      '@replit/codemirror-vim':
+        specifier: ^6.3.0
+        version: 6.3.0(@codemirror/commands@6.8.1)(@codemirror/language@6.11.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.2)(@codemirror/view@6.38.1)
       '@tauri-apps/api':
         specifier: ^2
         version: 2.7.0
@@ -352,6 +355,15 @@ packages:
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
+
+  '@replit/codemirror-vim@6.3.0':
+    resolution: {integrity: sha512-aTx931ULAMuJx6xLf7KQDOL7CxD+Sa05FktTDrtLaSy53uj01ll3Zf17JdKsriER248oS55GBzg0CfCTjEneAQ==}
+    peerDependencies:
+      '@codemirror/commands': 6.x.x
+      '@codemirror/language': 6.x.x
+      '@codemirror/search': 6.x.x
+      '@codemirror/state': 6.x.x
+      '@codemirror/view': 6.x.x
 
   '@rollup/rollup-android-arm-eabi@4.45.1':
     resolution: {integrity: sha512-NEySIFvMY0ZQO+utJkgoMiCAjMrGvnbDLHvcmlA33UXJpYBCvlBEbMMtV837uCkS+plG2umfhn0T5mMAxGrlRA==}
@@ -1079,6 +1091,14 @@ snapshots:
   '@marijn/find-cluster-break@1.0.2': {}
 
   '@polka/url@1.0.0-next.29': {}
+
+  '@replit/codemirror-vim@6.3.0(@codemirror/commands@6.8.1)(@codemirror/language@6.11.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.2)(@codemirror/view@6.38.1)':
+    dependencies:
+      '@codemirror/commands': 6.8.1
+      '@codemirror/language': 6.11.2
+      '@codemirror/search': 6.5.11
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.38.1
 
   '@rollup/rollup-android-arm-eabi@4.45.1':
     optional: true
