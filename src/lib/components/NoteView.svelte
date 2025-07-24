@@ -202,12 +202,15 @@
     margin: 2em 0;
   }
 
-  .highlight {
-    background-color: #e5c07b;
-    color: #282c34;
-    padding: 0.1em 0.2em;
+  :global(.highlight) {
+    background-color: rgba(254, 145, 0, 0.45);
     border-radius: 3px;
+    padding: 0.1em 0.3em;
+    font-weight: 500;
+    color: #f0f0f0;
+    display: inline-block;
   }
+
   .no-selection {
     flex: 1;
     display: flex;
@@ -218,21 +221,26 @@
     font-style: italic;
     text-align: center;
   }
+
   .help-text {
     font-size: 0.9em;
     margin-top: 0.5em;
     color: #4b5263;
   }
+
   .note-content::-webkit-scrollbar {
     width: 10px;
   }
+
   .note-content::-webkit-scrollbar-track {
     background: #21252b;
   }
+
   .note-content::-webkit-scrollbar-thumb {
     background: #4b5263;
     border-radius: 5px;
   }
+
   .note-content::-webkit-scrollbar-thumb:hover {
     background: #5c6370;
   }

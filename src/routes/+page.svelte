@@ -1,6 +1,6 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import SearchInput from "../lib/components/SearchInput.svelte";
   import NoteList from "../lib/components/NoteList.svelte";
   import NoteView from "../lib/components/NoteView.svelte";
@@ -315,14 +315,21 @@
           }
           break;
         case 'Escape':
+          event.preventDefault();
           searchElement.focus();
-          break;
+          return;
       }
     }
   }
 
-  onMount(() => {
-    searchElement.focus();
+  onMount(async () => {
+    await tick(); // Ensure DOM is updated and searchElement is bound
+    console.log('onMount: Attempting to focus searchElement', searchElement);
+    setTimeout(() => {
+      if (searchElement) {
+        searchElement.focus();
+      }
+    }, 0); // Small delay to ensure DOM is ready
     loadNotesImmediate('');
     return () => {
       if (searchAbortController) searchAbortController.abort();
