@@ -1,9 +1,119 @@
 use comrak::{markdown_to_html, ComrakOptions};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
+use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 use walkdir::WalkDir;
+
+// Configuration structure
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AppConfig {
+    notes_directory: String,
+    #[serde(default = "default_max_results")]
+    max_search_results: usize,
+    #[serde(default = "default_fuzzy_threshold")]
+    fuzzy_match_threshold: u16,
+    #[serde(default)]
+    editor_settings: EditorSettings,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+struct EditorSettings {
+    #[serde(default = "default_theme")]
+    theme: String,
+    #[serde(default = "default_font_size")]
+    font_size: u16,
+}
+
+// Default value functions
+fn default_max_results() -> usize {
+    100
+}
+fn default_fuzzy_threshold() -> u16 {
+    30
+}
+fn default_theme() -> String {
+    "dark".to_string()
+}
+fn default_font_size() -> u16 {
+    14
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            notes_directory: get_default_notes_dir(),
+            max_search_results: default_max_results(),
+            fuzzy_match_threshold: default_fuzzy_threshold(),
+            editor_settings: EditorSettings::default(),
+        }
+    }
+}
+
+fn get_default_notes_dir() -> String {
+    if let Some(home_dir) = dirs::home_dir() {
+        home_dir
+            .join("Documents")
+            .join("Notes")
+            .to_string_lossy()
+            .to_string()
+    } else {
+        "./notes".to_string()
+    }
+}
+
+fn get_config_path() -> PathBuf {
+    if let Some(home_dir) = dirs::home_dir() {
+        home_dir.join(".symiosis").join("config.toml")
+    } else {
+        PathBuf::from(".symiosis/config.toml")
+    }
+}
+
+fn load_config() -> AppConfig {
+    let config_path = get_config_path();
+
+    match fs::read_to_string(&config_path) {
+        Ok(content) => match toml::from_str::<AppConfig>(&content) {
+            Ok(config) => {
+                println!("Loaded config from: {}", config_path.display());
+                config
+            }
+            Err(e) => {
+                eprintln!("Failed to parse config file: {}. Using defaults.", e);
+                AppConfig::default()
+            }
+        },
+        Err(_) => {
+            println!(
+                "Config file not found, creating default config at: {}",
+                config_path.display()
+            );
+            let default_config = AppConfig::default();
+
+            // Create the directory if it doesn't exist
+            if let Some(parent) = config_path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+
+            // Try to save the default config
+            if let Ok(toml_content) = toml::to_string(&default_config) {
+                let _ = fs::write(&config_path, toml_content);
+            }
+
+            default_config
+        }
+    }
+}
+
+// Global config - loaded once at startup
+static APP_CONFIG: LazyLock<Mutex<AppConfig>> = LazyLock::new(|| Mutex::new(load_config()));
+
+// Helper function to get notes directory from config
+fn get_notes_dir() -> String {
+    APP_CONFIG.lock().unwrap().notes_directory.clone()
+}
 
 #[tauri::command]
 fn get_note_content(note_name: &str) -> Result<String, String> {
@@ -13,7 +123,8 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
     }
     drop(cache);
 
-    let note_path = Path::new(NOTES_DIR).join(note_name);
+    let notes_dir = get_notes_dir();
+    let note_path = Path::new(&notes_dir).join(note_name);
     if !note_path.exists() {
         return Err(format!("File does not exist: {note_name}"));
     }
@@ -47,8 +158,6 @@ struct CachedNote {
     content: String,
 }
 
-const NOTES_DIR: &str = "/Users/dathin/Documents/_notes";
-
 // Global cache for notes - reuse across searches
 // Use Mutex to allow mutation
 static NOTES_CACHE: LazyLock<Mutex<Vec<CachedNote>>> =
@@ -66,10 +175,11 @@ fn is_visible_note(path: &Path) -> bool {
 
 fn load_all_notes_into_cache() -> Vec<CachedNote> {
     let mut notes = Vec::new();
+    let notes_dir = get_notes_dir();
 
-    for entry in WalkDir::new(NOTES_DIR).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(&notes_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
-            if let Ok(relative) = entry.path().strip_prefix(NOTES_DIR) {
+            if let Ok(relative) = entry.path().strip_prefix(&notes_dir) {
                 if is_visible_note(relative) {
                     if let Some(filename) = relative.to_str() {
                         // Pre-load content into cache
@@ -128,10 +238,11 @@ fn score_filename_improved(query: &str, filename: &str) -> Option<u16> {
                 let haystack = Utf32Str::new(filename, &mut haystack_buf);
                 let needle = Utf32Str::new(query, &mut needle_buf);
 
+                let threshold = APP_CONFIG.lock().unwrap().fuzzy_match_threshold;
                 matcher.fuzzy_match(haystack, needle).and_then(|score| {
                     // Much more restrictive fuzzy matching for filenames
                     // Only allow very high-quality fuzzy matches to compete
-                    if score > 50 && query.len() > 2 {
+                    if score > threshold && query.len() > 2 {
                         Some((score / 2).min(400)) // Cap fuzzy matches at 400, well below exact content matches
                     } else if query.len() <= 2 && score > 20 {
                         Some((score * 2).min(200))
@@ -239,8 +350,9 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
             .then_with(|| a.filename.cmp(&b.filename))
     });
 
-    // Limit results for better UI performance
-    results.truncate(100);
+    // Use max results from config
+    let max_results = APP_CONFIG.lock().unwrap().max_search_results;
+    results.truncate(max_results);
 
     Ok(results.into_iter().map(|r| r.filename).collect())
 }
@@ -254,7 +366,8 @@ fn list_notes(query: &str) -> Result<Vec<String>, String> {
 
 #[tauri::command]
 fn open_note(note_name: &str) -> Result<(), String> {
-    let note_path = Path::new(NOTES_DIR).join(note_name);
+    let notes_dir = get_notes_dir();
+    let note_path = Path::new(&notes_dir).join(note_name);
     open::that(&note_path).map_err(|e| e.to_string())
 }
 
@@ -266,7 +379,8 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
     }
     drop(cache);
 
-    let note_path = Path::new(NOTES_DIR).join(note_name);
+    let notes_dir = get_notes_dir();
+    let note_path = Path::new(&notes_dir).join(note_name);
     if !note_path.exists() {
         return Err(format!("File does not exist: {note_name}"));
     }
@@ -279,7 +393,8 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn save_note(note_name: &str, content: &str) -> Result<(), String> {
-    let note_path = Path::new(NOTES_DIR).join(note_name);
+    let notes_dir = get_notes_dir();
+    let note_path = Path::new(&notes_dir).join(note_name);
 
     // Ensure the parent directory exists
     if let Some(parent) = note_path.parent() {
@@ -314,6 +429,56 @@ fn refresh_cache() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn get_config() -> Result<AppConfig, String> {
+    APP_CONFIG
+        .lock()
+        .map(|config| config.clone())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn update_config(new_config: AppConfig) -> Result<(), String> {
+    // Update the in-memory config
+    {
+        let mut config = APP_CONFIG.lock().map_err(|e| e.to_string())?;
+        *config = new_config.clone();
+    }
+
+    // Save to file
+    let config_path = get_config_path();
+    let toml_content =
+        toml::to_string(&new_config).map_err(|e| format!("Failed to serialize config: {e}"))?;
+
+    // Ensure directory exists
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create config directory: {e}"))?;
+    }
+
+    fs::write(&config_path, toml_content)
+        .map_err(|e| format!("Failed to write config file: {e}"))?;
+
+    // Refresh notes cache if notes directory changed
+    refresh_cache()?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn reload_config() -> Result<AppConfig, String> {
+    let new_config = load_config();
+    {
+        let mut config = APP_CONFIG.lock().map_err(|e| e.to_string())?;
+        *config = new_config.clone();
+    }
+
+    // Refresh notes cache since directory might have changed
+    refresh_cache()?;
+
+    Ok(new_config)
+}
+
 // --- App Entrypoint ---
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -326,7 +491,10 @@ pub fn run() {
             get_note_content,
             refresh_cache,
             get_note_raw_content,
-            save_note
+            save_note,
+            get_config,
+            update_config,
+            reload_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
