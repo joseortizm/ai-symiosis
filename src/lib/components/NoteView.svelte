@@ -1,5 +1,8 @@
 <script>
   import Editor from './Editor.svelte';
+  import hljs from 'highlight.js';
+  import 'highlight.js/styles/atom-one-dark.css';
+  import { afterUpdate } from 'svelte';
 
   export let selectedNote;
   export let isEditMode;
@@ -10,6 +13,15 @@
   export let onEnterEditMode;
   export let noteContentElement = null;
   export let isNoteContentFocused = false;
+
+  afterUpdate(() => {
+    if (noteContentElement) {
+      const blocks = noteContentElement.querySelectorAll('pre code');
+      blocks.forEach((block) => {
+        hljs.highlightElement(block);
+      });
+    }
+  });
 </script>
 
 <div class="note-preview">
@@ -51,171 +63,178 @@
 </div>
 
 <style>
-.note-preview {
-  flex: 1.2;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-.edit-mode {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: #32302f;
-}
-.edit-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.8em 1em;
-  border-bottom: 1px solid #504945;
-  background-color: #3c3836;
-  flex-shrink: 0;
-}
-.edit-header h3 {
-  margin: 0;
-  color: #fe8019;
-  font-size: 1.1em;
-  font-weight: 500;
-}
-.edit-controls {
-  display: flex;
-  gap: 0.5em;
-}
-.save-btn, .cancel-btn {
-  padding: 0.4em 0.8em;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.9em;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.save-btn {
-  background-color: #b8bb26;
-  color: #282828;
-}
-.save-btn:hover {
-  background-color: #98971a;
-}
-.cancel-btn {
-  background-color: #504945;
-  color: #ebdbb2;
-}
-.cancel-btn:hover {
-  background-color: #665c54;
-}
-.note-content {
-  flex: 1;
-  padding: 1em;
-  overflow-y: auto;
-  transform: translateZ(0);
-  will-change: scroll-position;
-  outline: none;
-  border: 2px solid transparent;
-  transition: border-color 0.2s ease;
-  background-color: #32302f;
-}
-.note-content:focus {
-  border-color: #83a598;
-}
-.note-text {
-  color: #fbf1c7;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.95em;
-  line-height: 1.6;
-  white-space: normal;
-}
-.note-text h1,
-.note-text h2,
-.note-text h3,
-.note-text h4 {
-  margin: 1em 0 0.5em;
-  font-weight: bold;
-  color: #fabd2f;
-}
-.note-text h1 { font-size: 1.5em; }
-.note-text h2 { font-size: 1.3em; }
-.note-text h3 { font-size: 1.15em; }
-.note-text p {
-  margin: 0.5em 0;
-}
-.note-text a {
-  color: #83a598;
-  text-decoration: underline;
-  word-break: break-word;
-}
-.note-text a:hover {
-  color: #b8bb26;
-}
-.note-text code {
-  background: #3c3836;
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.95em;
-  color: #d3869b;
-}
-.note-text pre {
-  background: #3c3836;
-  padding: 1em;
-  overflow-x: auto;
-  border-radius: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #fbf1c7;
-  margin: 1em 0;
-  font-size: 0.9em;
-}
-.note-text ul,
-.note-text ol {
-  margin: 0.5em 0 0.5em 1.2em;
-  padding-left: 1em;
-}
-.note-text blockquote {
-  margin: 1em 0;
-  padding-left: 1em;
-  border-left: 3px solid #504945;
-  color: #d5c4a1;
-  font-style: italic;
-}
-.note-text hr {
-  border: none;
-  border-top: 1px solid #504945;
-  margin: 1em 0;
-}
-.highlight {
-  background-color: #fabd2f;
-  color: #282828;
-  padding: 0.1em 0.2em;
-  border-radius: 3px;
-  font-weight: 500;
-}
-.no-selection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #928374;
-  font-style: italic;
-  text-align: center;
-}
-.help-text {
-  font-size: 0.9em;
-  margin-top: 0.5em;
-  color: #665c54;
-}
-.note-content::-webkit-scrollbar {
-  width: 8px;
-}
-.note-content::-webkit-scrollbar-track {
-  background: #282828;
-}
-.note-content::-webkit-scrollbar-thumb {
-  background: #504945;
-  border-radius: 4px;
-}
-.note-content::-webkit-scrollbar-thumb:hover {
-  background: #665c54;
-}
+  /* Sleek, modern, and beautiful dark theme */
+  .note-preview {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    background-color: #282c34; /* atom-one-dark background */
+  }
+  .edit-mode {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #21252b;
+  }
+  .edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8em 1em;
+    border-bottom: 1px solid #181a1f;
+    background-color: #21252b;
+    flex-shrink: 0;
+  }
+  .edit-header h3 {
+    margin: 0;
+    color: #61afef; /* A nice blue */
+    font-size: 1.1em;
+    font-weight: 500;
+  }
+  .edit-controls {
+    display: flex;
+    gap: 0.5em;
+  }
+  .save-btn, .cancel-btn {
+    padding: 0.4em 0.8em;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .save-btn {
+    background-color: #98c379; /* A nice green */
+    color: #282c34;
+  }
+  .save-btn:hover {
+    background-color: #a7d78b;
+  }
+  .cancel-btn {
+    background-color: #3a3f4b;
+    color: #abb2bf;
+  }
+  .cancel-btn:hover {
+    background-color: #4b5263;
+  }
+  .note-content {
+    flex: 1;
+    padding: 2em;
+    overflow-y: auto;
+    outline: none;
+    border: 2px solid transparent;
+    transition: border-color 0.2s ease;
+  }
+  .note-content:focus {
+    border-color: #61afef;
+  }
+  .note-text {
+    color: #abb2bf; /* Light gray text */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-size: 1em;
+    line-height: 1.7;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .note-text :global(h1),
+  .note-text :global(h2),
+  .note-text :global(h3),
+  .note-text :global(h4),
+  .note-text :global(h5),
+  .note-text :global(h6) {
+    color: #e5c07b; /* A nice gold */
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+  }
+  .note-text :global(h1) { font-size: 2em; }
+  .note-text :global(h2) { font-size: 1.5em; }
+  .note-text :global(h3) { font-size: 1.25em; }
+
+  .note-text :global(p) {
+    margin-bottom: 1em;
+  }
+
+  .note-text :global(a) {
+    color: #61afef;
+    text-decoration: none;
+    word-break: break-word;
+  }
+  .note-text :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .note-text :global(code) {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-size: 0.9em;
+  }
+
+  .note-text :global(pre) {
+    margin: 1.5em 0;
+    border-radius: 6px;
+    font-size: 0.9em;
+  }
+
+  .note-text :global(pre code) {
+    padding: 1em;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .note-text :global(ul),
+  .note-text :global(ol) {
+    margin-bottom: 1em;
+    padding-left: 2em;
+  }
+
+  .note-text :global(blockquote) {
+    margin: 1.5em 0;
+    padding-left: 1.5em;
+    border-left: 3px solid #5c6370;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  .note-text :global(hr) {
+    border: none;
+    border-top: 1px solid #3a3f4b;
+    margin: 2em 0;
+  }
+
+  .highlight {
+    background-color: #e5c07b;
+    color: #282c34;
+    padding: 0.1em 0.2em;
+    border-radius: 3px;
+  }
+  .no-selection {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #5c6370;
+    font-style: italic;
+    text-align: center;
+  }
+  .help-text {
+    font-size: 0.9em;
+    margin-top: 0.5em;
+    color: #4b5263;
+  }
+  .note-content::-webkit-scrollbar {
+    width: 10px;
+  }
+  .note-content::-webkit-scrollbar-track {
+    background: #21252b;
+  }
+  .note-content::-webkit-scrollbar-thumb {
+    background: #4b5263;
+    border-radius: 5px;
+  }
+  .note-content::-webkit-scrollbar-thumb:hover {
+    background: #5c6370;
+  }
 </style>

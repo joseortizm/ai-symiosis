@@ -371,13 +371,17 @@
 </main>
 
 <style>
-.container {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #282828;
-  color: #ebdbb2;
-  font-family: 'Inter', sans-serif;
-}
+  :global(body) {
+    margin: 0;
+    background-color: #282c34;
+  }
+  .container {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #282828;
+    color: #ebdbb2;
+    font-family: 'Inter', sans-serif;
+  }
 </style>
