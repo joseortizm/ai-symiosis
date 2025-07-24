@@ -124,24 +124,15 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
 
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     let notes_dir = get_notes_dir();
-    // println!("Loading notes from directory: {}", notes_dir.display());
 
-    // Check if directory exists
+    // Check if directory exists - if not, just return without creating it
     if !notes_dir.exists() {
-        println!(
-            "Notes directory doesn't exist, creating: {}",
-            notes_dir.display()
-        );
-        if let Err(e) = fs::create_dir_all(&notes_dir) {
-            eprintln!("Failed to create notes directory: {}", e);
-            return Ok(());
-        }
+        return Ok(());
     }
 
     conn.execute("DELETE FROM notes", [])?;
 
     let tx = conn.transaction()?;
-    let mut note_count = 0;
 
     for entry in WalkDir::new(&notes_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
@@ -166,17 +157,13 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
                 })
                 .unwrap_or(0);
 
-            println!("Loading note: {} (size: {} bytes)", filename, content.len());
-
             tx.execute(
                 "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
                 params![filename, content, modified],
             )?;
-            note_count += 1;
         }
     }
 
-    // println!("Loaded {} notes into database", note_count);
     tx.commit()
 }
 
@@ -198,39 +185,48 @@ fn list_all_notes() -> Result<Vec<String>, String> {
         }
     }
 
-    // println!("list_all_notes returned {} files", results.len());
     Ok(results)
 }
 
 #[tauri::command]
 fn search_notes(query: &str) -> Result<Vec<String>, String> {
     let db_path = get_database_path();
-    println!(
-        "Searching notes with query: '{}' in database: {}",
-        query,
-        db_path.display()
-    );
-
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
-    // First, let's check how many notes are in the database
-    let mut count_stmt = conn
-        .prepare("SELECT COUNT(*) FROM notes")
-        .map_err(|e| e.to_string())?;
-    let note_count: i64 = count_stmt.query_row([], |row| row.get(0)).unwrap_or(0);
-    // println!("Total notes in database: {}", note_count);
+    // If query is empty, return all notes ordered by most recent
+    if query.trim().is_empty() {
+        let mut stmt = conn
+            .prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([APP_CONFIG.max_search_results], |row| row.get(0))
+            .map_err(|e| e.to_string())?;
+        let mut results = Vec::new();
+        for r in rows {
+            if let Ok(filename) = r {
+                results.push(filename);
+            }
+        }
+        return Ok(results);
+    }
 
+    // For non-empty queries, use FTS search with fuzzy matching
     let mut stmt = conn
         .prepare("SELECT filename FROM notes WHERE notes MATCH ? ORDER BY rank LIMIT ?")
         .map_err(|e| e.to_string())?;
 
-    let pattern = if query.trim().is_empty() {
-        "*".to_string()
+    // Create a more flexible search pattern for fuzzy matching
+    let pattern = if query.contains(' ') {
+        // For multi-word queries, search for each word
+        query
+            .split_whitespace()
+            .map(|word| format!("{}*", word.replace('"', "")))
+            .collect::<Vec<_>>()
+            .join(" OR ")
     } else {
-        query.replace('"', "")
+        // For single words, use prefix matching with wildcard
+        format!("{}*", query.replace('"', ""))
     };
-
-    println!("Using search pattern: '{}'", pattern);
 
     let rows = stmt
         .query_map(params![pattern, APP_CONFIG.max_search_results], |row| {
@@ -244,7 +240,6 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
         }
     }
 
-    println!("Search returned {} results", results.len());
     Ok(results)
 }
 
