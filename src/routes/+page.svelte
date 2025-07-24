@@ -225,18 +225,12 @@
           }
           break;
         case 'ArrowUp':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            selectedIndex = Math.max(0, selectedIndex - 1);
-            return;
-          }
+          event.preventDefault();
+          selectedIndex = Math.max(0, selectedIndex - 1);
           break;
         case 'ArrowDown':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
-            return;
-          }
+          event.preventDefault();
+          selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
           break;
         case 'p':
           if (event.ctrlKey) {
@@ -273,12 +267,10 @@
     if (isNoteContentFocused && !isEditMode) {
       switch (event.key) {
         case 'ArrowUp':
-        case 'k':
           event.preventDefault();
           noteContentElement.scrollBy({ top: -50, behavior: 'smooth' });
           return;
         case 'ArrowDown':
-        case 'j':
           event.preventDefault();
           noteContentElement.scrollBy({ top: 50, behavior: 'smooth' });
           return;
@@ -310,12 +302,10 @@
     if (!isSearchInputFocused && !isNoteContentFocused && !isEditMode) {
       switch (event.key) {
         case 'ArrowUp':
-        case 'k':
           event.preventDefault();
           selectedIndex = Math.max(0, selectedIndex - 1);
           break;
         case 'ArrowDown':
-        case 'j':
           event.preventDefault();
           selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
           break;
