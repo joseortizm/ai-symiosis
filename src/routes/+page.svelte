@@ -232,6 +232,7 @@
           event.preventDefault();
           selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
           break;
+        case 'k':
         case 'p':
           if (event.ctrlKey) {
             event.preventDefault();
@@ -239,6 +240,7 @@
             return;
           }
           break;
+        case 'j':
         case 'n':
           if (event.ctrlKey) {
             event.preventDefault();
