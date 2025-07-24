@@ -1,19 +1,37 @@
 # Symiosis
 
-## Primary
+Symiosis is a desktop note-taking application inspired by Notational Velocity.
 
-* Expose customisation options at ~/.symiosis/config
-* Make sure the HTMl for the markdown is sleek and beautiful.
-* make the bar over the note pane when editing that has the title and info half the height and make sure you adjust the buttons etc. to fit
-* make the default height of the file list 4 lines.
-* make the pane size adjustable by dragging dividers with the mouse and remember last setting in the app. 
-* ctrl-r should reload/refresh the notes directory and rebuild cache etc.
-* ctrl-x should delete currnt note
+## Features
 
-*Titles have priority only when they are exact matches other wise not.
-* hypocrit should not display first the hypnosis note. Titles have priority only when they are exact matches other wise not.
+*   **Instant Search:** Search title and contents with fuzzy matching.
+*   **Markdown Support:** Write notes using Markdown for rich formatting.
+*   **Syntax Highlighting:** Beautiful syntax highlighting for code blocks in your Markdown notes.
+*   **Quick Editing:** Seamlessly switch between viewing and editing modes.
+*   **Keyboard-Driven Workflow:** Navigate and manage notes entirely with keyboard shortcuts.
 
-## Secondary
 
-* notational velocity sometimes did not find anything and then pressing enter would create a note. Not sure i need this feature
+## Usage
 
+Symiosis is designed for a keyboard-driven workflow.
+
+### General Navigation
+
+*   **Type to Search:** Start typing in the search bar to filter notes.
+*   **`Ctrl + N` / `Ctrl + P` or `ArrowDown` / `ArrowUp`:** Navigate through the search results (notes list).
+*   **`Ctrl + D`:**/**`Ctrl + U`:** Scroll up/down half a page on current note.
+*   **`Enter`:** When a note is selected in the list, press `Enter` to enter edit mode for that note.
+*   **`Escape`:** Exit edit mode and return to the search bar.
+*   **`Ctrl + O`:** Open the currently selected note in the system.
+
+### Editing Notes
+
+*   **`Ctrl + S`:** Save changes to the current note while in edit mode.
+*   **`Escape`:** Exit edit mode without saving changes.
+
+### Scrolling Note Content
+
+When viewing a note (not in edit mode):
+
+
+Enjoy a seamless note-taking experience with Symiosis!
