@@ -1,0 +1,23 @@
+[build]
+# Use shared target directory (optional - only if you want this)
+# target-dir = "/Users/dathin/_rust_builds/global_target"
+
+# Faster compilation on macOS
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-Wl,-no_compact_unwind",  # Disable compact unwinding for faster linking
+  "-C", "split-debuginfo=unpacked"          # Faster debug info generation
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-Wl,-no_compact_unwind",  # Disable compact unwinding for faster linking
+  "-C", "split-debuginfo=unpacked"          # Faster debug info generation
+]
+
+# If you want to try the faster mold linker (install with: brew install mold)
+# [target.x86_64-apple-darwin]
+# rustflags = ["-C", "link-arg=-fuse-ld=/opt/homebrew/bin/mold"]
+#
+# [target.aarch64-apple-darwin]
+# rustflags = ["-C", "link-arg=-fuse-ld=/opt/homebrew/bin/mold"]

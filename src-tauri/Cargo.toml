@@ -31,3 +31,12 @@ html-escape = "0.2.13"
 toml = "0.8.23"
 dirs = "6"
 rusqlite = { version = "0.37", features = ["bundled", "functions", "serde_json", "chrono"] }
+
+# Faster builds in debug mode
+[profile.dev]
+opt-level = 1
+incremental = true
+
+# Faster builds for dependencies
+[profile.dev.package."*"]
+opt-level = 3
