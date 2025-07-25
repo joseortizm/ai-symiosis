@@ -11,6 +11,7 @@ use tauri::{
     tray::{TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
 };
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -407,8 +408,6 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-
-
 pub fn initialize_notes() {
     let db_path = get_database_path();
     if let Some(parent) = db_path.parent() {
@@ -419,15 +418,46 @@ pub fn initialize_notes() {
     load_all_notes_into_sqlite(&mut conn).expect("Failed to load notes");
 }
 
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     initialize_notes();
 
-    tauri::Builder::default()
+    let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Setup the system tray
             setup_tray(app.handle())?;
+
+            // Setup global shortcut for Ctrl+Shift+N
+            #[cfg(desktop)]
+            {
+                let ctrl_shift_n = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN);
+                app.handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_handler(move |app, shortcut, event| {
+                            if shortcut == &ctrl_shift_n && event.state() == ShortcutState::Pressed {
+                                let app_handle = app.clone();
+                                match app_handle.get_webview_window("main") {
+                                    Some(window) => {
+                                        if window.is_visible().unwrap_or(false) {
+                                            let _ = window.hide();
+                                        } else {
+                                            let _ = window.show();
+                                            let _ = window.set_focus();
+                                        }
+                                    }
+                                    None => {
+                                        let _ = show_main_window(app_handle);
+                                    }
+                                }
+                            }
+                        })
+                        .build(),
+                )?;
+                
+                app.global_shortcut().register(ctrl_shift_n)?;
+            }
 
             // Hide the main window on startup (it starts visible by default)
             if let Some(window) = app.get_webview_window("main") {
@@ -457,11 +487,16 @@ pub fn run() {
             hide_main_window
         ])
         .build(tauri::generate_context!())
-        .expect("error while running tauri application")
-        .run(|_app_handle, event| match event {
-            tauri::RunEvent::ExitRequested { api, .. } => {
-                api.prevent_exit();
-            }
-            _ => {}
-        });
+        .expect("error while running tauri application");
+
+    // Hide from dock on macOS
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+    app.run(|_app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { api, .. } => {
+            api.prevent_exit();
+        }
+        _ => {}
+    });
 }
