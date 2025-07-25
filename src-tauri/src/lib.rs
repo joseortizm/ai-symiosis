@@ -6,6 +6,11 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
+};
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -304,6 +309,102 @@ fn refresh_cache() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn show_main_window(app: AppHandle) -> Result<(), String> {
+    match app.get_webview_window("main") {
+        Some(window) => {
+            window.show().map_err(|e| e.to_string())?;
+            window.set_focus().map_err(|e| e.to_string())?;
+        }
+        None => {
+            // Create the window if it doesn't exist
+            let _window = WebviewWindowBuilder::new(&app, "main", WebviewUrl::default())
+                .title("Symiosis Notes")
+                .inner_size(1200.0, 800.0)
+                .center()
+                .build()
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn hide_main_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+    // Create menu items
+    let open_item = MenuItem::with_id(app, "open", "Open Symiosis", true, None::<&str>)?;
+    let refresh_item =
+        MenuItem::with_id(app, "refresh", "Refresh Notes Cache", true, None::<&str>)?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+
+    // Create the menu
+    let menu = Menu::with_items(
+        app,
+        &[
+            &open_item,
+            &separator,
+            &refresh_item,
+            &separator,
+            &quit_item,
+        ],
+    )?;
+
+    // Build the tray icon
+    let _tray = TrayIconBuilder::with_id("main-tray")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(move |app, event| match event.id.as_ref() {
+            "open" => {
+                let _ = show_main_window(app.app_handle().clone());
+            }
+            "refresh" => {
+                let _ = refresh_cache();
+            }
+            "quit" => {
+                app.exit(0);
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                    button,
+                    button_state,
+                    ..
+                } = event {
+                if button == tauri::tray::MouseButton::Left
+                    && button_state == tauri::tray::MouseButtonState::Up
+                {
+                    // Toggle window visibility on left click
+                    let app = tray.app_handle();
+                    match app.get_webview_window("main") {
+                        Some(window) => {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        None => {
+                            let _ = show_main_window(app.clone());
+                        }
+                    }
+                }
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
 pub fn initialize_notes() {
     let db_path = get_database_path();
     if let Some(parent) = db_path.parent() {
@@ -317,16 +418,46 @@ pub fn initialize_notes() {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     initialize_notes();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // Setup the system tray
+            setup_tray(app.handle())?;
+
+            // Hide the main window on startup (it starts visible by default)
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.hide();
+            }
+
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            match event {
+                tauri::WindowEvent::CloseRequested { api, .. } => {
+                    // Hide window instead of closing when user clicks X
+                    window.hide().unwrap();
+                    api.prevent_close();
+                }
+                _ => {}
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             search_notes,
             get_note_content,
             get_note_raw_content,
             save_note,
             refresh_cache,
-            list_all_notes
+            list_all_notes,
+            show_main_window,
+            hide_main_window
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|_app_handle, event| match event {
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                api.prevent_exit();
+            }
+            _ => {}
+        });
 }
