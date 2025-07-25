@@ -16,7 +16,7 @@
         "width": 800,
         "height": 600,
         "center": true,
-        "visible": true,
+        "visible": false,
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
@@ -24,6 +24,7 @@
         "skipTaskbar": false
       }
     ],
+    "macOSPrivateApi": true,
     "security": {
       "csp": null
     }

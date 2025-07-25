@@ -357,8 +357,9 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    // Build the tray icon
+    // Build the tray icon with icon specified
     let _tray = TrayIconBuilder::with_id("main-tray")
+        .icon(app.default_window_icon().unwrap().clone()) // Use the default app icon
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
@@ -375,10 +376,11 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
-                    button,
-                    button_state,
-                    ..
-                } = event {
+                button,
+                button_state,
+                ..
+            } = event
+            {
                 if button == tauri::tray::MouseButton::Left
                     && button_state == tauri::tray::MouseButtonState::Up
                 {
@@ -404,6 +406,8 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 
     Ok(())
 }
+
+
 
 pub fn initialize_notes() {
     let db_path = get_database_path();
