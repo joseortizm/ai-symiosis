@@ -1,5 +1,4 @@
 use comrak::{markdown_to_html, ComrakOptions};
-use dirs;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -87,7 +86,7 @@ fn load_config() -> AppConfig {
                 config
             }
             Err(e) => {
-                eprintln!("Failed to parse config file: {}. Using defaults.", e);
+                eprintln!("Failed to parse config file: {e}. Using defaults.");
                 AppConfig::default()
             }
         },
@@ -207,12 +206,7 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
         let rows = stmt
             .query_map([APP_CONFIG.max_search_results], |row| row.get(0))
             .map_err(|e| e.to_string())?;
-        let mut results = Vec::new();
-        for r in rows {
-            if let Ok(filename) = r {
-                results.push(filename);
-            }
-        }
+        let results: Vec<_> = rows.flatten().collect();
         return Ok(results);
     }
 
@@ -239,12 +233,7 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
             row.get(0)
         })
         .map_err(|e| e.to_string())?;
-    let mut results = Vec::new();
-    for r in rows {
-        if let Ok(filename) = r {
-            results.push(filename);
-        }
-    }
+        let results: Vec<_> = rows.flatten().collect();
 
     Ok(results)
 }
@@ -418,7 +407,6 @@ pub fn initialize_notes() {
     load_all_notes_into_sqlite(&mut conn).expect("Failed to load notes");
 }
 
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     initialize_notes();
@@ -432,11 +420,13 @@ pub fn run() {
             // Setup global shortcut for Ctrl+Shift+N
             #[cfg(desktop)]
             {
-                let ctrl_shift_n = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN);
+                let ctrl_shift_n =
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN);
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
                         .with_handler(move |app, shortcut, event| {
-                            if shortcut == &ctrl_shift_n && event.state() == ShortcutState::Pressed {
+                            if shortcut == &ctrl_shift_n && event.state() == ShortcutState::Pressed
+                            {
                                 let app_handle = app.clone();
                                 match app_handle.get_webview_window("main") {
                                     Some(window) => {
@@ -455,7 +445,7 @@ pub fn run() {
                         })
                         .build(),
                 )?;
-                
+
                 app.global_shortcut().register(ctrl_shift_n)?;
             }
 
