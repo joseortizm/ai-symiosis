@@ -4,6 +4,8 @@
   import SearchInput from "../lib/components/SearchInput.svelte";
   import NoteList from "../lib/components/NoteList.svelte";
   import NoteView from "../lib/components/NoteView.svelte";
+  import { createKeyboardHandler } from '../lib/keyboardHandler.js';
+
 
   let filteredNotes = $state([]);
   let selectedNote = $state(null);
@@ -196,141 +198,27 @@
     }
   }
 
-  function handleKeydown(event) {
-    if (isSearchInputFocused) {
-      switch (event.key) {
-        case 'Enter':
-          event.preventDefault();
-          if (filteredNotes.length > 0 && selectedNote) {
-            enterEditMode();
-          }
-          return;
-        case 'o':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            if (selectedNote) {
-              invoke("open_note", { noteName: selectedNote });
-            }
-            return;
-          }
-          break;
-        case 'u':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            if (noteContentElement) {
-              noteContentElement.scrollBy({ top: -200, behavior: 'smooth' });
-            }
-            return;
-          }
-          break;
-        case 'd':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            if (noteContentElement) {
-              noteContentElement.scrollBy({ top: 200, behavior: 'smooth' });
-            }
-            return;
-          }
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          selectedIndex = Math.max(0, selectedIndex - 1);
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
-          break;
-        case 'k':
-        case 'p':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            selectedIndex = Math.max(0, selectedIndex - 1);
-            return;
-          }
-          break;
-        case 'j':
-        case 'n':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
-            return;
-          }
-          break;
-      }
+  const handleKeydown = createKeyboardHandler(
+    // Pass a FUNCTION that returns current state (this fixes the Svelte warning)
+    () => ({
+      isSearchInputFocused,
+      isEditMode,
+      isNoteContentFocused,
+      selectedIndex,
+      filteredNotes,
+      selectedNote,
+      noteContentElement,
+      searchElement,
+    }),
+    // Actions object (these don't change so can be passed directly)
+    {
+      setSelectedIndex: (value) => selectedIndex = value,
+      enterEditMode,
+      exitEditMode,
+      saveNote,
+      invoke,
     }
-    if (isEditMode) {
-      switch (event.key) {
-        case 'Escape':
-          event.preventDefault();
-          exitEditMode();
-          searchElement.focus();
-          return;
-        case 's':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            saveNote();
-            return;
-          }
-          break;
-      }
-    }
-    if (isNoteContentFocused && !isEditMode) {
-      switch (event.key) {
-        case 'ArrowUp':
-          event.preventDefault();
-          noteContentElement.scrollBy({ top: -50, behavior: 'smooth' });
-          return;
-        case 'ArrowDown':
-          event.preventDefault();
-          noteContentElement.scrollBy({ top: 50, behavior: 'smooth' });
-          return;
-        case 'p':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            noteContentElement.scrollBy({ top: -50, behavior: 'smooth' });
-            return;
-          }
-          break;
-        case 'n':
-          if (event.ctrlKey) {
-            event.preventDefault();
-            noteContentElement.scrollBy({ top: 50, behavior: 'smooth' });
-            return;
-          }
-          break;
-        case 'Escape':
-          event.preventDefault();
-          searchElement.focus();
-          return;
-        case 'e':
-          event.preventDefault();
-          enterEditMode();
-          return;
-      }
-    }
-    if (filteredNotes.length === 0) return;
-    if (!isSearchInputFocused && !isNoteContentFocused && !isEditMode) {
-      switch (event.key) {
-        case 'ArrowUp':
-          event.preventDefault();
-          selectedIndex = Math.max(0, selectedIndex - 1);
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          selectedIndex = Math.min(filteredNotes.length - 1, selectedIndex + 1);
-          break;
-        case 'Enter':
-          if (selectedNote) {
-            enterEditMode();
-          }
-          break;
-        case 'Escape':
-          event.preventDefault();
-          searchElement.focus();
-          return;
-      }
-    }
-  }
+  );
 
   onMount(async () => {
     await tick(); // Ensure DOM is updated and searchElement is bound
