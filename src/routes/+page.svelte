@@ -124,26 +124,36 @@
   });
 
   $effect(async () => {
+    // Clear content when no note is selected
     if (!selectedNote) {
       noteContent = '';
       highlightedContent = '';
       return;
     }
+
+    // Cancel any previous content loading request
     if (contentAbortController) {
       contentAbortController.abort();
     }
     contentAbortController = new AbortController();
     const currentController = contentAbortController;
+
     try {
-      const content = await invoke("get_note_content", { noteName: selectedNote });
+      // Load the note content from backend
+      const content = getNoteContent(selectedNote);
+
+      // Only update if request wasn't cancelled
       if (!currentController.signal.aborted) {
         noteContent = content;
         highlightedContent = processContentForDisplay(content, query);
+
+        // Scroll to first search match after DOM updates
         requestAnimationFrame(() => {
           scrollToFirstMatch();
         });
       }
     } catch (e) {
+      // Handle errors only if request wasn't cancelled
       if (!currentController.signal.aborted) {
         console.error("Failed to load note content:", e);
         noteContent = `Error loading note: ${e}`;
@@ -158,6 +168,11 @@
     }
   });
 
+  async function getNoteContent(noteName, abortController) {
+    const content = await invoke("get_note_content", { noteName });
+    return content;
+  }
+
   function selectNote(note, index) {
     if (selectedIndex !== index) {
       selectedIndex = index;
@@ -167,9 +182,7 @@
   async function enterEditMode() {
     if (selectedNote) {
       try {
-        // You'll need to add this function to your Rust code or modify get_note_content
-        // For now, let's try to get the raw content another way
-        const rawContent = await invoke("get_note_raw_content", { noteName: selectedNote });
+        const rawContent = getNoteContent(selectedNote);
         isEditMode = true;
         editContent = rawContent;
       } catch (e) {
@@ -194,7 +207,7 @@
         noteName: selectedNote,
         content: editContent
       });
-      const content = await invoke("get_note_content", { noteName: selectedNote });
+      const content = getNoteContent(selectedNote);
       noteContent = content;
       highlightedContent = processContentForDisplay(content, query);
       isEditMode = false;
