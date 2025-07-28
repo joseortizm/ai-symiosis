@@ -6,7 +6,6 @@
   import NoteView from "../lib/components/NoteView.svelte";
   import { createKeyboardHandler } from '../lib/keyboardHandler.js';
 
-
   let filteredNotes = $state([]);
   let selectedNote = $state(null);
   let selectedIndex = $state(-1);
@@ -57,11 +56,12 @@
 
   let searchTimeout;
   function debounceSearch(query) {
+    // Skip if query hasn't changed
     if (query === lastQuery) return;
+    // Cancel previous search request and timer
     clearTimeout(searchTimeout);
-    if (searchAbortController) {
-      searchAbortController.abort();
-    }
+    searchAbortController?.abort();
+    // Start new timer to search after user stops typing
     searchTimeout = setTimeout(() => {
       loadNotesImmediate(query);
     }, 100);
