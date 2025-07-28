@@ -12,7 +12,7 @@
   let selectedIndex = $state(-1);
   let searchInput = $state('');
   let noteContent = $state('');
-  let searchElement = $state(); // Fixed: made this reactive
+  let searchElement = $state();
   let noteListElement = $state();
   let noteContentElement = $state();
   let isSearchInputFocused = $state(false);
@@ -76,7 +76,6 @@
     try {
       isLoading = true;
       lastQuery = query;
-      // Fixed: Use the correct function name that matches your Rust code
       const newNotes = await invoke("search_notes", { query });
       if (currentController.signal.aborted) {
         return;
@@ -199,7 +198,6 @@
   }
 
   const handleKeydown = createKeyboardHandler(
-    // Pass a FUNCTION that returns current state (this fixes the Svelte warning)
     () => ({
       isSearchInputFocused,
       isEditMode,
@@ -210,7 +208,6 @@
       noteContentElement,
       searchElement,
     }),
-    // Actions object (these don't change so can be passed directly)
     {
       setSelectedIndex: (value) => selectedIndex = value,
       enterEditMode,
