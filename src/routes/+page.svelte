@@ -17,7 +17,7 @@
   let isSearchInputFocused = $state(false);
   let isNoteContentFocused = $state(false);
   let isLoading = $state(false);
-  let lastQuery = $state('');
+  let query = $state('');
   let highlightedContent = $state('');
   let isEditMode = $state(false);
   let editContent = $state('');
@@ -25,7 +25,7 @@
   let searchAbortController = null;
   let contentAbortController = null;
 
-  function highlightSearchTerms(content, query) {
+  function processContentForDisplay(content, query) {
     if (!query.trim()) {
       return content;
     }
@@ -35,7 +35,7 @@
   }
 
   function scrollToFirstMatch() {
-    if (noteContentElement && lastQuery.trim()) {
+    if (noteContentElement && query.trim()) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight');
         if (firstMatch) {
@@ -55,19 +55,20 @@
   }
 
   let searchTimeout;
-  function debounceSearch(query) {
-    // Skip if query hasn't changed
-    if (query === lastQuery) return;
+  function debounceSearch(newQuery) {
+    if (newQuery === query) return;
+    // Update query immediately for highlighting
+    query = newQuery;
     // Cancel previous search request and timer
     clearTimeout(searchTimeout);
     searchAbortController?.abort();
     // Start new timer to search after user stops typing
     searchTimeout = setTimeout(() => {
-      loadNotesImmediate(query);
+      loadNotesImmediate(newQuery);
     }, 100);
   }
 
-  async function loadNotesImmediate(query) {
+  async function loadNotesImmediate(searchQuery) {
     if (searchAbortController) {
       searchAbortController.abort();
     }
@@ -75,8 +76,7 @@
     const currentController = searchAbortController;
     try {
       isLoading = true;
-      lastQuery = query;
-      const newNotes = await invoke("search_notes", { query });
+      const newNotes = await invoke("search_notes", { query: searchQuery });
       if (currentController.signal.aborted) {
         return;
       }
@@ -138,7 +138,7 @@
       const content = await invoke("get_note_content", { noteName: selectedNote });
       if (!currentController.signal.aborted) {
         noteContent = content;
-        highlightedContent = highlightSearchTerms(content, lastQuery);
+        highlightedContent = processContentForDisplay(content, query);
         requestAnimationFrame(() => {
           scrollToFirstMatch();
         });
@@ -149,6 +149,12 @@
         noteContent = `Error loading note: ${e}`;
         highlightedContent = noteContent;
       }
+    }
+  });
+
+  $effect(() => {
+    if (noteContent) {
+      highlightedContent = processContentForDisplay(noteContent, query);
     }
   });
 
@@ -190,7 +196,7 @@
       });
       const content = await invoke("get_note_content", { noteName: selectedNote });
       noteContent = content;
-      highlightedContent = highlightSearchTerms(content, lastQuery);
+      highlightedContent = processContentForDisplay(content, query);
       isEditMode = false;
     } catch (e) {
       console.error("Failed to save note:", e);
