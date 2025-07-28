@@ -101,6 +101,12 @@
     }
   }
 
+  async function getNoteContent(noteName) {
+    const content = await invoke("get_note_content", { noteName });
+    return content;
+  }
+
+
   $effect(() => {
     debounceSearch(searchInput);
   });
@@ -140,7 +146,7 @@
 
     try {
       // Load the note content from backend
-      const content = getNoteContent(selectedNote);
+      const content = await getNoteContent(selectedNote);
 
       // Only update if request wasn't cancelled
       if (!currentController.signal.aborted) {
@@ -168,11 +174,6 @@
     }
   });
 
-  async function getNoteContent(noteName, abortController) {
-    const content = await invoke("get_note_content", { noteName });
-    return content;
-  }
-
   function selectNote(note, index) {
     if (selectedIndex !== index) {
       selectedIndex = index;
@@ -182,7 +183,7 @@
   async function enterEditMode() {
     if (selectedNote) {
       try {
-        const rawContent = getNoteContent(selectedNote);
+        const rawContent = await getNoteContent(selectedNote);
         isEditMode = true;
         editContent = rawContent;
       } catch (e) {
@@ -207,7 +208,7 @@
         noteName: selectedNote,
         content: editContent
       });
-      const content = getNoteContent(selectedNote);
+      const content = await getNoteContent(selectedNote);
       noteContent = content;
       highlightedContent = processContentForDisplay(content, query);
       isEditMode = false;
