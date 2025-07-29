@@ -239,7 +239,6 @@
 
   onMount(async () => {
     await tick(); // Ensure DOM is updated and searchElement is bound
-    console.log('onMount: Attempting to focus searchElement', searchElement);
     searchElement.focus();
     loadNotesImmediate('');
     return () => {

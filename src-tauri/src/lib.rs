@@ -233,7 +233,7 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
             row.get(0)
         })
         .map_err(|e| e.to_string())?;
-        let results: Vec<_> = rows.flatten().collect();
+    let results: Vec<_> = rows.flatten().collect();
 
     Ok(results)
 }
@@ -430,8 +430,14 @@ pub fn run() {
                                 let app_handle = app.clone();
                                 match app_handle.get_webview_window("main") {
                                     Some(window) => {
-                                        if window.is_visible().unwrap_or(false) {
+                                        if window.is_visible().unwrap_or(false)
+                                            && window.is_focused().unwrap_or(false)
+                                        {
                                             let _ = window.hide();
+                                        } else if window.is_visible().unwrap_or(false)
+                                            && !window.is_focused().unwrap_or(false)
+                                        {
+                                            let _ = window.set_focus();
                                         } else {
                                             let _ = window.show();
                                             let _ = window.set_focus();
