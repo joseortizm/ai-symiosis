@@ -372,6 +372,23 @@ fn refresh_cache() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_note_in_editor(note_name: &str) -> Result<(), String> {
+    let note_path = get_notes_dir().join(note_name);
+    if !note_path.exists() {
+        return Err(format!("Note not found: {}", note_name));
+    }
+
+    std::process::Command::new("open")
+        // .arg("-a")
+        // .arg("TextEdit")
+        .arg(&note_path)
+        .status()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 fn show_main_window(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
         Some(window) => {
@@ -558,6 +575,7 @@ pub fn run() {
             delete_note,
             save_note,
             refresh_cache,
+            open_note_in_editor,
             list_all_notes,
             show_main_window,
             hide_main_window

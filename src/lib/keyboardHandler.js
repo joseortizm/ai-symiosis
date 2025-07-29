@@ -59,8 +59,11 @@ const actionRegistry = {
   notes: {
     openExternal: async ({ state, actions }) => {
       if (state.selectedNote) {
-        await actions.invoke("open_note", { noteName: state.selectedNote });
+        await actions.invoke("open_note_in_editor", { noteName: state.selectedNote });
       }
+    },
+    refreshCache: async ({ state, actions }) => {
+      await actions.invoke("refresh_cache");
     },
     deleteNote: ({ state, actions }) => {
       if (state.selectedNote) {
@@ -90,6 +93,7 @@ const keyMappings = {
     'Ctrl+Enter': 'notes.createNote',
     'Ctrl+n': 'notes.createNote',
     'Ctrl+o': 'notes.openExternal',
+    'Ctrl+r': 'notes.refreshCache',
     'Ctrl+x': 'notes.deleteNote',
     'Ctrl+u': 'scrolling.scrollUp200',
     'Ctrl+d': 'scrolling.scrollDown200',
