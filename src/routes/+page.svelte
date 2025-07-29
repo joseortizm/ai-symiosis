@@ -28,6 +28,7 @@
   let createDialogInput = $state();
   let deleteKeyCount = $state(0);
   let deleteKeyTimeout = $state();
+  // svelte-ignore non_reactive_update
   let deletionDialog;
 
   let searchAbortController = null;
