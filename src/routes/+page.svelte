@@ -168,7 +168,7 @@
 
   function openCreateDialog() {
     // Pre-fill with search query if no results and query exists
-    if (filteredNotes.length === 0 && query.trim()) {
+    if (!highlightedContent.trim() && query.trim()) {
       newNoteName = query.trim();
     } else {
       newNoteName = '';
