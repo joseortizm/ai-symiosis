@@ -315,7 +315,7 @@
   async function enterEditMode() {
     if (selectedNote) {
       try {
-        const rawContent = await getNoteContent(selectedNote);
+        const rawContent = await invoke("get_note_raw_content", { noteName: selectedNote });
         isEditMode = true;
         editContent = rawContent;
       } catch (e) {
