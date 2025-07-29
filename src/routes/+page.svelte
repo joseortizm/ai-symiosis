@@ -332,6 +332,7 @@
 
   function exitEditMode() {
     isEditMode = false;
+    searchElement?.focus();
   }
 
   async function saveNote() {
