@@ -240,11 +240,7 @@
   onMount(async () => {
     await tick(); // Ensure DOM is updated and searchElement is bound
     console.log('onMount: Attempting to focus searchElement', searchElement);
-    setTimeout(() => {
-      if (searchElement) {
-        searchElement.focus();
-      }
-    }, 0); // Small delay to ensure DOM is ready
+    searchElement.focus();
     loadNotesImmediate('');
     return () => {
       if (searchAbortController) searchAbortController.abort();
