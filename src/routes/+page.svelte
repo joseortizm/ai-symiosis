@@ -21,12 +21,16 @@
   let highlightedContent = $state('');
   let isEditMode = $state(false);
   let editContent = $state('');
+  let showDeleteDialog = $state(false);
+  let showCreateDialog = $state(false);
+  let newNoteName = $state('');
+  let highlightsCleared = $state(false);
 
   let searchAbortController = null;
   let contentAbortController = null;
 
   function processContentForDisplay(content, query) {
-    if (!query.trim()) {
+    if (!query.trim() || highlightsCleared) {
       return content;
     }
     const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
@@ -35,7 +39,7 @@
   }
 
   function scrollToFirstMatch() {
-    if (noteContentElement && query.trim()) {
+    if (noteContentElement && query.trim() && !highlightsCleared) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight');
         if (firstMatch) {
@@ -59,6 +63,10 @@
     if (newQuery === query) return;
     // Update query immediately for highlighting
     query = newQuery;
+    // Reset highlights cleared flag when search changes
+    if (newQuery.trim()) {
+      highlightsCleared = false;
+    }
     // Cancel previous search request and timer
     clearTimeout(searchTimeout);
     searchAbortController?.abort();
@@ -106,6 +114,55 @@
     return content;
   }
 
+  async function deleteNote() {
+    if (!selectedNote) return;
+
+    try {
+      await invoke("delete_note", { noteName: selectedNote });
+      // Refresh the notes list
+      await loadNotesImmediate(searchInput);
+      showDeleteDialog = false;
+    } catch (e) {
+      console.error("Failed to delete note:", e);
+      alert(`Failed to delete note: ${e}`);
+    }
+  }
+
+  async function createNote() {
+    if (!newNoteName.trim()) return;
+
+    let noteName = newNoteName.trim();
+    // Auto-add .md extension if no extension provided
+    if (!noteName.includes('.')) {
+      noteName += '.md';
+    }
+
+    try {
+      await invoke("create_new_note", { noteName });
+      // Refresh the notes list
+      await loadNotesImmediate(searchInput);
+      // Select the new note
+      const noteIndex = filteredNotes.findIndex(note => note === noteName);
+      if (noteIndex >= 0) {
+        selectedIndex = noteIndex;
+      }
+      showCreateDialog = false;
+      newNoteName = '';
+    } catch (e) {
+      console.error("Failed to create note:", e);
+      alert(`Failed to create note: ${e}`);
+    }
+  }
+
+  function clearHighlights() {
+    highlightsCleared = true;
+    highlightedContent = processContentForDisplay(noteContent, query);
+  }
+
+  function clearSearch() {
+    searchInput = '';
+    highlightsCleared = false;
+  }
 
   $effect(() => {
     debounceSearch(searchInput);
@@ -227,6 +284,8 @@
       selectedNote,
       noteContentElement,
       searchElement,
+      query,
+      highlightsCleared,
     }),
     {
       setSelectedIndex: (value) => selectedIndex = value,
@@ -234,6 +293,10 @@
       exitEditMode,
       saveNote,
       invoke,
+      showDeleteDialog: () => showDeleteDialog = true,
+      showCreateDialog: () => showCreateDialog = true,
+      clearHighlights,
+      clearSearch,
     }
   );
 
@@ -275,6 +338,49 @@
     bind:noteContentElement={noteContentElement}
     bind:isNoteContentFocused={isNoteContentFocused}
   />
+
+  <!-- Delete Confirmation Dialog -->
+  {#if showDeleteDialog}
+    <div class="dialog-overlay" onclick={() => showDeleteDialog = false}>
+      <div class="dialog" onclick={(e) => e.stopPropagation()}>
+        <h3>Delete Note</h3>
+        <p>Are you sure you want to delete "{selectedNote}"?</p>
+        <p class="warning">This action cannot be undone.</p>
+        <div class="dialog-buttons">
+          <button class="btn-cancel" onclick={() => showDeleteDialog = false}>Cancel</button>
+          <button class="btn-delete" onclick={deleteNote}>Delete</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Create Note Dialog -->
+  {#if showCreateDialog}
+    <div class="dialog-overlay" onclick={() => showCreateDialog = false}>
+      <div class="dialog" onclick={(e) => e.stopPropagation()}>
+        <h3>Create New Note</h3>
+        <input
+          bind:value={newNoteName}
+          placeholder="Enter note name (extension will be .md)"
+          class="note-name-input"
+          onkeydown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              createNote();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              showCreateDialog = false;
+              newNoteName = '';
+            }
+          }}
+        />
+        <div class="dialog-buttons">
+          <button class="btn-cancel" onclick={() => { showCreateDialog = false; newNoteName = ''; }}>Cancel</button>
+          <button class="btn-create" onclick={createNote} disabled={!newNoteName.trim()}>Create</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </main>
 
 <style>
@@ -290,5 +396,115 @@
     background-color: #282828;
     color: #ebdbb2;
     font-family: 'Inter', sans-serif;
+  }
+
+  .dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .dialog {
+    background-color: #3c3836;
+    border: 1px solid #504945;
+    border-radius: 8px;
+    padding: 24px;
+    min-width: 400px;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .dialog h3 {
+    margin: 0 0 16px 0;
+    color: #ebdbb2;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .dialog p {
+    margin: 8px 0;
+    color: #d5c4a1;
+    line-height: 1.5;
+  }
+
+  .warning {
+    color: #fb4934 !important;
+    font-size: 14px;
+    font-style: italic;
+  }
+
+  .note-name-input {
+    width: 100%;
+    padding: 12px;
+    margin: 16px 0;
+    background-color: #282828;
+    border: 1px solid #504945;
+    border-radius: 4px;
+    color: #ebdbb2;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .note-name-input:focus {
+    outline: none;
+    border-color: #83a598;
+    box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
+  }
+
+  .dialog-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .dialog-buttons button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-cancel {
+    background-color: #504945;
+    color: #d5c4a1;
+  }
+
+  .btn-cancel:hover {
+    background-color: #665c54;
+  }
+
+  .btn-delete {
+    background-color: #fb4934;
+    color: #fbf1c7;
+  }
+
+  .btn-delete:hover {
+    background-color: #cc241d;
+  }
+
+  .btn-create {
+    background-color: #b8bb26;
+    color: #282828;
+  }
+
+  .btn-create:hover:not(:disabled) {
+    background-color: #98971a;
+  }
+
+  .btn-create:disabled {
+    background-color: #504945;
+    color: #7c6f64;
+    cursor: not-allowed;
   }
 </style>

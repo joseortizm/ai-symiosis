@@ -267,15 +267,86 @@ fn render_note(filename: &str, content: &str) -> String {
 }
 
 #[tauri::command]
+fn create_new_note(note_name: &str) -> Result<(), String> {
+    // Validate note name
+    if note_name.trim().is_empty() {
+        return Err("Note name cannot be empty".to_string());
+    }
+
+    // Prevent path traversal attacks
+    if note_name.contains("..") || note_name.contains('/') || note_name.contains('\\') {
+        return Err("Invalid note name".to_string());
+    }
+
+    let note_path = get_notes_dir().join(note_name);
+
+    // Check if note already exists
+    if note_path.exists() {
+        return Err(format!("Note '{}' already exists", note_name));
+    }
+
+    // Create parent directories if they don't exist
+    if let Some(parent) = note_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+
+    // Create empty note file
+    fs::write(&note_path, "").map_err(|e| format!("Failed to create note: {}", e))?;
+
+    // Add to database
+    let conn =
+        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    let modified = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    conn.execute(
+        "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+        params![note_name, "", modified],
+    )
+    .map_err(|e| format!("Database error: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn delete_note(note_name: &str) -> Result<(), String> {
+    // Validate note name
+    if note_name.trim().is_empty() {
+        return Err("Note name cannot be empty".to_string());
+    }
+
+    let note_path = get_notes_dir().join(note_name);
+
+    // Check if note exists
+    if !note_path.exists() {
+        return Err(format!("Note '{}' not found", note_name));
+    }
+
+    // Delete the file
+    fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
+
+    // Remove from database
+    let conn =
+        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
 fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     let note_path = get_notes_dir().join(note_name);
 
     if let Some(parent) = note_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
-    fs::write(&note_path, content).map_err(|e| e.to_string())?;
+    fs::write(&note_path, content).map_err(|e| format!("Failed to save note: {}", e))?;
 
-    let conn = Connection::open(get_database_path()).map_err(|e| e.to_string())?;
+    let conn =
+        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -286,16 +357,17 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
         "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
         params![note_name, content, modified],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("Database error: {}", e))?;
 
     Ok(())
 }
 
 #[tauri::command]
 fn refresh_cache() -> Result<(), String> {
-    let mut conn = Connection::open(get_database_path()).map_err(|e| e.to_string())?;
-    init_db(&conn).map_err(|e| e.to_string())?;
-    load_all_notes_into_sqlite(&mut conn).map_err(|e| e.to_string())?;
+    let mut conn =
+        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    init_db(&conn).map_err(|e| format!("Database initialization error: {}", e))?;
+    load_all_notes_into_sqlite(&mut conn).map_err(|e| format!("Failed to load notes: {}", e))?;
     Ok(())
 }
 
@@ -303,8 +375,12 @@ fn refresh_cache() -> Result<(), String> {
 fn show_main_window(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
         Some(window) => {
-            window.show().map_err(|e| e.to_string())?;
-            window.set_focus().map_err(|e| e.to_string())?;
+            window
+                .show()
+                .map_err(|e| format!("Failed to show window: {}", e))?;
+            window
+                .set_focus()
+                .map_err(|e| format!("Failed to focus window: {}", e))?;
         }
         None => {
             // Create the window if it doesn't exist
@@ -313,7 +389,7 @@ fn show_main_window(app: AppHandle) -> Result<(), String> {
                 .inner_size(1200.0, 800.0)
                 .center()
                 .build()
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| format!("Failed to create window: {}", e))?;
         }
     }
     Ok(())
@@ -322,7 +398,9 @@ fn show_main_window(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn hide_main_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
-        window.hide().map_err(|e| e.to_string())?;
+        window
+            .hide()
+            .map_err(|e| format!("Failed to hide window: {}", e))?;
     }
     Ok(())
 }
@@ -476,6 +554,8 @@ pub fn run() {
             search_notes,
             get_note_content,
             get_note_raw_content,
+            create_new_note,
+            delete_note,
             save_note,
             refresh_cache,
             list_all_notes,

@@ -62,6 +62,24 @@ const actionRegistry = {
         await actions.invoke("open_note", { noteName: state.selectedNote });
       }
     },
+    deleteNote: ({ state, actions }) => {
+      if (state.selectedNote) {
+        actions.showDeleteDialog();
+      }
+    },
+    createNote: ({ actions }) => {
+      actions.showCreateDialog();
+    },
+  },
+
+  search: {
+    clearHighlights: ({ state, actions }) => {
+      if (state.query.trim() && !state.highlightsCleared) {
+        actions.clearHighlights();
+      } else if (state.highlightsCleared || !state.query.trim()) {
+        actions.clearSearch();
+      }
+    },
   }
 };
 
@@ -69,7 +87,9 @@ const actionRegistry = {
 const keyMappings = {
   searchInput: {
     'Enter': 'editing.enterEdit',
+    'Ctrl+Enter': 'notes.createNote',
     'Ctrl+o': 'notes.openExternal',
+    'Ctrl+x': 'notes.deleteNote',
     'Ctrl+u': 'scrolling.scrollUp200',
     'Ctrl+d': 'scrolling.scrollDown200',
     'ArrowUp': 'navigation.moveUp',
@@ -78,6 +98,7 @@ const keyMappings = {
     'Ctrl+p': 'navigation.moveUp',
     'Ctrl+j': 'navigation.moveDown',
     'Ctrl+n': 'navigation.moveDown',
+    'Escape': 'search.clearHighlights',
   },
 
   editMode: {
@@ -92,12 +113,16 @@ const keyMappings = {
     'Ctrl+n': 'scrolling.scrollDown',
     'Escape': 'navigation.focusSearch',
     'e': 'editing.enterEdit',
+    'Ctrl+x': 'notes.deleteNote',
+    'Ctrl+Enter': 'notes.createNote',
   },
 
   default: {
     'ArrowUp': 'navigation.moveUp',
     'ArrowDown': 'navigation.moveDown',
     'Enter': 'editing.enterEdit',
+    'Ctrl+Enter': 'notes.createNote',
+    'Ctrl+x': 'notes.deleteNote',
     'Escape': 'navigation.focusSearch',
   }
 };
@@ -154,4 +179,3 @@ export function createKeyboardHandler(getState, actions) {
     }
   };
 }
-
