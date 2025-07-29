@@ -8,7 +8,7 @@
 <input
   type="text"
   bind:value
-  placeholder="Search notes... (Enter: edit, Ctrl+O: open, Ctrl+U/D: scroll)"
+  placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
   bind:this={element}
   on:focus={onFocus}
