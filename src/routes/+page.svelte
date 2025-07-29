@@ -346,6 +346,7 @@
       noteContent = content;
       highlightedContent = processContentForDisplay(content, query);
       isEditMode = false;
+      searchElement?.focus();
     } catch (e) {
       console.error("Failed to save note:", e);
     }
