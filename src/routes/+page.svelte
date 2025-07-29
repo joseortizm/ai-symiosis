@@ -24,6 +24,9 @@
   let showDeleteDialog = $state(false);
   let showCreateDialog = $state(false);
   let newNoteName = $state('');
+  let showRenameDialog = $state(false);
+  let newNoteNameForRename = $state('');
+  let renameDialogInput = $state();
   let highlightsCleared = $state(false);
   let createDialogInput = $state();
   let deleteKeyCount = $state(0);
@@ -167,6 +170,41 @@
     }
   }
 
+  async function renameNote() {
+    if (!newNoteNameForRename.trim() || !selectedNote) return;
+
+    let newName = newNoteNameForRename.trim();
+    if (!newName.includes('.')) {
+      newName += '.md';
+    }
+
+    try {
+      await invoke("rename_note", { oldName: selectedNote, newName: newName });
+      await loadNotesImmediate(searchInput);
+      const noteIndex = filteredNotes.findIndex(note => note === newName);
+      if (noteIndex >= 0) {
+        selectedIndex = noteIndex;
+      }
+      closeRenameDialog();
+    } catch (e) {
+      console.error("Failed to rename note:", e);
+      alert(`Failed to rename note: ${e}`);
+    }
+  }
+
+  function openRenameDialog() {
+    if (selectedNote) {
+      newNoteNameForRename = selectedNote.endsWith('.md') ? selectedNote.slice(0, -3) : selectedNote;
+      showRenameDialog = true;
+    }
+  }
+
+  function closeRenameDialog() {
+    showRenameDialog = false;
+    newNoteNameForRename = '';
+    searchElement?.focus();
+  }
+
   function openCreateDialog() {
     // Pre-fill with search query if no results and query exists
     if (!highlightedContent.trim() && query.trim()) {
@@ -307,6 +345,15 @@
     }
   });
 
+  $effect(() => {
+    if (showRenameDialog && renameDialogInput) {
+      tick().then(() => {
+        renameDialogInput.focus();
+        renameDialogInput.select();
+      });
+    }
+  });
+
   function selectNote(note, index) {
     if (selectedIndex !== index) {
       selectedIndex = index;
@@ -384,6 +431,7 @@
       invoke,
       showDeleteDialog: () => openDeleteDialog(),
       showCreateDialog: () => openCreateDialog(),
+      showRenameDialog: () => openRenameDialog(),
       clearHighlights,
       clearSearch,
     }
@@ -490,6 +538,36 @@
         <div class="dialog-buttons">
           <button class="btn-cancel" onclick={closeCreateDialog}>Cancel</button>
           <button class="btn-create" onclick={createNote} disabled={!newNoteName.trim()}>Create</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Rename Note Dialog -->
+  {#if showRenameDialog}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="dialog-overlay" onclick={closeRenameDialog}>
+      <div class="dialog" onclick={(e) => e.stopPropagation()}>
+        <h3>Rename Note</h3>
+        <input
+          bind:this={renameDialogInput}
+          bind:value={newNoteNameForRename}
+          placeholder="Enter new note name"
+          class="note-name-input"
+          onkeydown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              renameNote();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              closeRenameDialog();
+            }
+          }}
+        />
+        <div class="dialog-buttons">
+          <button class="btn-cancel" onclick={closeRenameDialog}>Cancel</button>
+          <button class="btn-create" onclick={renameNote} disabled={!newNoteNameForRename.trim()}>Rename</button>
         </div>
       </div>
     </div>

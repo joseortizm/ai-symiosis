@@ -337,6 +337,35 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
+    let notes_dir = get_notes_dir();
+    let old_path = notes_dir.join(&old_name);
+    let new_path = notes_dir.join(&new_name);
+
+    if !old_path.exists() {
+        return Err(format!("Note '{}' not found", old_name));
+    }
+
+    if new_path.exists() {
+        return Err(format!("Note '{}' already exists", new_name));
+    }
+
+    // Rename the file
+    fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))?;
+
+    // Update the database
+    let conn =
+        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    conn.execute(
+        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+        params![new_name, old_name],
+    )
+    .map_err(|e| format!("Database error: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
 fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     let note_path = get_notes_dir().join(note_name);
 
@@ -573,6 +602,7 @@ pub fn run() {
             get_note_raw_content,
             create_new_note,
             delete_note,
+            rename_note,
             save_note,
             refresh_cache,
             open_note_in_editor,

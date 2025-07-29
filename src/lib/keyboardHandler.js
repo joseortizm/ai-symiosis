@@ -73,6 +73,9 @@ const actionRegistry = {
     createNote: ({ actions }) => {
       actions.showCreateDialog();
     },
+    renameNote: ({ actions }) => {
+      actions.showRenameDialog();
+    },
   },
 
   search: {
@@ -92,6 +95,7 @@ const keyMappings = {
     'Enter': 'editing.enterEdit',
     'Ctrl+Enter': 'notes.createNote',
     'Ctrl+n': 'notes.createNote',
+    'Ctrl+m': 'notes.renameNote',
     'Ctrl+o': 'notes.openExternal',
     'Ctrl+r': 'notes.refreshCache',
     'Ctrl+x': 'notes.deleteNote',
