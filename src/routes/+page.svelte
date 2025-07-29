@@ -25,6 +25,10 @@
   let showCreateDialog = $state(false);
   let newNoteName = $state('');
   let highlightsCleared = $state(false);
+  let createDialogInput = $state();
+  let deleteKeyCount = $state(0);
+  let deleteKeyTimeout = $state();
+  let deletionDialog;
 
   let searchAbortController = null;
   let contentAbortController = null;
@@ -122,6 +126,11 @@
       // Refresh the notes list
       await loadNotesImmediate(searchInput);
       showDeleteDialog = false;
+      deleteKeyCount = 0;
+      clearTimeout(deleteKeyTimeout);
+      // Return focus to search
+      await tick();
+      searchElement?.focus();
     } catch (e) {
       console.error("Failed to delete note:", e);
       alert(`Failed to delete note: ${e}`);
@@ -148,9 +157,55 @@
       }
       showCreateDialog = false;
       newNoteName = '';
+      // Return focus to search
+      await tick();
+      searchElement?.focus();
     } catch (e) {
       console.error("Failed to create note:", e);
       alert(`Failed to create note: ${e}`);
+    }
+  }
+
+  function openCreateDialog() {
+    // Pre-fill with search query if no results and query exists
+    if (filteredNotes.length === 0 && query.trim()) {
+      newNoteName = query.trim();
+    } else {
+      newNoteName = '';
+    }
+    showCreateDialog = true;
+  }
+
+  function closeCreateDialog() {
+    showCreateDialog = false;
+    newNoteName = '';
+    searchElement?.focus();
+  }
+
+  function openDeleteDialog() {
+    showDeleteDialog = true;
+    deleteKeyCount = 0;
+    clearTimeout(deleteKeyTimeout);
+  }
+
+  function closeDeleteDialog() {
+    showDeleteDialog = false;
+    deleteKeyCount = 0;
+    clearTimeout(deleteKeyTimeout);
+    searchElement?.focus();
+  }
+
+  function handleDeleteKeyPress() {
+    deleteKeyCount++;
+    if (deleteKeyCount === 1) {
+      // Start timeout for first 'D' press
+      deleteKeyTimeout = setTimeout(() => {
+        deleteKeyCount = 0;
+      }, 2000); // Reset after 2 seconds
+    } else if (deleteKeyCount === 2) {
+      // Second 'D' press - confirm deletion
+      clearTimeout(deleteKeyTimeout);
+      deleteNote();
     }
   }
 
@@ -231,6 +286,26 @@
     }
   });
 
+  // Effect to focus and select text in create dialog
+  $effect(() => {
+    if (showCreateDialog && createDialogInput) {
+      tick().then(() => {
+        createDialogInput.focus();
+        // If text was pre-filled from search query, select all
+        if (newNoteName.trim()) {
+          createDialogInput.select();
+        }
+      });
+    }
+  });
+
+  $effect(async () => {
+    if (showDeleteDialog && deletionDialog) {
+      await tick();
+      deletionDialog.focus();
+    }
+  });
+
   function selectNote(note, index) {
     if (selectedIndex !== index) {
       selectedIndex = index;
@@ -293,8 +368,8 @@
       exitEditMode,
       saveNote,
       invoke,
-      showDeleteDialog: () => showDeleteDialog = true,
-      showCreateDialog: () => showCreateDialog = true,
+      showDeleteDialog: () => openDeleteDialog(),
+      showCreateDialog: () => openCreateDialog(),
       clearHighlights,
       clearSearch,
     }
@@ -341,13 +416,32 @@
 
   <!-- Delete Confirmation Dialog -->
   {#if showDeleteDialog}
-    <div class="dialog-overlay" onclick={() => showDeleteDialog = false}>
-      <div class="dialog" onclick={(e) => e.stopPropagation()}>
+    <div class="dialog-overlay" onclick={closeDeleteDialog}>
+      <div
+        class="dialog"
+        bind:this={deletionDialog}
+        tabindex="0"
+        onclick={(e) => e.stopPropagation()}
+           onkeydown={(e) => {
+             if (e.key === 'Escape') {
+               e.preventDefault();
+               closeDeleteDialog();
+             } else if (e.key === 'D' || e.key === 'd') {
+               e.preventDefault();
+               handleDeleteKeyPress();
+             }
+           }}>
         <h3>Delete Note</h3>
         <p>Are you sure you want to delete "{selectedNote}"?</p>
         <p class="warning">This action cannot be undone.</p>
+        <div class="keyboard-hint">
+          <p>Press <kbd>DD</kbd> to confirm or <kbd>Esc</kbd> to cancel</p>
+          {#if deleteKeyCount === 1}
+            <p class="delete-progress">Press <kbd>D</kbd> again to confirm deletion</p>
+          {/if}
+        </div>
         <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={() => showDeleteDialog = false}>Cancel</button>
+          <button class="btn-cancel" onclick={closeDeleteDialog}>Cancel</button>
           <button class="btn-delete" onclick={deleteNote}>Delete</button>
         </div>
       </div>
@@ -356,10 +450,11 @@
 
   <!-- Create Note Dialog -->
   {#if showCreateDialog}
-    <div class="dialog-overlay" onclick={() => showCreateDialog = false}>
+    <div class="dialog-overlay" onclick={closeCreateDialog}>
       <div class="dialog" onclick={(e) => e.stopPropagation()}>
         <h3>Create New Note</h3>
         <input
+          bind:this={createDialogInput}
           bind:value={newNoteName}
           placeholder="Enter note name (extension will be .md)"
           class="note-name-input"
@@ -369,13 +464,12 @@
               createNote();
             } else if (e.key === 'Escape') {
               e.preventDefault();
-              showCreateDialog = false;
-              newNoteName = '';
+              closeCreateDialog();
             }
           }}
         />
         <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={() => { showCreateDialog = false; newNoteName = ''; }}>Cancel</button>
+          <button class="btn-cancel" onclick={closeCreateDialog}>Cancel</button>
           <button class="btn-create" onclick={createNote} disabled={!newNoteName.trim()}>Create</button>
         </div>
       </div>
@@ -446,16 +540,48 @@
     margin: 16px 0;
     background-color: #282828;
     border: 1px solid #504945;
-    border-radius: 4px;
+    border-radius: 6px;
     color: #ebdbb2;
     font-size: 14px;
     font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .note-name-input:focus {
     outline: none;
     border-color: #83a598;
     box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
+  }
+
+  .keyboard-hint {
+    margin: 16px 0;
+    padding: 12px;
+    background-color: #32302f;
+    border-radius: 4px;
+    border-left: 3px solid #83a598;
+  }
+
+  .keyboard-hint p {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #a89984;
+  }
+
+  .delete-progress {
+    color: #fe8019 !important;
+    font-weight: 500;
+  }
+
+  kbd {
+    background-color: #504945;
+    color: #ebdbb2;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    border: 1px solid #665c54;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
   .dialog-buttons {
