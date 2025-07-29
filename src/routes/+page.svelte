@@ -342,10 +342,21 @@
         noteName: selectedNote,
         content: editContent
       });
+
+      // refresh the database to include the new file
+      await invoke("refresh_cache");
+
+      // Refresh the notes list to sync with database
+      await loadNotesImmediate(searchInput);
+
+      // Reload the current note content
       const content = await getNoteContent(selectedNote);
       noteContent = content;
       highlightedContent = processContentForDisplay(content, query);
       isEditMode = false;
+
+      // Return focus to search after UI updates
+      await tick();
       searchElement?.focus();
     } catch (e) {
       console.error("Failed to save note:", e);
@@ -419,7 +430,10 @@
 
   <!-- Delete Confirmation Dialog -->
   {#if showDeleteDialog}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeDeleteDialog}>
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
         class="dialog"
         bind:this={deletionDialog}
@@ -453,6 +467,8 @@
 
   <!-- Create Note Dialog -->
   {#if showCreateDialog}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeCreateDialog}>
       <div class="dialog" onclick={(e) => e.stopPropagation()}>
         <h3>Create New Note</h3>
