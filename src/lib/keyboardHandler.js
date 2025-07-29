@@ -88,6 +88,7 @@ const keyMappings = {
   searchInput: {
     'Enter': 'editing.enterEdit',
     'Ctrl+Enter': 'notes.createNote',
+    'Ctrl+n': 'notes.createNote',
     'Ctrl+o': 'notes.openExternal',
     'Ctrl+x': 'notes.deleteNote',
     'Ctrl+u': 'scrolling.scrollUp200',
@@ -95,9 +96,7 @@ const keyMappings = {
     'ArrowUp': 'navigation.moveUp',
     'ArrowDown': 'navigation.moveDown',
     'Ctrl+k': 'navigation.moveUp',
-    'Ctrl+p': 'navigation.moveUp',
     'Ctrl+j': 'navigation.moveDown',
-    'Ctrl+n': 'navigation.moveDown',
     'Escape': 'search.clearHighlights',
   },
 
@@ -115,6 +114,7 @@ const keyMappings = {
     'e': 'editing.enterEdit',
     'Ctrl+x': 'notes.deleteNote',
     'Ctrl+Enter': 'notes.createNote',
+    'Ctrl+n': 'notes.createNote',
   },
 
   default: {
