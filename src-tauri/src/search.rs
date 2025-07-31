@@ -169,7 +169,8 @@ impl HybridSearcher {
             }
 
             if text
-                .split_whitespace()
+                .split(|c: char| "_-.,+=;: ".contains(c) || c.is_whitespace())
+                .filter(|s| !s.is_empty())
                 .any(|word| word.starts_with(query_lower))
             {
                 return Some((700 + boost, MatchType::PrefixTitle));
