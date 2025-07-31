@@ -19,7 +19,7 @@
   export let value;
   export let filename;
   export let onSave;
-  export let onExit;
+  // export let onExit;
 
   let container;
   let editorView;
