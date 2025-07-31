@@ -182,8 +182,19 @@ fn validate_note_name(note_name: &str) -> Result<(), String> {
         return Err("Note name cannot be empty".to_string());
     }
     // Prevent path traversal attacks
-    if note_name.contains("..") || note_name.contains('/') || note_name.contains('\\') {
+    if std::path::Path::new(note_name)
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err("Path traversal not allowed".to_string());
+    }
+
+    if note_name.contains('\\') {
         return Err("Invalid note name".to_string());
+    }
+
+    if std::path::Path::new(note_name).is_absolute() {
+        return Err("Absolute paths not allowed".to_string());
     }
     // Prevent hidden files and system files
     if note_name.starts_with('.') {
