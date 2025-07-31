@@ -174,6 +174,26 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     tx.commit()
 }
 
+fn validate_note_name(note_name: &str) -> Result<(), String> {
+    // Check for empty name
+    if note_name.trim().is_empty() {
+        return Err("Note name cannot be empty".to_string());
+    }
+    // Prevent path traversal attacks
+    if note_name.contains("..") || note_name.contains('/') || note_name.contains('\\') {
+        return Err("Invalid note name".to_string());
+    }
+    // Prevent hidden files and system files
+    if note_name.starts_with('.') {
+        return Err("Note name cannot start with a dot".to_string());
+    }
+    // Prevent excessively long names
+    if note_name.len() > 255 {
+        return Err("Note name too long".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn list_all_notes() -> Result<Vec<String>, String> {
     let db_path = get_database_path();
@@ -203,6 +223,7 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
 
 #[tauri::command]
 fn get_note_content(note_name: &str) -> Result<String, String> {
+    validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
@@ -213,6 +234,7 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn get_note_raw_content(note_name: &str) -> Result<String, String> {
+    validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
@@ -275,11 +297,7 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn delete_note(note_name: &str) -> Result<(), String> {
-    // Validate note name
-    if note_name.trim().is_empty() {
-        return Err("Note name cannot be empty".to_string());
-    }
-
+    validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
 
     // Check if note exists
@@ -301,6 +319,9 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
+    validate_note_name(&old_name)?;
+    validate_note_name(&new_name)?;
+
     let notes_dir = get_notes_dir();
     let old_path = notes_dir.join(&old_name);
     let new_path = notes_dir.join(&new_name);
@@ -330,6 +351,7 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
 
 #[tauri::command]
 fn save_note(note_name: &str, content: &str) -> Result<(), String> {
+    validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
 
     if let Some(parent) = note_path.parent() {
@@ -365,6 +387,7 @@ fn refresh_cache() -> Result<(), String> {
 
 #[tauri::command]
 fn open_note_in_editor(note_name: &str) -> Result<(), String> {
+    validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
