@@ -1,5 +1,7 @@
+mod search;
 use comrak::{markdown_to_html, ComrakOptions};
 use rusqlite::{params, Connection};
+use search::{search_notes_hybrid, SearchResult};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -196,46 +198,7 @@ fn list_all_notes() -> Result<Vec<String>, String> {
 #[tauri::command]
 fn search_notes(query: &str) -> Result<Vec<String>, String> {
     let db_path = get_database_path();
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-
-    // If query is empty, return all notes ordered by most recent
-    if query.trim().is_empty() {
-        let mut stmt = conn
-            .prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")
-            .map_err(|e| e.to_string())?;
-        let rows = stmt
-            .query_map([APP_CONFIG.max_search_results], |row| row.get(0))
-            .map_err(|e| e.to_string())?;
-        let results: Vec<_> = rows.flatten().collect();
-        return Ok(results);
-    }
-
-    // For non-empty queries, use FTS search with fuzzy matching
-    let mut stmt = conn
-        .prepare("SELECT filename FROM notes WHERE notes MATCH ? ORDER BY rank LIMIT ?")
-        .map_err(|e| e.to_string())?;
-
-    // Create a more flexible search pattern for fuzzy matching
-    let pattern = if query.contains(' ') {
-        // For multi-word queries, search for each word
-        query
-            .split_whitespace()
-            .map(|word| format!("{}*", word.replace('"', "")))
-            .collect::<Vec<_>>()
-            .join(" OR ")
-    } else {
-        // For single words, use prefix matching with wildcard
-        format!("{}*", query.replace('"', ""))
-    };
-
-    let rows = stmt
-        .query_map(params![pattern, APP_CONFIG.max_search_results], |row| {
-            row.get(0)
-        })
-        .map_err(|e| e.to_string())?;
-    let results: Vec<_> = rows.flatten().collect();
-
-    Ok(results)
+    search_notes_hybrid(query, &db_path, APP_CONFIG.max_search_results)
 }
 
 #[tauri::command]
