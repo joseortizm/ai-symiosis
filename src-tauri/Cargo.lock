@@ -3,6 +3,26 @@
 version = 4
 
 [[package]]
+name = "Symiosis"
+version = "0.1.0"
+dependencies = [
+ "comrak",
+ "dirs",
+ "html-escape",
+ "nucleo-matcher",
+ "open",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-opener",
+ "toml 0.8.23",
+ "walkdir",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3841,26 +3861,6 @@ dependencies = [
  "base64 0.21.7",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "symiosis"
-version = "0.1.0"
-dependencies = [
- "comrak",
- "dirs",
- "html-escape",
- "nucleo-matcher",
- "open",
- "rusqlite",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-opener",
- "toml 0.8.23",
- "walkdir",
 ]
 
 [[package]]

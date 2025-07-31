@@ -1,7 +1,7 @@
 mod search;
 use comrak::{markdown_to_html, ComrakOptions};
 use rusqlite::{params, Connection};
-use search::{search_notes_hybrid, SearchResult};
+use search::search_notes_hybrid;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
