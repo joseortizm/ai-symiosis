@@ -36,14 +36,32 @@
 
   let searchAbortController = null;
   let contentAbortController = null;
+  let highlightMemo = new Map();
+
 
   function processContentForDisplay(content, query) {
     if (!query.trim() || highlightsCleared) {
       return content;
     }
-    const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+
+    // Use memoization to avoid re-processing
+    const key = `${content.substring(0, 100)}:${query}`;
+    if (highlightMemo.has(key)) {
+      return highlightMemo.get(key);
+    }
+
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Fixed regex
     const regex = new RegExp(`(${escapedQuery})`, 'gi');
-    return content.replace(regex, '<mark class="highlight">$1</mark>');
+    const result = content.replace(regex, '<mark class="highlight">$1</mark>');
+
+    // Cache result (limit cache size)
+    if (highlightMemo.size > 50) {
+      const firstKey = highlightMemo.keys().next().value;
+      highlightMemo.delete(firstKey);
+    }
+    highlightMemo.set(key, result);
+
+    return result;
   }
 
   function scrollToFirstMatch() {
