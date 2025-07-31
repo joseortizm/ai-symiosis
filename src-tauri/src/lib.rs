@@ -1,5 +1,7 @@
+mod database;
 mod search;
 use comrak::{markdown_to_html, ComrakOptions};
+use database::get_db_connection;
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use serde::{Deserialize, Serialize};
@@ -196,8 +198,8 @@ fn validate_note_name(note_name: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn list_all_notes() -> Result<Vec<String>, String> {
-    let db_path = get_database_path();
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let conn = get_db_connection()?;
+
     let mut stmt = conn
         .prepare("SELECT filename FROM notes ORDER BY modified DESC")
         .map_err(|e| e.to_string())?;
@@ -217,8 +219,7 @@ fn list_all_notes() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 fn search_notes(query: &str) -> Result<Vec<String>, String> {
-    let db_path = get_database_path();
-    search_notes_hybrid(query, &db_path, APP_CONFIG.max_search_results)
+    search_notes_hybrid(query, APP_CONFIG.max_search_results)
 }
 
 #[tauri::command]
@@ -278,9 +279,8 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
     // Create empty note file
     fs::write(&note_path, "").map_err(|e| format!("Failed to create note: {}", e))?;
 
-    // Add to database
-    let conn =
-        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    let conn = get_db_connection()?;
+
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -308,9 +308,8 @@ fn delete_note(note_name: &str) -> Result<(), String> {
     // Delete the file
     fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
 
-    // Remove from database
-    let conn =
-        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    let conn = get_db_connection()?;
+
     conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -337,9 +336,8 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     // Rename the file
     fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))?;
 
-    // Update the database
-    let conn =
-        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    let conn = get_db_connection()?;
+
     conn.execute(
         "UPDATE notes SET filename = ?1 WHERE filename = ?2",
         params![new_name, old_name],
@@ -359,8 +357,8 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     }
     fs::write(&note_path, content).map_err(|e| format!("Failed to save note: {}", e))?;
 
-    let conn =
-        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    let conn = get_db_connection()?;
+
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -378,8 +376,7 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn refresh_cache() -> Result<(), String> {
-    let mut conn =
-        Connection::open(get_database_path()).map_err(|e| format!("Database error: {}", e))?;
+    let mut conn = get_db_connection()?;
     init_db(&conn).map_err(|e| format!("Database initialization error: {}", e))?;
     load_all_notes_into_sqlite(&mut conn).map_err(|e| format!("Failed to load notes: {}", e))?;
     Ok(())
@@ -512,7 +509,7 @@ pub fn initialize_notes() {
     if let Some(parent) = db_path.parent() {
         let _ = fs::create_dir_all(parent);
     }
-    let mut conn = Connection::open(&db_path).expect("Failed to open DB");
+    let mut conn = get_db_connection().expect("Failed to open DB");
     init_db(&conn).expect("Failed to init DB");
     load_all_notes_into_sqlite(&mut conn).expect("Failed to load notes");
 }

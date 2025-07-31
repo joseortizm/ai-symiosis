@@ -31,6 +31,8 @@ html-escape = "0.2.13"
 toml = "0.8.23"
 dirs = "6"
 rusqlite = { version = "0.37", features = ["bundled", "functions", "serde_json", "chrono"] }
+r2d2_sqlite = "0.31.0"
+r2d2 = "0.8.10"
 
 # Faster builds in debug mode
 [profile.dev]

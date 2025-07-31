@@ -1,7 +1,8 @@
 use nucleo_matcher::{Config, Matcher, Utf32Str};
-use rusqlite::{params, Connection};
+use r2d2::PooledConnection;
+use r2d2_sqlite::SqliteConnectionManager;
+use rusqlite::params;
 use std::cmp::Ordering;
-use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub struct SearchResult {
@@ -29,13 +30,13 @@ struct SearchCandidate {
 }
 
 pub struct HybridSearcher {
-    conn: Connection,
+    conn: PooledConnection<SqliteConnectionManager>,
     matcher: Matcher,
 }
 
 impl HybridSearcher {
-    pub fn new(db_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
-        let conn = Connection::open(db_path)?;
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let conn = crate::database::get_db_connection()?;
         let matcher = Matcher::new(Config::DEFAULT);
         Ok(Self { conn, matcher })
     }
@@ -120,7 +121,11 @@ impl HybridSearcher {
             .map_err(|e| e.to_string())
     }
 
-    fn score_candidate(&mut self, candidate: &SearchCandidate, query: &str) -> Option<SearchResult> {
+    fn score_candidate(
+        &mut self,
+        candidate: &SearchCandidate,
+        query: &str,
+    ) -> Option<SearchResult> {
         let query_lower = query.to_lowercase();
         let title_lower = candidate.title.to_lowercase();
         let filename_lower = candidate.filename.to_lowercase();
@@ -226,9 +231,8 @@ impl HybridSearcher {
 
 pub fn search_notes_hybrid(
     query: &str,
-    db_path: &Path,
     max_results: usize,
 ) -> Result<Vec<String>, String> {
-    let mut searcher = HybridSearcher::new(db_path).map_err(|e| e.to_string())?;
+    let mut searcher = HybridSearcher::new().map_err(|e| e.to_string())?;
     searcher.search(query, max_results)
 }
