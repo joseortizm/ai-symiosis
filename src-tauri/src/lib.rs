@@ -26,7 +26,6 @@ struct AppConfig {
     max_search_results: usize,
 }
 
-
 fn default_max_results() -> usize {
     100
 }
@@ -114,9 +113,11 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     let notes_dir = get_notes_dir();
 
-    // Check if directory exists - if not, just return without creating it
     if !notes_dir.exists() {
-        return Ok(());
+        if let Err(e) = fs::create_dir_all(&notes_dir) {
+            eprintln!("Failed to create notes directory: {}", e);
+            return Ok(());
+        }
     }
 
     conn.execute("DELETE FROM notes", [])?;
@@ -386,40 +387,49 @@ fn open_note_in_editor(note_name: &str) -> Result<(), String> {
 #[tauri::command]
 fn get_config_content() -> Result<String, String> {
     let config_path = get_config_path();
-    
+
     match fs::read_to_string(&config_path) {
         Ok(content) => Ok(content),
         Err(_) => {
-            // Create default config if it doesn't exist
-            let default_config = AppConfig::default();
-            if let Some(parent) = config_path.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
-            let toml_content = toml::to_string(&default_config)
-                .map_err(|e| format!("Failed to serialize config: {}", e))?;
-            fs::write(&config_path, &toml_content)
-                .map_err(|e| format!("Failed to write config: {}", e))?;
-            Ok(toml_content)
+            let template = format!(
+                r#"# Symiosis Configuration File
+# Uncomment and modify the options below to configure the application
+
+# Directory where your notes are stored
+# Default: ~/Documents/Notes
+notes_directory = "{}"
+
+# Maximum number of search results to display
+# Default: 100
+max_search_results = 100
+"#,
+                get_default_notes_dir()
+            );
+            Ok(template)
         }
     }
 }
 
 #[tauri::command]
+fn config_exists() -> bool {
+    get_config_path().exists()
+}
+
+#[tauri::command]
 fn save_config_content(content: &str) -> Result<(), String> {
     let config_path = get_config_path();
-    
+
     // Validate TOML format before saving
-    let _: AppConfig = toml::from_str(content)
-        .map_err(|e| format!("Invalid TOML format: {}", e))?;
-    
+    let _: AppConfig =
+        toml::from_str(content).map_err(|e| format!("Invalid TOML format: {}", e))?;
+
     if let Some(parent) = config_path.parent() {
         fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create config directory: {}", e))?;
     }
-    
-    fs::write(&config_path, content)
-        .map_err(|e| format!("Failed to save config: {}", e))?;
-    
+
+    fs::write(&config_path, content).map_err(|e| format!("Failed to save config: {}", e))?;
+
     Ok(())
 }
 
@@ -534,6 +544,13 @@ pub fn initialize_notes() {
     }
     let mut conn = get_db_connection().expect("Failed to open DB");
     init_db(&conn).expect("Failed to init DB");
+
+    if !get_config_path().exists() {
+        conn.execute("DELETE FROM notes", [])
+            .expect("Failed to purge database");
+        return;
+    }
+
     load_all_notes_into_sqlite(&mut conn).expect("Failed to load notes");
 }
 
@@ -552,7 +569,7 @@ pub fn run() {
             {
                 let ctrl_shift_n =
                     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN);
-                
+
                 // Platform-specific preferences shortcut
                 let preferences_shortcut = if cfg!(target_os = "macos") {
                     Shortcut::new(Some(Modifiers::META), Code::Comma)
@@ -633,7 +650,8 @@ pub fn run() {
             show_main_window,
             hide_main_window,
             get_config_content,
-            save_config_content
+            save_config_content,
+            config_exists
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
