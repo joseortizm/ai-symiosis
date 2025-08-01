@@ -24,31 +24,11 @@ struct AppConfig {
     notes_directory: String,
     #[serde(default = "default_max_results")]
     max_search_results: usize,
-    #[serde(default = "default_fuzzy_threshold")]
-    fuzzy_match_threshold: u16,
-    #[serde(default)]
-    editor_settings: EditorSettings,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-struct EditorSettings {
-    #[serde(default = "default_theme")]
-    theme: String,
-    #[serde(default = "default_font_size")]
-    font_size: u16,
-}
 
 fn default_max_results() -> usize {
     100
-}
-fn default_fuzzy_threshold() -> u16 {
-    30
-}
-fn default_theme() -> String {
-    "dark".to_string()
-}
-fn default_font_size() -> u16 {
-    14
 }
 
 impl Default for AppConfig {
@@ -56,8 +36,6 @@ impl Default for AppConfig {
         Self {
             notes_directory: get_default_notes_dir(),
             max_search_results: default_max_results(),
-            fuzzy_match_threshold: default_fuzzy_threshold(),
-            editor_settings: EditorSettings::default(),
         }
     }
 }
