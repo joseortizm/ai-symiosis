@@ -1,3 +1,8 @@
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/aac06ba3-0a2f-443b-991e-d9d54b0a9ba2" width="20%" height="20%" alt="app-icon" />
+</div>
+
 # Symiosis
 
 > [!Warning]
