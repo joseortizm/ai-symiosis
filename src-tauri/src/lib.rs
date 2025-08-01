@@ -1,5 +1,7 @@
 mod database;
 mod search;
+#[cfg(test)]
+mod tests;
 use comrak::{markdown_to_html, ComrakOptions};
 use database::get_db_connection;
 use rusqlite::{params, Connection};
@@ -609,114 +611,4 @@ pub fn run() {
         }
         _ => {}
     });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_validate_note_name_valid_names() {
-        // Valid note names should pass
-        assert!(validate_note_name("note.md").is_ok());
-        assert!(validate_note_name("my-note.txt").is_ok());
-        assert!(validate_note_name("folder/note.md").is_ok());
-        assert!(validate_note_name("deep/folder/structure/note.md").is_ok());
-        assert!(validate_note_name("note_with_underscores.md").is_ok());
-        assert!(validate_note_name("123-numbers.md").is_ok());
-    }
-
-    #[test]
-    fn test_validate_note_name_path_traversal_attacks() {
-        // Path traversal attempts should be rejected
-        assert!(validate_note_name("../secret.txt").is_err());
-        assert!(validate_note_name("folder/../secret.txt").is_err());
-        assert!(validate_note_name("../../etc/passwd").is_err());
-        assert!(validate_note_name("folder/../../secret.txt").is_err());
-        assert!(validate_note_name("../../../root.txt").is_err());
-    }
-
-    #[test]
-    fn test_validate_note_name_absolute_paths() {
-        // Absolute paths should be rejected
-        assert!(validate_note_name("/etc/passwd").is_err());
-        assert!(validate_note_name("/home/user/secret.txt").is_err());
-        assert!(validate_note_name("/tmp/malicious.sh").is_err());
-        
-        // Windows-style absolute paths
-        assert!(validate_note_name("C:\\Windows\\System32\\config").is_err());
-        assert!(validate_note_name("D:\\secrets\\file.txt").is_err());
-    }
-
-    #[test]
-    fn test_validate_note_name_backslash_rejection() {
-        // Backslashes should be rejected (Windows path separators)
-        assert!(validate_note_name("folder\\note.txt").is_err());
-        assert!(validate_note_name("deep\\folder\\note.md").is_err());
-        assert!(validate_note_name("note\\..\\secret.txt").is_err());
-    }
-
-    #[test]
-    fn test_validate_note_name_hidden_files() {
-        // Hidden files (starting with dot) should be rejected
-        assert!(validate_note_name(".hidden").is_err());
-        assert!(validate_note_name(".config").is_err());
-        assert!(validate_note_name(".ssh/id_rsa").is_err());
-        assert!(validate_note_name("folder/.hidden").is_ok()); // Only basename matters
-    }
-
-    #[test]
-    fn test_validate_note_name_empty_and_whitespace() {
-        // Empty or whitespace-only names should be rejected
-        assert!(validate_note_name("").is_err());
-        assert!(validate_note_name("   ").is_err());
-        assert!(validate_note_name("\t").is_err());
-        assert!(validate_note_name("\n").is_err());
-        assert!(validate_note_name("  \t  \n  ").is_err());
-    }
-
-    #[test]
-    fn test_validate_note_name_length_limits() {
-        // Excessively long names should be rejected
-        let long_name = "a".repeat(256);
-        assert!(validate_note_name(&long_name).is_err());
-        
-        // 255 characters should be allowed
-        let max_length_name = "a".repeat(255);
-        assert!(validate_note_name(&max_length_name).is_ok());
-        
-        // 254 characters should be allowed
-        let normal_name = "a".repeat(254);
-        assert!(validate_note_name(&normal_name).is_ok());
-    }
-
-    #[test]
-    fn test_validate_note_name_edge_cases() {
-        // Test various edge cases that could bypass validation
-        assert!(validate_note_name("../").is_err());
-        assert!(validate_note_name("./").is_err()); // Starts with dot (hidden file)
-        assert!(validate_note_name("...").is_ok()); // Just dots, not parent dir
-        assert!(validate_note_name("note..md").is_ok()); // Dots in middle are fine
-        assert!(validate_note_name("folder/../subfolder/note.md").is_err()); // Mixed valid/invalid
-        assert!(validate_note_name("file.txt").is_ok()); // Normal file should work
-    }
-
-    #[test]
-    fn test_security_critical_functions_integration() {
-        // Test that security functions work together properly
-        let valid_name = "test-note.md";
-        let invalid_name = "../../../secret.txt";
-        
-        // Valid name should pass validation
-        assert!(validate_note_name(valid_name).is_ok());
-        
-        // Invalid name should fail validation
-        assert!(validate_note_name(invalid_name).is_err());
-        
-        // Test that the error messages are meaningful
-        let result = validate_note_name(invalid_name);
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err();
-        assert!(error_msg.contains("Path traversal not allowed"));
-    }
 }
