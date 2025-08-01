@@ -1,10 +1,25 @@
+# macOS
 .DS_Store
+
+# Dependencies
 node_modules
+
+# Build outputs
 /build
 /.svelte-kit
 /package
+
+# Tauri build
+/src-tauri/target/
+
+# Environment variables
 .env
 .env.*
 !.env.example
+
+# Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Development tools
+/.ai/
