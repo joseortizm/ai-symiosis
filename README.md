@@ -25,21 +25,35 @@ Symiosis is designed for a keyboard-driven workflow.
 
 ### General Navigation
 
-*   **Type to Search:** Start typing in the search bar to filter notes.
-*   **`Ctrl + N` / `Ctrl + P` or `ArrowDown` / `ArrowUp`:** Navigate through the search results (notes list).
-*   **`Ctrl + D`:**/**`Ctrl + U`:** Scroll up/down half a page on current note.
-*   **`Enter`:** When a note is selected in the list, press `Enter` to enter edit mode for that note.
-*   **`Escape`:** Exit edit mode and return to the search bar.
-*   **`Ctrl + O`:** Open the currently selected note in the system.
+*   **Type to Search:** Start typing to filter notes (automatically focuses search bar).
+*   **`↓` / `↑` or `Ctrl + J` / `Ctrl + K`:** Navigate through the search results (notes list).
+*   **`Enter`:** When a note is selected, enter edit mode for that note.
+*   **`Escape`:** Return focus to the search bar.
+
+### Note Management
+
+*   **`Ctrl + N` or `Ctrl + Enter`:** Create a new note.
+*   **`Ctrl + M`:** Rename the currently selected note.
+*   **`Ctrl + O`:** Open the currently selected note in the system default editor.
+*   **`Ctrl + X`:** Delete the currently selected note (requires confirmation).
 
 ### Editing Notes
 
 *   **`Ctrl + S`:** Save changes to the current note while in edit mode.
-*   **`Escape`:** Exit edit mode without saving changes.
+*   **`Escape`:** Exit edit mode without saving changes and return to search bar.
 
 ### Scrolling Note Content
 
 When viewing a note (not in edit mode):
+*   **`Ctrl + D`:** Scroll down half a page.
+*   **`Ctrl + U`:** Scroll up half a page.
 
+### Search Highlights
 
-Enjoy a seamless note-taking experience with Symiosis!
+*   **`Escape`:** Clear search highlights in the current note, or clear search input if highlights are already cleared.
+
+### Global Shortcuts
+
+*   **`Ctrl + Shift + N`:** Toggle Symiosis window visibility (works system-wide).
+
+Have fun 🙂
