@@ -4,14 +4,6 @@
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
   import { markdown } from '@codemirror/lang-markdown';
-  import { javascript } from '@codemirror/lang-javascript';
-  import { python } from '@codemirror/lang-python';
-  import { rust } from '@codemirror/lang-rust';
-  import { html } from '@codemirror/lang-html';
-  import { css } from '@codemirror/lang-css';
-  import { json } from '@codemirror/lang-json';
-  import { xml } from '@codemirror/lang-xml';
-  import { sql } from '@codemirror/lang-sql';
   import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
   import { tags } from '@lezer/highlight';
   import { StreamLanguage } from '@codemirror/language';
@@ -131,14 +123,10 @@
         if (!filename) return markdown();
         const ext = filename.split('.').pop()?.toLowerCase();
         switch (ext) {
-          case 'js': case 'jsx': case 'ts': case 'tsx': return javascript();
-          case 'py': return python();
-          case 'rs': return rust();
-          case 'html': case 'htm': return html();
-          case 'css': return css();
-          case 'json': return json();
-          case 'xml': return xml();
-          case 'sql': return sql();
+          //case 'js': case 'jsx': case 'ts': case 'tsx': return javascript();
+          //case 'rs': return rust();
+          //case 'html': case 'htm': return html();
+          //case 'css': return css();
           case 'toml': return StreamLanguage.define(toml);
           case 'md': case 'markdown': default: return markdown();
         }
