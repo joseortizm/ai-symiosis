@@ -59,29 +59,30 @@ impl HybridSearcher {
     }
 
     fn sanitize_fts_query(query: &str) -> String {
-        let cleaned_query = query
-            .replace("AND", "")
-            .replace("OR", "")
-            .replace("NOT", "")
-            .replace("NEAR", "")
-            .replace("MATCH", "");
-
-        cleaned_query
+        // First pass: remove dangerous characters and special syntax
+        let cleaned_chars: String = query
             .chars()
             .filter_map(|c| match c {
                 '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' => None,
                 ':' | ';' | ',' | '!' | '@' | '#' | '$' | '%' | '^' | '&' => None,
                 '*' if query.len() == 1 => None,
                 c if c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.' => Some(c),
-                '*' if cleaned_query.len() > 1 => Some(c),
+                '*' if query.len() > 1 => Some(c),
                 _ => None,
             })
-            .collect::<String>()
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .trim()
-            .to_string()
+            .collect();
+
+        // Second pass: remove FTS operators as standalone words only
+        let words: Vec<&str> = cleaned_chars.split_whitespace().collect();
+        let filtered_words: Vec<&str> = words
+            .into_iter()
+            .filter(|&word| {
+                let upper_word = word.to_uppercase();
+                !matches!(upper_word.as_str(), "AND" | "OR" | "NOT" | "NEAR" | "MATCH")
+            })
+            .collect();
+
+        filtered_words.join(" ").trim().to_string()
     }
 
     pub fn search(&mut self, query: &str, max_results: usize) -> Result<Vec<String>, String> {
@@ -115,10 +116,11 @@ impl HybridSearcher {
             sanitized_query
                 .split_whitespace()
                 .filter(|word| !word.trim().is_empty())
+                .map(|word| format!("{}*", word))
                 .collect::<Vec<_>>()
                 .join(" OR ")
         } else {
-            sanitized_query
+            format!("{}*", sanitized_query)
         };
 
         let mut stmt = self
