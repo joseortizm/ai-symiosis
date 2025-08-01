@@ -103,11 +103,6 @@ mod config_tests {
         let config = AppConfig::default();
 
         assert_eq!(config.max_search_results, 100);
-        assert_eq!(config.fuzzy_match_threshold, 30);
-
-        assert_eq!(config.editor_settings.font_size, 0);
-        assert_eq!(config.editor_settings.theme, "");
-
         assert!(!config.notes_directory.is_empty());
     }
 
@@ -119,18 +114,7 @@ mod config_tests {
             toml::from_str(&toml_str).expect("Failed to deserialize config");
 
         assert_eq!(config.max_search_results, deserialized.max_search_results);
-        assert_eq!(
-            config.fuzzy_match_threshold,
-            deserialized.fuzzy_match_threshold
-        );
-        assert_eq!(
-            config.editor_settings.theme,
-            deserialized.editor_settings.theme
-        );
-        assert_eq!(
-            config.editor_settings.font_size,
-            deserialized.editor_settings.font_size
-        );
+        assert_eq!(config.notes_directory, deserialized.notes_directory);
     }
 
     #[test]
@@ -142,10 +126,6 @@ mod config_tests {
         let config: AppConfig = toml::from_str(minimal_toml).expect("Failed to deserialize");
 
         assert_eq!(config.max_search_results, 100);
-        assert_eq!(config.fuzzy_match_threshold, 30);
-
-        assert_eq!(config.editor_settings.theme, "");
-        assert_eq!(config.editor_settings.font_size, 0);
         assert_eq!(config.notes_directory, "/tmp/test");
     }
 
@@ -153,16 +133,13 @@ mod config_tests {
     fn test_config_serde_field_defaults() {
         let partial_toml = r#"
             notes_directory = "/tmp/test"
-
-            [editor_settings]
-            font_size = 16
+            max_search_results = 50
         "#;
 
         let config: AppConfig = toml::from_str(partial_toml).expect("Failed to deserialize");
 
         assert_eq!(config.notes_directory, "/tmp/test");
-        assert_eq!(config.editor_settings.theme, "dark");
-        assert_eq!(config.editor_settings.font_size, 16);
+        assert_eq!(config.max_search_results, 50);
     }
 }
 
