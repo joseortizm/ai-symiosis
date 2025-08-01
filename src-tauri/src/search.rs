@@ -58,6 +58,32 @@ impl HybridSearcher {
             .filter(|title| !title.is_empty())
     }
 
+    fn sanitize_fts_query(query: &str) -> String {
+        let cleaned_query = query
+            .replace("AND", "")
+            .replace("OR", "")
+            .replace("NOT", "")
+            .replace("NEAR", "")
+            .replace("MATCH", "");
+
+        cleaned_query
+            .chars()
+            .filter_map(|c| match c {
+                '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' => None,
+                ':' | ';' | ',' | '!' | '@' | '#' | '$' | '%' | '^' | '&' => None,
+                '*' if query.len() == 1 => None,
+                c if c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.' => Some(c),
+                '*' if cleaned_query.len() > 1 => Some(c),
+                _ => None,
+            })
+            .collect::<String>()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .trim()
+            .to_string()
+    }
+
     pub fn search(&mut self, query: &str, max_results: usize) -> Result<Vec<String>, String> {
         if query.trim().is_empty() {
             return self.get_recent_notes(max_results);
@@ -79,14 +105,20 @@ impl HybridSearcher {
     }
 
     fn get_candidates_from_sqlite(&self, query: &str) -> Result<Vec<SearchCandidate>, String> {
-        let fts_pattern = if query.contains(' ') {
-            query
+        let sanitized_query = Self::sanitize_fts_query(query);
+        
+        if sanitized_query.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        let fts_pattern = if sanitized_query.contains(' ') {
+            sanitized_query
                 .split_whitespace()
-                .map(|word| format!("{}*", word.replace('"', "")))
+                .filter(|word| !word.trim().is_empty())
                 .collect::<Vec<_>>()
                 .join(" OR ")
         } else {
-            format!("{}*", query.replace('"', ""))
+            sanitized_query
         };
 
         let mut stmt = self

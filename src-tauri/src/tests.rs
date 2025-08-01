@@ -50,7 +50,16 @@ mod validation_tests {
     #[test]
     fn test_validate_note_name_empty_and_whitespace() {
         let whitespace_variants = vec![
-            "", "   ", "\t", "\n", "\r", "\r\n", "\t\t\t", "\n\n\n", "  \t  \n  ", " \t \n \r ",
+            "",
+            "   ",
+            "\t",
+            "\n",
+            "\r",
+            "\r\n",
+            "\t\t\t",
+            "\n\n\n",
+            "  \t  \n  ",
+            " \t \n \r ",
         ];
 
         for variant in whitespace_variants {
@@ -79,7 +88,7 @@ mod validation_tests {
     fn test_security_critical_functions_integration() {
         assert!(validate_note_name("test-note.md").is_ok());
         assert!(validate_note_name("../../../secret.txt").is_err());
-        
+
         let error_msg = validate_note_name("../../../secret.txt").unwrap_err();
         assert!(error_msg.contains("Path traversal not allowed"));
     }
@@ -92,13 +101,13 @@ mod config_tests {
     #[test]
     fn test_default_config_values() {
         let config = AppConfig::default();
-        
+
         assert_eq!(config.max_search_results, 100);
         assert_eq!(config.fuzzy_match_threshold, 30);
-        
+
         assert_eq!(config.editor_settings.font_size, 0);
         assert_eq!(config.editor_settings.theme, "");
-        
+
         assert!(!config.notes_directory.is_empty());
     }
 
@@ -129,12 +138,12 @@ mod config_tests {
         let minimal_toml = r#"
             notes_directory = "/tmp/test"
         "#;
-        
+
         let config: AppConfig = toml::from_str(minimal_toml).expect("Failed to deserialize");
-        
+
         assert_eq!(config.max_search_results, 100);
         assert_eq!(config.fuzzy_match_threshold, 30);
-        
+
         assert_eq!(config.editor_settings.theme, "");
         assert_eq!(config.editor_settings.font_size, 0);
         assert_eq!(config.notes_directory, "/tmp/test");
@@ -144,13 +153,13 @@ mod config_tests {
     fn test_config_serde_field_defaults() {
         let partial_toml = r#"
             notes_directory = "/tmp/test"
-            
+
             [editor_settings]
             font_size = 16
         "#;
-        
+
         let config: AppConfig = toml::from_str(partial_toml).expect("Failed to deserialize");
-        
+
         assert_eq!(config.notes_directory, "/tmp/test");
         assert_eq!(config.editor_settings.theme, "dark");
         assert_eq!(config.editor_settings.font_size, 16);
@@ -196,6 +205,106 @@ mod note_rendering_tests {
     }
 }
 
+#[cfg(test)]
+mod fts_injection_tests {
+    use crate::search::search_notes_hybrid;
+
+    #[test]
+    fn test_fts_injection_attempts() {
+        let injection_attempts = vec![
+            "test AND malicious",
+            "test OR secret",
+            "test NOT public",
+            "test NEAR(password, 5)",
+            "test) OR (notes MATCH 'secret'",
+            "test) AND (filename:private",
+            "filename:secret",
+            "content:password",
+            "* AND NOT filename:public",
+            "NOT test",
+            "***",
+            "*test*",
+            "\"test\" OR \"secret\"",
+            "\"unclosed quote",
+            "(test OR (secret AND password))",
+            "test) UNION SELECT * FROM notes WHERE (1=1",
+        ];
+
+        for malicious_query in injection_attempts {
+            let result = std::panic::catch_unwind(|| search_notes_hybrid(malicious_query, 10));
+
+            assert!(
+                result.is_ok(),
+                "FTS injection query caused panic: {}",
+                malicious_query
+            );
+
+            match result.unwrap() {
+                Ok(_) => {}
+                Err(error_msg) => {
+                    assert!(
+                        !error_msg.contains("SQL"),
+                        "Error message leaked SQL details: {}",
+                        error_msg
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_fts_query_sanitization() {
+        let special_chars = vec![
+            "test\"quote",
+            "test(paren",
+            "test*wildcard",
+            "test AND operator",
+            "test: colon",
+        ];
+
+        for query in special_chars {
+            let result = search_notes_hybrid(query, 10);
+
+            match result {
+                Ok(_) => {}
+                Err(error) => {
+                    assert!(
+                        !error.to_lowercase().contains("syntax error"),
+                        "Query resulted in SQL syntax error: {} for input: {}",
+                        error,
+                        query
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_fts_parameter_safety() {
+        let dangerous_inputs = vec![
+            "'; DROP TABLE notes; --",
+            "' UNION SELECT * FROM sqlite_master --",
+            "\"; DELETE FROM notes; --",
+            "test'; INSERT INTO notes VALUES ('hack'); --",
+        ];
+
+        for dangerous_input in dangerous_inputs {
+            let result = search_notes_hybrid(dangerous_input, 10);
+
+            match result {
+                Ok(_) => {}
+                Err(error) => {
+                    let error_lower = error.to_lowercase();
+                    assert!(
+                        !error_lower.contains("table") || error_lower.contains("fts"),
+                        "Unexpected error type: {}",
+                        error
+                    );
+                }
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod database_integration_tests {
@@ -235,7 +344,7 @@ mod error_handling_tests {
         for (input, expected_error_content) in test_cases {
             let error_msg = validate_note_name(input).unwrap_err();
             assert!(error_msg.contains(expected_error_content));
-            
+
             if input.len() > 10 {
                 assert!(!error_msg.contains(input));
             }
@@ -284,5 +393,4 @@ mod security_regression_tests {
             assert!(validate_note_name(name).is_err());
         }
     }
-
 }
