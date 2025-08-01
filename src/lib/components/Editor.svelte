@@ -1,5 +1,6 @@
 <script>
   import { onMount, tick } from 'svelte';
+  import { invoke } from "@tauri-apps/api/core";
   import { EditorView, basicSetup } from 'codemirror';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
@@ -9,6 +10,7 @@
   import { StreamLanguage } from '@codemirror/language';
   import { toml } from '@codemirror/legacy-modes/mode/toml';
   import { vim } from "@replit/codemirror-vim";
+  import { emacs } from "@replit/codemirror-emacs";
 
   export let value;
   export let filename;
@@ -17,6 +19,25 @@
 
   let container;
   let editorView;
+  let editorMode = 'basic'; // default
+
+  async function loadEditorMode() {
+    try {
+      editorMode = await invoke("get_editor_mode");
+    } catch (e) {
+      console.error("Failed to load editor mode:", e);
+      editorMode = 'basic'; // fallback
+    }
+  }
+
+  function getKeyMappingsMode(mode) {
+    switch (mode) {
+      case 'vim': return vim();
+      case 'emacs': return emacs();
+      case 'basic': return null;
+      default: return null; // basic mode as default
+    }
+  }
 
   function createFallbackEditor() {
     if (!container) return;
@@ -142,8 +163,12 @@
         run: (view) => {
           setTimeout(() => {
             try {
-              const vimState = view.state.field(vim().field, false);
-              if (vimState && !vimState.insertMode) onExit();
+              if (editorMode === 'vim') {
+                const vimState = view.state.field(vim().field, false);
+                if (vimState && !vimState.insertMode) onExit();
+              } else {
+                onExit();
+              }
             } catch (e) {
               onExit();
             }
@@ -152,8 +177,10 @@
         }
       }]) : null;
 
+      const keyMappingsMode = getKeyMappingsMode(editorMode);
+      
       const extensions = [
-        vim(),
+        keyMappingsMode,
         basicSetup,
         getLanguageExtension(filename),
         gruvboxTheme,
@@ -188,6 +215,7 @@
 
   onMount(async () => {
     await tick();
+    await loadEditorMode();
     createCodeMirrorEditor();
     return () => {
       if (editorView) {

@@ -26,6 +26,8 @@ struct AppConfig {
     max_search_results: usize,
     #[serde(default = "default_global_shortcut")]
     global_shortcut: String,
+    #[serde(default = "default_editor_mode")]
+    editor_mode: String,
 }
 
 fn default_max_results() -> usize {
@@ -34,6 +36,10 @@ fn default_max_results() -> usize {
 
 fn default_global_shortcut() -> String {
     "Ctrl+Shift+N".to_string()
+}
+
+fn default_editor_mode() -> String {
+    "basic".to_string()
 }
 
 fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
@@ -46,6 +52,7 @@ impl Default for AppConfig {
             notes_directory: get_default_notes_dir(),
             max_search_results: default_max_results(),
             global_shortcut: default_global_shortcut(),
+            editor_mode: default_editor_mode(),
         }
     }
 }
@@ -420,6 +427,11 @@ fn save_config_content(content: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn get_editor_mode() -> String {
+    APP_CONFIG.editor_mode.clone()
+}
+
+#[tauri::command]
 fn show_main_window(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
         Some(window) => {
@@ -633,7 +645,8 @@ pub fn run() {
             hide_main_window,
             get_config_content,
             save_config_content,
-            config_exists
+            config_exists,
+            get_editor_mode
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
