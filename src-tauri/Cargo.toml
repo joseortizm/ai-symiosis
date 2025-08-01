@@ -35,9 +35,9 @@ r2d2_sqlite = "0.31.0"
 r2d2 = "0.8.10"
 
 # Faster builds in debug mode
-[profile.dev]
-opt-level = 1
-incremental = true
+# [profile.dev]
+# opt-level = 1
+# incremental = true
 
 # Faster builds for dependencies
 # [profile.dev.package."*"]

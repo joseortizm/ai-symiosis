@@ -265,15 +265,7 @@ fn render_note(filename: &str, content: &str) -> String {
 
 #[tauri::command]
 fn create_new_note(note_name: &str) -> Result<(), String> {
-    // Validate note name
-    if note_name.trim().is_empty() {
-        return Err("Note name cannot be empty".to_string());
-    }
-
-    // Prevent path traversal attacks
-    if note_name.contains("..") || note_name.contains('/') || note_name.contains('\\') {
-        return Err("Invalid note name".to_string());
-    }
+    validate_note_name(note_name)?;
 
     let note_path = get_notes_dir().join(note_name);
 
