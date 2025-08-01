@@ -493,9 +493,12 @@ onMount(async () => {
   await tick();
 
   const configExists = await invoke("config_exists");
+  console.log("Config exists:", configExists);
   if (!configExists) {
+    console.log("Opening config dialog for new user");
     openConfigDialog();
   } else {
+    console.log("Config exists, focusing search");
     searchElement.focus();
     loadNotesImmediate('');
   }

@@ -24,10 +24,20 @@ struct AppConfig {
     notes_directory: String,
     #[serde(default = "default_max_results")]
     max_search_results: usize,
+    #[serde(default = "default_global_shortcut")]
+    global_shortcut: String,
 }
 
 fn default_max_results() -> usize {
     100
+}
+
+fn default_global_shortcut() -> String {
+    "Ctrl+Shift+N".to_string()
+}
+
+fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
+    shortcut_str.parse().ok()
 }
 
 impl Default for AppConfig {
@@ -35,6 +45,7 @@ impl Default for AppConfig {
         Self {
             notes_directory: get_default_notes_dir(),
             max_search_results: default_max_results(),
+            global_shortcut: default_global_shortcut(),
         }
     }
 }
@@ -74,21 +85,8 @@ fn load_config() -> AppConfig {
             }
         },
         Err(_) => {
-            println!(
-                "Config file not found, creating default config at: {}",
-                config_path.display()
-            );
-            let default_config = AppConfig::default();
-
-            if let Some(parent) = config_path.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
-
-            if let Ok(toml_content) = toml::to_string(&default_config) {
-                let _ = fs::write(&config_path, toml_content);
-            }
-
-            default_config
+            println!("Config file not found, using defaults");
+            AppConfig::default()
         }
     }
 }
@@ -391,20 +389,8 @@ fn get_config_content() -> Result<String, String> {
     match fs::read_to_string(&config_path) {
         Ok(content) => Ok(content),
         Err(_) => {
-            let template = format!(
-                r#"# Symiosis Configuration File
-# Uncomment and modify the options below to configure the application
-
-# Directory where your notes are stored
-# Default: ~/Documents/Notes
-notes_directory = "{}"
-
-# Maximum number of search results to display
-# Default: 100
-max_search_results = 100
-"#,
-                get_default_notes_dir()
-            );
+            let template = include_str!("../config-template.toml")
+                .replace("{DEFAULT_NOTES_DIR}", &get_default_notes_dir());
             Ok(template)
         }
     }
@@ -567,8 +553,10 @@ pub fn run() {
             // Setup global shortcuts
             #[cfg(desktop)]
             {
-                let ctrl_shift_n =
-                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN);
+                // Get main shortcut from config
+                let config = load_config();
+                let main_shortcut = parse_shortcut(&config.global_shortcut)
+                    .unwrap_or_else(|| Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN));
 
                 // Platform-specific preferences shortcut
                 let preferences_shortcut = if cfg!(target_os = "macos") {
@@ -581,7 +569,7 @@ pub fn run() {
                     tauri_plugin_global_shortcut::Builder::new()
                         .with_handler(move |app, shortcut, event| {
                             if event.state() == ShortcutState::Pressed {
-                                if shortcut == &ctrl_shift_n {
+                                if shortcut == &main_shortcut {
                                     let app_handle = app.clone();
                                     match app_handle.get_webview_window("main") {
                                         Some(window) => {
@@ -603,7 +591,6 @@ pub fn run() {
                                         }
                                     }
                                 } else if shortcut == &preferences_shortcut {
-                                    // Handle preferences shortcut
                                     let app_handle = app.clone();
                                     let _ = show_main_window(app_handle.clone());
                                     if let Some(window) = app_handle.get_webview_window("main") {
@@ -615,13 +602,8 @@ pub fn run() {
                         .build(),
                 )?;
 
-                app.global_shortcut().register(ctrl_shift_n)?;
+                app.global_shortcut().register(main_shortcut)?;
                 app.global_shortcut().register(preferences_shortcut)?;
-            }
-
-            // Hide the main window on startup (it starts visible by default)
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.hide();
             }
 
             Ok(())

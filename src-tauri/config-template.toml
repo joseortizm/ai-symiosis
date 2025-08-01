@@ -1,0 +1,13 @@
+# Symiosis Configuration File
+# Uncomment and modify the options below to configure the application
+
+# Default: ~/Documents/Notes (or equivalent on your system)
+notes_directory = "{DEFAULT_NOTES_DIR}"
+
+# Maximum number of search results to display
+max_search_results = 100
+
+# Global shortcut to toggle the application window
+# Format: modifier keys + key (e.g., "Ctrl+Shift+N", "Cmd+Space", "Alt+F1")
+# Supported modifiers: Ctrl, Alt, Shift, Cmd (macOS), Super (Linux)
+global_shortcut = "Ctrl+Shift+N"

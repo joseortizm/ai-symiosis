@@ -103,6 +103,7 @@ mod config_tests {
         let config = AppConfig::default();
 
         assert_eq!(config.max_search_results, 100);
+        assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
         assert!(!config.notes_directory.is_empty());
     }
 
@@ -115,6 +116,7 @@ mod config_tests {
 
         assert_eq!(config.max_search_results, deserialized.max_search_results);
         assert_eq!(config.notes_directory, deserialized.notes_directory);
+        assert_eq!(config.global_shortcut, deserialized.global_shortcut);
     }
 
     #[test]
@@ -126,6 +128,7 @@ mod config_tests {
         let config: AppConfig = toml::from_str(minimal_toml).expect("Failed to deserialize");
 
         assert_eq!(config.max_search_results, 100);
+        assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
         assert_eq!(config.notes_directory, "/tmp/test");
     }
 
@@ -134,12 +137,23 @@ mod config_tests {
         let partial_toml = r#"
             notes_directory = "/tmp/test"
             max_search_results = 50
+            global_shortcut = "Alt+Space"
         "#;
 
         let config: AppConfig = toml::from_str(partial_toml).expect("Failed to deserialize");
 
         assert_eq!(config.notes_directory, "/tmp/test");
         assert_eq!(config.max_search_results, 50);
+        assert_eq!(config.global_shortcut, "Alt+Space");
+    }
+
+    #[test]
+    fn test_shortcut_parsing() {
+        assert!(parse_shortcut("Ctrl+Shift+N").is_some());
+        assert!(parse_shortcut("Alt+Space").is_some());
+        assert!(parse_shortcut("Cmd+F1").is_some());
+        assert!(parse_shortcut("invalid").is_none());
+        assert!(parse_shortcut("").is_none());
     }
 }
 
