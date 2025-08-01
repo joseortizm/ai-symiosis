@@ -1,9 +1,11 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { onMount, tick } from "svelte";
+  import { listen } from "@tauri-apps/api/event";
   import SearchInput from "../lib/components/SearchInput.svelte";
   import NoteList from "../lib/components/NoteList.svelte";
   import NoteView from "../lib/components/NoteView.svelte";
+  import Editor from "../lib/components/Editor.svelte";
   import { createKeyboardHandler } from '../lib/keyboardHandler.js';
 
   let filteredNotes = $state([]);
@@ -33,6 +35,8 @@
   let deleteKeyTimeout = $state();
   // svelte-ignore non_reactive_update
   let deletionDialog;
+  let showConfigDialog = $state(false);
+  let configContent = $state('');
 
   let searchAbortController = null;
   let contentAbortController = null;
@@ -252,6 +256,32 @@
     searchElement?.focus();
   }
 
+  async function openConfigDialog() {
+    try {
+      const content = await invoke("get_config_content");
+      configContent = content;
+      showConfigDialog = true;
+    } catch (e) {
+      console.error("Failed to load config:", e);
+    }
+  }
+
+  function closeConfigDialog() {
+    showConfigDialog = false;
+    configContent = '';
+    searchElement?.focus();
+  }
+
+  async function saveConfig() {
+    try {
+      await invoke("save_config_content", { content: configContent });
+      closeConfigDialog();
+    } catch (e) {
+      console.error("Failed to save config:", e);
+      alert(`Failed to save config: ${e}`);
+    }
+  }
+
   function handleDeleteKeyPress() {
     deleteKeyCount++;
     if (deleteKeyCount === 1) {
@@ -440,6 +470,7 @@
       searchElement,
       query,
       highlightsCleared,
+      showConfigDialog,
     }),
     {
       setSelectedIndex: (value) => selectedIndex = value,
@@ -456,13 +487,19 @@
   );
 
   onMount(async () => {
-    await tick(); // Ensure DOM is updated and searchElement is bound
+    await tick();
     searchElement.focus();
     loadNotesImmediate('');
+
+    const unlisten = await listen("open-preferences", () => {
+      openConfigDialog();
+    });
+
     return () => {
       if (searchAbortController) searchAbortController.abort();
       if (contentAbortController) contentAbortController.abort();
       clearTimeout(searchTimeout);
+      unlisten();
     };
   });
 </script>
@@ -586,6 +623,32 @@
         <div class="dialog-buttons">
           <button class="btn-cancel" onclick={closeRenameDialog}>Cancel</button>
           <button class="btn-create" onclick={renameNote} disabled={!newNoteNameForRename.trim()}>Rename</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Config Dialog -->
+  {#if showConfigDialog}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="dialog-overlay" onclick={closeConfigDialog}>
+      <div class="dialog config-dialog" onclick={(e) => e.stopPropagation()}>
+        <h3>Configuration</h3>
+        <div class="config-editor-container">
+          <Editor
+            bind:value={configContent}
+            filename="config.toml"
+            onSave={saveConfig}
+            onExit={closeConfigDialog}
+          />
+        </div>
+        <div class="keyboard-hint">
+          <p>Press <kbd>Ctrl+S</kbd> to save, <kbd>Esc</kbd> in normal mode to close</p>
+        </div>
+        <div class="dialog-buttons">
+          <button class="btn-cancel" onclick={closeConfigDialog}>Cancel</button>
+          <button class="btn-create" onclick={saveConfig}>Save</button>
         </div>
       </div>
     </div>
@@ -747,5 +810,20 @@
     background-color: #504945;
     color: #7c6f64;
     cursor: not-allowed;
+  }
+
+  .config-dialog {
+    min-width: 600px;
+    max-width: 800px;
+  }
+
+  .config-editor-container {
+    width: 100%;
+    height: 400px;
+    margin: 16px 0;
+    border: 1px solid #504945;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #282828;
   }
 </style>

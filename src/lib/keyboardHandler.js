@@ -170,10 +170,11 @@ async function executeKeyAction(mappings, event, context) {
 
 export function createKeyboardHandler(getState, actions) {
   return async function handleKeydown(event) {
-    // Get fresh state each time the handler runs
     const state = getState();
-    const context = { state, actions };
 
+    if (state.showConfigDialog) return;
+
+    const context = { state, actions };
     let handled = false;
 
     if (state.isSearchInputFocused) {

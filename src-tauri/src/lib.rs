@@ -14,7 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
+    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use walkdir::WalkDir;
@@ -384,6 +384,46 @@ fn open_note_in_editor(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn get_config_content() -> Result<String, String> {
+    let config_path = get_config_path();
+    
+    match fs::read_to_string(&config_path) {
+        Ok(content) => Ok(content),
+        Err(_) => {
+            // Create default config if it doesn't exist
+            let default_config = AppConfig::default();
+            if let Some(parent) = config_path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let toml_content = toml::to_string(&default_config)
+                .map_err(|e| format!("Failed to serialize config: {}", e))?;
+            fs::write(&config_path, &toml_content)
+                .map_err(|e| format!("Failed to write config: {}", e))?;
+            Ok(toml_content)
+        }
+    }
+}
+
+#[tauri::command]
+fn save_config_content(content: &str) -> Result<(), String> {
+    let config_path = get_config_path();
+    
+    // Validate TOML format before saving
+    let _: AppConfig = toml::from_str(content)
+        .map_err(|e| format!("Invalid TOML format: {}", e))?;
+    
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create config directory: {}", e))?;
+    }
+    
+    fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to save config: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
 fn show_main_window(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
         Some(window) => {
@@ -507,34 +547,50 @@ pub fn run() {
             // Setup the system tray
             setup_tray(app.handle())?;
 
-            // Setup global shortcut for Ctrl+Shift+N
+            // Setup global shortcuts
             #[cfg(desktop)]
             {
                 let ctrl_shift_n =
                     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN);
+                
+                // Platform-specific preferences shortcut
+                let preferences_shortcut = if cfg!(target_os = "macos") {
+                    Shortcut::new(Some(Modifiers::META), Code::Comma)
+                } else {
+                    Shortcut::new(Some(Modifiers::CONTROL), Code::Comma)
+                };
+
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
                         .with_handler(move |app, shortcut, event| {
-                            if shortcut == &ctrl_shift_n && event.state() == ShortcutState::Pressed
-                            {
-                                let app_handle = app.clone();
-                                match app_handle.get_webview_window("main") {
-                                    Some(window) => {
-                                        if window.is_visible().unwrap_or(false)
-                                            && window.is_focused().unwrap_or(false)
-                                        {
-                                            let _ = window.hide();
-                                        } else if window.is_visible().unwrap_or(false)
-                                            && !window.is_focused().unwrap_or(false)
-                                        {
-                                            let _ = window.set_focus();
-                                        } else {
-                                            let _ = window.show();
-                                            let _ = window.set_focus();
+                            if event.state() == ShortcutState::Pressed {
+                                if shortcut == &ctrl_shift_n {
+                                    let app_handle = app.clone();
+                                    match app_handle.get_webview_window("main") {
+                                        Some(window) => {
+                                            if window.is_visible().unwrap_or(false)
+                                                && window.is_focused().unwrap_or(false)
+                                            {
+                                                let _ = window.hide();
+                                            } else if window.is_visible().unwrap_or(false)
+                                                && !window.is_focused().unwrap_or(false)
+                                            {
+                                                let _ = window.set_focus();
+                                            } else {
+                                                let _ = window.show();
+                                                let _ = window.set_focus();
+                                            }
+                                        }
+                                        None => {
+                                            let _ = show_main_window(app_handle);
                                         }
                                     }
-                                    None => {
-                                        let _ = show_main_window(app_handle);
+                                } else if shortcut == &preferences_shortcut {
+                                    // Handle preferences shortcut
+                                    let app_handle = app.clone();
+                                    let _ = show_main_window(app_handle.clone());
+                                    if let Some(window) = app_handle.get_webview_window("main") {
+                                        let _ = window.emit("open-preferences", ());
                                     }
                                 }
                             }
@@ -543,6 +599,7 @@ pub fn run() {
                 )?;
 
                 app.global_shortcut().register(ctrl_shift_n)?;
+                app.global_shortcut().register(preferences_shortcut)?;
             }
 
             // Hide the main window on startup (it starts visible by default)
@@ -574,7 +631,9 @@ pub fn run() {
             open_note_in_editor,
             list_all_notes,
             show_main_window,
-            hide_main_window
+            hide_main_window,
+            get_config_content,
+            save_config_content
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

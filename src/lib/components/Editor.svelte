@@ -14,12 +14,14 @@
   import { sql } from '@codemirror/lang-sql';
   import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
   import { tags } from '@lezer/highlight';
+  import { StreamLanguage } from '@codemirror/language';
+  import { toml } from '@codemirror/legacy-modes/mode/toml';
   import { vim } from "@replit/codemirror-vim";
 
   export let value;
   export let filename;
   export let onSave;
-  // export let onExit;
+  export let onExit = null;
 
   let container;
   let editorView;
@@ -137,6 +139,7 @@
           case 'json': return json();
           case 'xml': return xml();
           case 'sql': return sql();
+          case 'toml': return StreamLanguage.define(toml);
           case 'md': case 'markdown': default: return markdown();
         }
       }
@@ -146,13 +149,29 @@
         { key: "Ctrl-s", run: () => { onSave(); return true; } },
       ]);
 
+      const escapeKeymap = onExit ? keymap.of([{
+        key: "Escape",
+        run: (view) => {
+          setTimeout(() => {
+            try {
+              const vimState = view.state.field(vim().field, false);
+              if (vimState && !vimState.insertMode) onExit();
+            } catch (e) {
+              onExit();
+            }
+          }, 100);
+          return false;
+        }
+      }]) : null;
+
       const extensions = [
-        vim(), // Vim keymap
+        vim(),
         basicSetup,
         getLanguageExtension(filename),
         gruvboxTheme,
         gruvboxHighlighting,
         customKeymap,
+        escapeKeymap,
         EditorView.lineWrapping,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
