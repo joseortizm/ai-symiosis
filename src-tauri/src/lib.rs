@@ -470,6 +470,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, "open", "Open Symiosis", true, None::<&str>)?;
     let refresh_item =
         MenuItem::with_id(app, "refresh", "Refresh Notes Cache", true, None::<&str>)?;
+    let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
@@ -480,6 +481,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             &open_item,
             &separator,
             &refresh_item,
+            &settings_item,
             &separator,
             &quit_item,
         ],
@@ -497,8 +499,15 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             "refresh" => {
                 let _ = refresh_cache();
             }
+            "settings" => {
+                let app_handle = app.app_handle().clone();
+                let _ = show_main_window(app_handle.clone());
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.emit("open-preferences", ());
+                }
+            }
             "quit" => {
-                app.exit(0);
+                std::process::exit(0);
             }
             _ => {}
         })
