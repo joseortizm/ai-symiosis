@@ -448,6 +448,7 @@ fn show_main_window(app: AppHandle) -> Result<(), String> {
                 .title("Symiosis Notes")
                 .inner_size(1200.0, 800.0)
                 .center()
+                .visible(false) // Let window-state plugin handle visibility to prevent flash
                 .build()
                 .map_err(|e| format!("Failed to create window: {}", e))?;
         }
@@ -567,6 +568,7 @@ pub fn run() {
 
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             // Setup the system tray
             setup_tray(app.handle())?;
