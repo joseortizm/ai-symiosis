@@ -16,6 +16,25 @@
   export let filename;
   export let onSave;
   export let onExit = null;
+  export let onRequestExit = null;
+
+  let isDirty = false;
+  let initialValue = value;
+  let lastExternalValue = value;
+
+  $: if (value !== lastExternalValue) {
+    initialValue = value;
+    lastExternalValue = value;
+    isDirty = false;
+  }
+
+  function resetDirtyFlag() {
+    isDirty = false;
+    initialValue = value;
+    lastExternalValue = value;
+  }
+
+  export { isDirty };
 
   let container;
   let editorView;
@@ -155,22 +174,40 @@
 
       const customKeymap = keymap.of([
         indentWithTab,
-        { key: "Ctrl-s", run: () => { onSave(); return true; } },
+        { key: "Ctrl-s", run: () => {
+          onSave();
+          resetDirtyFlag();
+          return true;
+        } },
       ]);
 
-      const escapeKeymap = onExit ? keymap.of([{
+      const escapeKeymap = (onExit || onRequestExit) ? keymap.of([{
         key: "Escape",
         run: (view) => {
           setTimeout(() => {
             try {
               if (editorMode === 'vim') {
-                const vimState = view.state.field(vim().field, false);
-                if (vimState && !vimState.insertMode) onExit();
-              } else {
+                try {
+                  const vimExtension = vim();
+                  const vimField = vimExtension.field;
+                  if (vimField) {
+                    const vimState = view.state.field(vimField, false);
+                    if (vimState && vimState.insertMode) {
+                      return;
+                    }
+                  }
+                } catch (vimError) {
+                  // Continue with normal exit logic if vim state check fails
+                }
+              }
+
+              if (isDirty && onRequestExit) {
+                onRequestExit();
+              } else if (onExit) {
                 onExit();
               }
             } catch (e) {
-              onExit();
+              if (onExit) onExit();
             }
           }, 100);
           return false;
@@ -178,7 +215,7 @@
       }]) : null;
 
       const keyMappingsMode = getKeyMappingsMode(editorMode);
-      
+
       const extensions = [
         keyMappingsMode,
         basicSetup,
@@ -190,7 +227,12 @@
         EditorView.lineWrapping,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            value = update.state.doc.toString();
+            const newValue = update.state.doc.toString();
+            value = newValue;
+            lastExternalValue = newValue;
+            if (!isDirty && newValue !== initialValue) {
+              isDirty = true;
+            }
           }
         })
       ].filter(Boolean);

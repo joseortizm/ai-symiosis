@@ -6,6 +6,7 @@ import SearchInput from "../lib/components/SearchInput.svelte";
 import NoteList from "../lib/components/NoteList.svelte";
 import NoteView from "../lib/components/NoteView.svelte";
 import Editor from "../lib/components/Editor.svelte";
+import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler.js';
 
 let filteredNotes = $state([]);
@@ -37,6 +38,7 @@ let deleteKeyTimeout = $state();
 let deletionDialog;
 let showConfigDialog = $state(false);
 let configContent = $state('');
+let showUnsavedChangesDialog = $state(false);
 
 let searchAbortController = null;
 let contentAbortController = null;
@@ -433,6 +435,20 @@ function exitEditMode() {
   searchElement?.focus();
 }
 
+function requestExitEditMode() {
+  showUnsavedChangesDialog = true;
+}
+
+function handleSaveAndExit() {
+  showUnsavedChangesDialog = false;
+  saveNote();
+}
+
+function handleDiscardAndExit() {
+  showUnsavedChangesDialog = false;
+  exitEditMode();
+}
+
 async function saveNote() {
   if (!selectedNote || !editContent) return;
   try {
@@ -538,6 +554,7 @@ onMount(async () => {
     highlightedContent={highlightedContent}
     onSave={saveNote}
     onExitEditMode={exitEditMode}
+    onRequestExitEditMode={requestExitEditMode}
     onEnterEditMode={enterEditMode}
     bind:noteContentElement={noteContentElement}
     bind:isNoteContentFocused={isNoteContentFocused}
@@ -665,6 +682,18 @@ onMount(async () => {
       </div>
     </div>
   {/if}
+
+  <!-- Unsaved Changes Confirmation Dialog -->
+  <ConfirmationDialog
+    show={showUnsavedChangesDialog}
+    title="Unsaved Changes"
+    message="You have unsaved changes. What would you like to do?"
+    confirmText="Save and Exit"
+    cancelText="Discard Changes"
+    variant="default"
+    on:confirm={handleSaveAndExit}
+    on:cancel={handleDiscardAndExit}
+  />
 </main>
 
 <style>
