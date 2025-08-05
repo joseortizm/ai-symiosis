@@ -115,18 +115,23 @@
   .dialog-buttons {
     display: flex;
     gap: 12px;
-    justify-content: flex-end;
+    justify-content: center;
   }
 
-  .cancel-btn {
+  .cancel-btn, .confirm-btn {
     padding: 8px 16px;
-    border: 1px solid #665c54;
-    background-color: #3c3836;
-    color: #fbf1c7;
     border-radius: 4px;
     cursor: pointer;
     font-family: inherit;
     font-size: 14px;
+    min-width: 140px;
+    text-align: center;
+  }
+
+  .cancel-btn {
+    border: 1px solid #665c54;
+    background-color: #3c3836;
+    color: #fbf1c7;
   }
 
   .cancel-btn:hover {
@@ -140,14 +145,9 @@
   }
 
   .confirm-btn {
-    padding: 8px 16px;
     border: 1px solid #83a598;
     background-color: #458588;
     color: #fbf1c7;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 14px;
     font-weight: 500;
   }
 
