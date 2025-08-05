@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "symiosis",
-  "version": "0.1.4",
   "identifier": "com.fasmatwist.symiosis",
   "build": {
     "beforeDevCommand": "pnpm dev",

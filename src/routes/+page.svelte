@@ -29,32 +29,32 @@ let showCreateDialog = $state(false);
 let newNoteName = $state('');
 let showRenameDialog = $state(false);
 let newNoteNameForRename = $state('');
-let renameDialogInput = $state();
-let highlightsCleared = $state(false);
-let createDialogInput = $state();
-let deleteKeyCount = $state(0);
-let deleteKeyTimeout = $state();
+let renameDialogInputElement = $state();
+let areHighlightsCleared = $state(false);
+let createDialogInputElement = $state();
+let deleteKeyPressCount = $state(0);
+let deleteKeyResetTimeout = $state();
 // svelte-ignore non_reactive_update
-let deletionDialog;
+let deleteDialogElement;
 let showConfigDialog = $state(false);
 let configContent = $state('');
 let showUnsavedChangesDialog = $state(false);
 let isEditorDirty = $state(false);
 
-let searchAbortController = null;
-let contentAbortController = null;
-let highlightMemo = new Map();
+let searchRequestController = null;
+let contentRequestController = null;
+let highlightCache = new Map();
 
 
 function processContentForDisplay(content, query) {
-  if (!query.trim() || highlightsCleared) {
+  if (!query.trim() || areHighlightsCleared) {
     return content;
   }
 
   // Use memoization to avoid re-processing
   const key = `${content.substring(0, 100)}:${query}`;
-  if (highlightMemo.has(key)) {
-    return highlightMemo.get(key);
+  if (highlightCache.has(key)) {
+    return highlightCache.get(key);
   }
 
   const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Fixed regex
@@ -62,17 +62,17 @@ function processContentForDisplay(content, query) {
   const result = content.replace(regex, '<mark class="highlight">$1</mark>');
 
   // Cache result (limit cache size)
-  if (highlightMemo.size > 50) {
-    const firstKey = highlightMemo.keys().next().value;
-    highlightMemo.delete(firstKey);
+  if (highlightCache.size > 50) {
+    const firstKey = highlightCache.keys().next().value;
+    highlightCache.delete(firstKey);
   }
-  highlightMemo.set(key, result);
+  highlightCache.set(key, result);
 
   return result;
 }
 
 function scrollToFirstMatch() {
-  if (noteContentElement && query.trim() && !highlightsCleared) {
+  if (noteContentElement && query.trim() && !areHighlightsCleared) {
     setTimeout(() => {
       const firstMatch = noteContentElement.querySelector('.highlight');
       if (firstMatch) {
@@ -98,11 +98,11 @@ function debounceSearch(newQuery) {
   query = newQuery;
   // Reset highlights cleared flag when search changes
   if (newQuery.trim()) {
-    highlightsCleared = false;
+    areHighlightsCleared = false;
   }
   // Cancel previous search request and timer
   clearTimeout(searchTimeout);
-  searchAbortController?.abort();
+  searchRequestController?.abort();
   // Start new timer to search after user stops typing
   searchTimeout = setTimeout(() => {
     loadNotesImmediate(newQuery);
@@ -110,11 +110,11 @@ function debounceSearch(newQuery) {
 }
 
 async function loadNotesImmediate(searchQuery) {
-  if (searchAbortController) {
-    searchAbortController.abort();
+  if (searchRequestController) {
+    searchRequestController.abort();
   }
-  searchAbortController = new AbortController();
-  const currentController = searchAbortController;
+  searchRequestController = new AbortController();
+  const currentController = searchRequestController;
   try {
     isLoading = true;
     const newNotes = await invoke("search_notes", { query: searchQuery });
@@ -155,8 +155,8 @@ async function deleteNote() {
     // Refresh the notes list
     await loadNotesImmediate(searchInput);
     showDeleteDialog = false;
-    deleteKeyCount = 0;
-    clearTimeout(deleteKeyTimeout);
+    deleteKeyPressCount = 0;
+    clearTimeout(deleteKeyResetTimeout);
     // Return focus to search
     await tick();
     searchElement?.focus();
@@ -248,14 +248,14 @@ function closeCreateDialog() {
 
 function openDeleteDialog() {
   showDeleteDialog = true;
-  deleteKeyCount = 0;
-  clearTimeout(deleteKeyTimeout);
+  deleteKeyPressCount = 0;
+  clearTimeout(deleteKeyResetTimeout);
 }
 
 function closeDeleteDialog() {
   showDeleteDialog = false;
-  deleteKeyCount = 0;
-  clearTimeout(deleteKeyTimeout);
+  deleteKeyPressCount = 0;
+  clearTimeout(deleteKeyResetTimeout);
   searchElement?.focus();
 }
 
@@ -289,27 +289,27 @@ async function saveConfig() {
 }
 
 function handleDeleteKeyPress() {
-  deleteKeyCount++;
-  if (deleteKeyCount === 1) {
+  deleteKeyPressCount++;
+  if (deleteKeyPressCount === 1) {
     // Start timeout for first 'D' press
-    deleteKeyTimeout = setTimeout(() => {
-      deleteKeyCount = 0;
+    deleteKeyResetTimeout = setTimeout(() => {
+      deleteKeyPressCount = 0;
     }, 2000); // Reset after 2 seconds
-  } else if (deleteKeyCount === 2) {
+  } else if (deleteKeyPressCount === 2) {
     // Second 'D' press - confirm deletion
-    clearTimeout(deleteKeyTimeout);
+    clearTimeout(deleteKeyResetTimeout);
     deleteNote();
   }
 }
 
 function clearHighlights() {
-  highlightsCleared = true;
+  areHighlightsCleared = true;
   highlightedContent = processContentForDisplay(noteContent, query);
 }
 
 function clearSearch() {
   searchInput = '';
-  highlightsCleared = false;
+  areHighlightsCleared = false;
 }
 
 $effect(() => {
@@ -343,11 +343,11 @@ $effect(async () => {
   }
 
   // Cancel any previous content loading request
-  if (contentAbortController) {
-    contentAbortController.abort();
+  if (contentRequestController) {
+    contentRequestController.abort();
   }
-  contentAbortController = new AbortController();
-  const currentController = contentAbortController;
+  contentRequestController = new AbortController();
+  const currentController = contentRequestController;
 
   try {
     // Load the note content from backend
@@ -381,29 +381,29 @@ $effect(() => {
 
 // Effect to focus and select text in create dialog
 $effect(() => {
-  if (showCreateDialog && createDialogInput) {
+  if (showCreateDialog && createDialogInputElement) {
     tick().then(() => {
-      createDialogInput.focus();
+      createDialogInputElement.focus();
       // If text was pre-filled from search query, select all
       if (newNoteName.trim()) {
-        createDialogInput.select();
+        createDialogInputElement.select();
       }
     });
   }
 });
 
 $effect(async () => {
-  if (showDeleteDialog && deletionDialog) {
+  if (showDeleteDialog && deleteDialogElement) {
     await tick();
-    deletionDialog.focus();
+    deleteDialogElement.focus();
   }
 });
 
 $effect(() => {
-  if (showRenameDialog && renameDialogInput) {
+  if (showRenameDialog && renameDialogInputElement) {
     tick().then(() => {
-      renameDialogInput.focus();
-      renameDialogInput.select();
+      renameDialogInputElement.focus();
+      renameDialogInputElement.select();
     });
   }
 });
@@ -490,7 +490,7 @@ const handleKeydown = createKeyboardHandler(
     noteContentElement,
     searchElement,
     query,
-    highlightsCleared,
+    areHighlightsCleared,
     showConfigDialog,
     isEditorDirty,
   }),
@@ -528,8 +528,8 @@ onMount(async () => {
   });
 
   return () => {
-    if (searchAbortController) searchAbortController.abort();
-    if (contentAbortController) contentAbortController.abort();
+    if (searchRequestController) searchRequestController.abort();
+    if (contentRequestController) contentRequestController.abort();
     clearTimeout(searchTimeout);
     unlisten();
   };
@@ -558,7 +558,7 @@ onMount(async () => {
     highlightedContent={highlightedContent}
     onSave={saveNote}
     onExitEditMode={exitEditMode}
-    onRequestExitEditMode={showExitEditDialog}
+    onRequestExitEdit={showExitEditDialog}
     onEnterEditMode={enterEditMode}
     bind:noteContentElement={noteContentElement}
     bind:isNoteContentFocused={isNoteContentFocused}
@@ -573,7 +573,7 @@ onMount(async () => {
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
         class="dialog"
-        bind:this={deletionDialog}
+        bind:this={deleteDialogElement}
         tabindex="0"
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => {
@@ -590,7 +590,7 @@ onMount(async () => {
         <p class="warning">This action cannot be undone.</p>
         <div class="keyboard-hint">
           <p>Press <kbd>DD</kbd> to confirm or <kbd>Esc</kbd> to cancel</p>
-          {#if deleteKeyCount === 1}
+          {#if deleteKeyPressCount === 1}
             <p class="delete-progress">Press <kbd>D</kbd> again to confirm deletion</p>
           {/if}
         </div>
@@ -610,7 +610,7 @@ onMount(async () => {
       <div class="dialog" onclick={(e) => e.stopPropagation()}>
         <h3>Create New Note</h3>
         <input
-          bind:this={createDialogInput}
+          bind:this={createDialogInputElement}
           bind:value={newNoteName}
           placeholder="Enter note name (extension will be .md)"
           class="note-name-input"
@@ -640,7 +640,7 @@ onMount(async () => {
       <div class="dialog" onclick={(e) => e.stopPropagation()}>
         <h3>Rename Note</h3>
         <input
-          bind:this={renameDialogInput}
+          bind:this={renameDialogInputElement}
           bind:value={newNoteNameForRename}
           placeholder="Enter new note name"
           class="note-name-input"

@@ -10,7 +10,7 @@
   export let highlightedContent;
   export let onSave;
   export let onExitEditMode;
-  export let onRequestExitEditMode = null;
+  export let onRequestExitEdit = null;
   export let onEnterEditMode;
   export let noteContentElement = null;
   export let isNoteContentFocused = false;
@@ -43,7 +43,7 @@
           filename={selectedNote}
           onSave={onSave}
           onExit={onExitEditMode}
-          onRequestExit={onRequestExitEditMode}
+          onRequestExit={onRequestExitEdit}
         />
       </div>
     {:else}

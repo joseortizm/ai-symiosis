@@ -141,7 +141,7 @@ const keyMappings = {
   }
 };
 
-function getKeyString(event) {
+function formatKeyCombo(event) {
   const modifiers = [];
   if (event.ctrlKey) modifiers.push('Ctrl');
   if (event.altKey) modifiers.push('Alt');
@@ -153,8 +153,8 @@ function getKeyString(event) {
     : event.key;
 }
 
-async function executeKeyAction(mappings, event, context) {
-  const keyString = getKeyString(event);
+async function handleKeyAction(mappings, event, context) {
+  const keyString = formatKeyCombo(event);
   const actionPath = mappings[keyString];
 
   if (actionPath) {
@@ -184,13 +184,13 @@ export function createKeyboardHandler(getState, actions) {
     let handled = false;
 
     if (state.isSearchInputFocused) {
-      handled = await executeKeyAction(keyMappings.searchInput, event, context);
+      handled = await handleKeyAction(keyMappings.searchInput, event, context);
     } else if (state.isEditMode) {
-      handled = await executeKeyAction(keyMappings.editMode, event, context);
+      handled = await handleKeyAction(keyMappings.editMode, event, context);
     } else if (state.isNoteContentFocused && !state.isEditMode) {
-      handled = await executeKeyAction(keyMappings.noteContent, event, context);
+      handled = await handleKeyAction(keyMappings.noteContent, event, context);
     } else if (state.filteredNotes.length > 0) {
-      handled = await executeKeyAction(keyMappings.default, event, context);
+      handled = await handleKeyAction(keyMappings.default, event, context);
     }
   };
 }

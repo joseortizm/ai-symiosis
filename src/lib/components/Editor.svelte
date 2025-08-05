@@ -20,32 +20,32 @@
 
   let isDirty = false;
   let initialValue = value;
-  let lastExternalValue = value;
+  let lastPropsValue = value;
 
-  $: if (value !== lastExternalValue) {
+  $: if (value !== lastPropsValue) {
     initialValue = value;
-    lastExternalValue = value;
+    lastPropsValue = value;
     isDirty = false;
   }
 
   function resetDirtyFlag() {
     isDirty = false;
     initialValue = value;
-    lastExternalValue = value;
+    lastPropsValue = value;
   }
 
   export { isDirty };
 
-  let container;
+  let editorContainer;
   let editorView;
-  let editorMode = 'basic'; // default
+  let keyBindingMode = 'basic'; // default
 
   async function loadEditorMode() {
     try {
-      editorMode = await invoke("get_editor_mode");
+      keyBindingMode = await invoke("get_editor_mode");
     } catch (e) {
       console.error("Failed to load editor mode:", e);
-      editorMode = 'basic'; // fallback
+      keyBindingMode = 'basic'; // fallback
     }
   }
 
@@ -59,9 +59,9 @@
   }
 
   function createFallbackEditor() {
-    if (!container) return;
-    container.innerHTML = '<textarea style="width:100%; height:100%; background:#282828; color:#fbf1c7; font-family:\'JetBrains Mono\', monospace; padding:16px; border:none; resize:none;"></textarea>';
-    const textarea = container.querySelector('textarea');
+    if (!editorContainer) return;
+    editorContainer.innerHTML = '<textarea style="width:100%; height:100%; background:#282828; color:#fbf1c7; font-family:\'JetBrains Mono\', monospace; padding:16px; border:none; resize:none;"></textarea>';
+    const textarea = editorContainer.querySelector('textarea');
     if (textarea) {
       textarea.value = value || '';
       textarea.addEventListener('input', () => {
@@ -72,7 +72,7 @@
   }
 
   function createCodeMirrorEditor() {
-    if (!container) {
+    if (!editorContainer) {
       console.error('Edit container not found');
       return;
     }
@@ -80,7 +80,7 @@
       editorView.destroy();
       editorView = null;
     }
-    container.innerHTML = '';
+    editorContainer.innerHTML = '';
 
     try {
       const gruvboxTheme = EditorView.theme({
@@ -186,7 +186,7 @@
         run: (view) => {
           setTimeout(() => {
             try {
-              if (editorMode === 'vim') {
+              if (keyBindingMode === 'vim') {
                 try {
                   const vimExtension = vim();
                   const vimField = vimExtension.field;
@@ -214,7 +214,7 @@
         }
       }]) : null;
 
-      const keyMappingsMode = getKeyMappingsMode(editorMode);
+      const keyMappingsMode = getKeyMappingsMode(keyBindingMode);
 
       const extensions = [
         keyMappingsMode,
@@ -229,7 +229,7 @@
           if (update.docChanged) {
             const newValue = update.state.doc.toString();
             value = newValue;
-            lastExternalValue = newValue;
+            lastPropsValue = newValue;
             if (!isDirty && newValue !== initialValue) {
               isDirty = true;
             }
@@ -240,7 +240,7 @@
       editorView = new EditorView({
         doc: value || '',
         extensions,
-        parent: container
+        parent: editorContainer
       });
 
       setTimeout(() => {
@@ -268,7 +268,7 @@
 
 </script>
 
-<div bind:this={container} class="editor-container"></div>
+<div bind:this={editorContainer} class="editor-container"></div>
 
 <style>
 .editor-container {
