@@ -14,6 +14,7 @@
   export let onEnterEditMode;
   export let noteContentElement = null;
   export let isNoteContentFocused = false;
+  export let isEditorDirty = false;
 
   afterUpdate(() => {
     if (noteContentElement) {
@@ -38,6 +39,7 @@
         </div>
         <Editor
           bind:value={editContent}
+          bind:isDirty={isEditorDirty}
           filename={selectedNote}
           onSave={onSave}
           onExit={onExitEditMode}

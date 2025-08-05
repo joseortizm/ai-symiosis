@@ -39,6 +39,7 @@ let deletionDialog;
 let showConfigDialog = $state(false);
 let configContent = $state('');
 let showUnsavedChangesDialog = $state(false);
+let isEditorDirty = $state(false);
 
 let searchAbortController = null;
 let contentAbortController = null;
@@ -435,13 +436,14 @@ function exitEditMode() {
   searchElement?.focus();
 }
 
-function requestExitEditMode() {
+function showExitEditDialog() {
   showUnsavedChangesDialog = true;
 }
 
 function handleSaveAndExit() {
   showUnsavedChangesDialog = false;
   saveNote();
+  exitEditMode();
 }
 
 function handleDiscardAndExit() {
@@ -490,11 +492,13 @@ const handleKeydown = createKeyboardHandler(
     query,
     highlightsCleared,
     showConfigDialog,
+    isEditorDirty,
   }),
   {
     setSelectedIndex: (value) => selectedIndex = value,
     enterEditMode,
     exitEditMode,
+    showExitEditDialog,
     saveNote,
     invoke,
     showDeleteDialog: () => openDeleteDialog(),
@@ -554,10 +558,11 @@ onMount(async () => {
     highlightedContent={highlightedContent}
     onSave={saveNote}
     onExitEditMode={exitEditMode}
-    onRequestExitEditMode={requestExitEditMode}
+    onRequestExitEditMode={showExitEditDialog}
     onEnterEditMode={enterEditMode}
     bind:noteContentElement={noteContentElement}
     bind:isNoteContentFocused={isNoteContentFocused}
+    bind:isEditorDirty={isEditorDirty}
   />
 
   <!-- Delete Confirmation Dialog -->

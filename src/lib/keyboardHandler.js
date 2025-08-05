@@ -49,7 +49,13 @@ const actionRegistry = {
     },
     exitEdit: ({ state, actions }) => {
       actions.exitEditMode();
-      state.searchElement?.focus();
+    },
+    smartExitEdit: ({ state, actions }) => {
+      if (state.isEditorDirty) {
+        actions.showExitEditDialog();
+      } else {
+        actions.exitEditMode();
+      }
     },
     save: async ({ actions }) => {
       await actions.saveNote();
@@ -109,7 +115,7 @@ const keyMappings = {
   },
 
   editMode: {
-    'Escape': 'editing.exitEdit',
+    'Escape': 'editing.smartExitEdit',
     'Ctrl+s': 'editing.save',
   },
 
