@@ -29,7 +29,24 @@ pub fn get_db_connection() -> Result<r2d2::PooledConnection<SqliteConnectionMana
 }
 
 fn get_database_path() -> Result<PathBuf, String> {
-    dirs::data_dir()
+    get_data_dir()
         .ok_or_else(|| "Failed to get data directory".to_string())
         .map(|path| path.join("symiosis").join("notes.sqlite"))
+}
+
+fn get_data_dir() -> Option<PathBuf> {
+    if let Some(home_dir) = home::home_dir() {
+        #[cfg(target_os = "macos")]
+        return Some(home_dir.join("Library").join("Application Support"));
+
+        #[cfg(target_os = "windows")]
+        return std::env::var("APPDATA").ok().map(PathBuf::from);
+
+        #[cfg(target_os = "linux")]
+        return Some(home_dir.join(".local").join("share"));
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+        return Some(home_dir.join(".local").join("share"));
+    }
+    None
 }

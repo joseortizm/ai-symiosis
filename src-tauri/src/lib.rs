@@ -58,7 +58,7 @@ impl Default for AppConfig {
 }
 
 fn get_default_notes_dir() -> String {
-    if let Some(home_dir) = dirs::home_dir() {
+    if let Some(home_dir) = home::home_dir() {
         home_dir
             .join("Documents")
             .join("Notes")
@@ -70,11 +70,28 @@ fn get_default_notes_dir() -> String {
 }
 
 fn get_config_path() -> PathBuf {
-    if let Some(home_dir) = dirs::home_dir() {
+    if let Some(home_dir) = home::home_dir() {
         home_dir.join(".symiosis").join("config.toml")
     } else {
         PathBuf::from(".symiosis/config.toml")
     }
+}
+
+fn get_data_dir() -> Option<PathBuf> {
+    if let Some(home_dir) = home::home_dir() {
+        #[cfg(target_os = "macos")]
+        return Some(home_dir.join("Library").join("Application Support"));
+        
+        #[cfg(target_os = "windows")]
+        return std::env::var("APPDATA").ok().map(PathBuf::from);
+        
+        #[cfg(target_os = "linux")]
+        return Some(home_dir.join(".local").join("share"));
+        
+        #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+        return Some(home_dir.join(".local").join("share"));
+    }
+    None
 }
 
 fn load_config() -> AppConfig {
@@ -105,7 +122,7 @@ fn get_notes_dir() -> PathBuf {
 }
 
 fn get_database_path() -> PathBuf {
-    dirs::data_dir()
+    get_data_dir()
         .unwrap_or_else(|| PathBuf::from("./"))
         .join("symiosis")
         .join("notes.sqlite")

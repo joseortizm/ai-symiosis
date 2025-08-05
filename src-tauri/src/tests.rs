@@ -385,3 +385,194 @@ mod security_regression_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod directory_path_tests {
+    use super::*;
+
+    #[test]
+    fn test_get_data_dir_returns_some() {
+        let data_dir = get_data_dir();
+        assert!(
+            data_dir.is_some(),
+            "get_data_dir should return Some when home directory is available"
+        );
+
+        let path = data_dir.unwrap();
+        assert!(path.is_absolute(), "Data directory path should be absolute");
+        assert!(
+            !path.to_string_lossy().is_empty(),
+            "Data directory path should not be empty"
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn test_get_data_dir_macos_structure() {
+        if let Some(data_dir) = get_data_dir() {
+            let path_str = data_dir.to_string_lossy();
+            assert!(
+                path_str.contains("Library"),
+                "macOS data dir should contain 'Library'"
+            );
+            assert!(
+                path_str.contains("Application Support"),
+                "macOS data dir should contain 'Application Support'"
+            );
+            assert!(
+                path_str.ends_with("Library/Application Support"),
+                "macOS data dir should end with correct path"
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_get_data_dir_linux_structure() {
+        if let Some(data_dir) = get_data_dir() {
+            let path_str = data_dir.to_string_lossy();
+            assert!(
+                path_str.contains(".local"),
+                "Linux data dir should contain '.local'"
+            );
+            assert!(
+                path_str.contains("share"),
+                "Linux data dir should contain 'share'"
+            );
+            assert!(
+                path_str.ends_with(".local/share"),
+                "Linux data dir should end with correct path"
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn test_get_data_dir_windows_structure() {
+        if let Some(data_dir) = get_data_dir() {
+            let path_str = data_dir.to_string_lossy();
+            // On Windows, should use APPDATA environment variable
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                assert_eq!(
+                    path_str, appdata,
+                    "Windows data dir should match APPDATA env var"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_config_path_structure() {
+        let config_path = get_config_path();
+
+        assert!(config_path.is_absolute(), "Config path should be absolute");
+        assert!(
+            config_path.to_string_lossy().contains(".symiosis"),
+            "Config path should contain '.symiosis'"
+        );
+        assert!(
+            config_path.to_string_lossy().ends_with("config.toml"),
+            "Config path should end with 'config.toml'"
+        );
+
+        let path_str = config_path.to_string_lossy();
+        assert!(
+            path_str.contains(".symiosis/config.toml")
+                || path_str.contains(".symiosis\\config.toml"),
+            "Config path should have correct structure"
+        );
+    }
+
+    #[test]
+    fn test_get_default_notes_dir_structure() {
+        let notes_dir = get_default_notes_dir();
+
+        assert!(!notes_dir.is_empty(), "Notes directory should not be empty");
+        assert!(
+            notes_dir.contains("Documents"),
+            "Notes directory should contain 'Documents'"
+        );
+        assert!(
+            notes_dir.contains("Notes"),
+            "Notes directory should contain 'Notes'"
+        );
+
+        // Should end with Documents/Notes or Documents\\Notes depending on platform
+        let has_correct_ending =
+            notes_dir.ends_with("Documents/Notes") || notes_dir.ends_with("Documents\\Notes");
+        assert!(
+            has_correct_ending,
+            "Notes directory should end with correct path structure"
+        );
+    }
+
+    #[test]
+    fn test_database_path_uses_data_dir() {
+        let db_path = get_database_path();
+
+        assert!(db_path.is_absolute(), "Database path should be absolute");
+        assert!(
+            db_path.to_string_lossy().contains("symiosis"),
+            "Database path should contain 'symiosis'"
+        );
+        assert!(
+            db_path.to_string_lossy().ends_with("notes.sqlite"),
+            "Database path should end with 'notes.sqlite'"
+        );
+
+        // Verify it uses the same data directory structure as get_data_dir
+        if let Some(data_dir) = get_data_dir() {
+            let expected_prefix = data_dir.join("symiosis");
+            let db_parent = db_path.parent().unwrap();
+            assert_eq!(
+                db_parent, expected_prefix,
+                "Database path should be in data directory"
+            );
+        }
+    }
+
+    #[test]
+    fn test_directory_paths_are_absolute() {
+        assert!(
+            get_config_path().is_absolute(),
+            "Config path should be absolute"
+        );
+
+        let notes_dir_string = get_default_notes_dir();
+        let notes_dir_path = std::path::Path::new(&notes_dir_string);
+        assert!(
+            notes_dir_path.is_absolute(),
+            "Notes directory path should be absolute"
+        );
+
+        assert!(
+            get_database_path().is_absolute(),
+            "Database path should be absolute"
+        );
+
+        if let Some(data_dir) = get_data_dir() {
+            assert!(
+                data_dir.is_absolute(),
+                "Data directory path should be absolute"
+            );
+        }
+    }
+
+    #[test]
+    fn test_directory_path_consistency() {
+        // All directory functions should work together consistently
+        let config_path = get_config_path();
+        let notes_dir = get_default_notes_dir();
+        let db_path = get_database_path();
+
+        // All should be non-empty
+        assert!(!config_path.to_string_lossy().is_empty());
+        assert!(!notes_dir.is_empty());
+        assert!(!db_path.to_string_lossy().is_empty());
+
+        // All should be absolute paths
+        assert!(config_path.is_absolute());
+        assert!(std::path::Path::new(&notes_dir).is_absolute());
+        assert!(db_path.is_absolute());
+    }
+}
