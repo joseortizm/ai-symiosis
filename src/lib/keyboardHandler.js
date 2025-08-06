@@ -86,9 +86,9 @@ const actionRegistry = {
 
   search: {
     clearHighlights: ({ state, actions }) => {
-      if (state.query.trim() && !state.highlightsCleared) {
+      if (state.query.trim() && !state.areHighlightsCleared) {
         actions.clearHighlights();
-      } else if (state.highlightsCleared || !state.query.trim()) {
+      } else if (state.areHighlightsCleared || !state.query.trim()) {
         actions.clearSearch();
       }
     },
