@@ -267,7 +267,7 @@
 
               editorView.dispatch({
                 selection: { anchor: match.index, head: match.index },
-                effects: EditorView.scrollIntoView(match.index, { y: "start", yMargin: 0 })
+                effects: EditorView.scrollIntoView(match.index, { y: "start", yMargin: 80 })
               });
             } else {
               console.log('Header not found in markdown');
