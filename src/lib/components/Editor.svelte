@@ -5,7 +5,8 @@
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
   import { markdown } from '@codemirror/lang-markdown';
-  import { syntaxHighlighting, HighlightStyle, Extension } from '@codemirror/language';
+  import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
+  import type { Extension } from '@codemirror/state';
   import { tags } from '@lezer/highlight';
   import { StreamLanguage } from '@codemirror/language';
   import { toml } from '@codemirror/legacy-modes/mode/toml';
