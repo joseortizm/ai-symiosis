@@ -1,18 +1,16 @@
 <script lang="ts">
-  export let value: string;
-  export let onFocus: () => void;
-  export let onBlur: () => void;
-  export let element: HTMLInputElement | null = null;
+  import { getAppContext } from '../context/app.svelte';
+  const context = getAppContext();
 </script>
 
 <input
   type="text"
-  bind:value
+  bind:value={context.state.searchInput}
   placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
-  bind:this={element}
-  on:focus={onFocus}
-  on:blur={onBlur}
+  bind:this={context.state.searchElement}
+  on:focus={() => context.state.isSearchInputFocused = true}
+  on:blur={() => context.state.isSearchInputFocused = false}
 />
 
 <style>

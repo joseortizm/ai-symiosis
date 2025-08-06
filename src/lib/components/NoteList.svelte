@@ -1,25 +1,22 @@
 <script lang="ts">
-  export let notes: string[] = [];
-  export let selectedIndex: number = -1;
-  export let isLoading: boolean = false;
-  export let onSelectNote: (note: string, index: number) => void = () => {};
-  export let listElement: HTMLElement | null = null;
+  import { getAppContext } from '../context/app.svelte';
+  const context = getAppContext();
 </script>
 
 <div class="notes-list-container">
   <div class="notes-list">
-    {#if isLoading && notes.length === 0}
+    {#if context.state.isLoading && context.state.filteredNotes.length === 0}
       <div class="loading">Loading...</div>
-    {:else if notes.length === 0}
+    {:else if context.state.filteredNotes.length === 0}
       <div class="no-notes">No notes found</div>
     {:else}
-      <ul bind:this={listElement} tabindex="-1">
-        {#each notes as note, index (note)}
+      <ul bind:this={context.state.noteListElement} tabindex="-1">
+        {#each context.state.filteredNotes as note, index (note)}
           <li>
             <button
-              class:selected={index === selectedIndex}
+              class:selected={index === context.state.selectedIndex}
               tabindex="-1"
-              on:click={() => onSelectNote(note, index)}
+              on:click={() => context.selectNote(note, index)}
             >
               {note}
             </button>

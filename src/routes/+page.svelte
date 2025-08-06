@@ -8,6 +8,7 @@ import NoteView from "../lib/components/NoteView.svelte";
 import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
+import { setAppContext } from '../lib/context/app.svelte';
 
 // Tauri API Response Types
 interface SearchNotesResponse {
@@ -16,38 +17,51 @@ interface SearchNotesResponse {
 
 type TauriInvokeResponse<T> = Promise<T>;
 
-let filteredNotes = $state<string[]>([]);
-let selectedNote = $state<string | null>(null);
-let selectedIndex = $state<number>(-1);
-let searchInput = $state<string>('');
-let noteContent = $state<string>('');
-let searchElement = $state<HTMLInputElement | null>();
-let noteListElement = $state<HTMLElement | null>();
-let noteContentElement = $state<HTMLElement | null>();
-let isSearchInputFocused = $state<boolean>(false);
-let isNoteContentFocused = $state<boolean>(false);
-let isLoading = $state<boolean>(false);
-let query = $state<string>('');
-let highlightedContent = $state<string>('');
-let isEditMode = $state<boolean>(false);
-let editContent = $state<string>('');
-let showDeleteDialog = $state<boolean>(false);
-let showCreateDialog = $state<boolean>(false);
-let newNoteName = $state<string>('');
-let showRenameDialog = $state<boolean>(false);
-let newNoteNameForRename = $state<string>('');
-let renameDialogInputElement = $state<HTMLInputElement | null>();
-let areHighlightsCleared = $state<boolean>(false);
-let createDialogInputElement = $state<HTMLInputElement | null>();
-let deleteKeyPressCount = $state<number>(0);
-let deleteKeyResetTimeout = $state<number | undefined>();
+// Create reactive state with $state rune
+const appState = $state({
+  // Search state
+  searchInput: '',
+  query: '',
+  isLoading: false,
+  areHighlightsCleared: false,
+
+  // Selection state
+  filteredNotes: [] as string[],
+  selectedNote: null as string | null,
+  selectedIndex: -1,
+
+  // Editor state
+  noteContent: '',
+  highlightedContent: '',
+  isEditMode: false,
+  editContent: '',
+  isEditorDirty: false,
+  nearestHeaderText: '',
+
+  // Dialog state
+  showDeleteDialog: false,
+  showCreateDialog: false,
+  showRenameDialog: false,
+  showConfigDialog: false,
+  showUnsavedChangesDialog: false,
+  newNoteName: '',
+  newNoteNameForRename: '',
+  configContent: '',
+  deleteKeyPressCount: 0,
+  deleteKeyResetTimeout: undefined as number | undefined,
+
+  // UI state
+  isSearchInputFocused: false,
+  isNoteContentFocused: false,
+  searchElement: null as HTMLInputElement | null,
+  noteListElement: null as HTMLElement | null,
+  noteContentElement: null as HTMLElement | null,
+  renameDialogInputElement: null as HTMLInputElement | null,
+  createDialogInputElement: null as HTMLInputElement | null,
+});
+
 // svelte-ignore non_reactive_update
 let deleteDialogElement: HTMLElement;
-let showConfigDialog = $state<boolean>(false);
-let configContent = $state<string>('');
-let showUnsavedChangesDialog = $state<boolean>(false);
-let isEditorDirty = $state<boolean>(false);
-let nearestHeaderText = $state<string>('');
 
 let searchRequestController: AbortController | null = null;
 let contentRequestController: AbortController | null = null;
@@ -55,14 +69,14 @@ let highlightCache = new Map<string, string>();
 
 
 function processContentForDisplay(content: string, query: string): string {
-  if (!query.trim() || areHighlightsCleared) {
+  if (!query.trim() || appState.areHighlightsCleared) {
     return content;
   }
 
   // Use memoization to avoid re-processing
   const key = `${content.substring(0, 100)}:${query}`;
   if (highlightCache.has(key)) {
-    return highlightCache.get(key);
+    return highlightCache.get(key)!
   }
 
   const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Fixed regex
@@ -71,7 +85,7 @@ function processContentForDisplay(content: string, query: string): string {
 
   // Cache result (limit cache size)
   if (highlightCache.size > 50) {
-    const firstKey = highlightCache.keys().next().value;
+    const firstKey = highlightCache.keys().next().value!;
     highlightCache.delete(firstKey);
   }
   highlightCache.set(key, result);
@@ -80,9 +94,9 @@ function processContentForDisplay(content: string, query: string): string {
 }
 
 function scrollToFirstMatch(): void {
-  if (noteContentElement && query.trim() && !areHighlightsCleared) {
+  if (appState.noteContentElement && appState.query.trim() && !appState.areHighlightsCleared) {
     setTimeout(() => {
-      const firstMatch = noteContentElement.querySelector('.highlight');
+      const firstMatch = appState.noteContentElement!.querySelector('.highlight');
       if (firstMatch) {
         firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -91,8 +105,8 @@ function scrollToFirstMatch(): void {
 }
 
 function scrollToSelected(): void {
-  if (noteListElement && selectedIndex >= 0) {
-    const selectedButton = noteListElement.children[selectedIndex]?.querySelector('button');
+  if (appState.noteListElement && appState.selectedIndex >= 0) {
+    const selectedButton = appState.noteListElement.children[appState.selectedIndex]?.querySelector('button');
     if (selectedButton) {
       selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -101,12 +115,12 @@ function scrollToSelected(): void {
 
 let searchTimeout: number;
 function debounceSearch(newQuery: string): void {
-  if (newQuery === query) return;
+  if (newQuery === appState.query) return;
   // Update query immediately for highlighting
-  query = newQuery;
+  appState.query = newQuery;
   // Reset highlights cleared flag when search changes
   if (newQuery.trim()) {
-    areHighlightsCleared = false;
+    appState.areHighlightsCleared = false;
   }
   // Cancel previous search request and timer
   clearTimeout(searchTimeout);
@@ -124,28 +138,28 @@ async function loadNotesImmediate(searchQuery: string): Promise<void> {
   searchRequestController = new AbortController();
   const currentController = searchRequestController;
   try {
-    isLoading = true;
+    appState.isLoading = true;
     const newNotes = await invoke<string[]>("search_notes", { query: searchQuery });
     if (currentController.signal.aborted) {
       return;
     }
-    if (JSON.stringify(newNotes) !== JSON.stringify(filteredNotes)) {
-      filteredNotes = newNotes;
+    if (JSON.stringify(newNotes) !== JSON.stringify(appState.filteredNotes)) {
+      appState.filteredNotes = newNotes;
       if (newNotes.length === 0) {
-        selectedIndex = -1;
+        appState.selectedIndex = -1;
       } else {
-        selectedIndex = 0;
+        appState.selectedIndex = 0;
       }
     }
   } catch (e) {
     if (!currentController.signal.aborted) {
-      console.error('Failed to load notes:', e);
-      filteredNotes = [];
-      selectedIndex = -1;
+      console.error('❌ Failed to load notes:', e);
+      appState.filteredNotes = [];
+      appState.selectedIndex = -1;
     }
   } finally {
     if (!currentController.signal.aborted) {
-      isLoading = false;
+      appState.isLoading = false;
     }
   }
 }
@@ -156,18 +170,18 @@ async function getNoteContent(noteName: string): Promise<string> {
 }
 
 async function deleteNote(): Promise<void> {
-  if (!selectedNote) return;
+  if (!appState.selectedNote) return;
 
   try {
-    await invoke<void>("delete_note", { noteName: selectedNote });
+    await invoke<void>("delete_note", { noteName: appState.selectedNote });
     // Refresh the notes list
-    await loadNotesImmediate(searchInput);
-    showDeleteDialog = false;
-    deleteKeyPressCount = 0;
-    clearTimeout(deleteKeyResetTimeout);
+    await loadNotesImmediate(appState.searchInput);
+    appState.showDeleteDialog = false;
+    appState.deleteKeyPressCount = 0;
+    clearTimeout(appState.deleteKeyResetTimeout);
     // Return focus to search
     await tick();
-    searchElement?.focus();
+    appState.searchElement?.focus();
   } catch (e) {
     console.error("Failed to delete note:", e);
     alert(`Failed to delete note: ${e}`);
@@ -175,9 +189,9 @@ async function deleteNote(): Promise<void> {
 }
 
 async function createNote(): Promise<void> {
-  if (!newNoteName.trim()) return;
+  if (!appState.newNoteName.trim()) return;
 
-  let noteName = newNoteName.trim();
+  let noteName = appState.newNoteName.trim();
   // Auto-add .md extension if no extension provided
   if (!noteName.includes('.')) {
     noteName += '.md';
@@ -186,17 +200,17 @@ async function createNote(): Promise<void> {
   try {
     await invoke<void>("create_new_note", { noteName });
     // Refresh the notes list
-    await loadNotesImmediate(searchInput);
+    await loadNotesImmediate(appState.searchInput);
     // Select the new note
-    const noteIndex = filteredNotes.findIndex(note => note === noteName);
+    const noteIndex = appState.filteredNotes.findIndex(note => note === noteName);
     if (noteIndex >= 0) {
-      selectedIndex = noteIndex;
+      appState.selectedIndex = noteIndex;
     }
-    showCreateDialog = false;
-    newNoteName = '';
+    appState.showCreateDialog = false;
+    appState.newNoteName = '';
     // Return focus to search
     await tick();
-    searchElement?.focus();
+    appState.searchElement?.focus();
   } catch (e) {
     console.error("Failed to create note:", e);
     alert(`Failed to create note: ${e}`);
@@ -204,19 +218,19 @@ async function createNote(): Promise<void> {
 }
 
 async function renameNote(): Promise<void> {
-  if (!newNoteNameForRename.trim() || !selectedNote) return;
+  if (!appState.newNoteNameForRename.trim() || !appState.selectedNote) return;
 
-  let newName = newNoteNameForRename.trim();
+  let newName = appState.newNoteNameForRename.trim();
   if (!newName.includes('.')) {
     newName += '.md';
   }
 
   try {
-    await invoke<void>("rename_note", { oldName: selectedNote, newName: newName });
-    await loadNotesImmediate(searchInput);
-    const noteIndex = filteredNotes.findIndex(note => note === newName);
+    await invoke<void>("rename_note", { oldName: appState.selectedNote, newName: newName });
+    await loadNotesImmediate(appState.searchInput);
+    const noteIndex = appState.filteredNotes.findIndex(note => note === newName);
     if (noteIndex >= 0) {
-      selectedIndex = noteIndex;
+      appState.selectedIndex = noteIndex;
     }
     closeRenameDialog();
   } catch (e) {
@@ -226,69 +240,69 @@ async function renameNote(): Promise<void> {
 }
 
 function openRenameDialog(): void {
-  if (selectedNote) {
-    newNoteNameForRename = selectedNote.endsWith('.md') ? selectedNote.slice(0, -3) : selectedNote;
-    showRenameDialog = true;
+  if (appState.selectedNote) {
+    appState.newNoteNameForRename = appState.selectedNote.endsWith('.md') ? appState.selectedNote.slice(0, -3) : appState.selectedNote;
+    appState.showRenameDialog = true;
   }
 }
 
 function closeRenameDialog(): void {
-  showRenameDialog = false;
-  newNoteNameForRename = '';
-  searchElement?.focus();
+  appState.showRenameDialog = false;
+  appState.newNoteNameForRename = '';
+  appState.searchElement?.focus();
 }
 
 function openCreateDialog(): void {
   // Pre-fill with search query if no results and query exists
-  if (!highlightedContent.trim() && query.trim()) {
-    newNoteName = query.trim();
+  if (!appState.highlightedContent.trim() && appState.query.trim()) {
+    appState.newNoteName = appState.query.trim();
   } else {
-    newNoteName = '';
+    appState.newNoteName = '';
   }
-  showCreateDialog = true;
+  appState.showCreateDialog = true;
 }
 
 function closeCreateDialog(): void {
-  showCreateDialog = false;
-  newNoteName = '';
-  searchElement?.focus();
+  appState.showCreateDialog = false;
+  appState.newNoteName = '';
+  appState.searchElement?.focus();
 }
 
 function openDeleteDialog(): void {
-  showDeleteDialog = true;
-  deleteKeyPressCount = 0;
-  clearTimeout(deleteKeyResetTimeout);
+  appState.showDeleteDialog = true;
+  appState.deleteKeyPressCount = 0;
+  clearTimeout(appState.deleteKeyResetTimeout);
 }
 
 function closeDeleteDialog(): void {
-  showDeleteDialog = false;
-  deleteKeyPressCount = 0;
-  clearTimeout(deleteKeyResetTimeout);
-  searchElement?.focus();
+  appState.showDeleteDialog = false;
+  appState.deleteKeyPressCount = 0;
+  clearTimeout(appState.deleteKeyResetTimeout);
+  appState.searchElement?.focus();
 }
 
 async function openConfigDialog(): Promise<void> {
   try {
     const content = await invoke<string>("get_config_content");
-    configContent = content;
-    showConfigDialog = true;
+    appState.configContent = content;
+    appState.showConfigDialog = true;
   } catch (e) {
     console.error("Failed to load config:", e);
   }
 }
 
 function closeConfigDialog(): void {
-  showConfigDialog = false;
-  configContent = '';
-  searchElement?.focus();
+  appState.showConfigDialog = false;
+  appState.configContent = '';
+  appState.searchElement?.focus();
 }
 
 async function saveConfig(): Promise<void> {
   try {
-    await invoke<void>("save_config_content", { content: configContent });
+    await invoke<void>("save_config_content", { content: appState.configContent });
     await invoke<void>("refresh_cache");
     closeConfigDialog();
-    searchElement?.focus();
+    appState.searchElement?.focus();
     loadNotesImmediate('');
   } catch (e) {
     console.error("Failed to save config:", e);
@@ -297,56 +311,56 @@ async function saveConfig(): Promise<void> {
 }
 
 function handleDeleteKeyPress(): void {
-  deleteKeyPressCount++;
-  if (deleteKeyPressCount === 1) {
+  appState.deleteKeyPressCount++;
+  if (appState.deleteKeyPressCount === 1) {
     // Start timeout for first 'D' press
-    deleteKeyResetTimeout = setTimeout(() => {
-      deleteKeyPressCount = 0;
+    appState.deleteKeyResetTimeout = setTimeout(() => {
+      appState.deleteKeyPressCount = 0;
     }, 2000); // Reset after 2 seconds
-  } else if (deleteKeyPressCount === 2) {
+  } else if (appState.deleteKeyPressCount === 2) {
     // Second 'D' press - confirm deletion
-    clearTimeout(deleteKeyResetTimeout);
+    clearTimeout(appState.deleteKeyResetTimeout);
     deleteNote();
   }
 }
 
 function clearHighlights(): void {
-  areHighlightsCleared = true;
-  highlightedContent = processContentForDisplay(noteContent, query);
+  appState.areHighlightsCleared = true;
+  appState.highlightedContent = processContentForDisplay(appState.noteContent, appState.query);
 }
 
 function clearSearch(): void {
-  searchInput = '';
-  areHighlightsCleared = false;
+  appState.searchInput = '';
+  appState.areHighlightsCleared = false;
 }
 
 $effect(() => {
-  debounceSearch(searchInput);
+  debounceSearch(appState.searchInput);
 });
 
 $effect(() => {
-  const newSelectedNote = filteredNotes.length > 0 && selectedIndex !== -1
-    ? filteredNotes[selectedIndex]
+  const newSelectedNote = appState.filteredNotes.length > 0 && appState.selectedIndex !== -1
+    ? appState.filteredNotes[appState.selectedIndex]
     : null;
-  if (newSelectedNote !== selectedNote) {
-    selectedNote = newSelectedNote;
-    isEditMode = false;
+  if (newSelectedNote !== appState.selectedNote) {
+    appState.selectedNote = newSelectedNote;
+    appState.isEditMode = false;
   }
 });
 
 $effect(() => {
-  if (selectedIndex >= 0) {
+  if (appState.selectedIndex >= 0) {
     requestAnimationFrame(() => {
       scrollToSelected();
     });
   }
 });
 
-$effect(async () => {
+$effect(() => {
   // Clear content when no note is selected
-  if (!selectedNote) {
-    noteContent = '';
-    highlightedContent = '';
+  if (!appState.selectedNote) {
+    appState.noteContent = '';
+    appState.highlightedContent = '';
     return;
   }
 
@@ -357,145 +371,148 @@ $effect(async () => {
   contentRequestController = new AbortController();
   const currentController = contentRequestController;
 
-  try {
-    // Load the note content from backend
-    const content = await getNoteContent(selectedNote);
+  // Handle async loading
+  (async () => {
+    try {
+      // Load the note content from backend
+      const content = await getNoteContent(appState.selectedNote!);
 
-    // Only update if request wasn't cancelled
-    if (!currentController.signal.aborted) {
-      noteContent = content;
-      highlightedContent = processContentForDisplay(content, query);
+      // Only update if request wasn't cancelled
+      if (!currentController.signal.aborted) {
+        appState.noteContent = content;
+        appState.highlightedContent = processContentForDisplay(content, appState.query);
 
-      // Scroll to first search match after DOM updates
-      requestAnimationFrame(() => {
-        scrollToFirstMatch();
-      });
+        // Scroll to first search match after DOM updates
+        requestAnimationFrame(() => {
+          scrollToFirstMatch();
+        });
+      }
+    } catch (e) {
+      // Handle errors only if request wasn't cancelled
+      if (!currentController.signal.aborted) {
+        console.error("Failed to load note content:", e);
+        appState.noteContent = `Error loading note: ${e}`;
+        appState.highlightedContent = appState.noteContent;
+      }
     }
-  } catch (e) {
-    // Handle errors only if request wasn't cancelled
-    if (!currentController.signal.aborted) {
-      console.error("Failed to load note content:", e);
-      noteContent = `Error loading note: ${e}`;
-      highlightedContent = noteContent;
-    }
-  }
+  })();
 });
 
 $effect(() => {
-  if (noteContent) {
-    highlightedContent = processContentForDisplay(noteContent, query);
+  if (appState.noteContent) {
+    appState.highlightedContent = processContentForDisplay(appState.noteContent, appState.query);
   }
 });
 
 // Effect to focus and select text in create dialog
 $effect(() => {
-  if (showCreateDialog && createDialogInputElement) {
+  if (appState.showCreateDialog && appState.createDialogInputElement) {
     tick().then(() => {
-      createDialogInputElement.focus();
+      appState.createDialogInputElement!.focus();
       // If text was pre-filled from search query, select all
-      if (newNoteName.trim()) {
-        createDialogInputElement.select();
+      if (appState.newNoteName.trim()) {
+        appState.createDialogInputElement!.select();
       }
     });
   }
 });
 
-$effect(async () => {
-  if (showDeleteDialog && deleteDialogElement) {
-    await tick();
-    deleteDialogElement.focus();
+$effect(() => {
+  if (appState.showDeleteDialog && deleteDialogElement) {
+    tick().then(() => {
+      deleteDialogElement.focus();
+    });
   }
 });
 
 $effect(() => {
-  if (showRenameDialog && renameDialogInputElement) {
+  if (appState.showRenameDialog && appState.renameDialogInputElement) {
     tick().then(() => {
-      renameDialogInputElement.focus();
-      renameDialogInputElement.select();
+      appState.renameDialogInputElement!.focus();
+      appState.renameDialogInputElement!.select();
     });
   }
 });
 
 function selectNote(note: string, index: number): void {
-  if (selectedIndex !== index) {
-    selectedIndex = index;
+  if (appState.selectedIndex !== index) {
+    appState.selectedIndex = index;
   }
 }
 
 async function enterEditMode(): Promise<void> {
-  if (selectedNote) {
-    if (noteContentElement) {
-      const rect = noteContentElement.getBoundingClientRect();
-      const headers = noteContentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  if (appState.selectedNote) {
+    if (appState.noteContentElement) {
+      const rect = appState.noteContentElement.getBoundingClientRect();
+      const headers = appState.noteContentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
 
       for (const header of headers) {
         const headerRect = header.getBoundingClientRect();
         if (headerRect.top >= rect.top) {
-          nearestHeaderText = header.textContent?.trim() || '';
-          console.log('Found nearest header:', nearestHeaderText);
+          appState.nearestHeaderText = header.textContent?.trim() || '';
           break;
         }
       }
     }
 
     try {
-      const rawContent = await invoke<string>("get_note_raw_content", { noteName: selectedNote });
-      isEditMode = true;
-      editContent = rawContent;
+      const rawContent = await invoke<string>("get_note_raw_content", { noteName: appState.selectedNote });
+      appState.isEditMode = true;
+      appState.editContent = rawContent;
     } catch (e) {
       console.error("Failed to load raw note content:", e);
       // Fallback: try to extract text from HTML content
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = noteContent;
-      editContent = tempDiv.textContent || tempDiv.innerText || '';
-      isEditMode = true;
+      tempDiv.innerHTML = appState.noteContent;
+      appState.editContent = tempDiv.textContent || tempDiv.innerText || '';
+      appState.isEditMode = true;
     }
   }
 }
 
 function exitEditMode(): void {
-  isEditMode = false;
-  searchElement?.focus();
+  appState.isEditMode = false;
+  appState.searchElement?.focus();
 }
 
 function showExitEditDialog(): void {
-  showUnsavedChangesDialog = true;
+  appState.showUnsavedChangesDialog = true;
 }
 
 function handleSaveAndExit(): void {
-  showUnsavedChangesDialog = false;
+  appState.showUnsavedChangesDialog = false;
   saveNote();
   exitEditMode();
 }
 
 function handleDiscardAndExit(): void {
-  showUnsavedChangesDialog = false;
+  appState.showUnsavedChangesDialog = false;
   exitEditMode();
 }
 
 async function saveNote(): Promise<void> {
-  if (!selectedNote || !editContent) return;
+  if (!appState.selectedNote || !appState.editContent) return;
   try {
     await invoke<void>("save_note", {
-      noteName: selectedNote,
-      content: editContent
+      noteName: appState.selectedNote,
+      content: appState.editContent
     });
 
     // refresh the database to include the new file
     await invoke<void>("refresh_cache");
 
     // Refresh the notes list to sync with database
-    await loadNotesImmediate(searchInput);
+    await loadNotesImmediate(appState.searchInput);
 
     // Reload the current note content
-    const content = await getNoteContent(selectedNote);
-    noteContent = content;
-    highlightedContent = processContentForDisplay(content, query);
-    isEditMode = false;
+    const content = await getNoteContent(appState.selectedNote);
+    appState.noteContent = content;
+    appState.highlightedContent = processContentForDisplay(content, appState.query);
+    appState.isEditMode = false;
 
     // Return focus to search after UI updates
     await tick();
-    searchElement?.focus();
+    appState.searchElement?.focus();
   } catch (e) {
     console.error("Failed to save note:", e);
   }
@@ -503,21 +520,21 @@ async function saveNote(): Promise<void> {
 
 const handleKeydown = createKeyboardHandler(
   () => ({
-    isSearchInputFocused,
-    isEditMode,
-    isNoteContentFocused,
-    selectedIndex,
-    filteredNotes,
-    selectedNote,
-    noteContentElement,
-    searchElement,
-    query,
-    areHighlightsCleared,
-    showConfigDialog,
-    isEditorDirty,
+    isSearchInputFocused: appState.isSearchInputFocused,
+    isEditMode: appState.isEditMode,
+    isNoteContentFocused: appState.isNoteContentFocused,
+    selectedIndex: appState.selectedIndex,
+    filteredNotes: appState.filteredNotes,
+    selectedNote: appState.selectedNote,
+    noteContentElement: appState.noteContentElement,
+    searchElement: appState.searchElement,
+    query: appState.query,
+    areHighlightsCleared: appState.areHighlightsCleared,
+    showConfigDialog: appState.showConfigDialog,
+    isEditorDirty: appState.isEditorDirty,
   }),
   {
-    setSelectedIndex: (value: number) => selectedIndex = value,
+    setSelectedIndex: (value: number) => appState.selectedIndex = value,
     enterEditMode,
     exitEditMode,
     showExitEditDialog,
@@ -531,65 +548,71 @@ const handleKeydown = createKeyboardHandler(
   }
 );
 
-onMount(async () => {
-  await tick();
+// Set up the context - pass the state object directly with actions
+setAppContext({
+  // Pass the reactive state object directly (don't spread it)
+  state: appState,
 
-  const configExists = await invoke<boolean>("config_exists");
-  console.log("Config exists:", configExists);
-  if (!configExists) {
-    console.log("Opening config dialog for new user");
-    openConfigDialog();
-  } else {
-    console.log("Config exists, focusing search");
-    searchElement?.focus();
-    loadNotesImmediate('');
-  }
+  // Action functions
+  selectNote,
+  deleteNote,
+  createNote,
+  renameNote,
+  saveNote,
+  enterEditMode,
+  exitEditMode,
+  showExitEditDialog,
+  handleSaveAndExit,
+  handleDiscardAndExit,
+  openCreateDialog,
+  closeCreateDialog,
+  openRenameDialog,
+  closeRenameDialog,
+  openDeleteDialog,
+  closeDeleteDialog,
+  openConfigDialog,
+  closeConfigDialog,
+  saveConfig,
+  handleDeleteKeyPress,
+  clearHighlights,
+  clearSearch,
+  invoke,
+});
 
-  const unlisten = await listen("open-preferences", () => {
-    openConfigDialog();
-  });
+onMount(() => {
+  (async () => {
+    await tick();
 
-  return () => {
-    if (searchRequestController) searchRequestController.abort();
-    if (contentRequestController) contentRequestController.abort();
-    clearTimeout(searchTimeout);
-    unlisten();
-  };
+    const configExists = await invoke<boolean>("config_exists");
+    if (!configExists) {
+      openConfigDialog();
+    } else {
+      appState.searchElement?.focus();
+      loadNotesImmediate('');
+    }
+
+    const unlisten = await listen("open-preferences", () => {
+      openConfigDialog();
+    });
+
+    return () => {
+      if (searchRequestController) searchRequestController.abort();
+      if (contentRequestController) contentRequestController.abort();
+      clearTimeout(searchTimeout);
+      unlisten();
+    };
+  })();
 });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 <main class="container">
-  <SearchInput
-    bind:value={searchInput}
-    onFocus={() => isSearchInputFocused = true}
-    onBlur={() => isSearchInputFocused = false}
-    bind:element={searchElement}
-  />
-  <NoteList
-    notes={filteredNotes}
-    selectedIndex={selectedIndex}
-    isLoading={isLoading}
-    onSelectNote={selectNote}
-    bind:listElement={noteListElement}
-  />
-  <NoteView
-    selectedNote={selectedNote}
-    isEditMode={isEditMode}
-    bind:editContent={editContent}
-    highlightedContent={highlightedContent}
-    nearestHeaderText={nearestHeaderText}
-    onSave={saveNote}
-    onExitEditMode={exitEditMode}
-    onRequestExitEdit={showExitEditDialog}
-    onEnterEditMode={enterEditMode}
-    bind:noteContentElement={noteContentElement}
-    bind:isNoteContentFocused={isNoteContentFocused}
-    bind:isEditorDirty={isEditorDirty}
-  />
+  <SearchInput />
+  <NoteList />
+  <NoteView />
 
   <!-- Delete Confirmation Dialog -->
-  {#if showDeleteDialog}
+  {#if appState.showDeleteDialog}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeDeleteDialog}>
@@ -609,11 +632,11 @@ onMount(async () => {
           }
         }}>
         <h3>Delete Note</h3>
-        <p>Are you sure you want to delete "{selectedNote}"?</p>
+        <p>Are you sure you want to delete "{appState.selectedNote}"?</p>
         <p class="warning">This action cannot be undone.</p>
         <div class="keyboard-hint">
           <p>Press <kbd>DD</kbd> to confirm or <kbd>Esc</kbd> to cancel</p>
-          {#if deleteKeyPressCount === 1}
+          {#if appState.deleteKeyPressCount === 1}
             <p class="delete-progress">Press <kbd>D</kbd> again to confirm deletion</p>
           {/if}
         </div>
@@ -626,15 +649,15 @@ onMount(async () => {
   {/if}
 
   <!-- Create Note Dialog -->
-  {#if showCreateDialog}
+  {#if appState.showCreateDialog}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeCreateDialog}>
       <div class="dialog" onclick={(e) => e.stopPropagation()}>
         <h3>Create New Note</h3>
         <input
-          bind:this={createDialogInputElement}
-          bind:value={newNoteName}
+          bind:this={appState.createDialogInputElement}
+          bind:value={appState.newNoteName}
           placeholder="Enter note name (extension will be .md)"
           class="note-name-input"
           onkeydown={(e) => {
@@ -649,22 +672,22 @@ onMount(async () => {
         />
         <div class="dialog-buttons">
           <button class="btn-cancel" onclick={closeCreateDialog}>Cancel</button>
-          <button class="btn-create" onclick={createNote} disabled={!newNoteName.trim()}>Create</button>
+          <button class="btn-create" onclick={createNote} disabled={!appState.newNoteName.trim()}>Create</button>
         </div>
       </div>
     </div>
   {/if}
 
   <!-- Rename Note Dialog -->
-  {#if showRenameDialog}
+  {#if appState.showRenameDialog}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeRenameDialog}>
       <div class="dialog" onclick={(e) => e.stopPropagation()}>
         <h3>Rename Note</h3>
         <input
-          bind:this={renameDialogInputElement}
-          bind:value={newNoteNameForRename}
+          bind:this={appState.renameDialogInputElement}
+          bind:value={appState.newNoteNameForRename}
           placeholder="Enter new note name"
           class="note-name-input"
           onkeydown={(e) => {
@@ -679,14 +702,14 @@ onMount(async () => {
         />
         <div class="dialog-buttons">
           <button class="btn-cancel" onclick={closeRenameDialog}>Cancel</button>
-          <button class="btn-create" onclick={renameNote} disabled={!newNoteNameForRename.trim()}>Rename</button>
+          <button class="btn-create" onclick={renameNote} disabled={!appState.newNoteNameForRename.trim()}>Rename</button>
         </div>
       </div>
     </div>
   {/if}
 
   <!-- Config Dialog -->
-  {#if showConfigDialog}
+  {#if appState.showConfigDialog}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeConfigDialog}>
@@ -694,7 +717,7 @@ onMount(async () => {
         <h3>Configuration</h3>
         <div class="config-editor-container">
           <Editor
-            bind:value={configContent}
+            bind:value={appState.configContent}
             filename="config.toml"
             onSave={saveConfig}
             onExit={closeConfigDialog}
@@ -713,7 +736,7 @@ onMount(async () => {
 
   <!-- Unsaved Changes Confirmation Dialog -->
   <ConfirmationDialog
-    show={showUnsavedChangesDialog}
+    show={appState.showUnsavedChangesDialog}
     title="Unsaved Changes"
     message="You have unsaved changes. What would you like to do?"
     confirmText="Save and Exit"

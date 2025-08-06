@@ -3,23 +3,13 @@
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
   import { afterUpdate } from 'svelte';
+  import { getAppContext } from '../context/app.svelte';
 
-  export let selectedNote: string | null;
-  export let isEditMode: boolean;
-  export let editContent: string;
-  export let highlightedContent: string;
-  export let onSave: () => Promise<void>;
-  export let onExitEditMode: () => void;
-  export let onRequestExitEdit: (() => void) | null = null;
-  export let onEnterEditMode: () => void;
-  export let noteContentElement: HTMLElement | null = null;
-  export let isNoteContentFocused: boolean = false;
-  export let isEditorDirty: boolean = false;
-  export let nearestHeaderText: string = '';
+  const context = getAppContext();
 
   afterUpdate(() => {
-    if (noteContentElement) {
-      const blocks = noteContentElement.querySelectorAll('pre code');
+    if (context.state.noteContentElement) {
+      const blocks = context.state.noteContentElement.querySelectorAll('pre code');
       blocks.forEach((block: Element) => {
         hljs.highlightElement(block as HTMLElement);
       });
@@ -28,24 +18,24 @@
 </script>
 
 <div class="note-preview">
-  {#if selectedNote}
-    {#if isEditMode}
+  {#if context.state.selectedNote}
+    {#if context.state.isEditMode}
       <div class="edit-mode">
         <div class="edit-header">
-          <h3>Editing: {selectedNote}</h3>
+          <h3>Editing: {context.state.selectedNote}</h3>
           <div class="edit-controls">
-            <button on:click={onSave} class="save-btn">Save (Ctrl+S)</button>
-            <button on:click={onExitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            <button on:click={context.saveNote} class="save-btn">Save (Ctrl+S)</button>
+            <button on:click={context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
           </div>
         </div>
         <Editor
-          bind:value={editContent}
-          bind:isDirty={isEditorDirty}
-          filename={selectedNote}
-          nearestHeaderText={nearestHeaderText}
-          onSave={onSave}
-          onExit={onExitEditMode}
-          onRequestExit={onRequestExitEdit}
+          bind:value={context.state.editContent}
+          bind:isDirty={context.state.isEditorDirty}
+          filename={context.state.selectedNote}
+          nearestHeaderText={context.state.nearestHeaderText}
+          onSave={context.saveNote}
+          onExit={context.exitEditMode}
+          onRequestExit={context.showExitEditDialog}
         />
       </div>
     {:else}
@@ -53,13 +43,13 @@
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="note-content"
-        bind:this={noteContentElement}
+        bind:this={context.state.noteContentElement}
         tabindex="-1"
-        on:focus={() => isNoteContentFocused = true}
-        on:blur={() => isNoteContentFocused = false}
-        on:dblclick={onEnterEditMode}
+        on:focus={() => context.state.isNoteContentFocused = true}
+        on:blur={() => context.state.isNoteContentFocused = false}
+        on:dblclick={context.enterEditMode}
       >
-        <div class="note-text">{@html highlightedContent}</div>
+        <div class="note-text">{@html context.state.highlightedContent}</div>
       </div>
     {/if}
   {:else}
