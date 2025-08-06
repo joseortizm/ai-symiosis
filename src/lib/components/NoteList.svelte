@@ -1,9 +1,9 @@
-<script>
-  export let notes = [];
-  export let selectedIndex = -1;
-  export let isLoading = false;
-  export let onSelectNote = () => {};
-  export let listElement = null;
+<script lang="ts">
+  export let notes: string[] = [];
+  export let selectedIndex: number = -1;
+  export let isLoading: boolean = false;
+  export let onSelectNote: (note: string, index: number) => void = () => {};
+  export let listElement: HTMLElement | null = null;
 </script>
 
 <div class="notes-list-container">

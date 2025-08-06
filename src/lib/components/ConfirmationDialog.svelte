@@ -1,26 +1,29 @@
-<script>
-  import { createEventDispatcher, onMount } from 'svelte';
+<script lang="ts">
+  import { createEventDispatcher } from 'svelte';
 
-  export let show = false;
-  export let title = "Confirm";
-  export let message = "";
-  export let confirmText = "Confirm";
-  export let cancelText = "Cancel";
-  export let variant = "default"; // default, danger
+  export let show: boolean = false;
+  export let title: string = "Confirm";
+  export let message: string = "";
+  export let confirmText: string = "Confirm";
+  export let cancelText: string = "Cancel";
+  export let variant: 'default' | 'danger' = "default";
 
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher<{
+    confirm: void;
+    cancel: void;
+  }>();
 
-  let dialogElement;
+  let dialogElement: HTMLElement;
 
-  function handleConfirm() {
+  function handleConfirm(): void {
     dispatch('confirm');
   }
 
-  function handleCancel() {
+  function handleCancel(): void {
     dispatch('cancel');
   }
 
-  function handleKeydown(event) {
+  function handleKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
       handleCancel();
@@ -30,7 +33,7 @@
     }
   }
 
-  function handleOverlayClick(event) {
+  function handleOverlayClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
       handleCancel();
     }

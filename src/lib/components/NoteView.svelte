@@ -1,26 +1,26 @@
-<script>
+<script lang="ts">
   import Editor from './Editor.svelte';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
   import { afterUpdate } from 'svelte';
 
-  export let selectedNote;
-  export let isEditMode;
-  export let editContent;
-  export let highlightedContent;
-  export let onSave;
-  export let onExitEditMode;
-  export let onRequestExitEdit = null;
-  export let onEnterEditMode;
-  export let noteContentElement = null;
-  export let isNoteContentFocused = false;
-  export let isEditorDirty = false;
+  export let selectedNote: string | null;
+  export let isEditMode: boolean;
+  export let editContent: string;
+  export let highlightedContent: string;
+  export let onSave: () => Promise<void>;
+  export let onExitEditMode: () => void;
+  export let onRequestExitEdit: (() => void) | null = null;
+  export let onEnterEditMode: () => void;
+  export let noteContentElement: HTMLElement | null = null;
+  export let isNoteContentFocused: boolean = false;
+  export let isEditorDirty: boolean = false;
 
   afterUpdate(() => {
     if (noteContentElement) {
       const blocks = noteContentElement.querySelectorAll('pre code');
-      blocks.forEach((block) => {
-        hljs.highlightElement(block);
+      blocks.forEach((block: Element) => {
+        hljs.highlightElement(block as HTMLElement);
       });
     }
   });

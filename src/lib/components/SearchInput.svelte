@@ -1,8 +1,8 @@
-<script>
-  export let value;
-  export let onFocus;
-  export let onBlur;
-  export let element = null;
+<script lang="ts">
+  export let value: string;
+  export let onFocus: () => void;
+  export let onBlur: () => void;
+  export let element: HTMLInputElement | null = null;
 </script>
 
 <input

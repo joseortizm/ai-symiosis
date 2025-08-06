@@ -1,26 +1,27 @@
-<script>
+<script lang="ts">
   import { onMount, tick } from 'svelte';
   import { invoke } from "@tauri-apps/api/core";
   import { EditorView, basicSetup } from 'codemirror';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
   import { markdown } from '@codemirror/lang-markdown';
-  import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
+  import { syntaxHighlighting, HighlightStyle, Extension } from '@codemirror/language';
   import { tags } from '@lezer/highlight';
   import { StreamLanguage } from '@codemirror/language';
   import { toml } from '@codemirror/legacy-modes/mode/toml';
   import { vim } from "@replit/codemirror-vim";
   import { emacs } from "@replit/codemirror-emacs";
+  import type { Command } from '@codemirror/view';
 
-  export let value;
-  export let filename;
-  export let onSave;
-  export let onExit = null;
-  export let onRequestExit = null;
+  export let value: string;
+  export let filename: string;
+  export let onSave: () => void;
+  export let onExit: (() => void) | null = null;
+  export let onRequestExit: (() => void) | null = null;
 
-  let isDirty = false;
-  let initialValue = value;
-  let lastPropsValue = value;
+  let isDirty: boolean = false;
+  let initialValue: string = value;
+  let lastPropsValue: string = value;
 
   $: if (value !== lastPropsValue) {
     initialValue = value;
@@ -28,7 +29,7 @@
     isDirty = false;
   }
 
-  function resetDirtyFlag() {
+  function resetDirtyFlag(): void {
     isDirty = false;
     initialValue = value;
     lastPropsValue = value;
@@ -36,20 +37,20 @@
 
   export { isDirty };
 
-  let editorContainer;
-  let editorView;
-  let keyBindingMode = 'basic'; // default
+  let editorContainer: HTMLElement;
+  let editorView: EditorView | null;
+  let keyBindingMode: string = 'basic'; // default
 
-  async function loadEditorMode() {
+  async function loadEditorMode(): Promise<void> {
     try {
-      keyBindingMode = await invoke("get_editor_mode");
+      keyBindingMode = await invoke<string>("get_editor_mode");
     } catch (e) {
       console.error("Failed to load editor mode:", e);
       keyBindingMode = 'basic'; // fallback
     }
   }
 
-  function getKeyMappingsMode(mode) {
+  function getKeyMappingsMode(mode: string): Extension | null {
     switch (mode) {
       case 'vim': return vim();
       case 'emacs': return emacs();
@@ -58,10 +59,10 @@
     }
   }
 
-  function createFallbackEditor() {
+  function createFallbackEditor(): void {
     if (!editorContainer) return;
     editorContainer.innerHTML = '<textarea style="width:100%; height:100%; background:#282828; color:#fbf1c7; font-family:\'JetBrains Mono\', monospace; padding:16px; border:none; resize:none;"></textarea>';
-    const textarea = editorContainer.querySelector('textarea');
+    const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
     if (textarea) {
       textarea.value = value || '';
       textarea.addEventListener('input', () => {
@@ -71,7 +72,7 @@
     }
   }
 
-  function createCodeMirrorEditor() {
+  function createCodeMirrorEditor(): void {
     if (!editorContainer) {
       console.error('Edit container not found');
       return;
@@ -159,7 +160,7 @@
         { tag: tags.monospace, color: "#d3869b", backgroundColor: "#3c3836" }
       ]));
 
-      function getLanguageExtension(filename) {
+      function getLanguageExtension(filename: string): Extension {
         if (!filename) return markdown();
         const ext = filename.split('.').pop()?.toLowerCase();
         switch (ext) {
@@ -174,7 +175,7 @@
 
       const customKeymap = keymap.of([
         indentWithTab,
-        { key: "Ctrl-s", run: () => {
+        { key: "Ctrl-s", run: (): boolean => {
           onSave();
           resetDirtyFlag();
           return true;
@@ -183,7 +184,7 @@
 
       const escapeKeymap = (onExit || onRequestExit) ? keymap.of([{
         key: "Escape",
-        run: (view) => {
+        run: (view: EditorView): boolean => {
           setTimeout(() => {
             try {
               if (keyBindingMode === 'vim') {
@@ -216,7 +217,7 @@
 
       const keyMappingsMode = getKeyMappingsMode(keyBindingMode);
 
-      const extensions = [
+      const extensions: Extension[] = [
         keyMappingsMode,
         basicSetup,
         getLanguageExtension(filename),
@@ -235,7 +236,7 @@
             }
           }
         })
-      ].filter(Boolean);
+      ].filter((ext): ext is Extension => Boolean(ext));
 
       editorView = new EditorView({
         doc: value || '',
