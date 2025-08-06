@@ -7,7 +7,7 @@ import NoteList from "../lib/components/NoteList.svelte";
 import NoteView from "../lib/components/NoteView.svelte";
 import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
-import { createKeyboardHandler } from '../lib/keyboardHandler.js';
+import { createKeyboardHandler } from '../lib/keyboardHandler.ts';
 
 let filteredNotes = $state([]);
 let selectedNote = $state(null);

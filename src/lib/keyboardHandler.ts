@@ -1,39 +1,83 @@
-const actionRegistry = {
+export interface AppState {
+  isSearchInputFocused: boolean;
+  isEditMode: boolean;
+  isNoteContentFocused: boolean;
+  selectedIndex: number;
+  filteredNotes: string[];
+  selectedNote: string | null;
+  noteContentElement: HTMLElement | null;
+  searchElement: HTMLInputElement | null;
+  query: string;
+  areHighlightsCleared: boolean;
+  showConfigDialog: boolean;
+  isEditorDirty: boolean;
+}
+
+export interface Actions {
+  setSelectedIndex: (value: number) => void;
+  enterEditMode: () => Promise<void>;
+  exitEditMode: () => void;
+  showExitEditDialog: () => void;
+  saveNote: () => Promise<void>;
+  invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+  showDeleteDialog: () => void;
+  showCreateDialog: () => void;
+  showRenameDialog: () => void;
+  clearHighlights: () => void;
+  clearSearch: () => void;
+}
+
+export interface ActionContext {
+  state: AppState;
+  actions: Actions;
+}
+
+export type ActionFunction = (context: ActionContext) => void | Promise<void>;
+
+export type KeyMappings = Record<string, string>;
+
+export interface ActionRegistry {
+  [category: string]: {
+    [actionName: string]: ActionFunction;
+  };
+}
+
+const actionRegistry: ActionRegistry = {
   navigation: {
-    moveUp: ({ state, actions }) => {
+    moveUp: ({ state, actions }: ActionContext) => {
       const newIndex = Math.max(0, state.selectedIndex - 1);
       actions.setSelectedIndex(newIndex);
     },
-    moveDown: ({ state, actions }) => {
+    moveDown: ({ state, actions }: ActionContext) => {
       const maxIndex = state.filteredNotes.length - 1;
       const newIndex = Math.min(maxIndex, state.selectedIndex + 1);
       actions.setSelectedIndex(newIndex);
     },
-    focusSearch: ({ state }) => {
+    focusSearch: ({ state }: ActionContext) => {
       state.searchElement?.focus();
     },
   },
 
   scrolling: {
-    scrollUp: ({ state }) => {
+    scrollUp: ({ state }: ActionContext) => {
       state.noteContentElement?.scrollBy({
         top: -50,
         behavior: 'smooth'
       });
     },
-    scrollDown: ({ state }) => {
+    scrollDown: ({ state }: ActionContext) => {
       state.noteContentElement?.scrollBy({
         top: 50,
         behavior: 'smooth'
       });
     },
-    scrollUp200: ({ state }) => {
+    scrollUp200: ({ state }: ActionContext) => {
       state.noteContentElement?.scrollBy({
         top: -200,
         behavior: 'smooth'
       });
     },
-    scrollDown200: ({ state }) => {
+    scrollDown200: ({ state }: ActionContext) => {
       state.noteContentElement?.scrollBy({
         top: 200,
         behavior: 'smooth'
@@ -42,50 +86,50 @@ const actionRegistry = {
   },
 
   editing: {
-    enterEdit: async ({ state, actions }) => {
+    enterEdit: async ({ state, actions }: ActionContext) => {
       if (state.selectedNote && state.filteredNotes.length > 0) {
         await actions.enterEditMode();
       }
     },
-    exitEdit: ({ state, actions }) => {
+    exitEdit: ({ state, actions }: ActionContext) => {
       actions.exitEditMode();
     },
-    smartExitEdit: ({ state, actions }) => {
+    smartExitEdit: ({ state, actions }: ActionContext) => {
       if (state.isEditorDirty) {
         actions.showExitEditDialog();
       } else {
         actions.exitEditMode();
       }
     },
-    save: async ({ actions }) => {
+    save: async ({ actions }: ActionContext) => {
       await actions.saveNote();
     },
   },
 
   notes: {
-    openExternal: async ({ state, actions }) => {
+    openExternal: async ({ state, actions }: ActionContext) => {
       if (state.selectedNote) {
         await actions.invoke("open_note_in_editor", { noteName: state.selectedNote });
       }
     },
-    refreshCache: async ({ state, actions }) => {
+    refreshCache: async ({ state, actions }: ActionContext) => {
       await actions.invoke("refresh_cache");
     },
-    deleteNote: ({ state, actions }) => {
+    deleteNote: ({ state, actions }: ActionContext) => {
       if (state.selectedNote) {
         actions.showDeleteDialog();
       }
     },
-    createNote: ({ actions }) => {
+    createNote: ({ actions }: ActionContext) => {
       actions.showCreateDialog();
     },
-    renameNote: ({ actions }) => {
+    renameNote: ({ actions }: ActionContext) => {
       actions.showRenameDialog();
     },
   },
 
   search: {
-    clearHighlights: ({ state, actions }) => {
+    clearHighlights: ({ state, actions }: ActionContext) => {
       if (state.query.trim() && !state.areHighlightsCleared) {
         actions.clearHighlights();
       } else if (state.areHighlightsCleared || !state.query.trim()) {
@@ -96,7 +140,7 @@ const actionRegistry = {
 };
 
 // Key mappings for each mode - these reference the actions object above
-const keyMappings = {
+const keyMappings: Record<string, KeyMappings> = {
   searchInput: {
     'Enter': 'editing.enterEdit',
     'Ctrl+Enter': 'notes.createNote',
@@ -127,8 +171,6 @@ const keyMappings = {
     'Escape': 'navigation.focusSearch',
     'e': 'editing.enterEdit',
     'Ctrl+x': 'notes.deleteNote',
-    'Ctrl+Enter': 'notes.createNote',
-    'Ctrl+n': 'notes.createNote',
   },
 
   default: {
@@ -141,8 +183,8 @@ const keyMappings = {
   }
 };
 
-function formatKeyCombo(event) {
-  const modifiers = [];
+function formatKeyCombo(event: KeyboardEvent): string {
+  const modifiers: string[] = [];
   if (event.ctrlKey) modifiers.push('Ctrl');
   if (event.altKey) modifiers.push('Alt');
   if (event.shiftKey) modifiers.push('Shift');
@@ -153,7 +195,11 @@ function formatKeyCombo(event) {
     : event.key;
 }
 
-async function handleKeyAction(mappings, event, context) {
+async function handleKeyAction(
+  mappings: KeyMappings, 
+  event: KeyboardEvent, 
+  context: ActionContext
+): Promise<boolean> {
   const keyString = formatKeyCombo(event);
   const actionPath = mappings[keyString];
 
@@ -174,13 +220,16 @@ async function handleKeyAction(mappings, event, context) {
   return false;
 }
 
-export function createKeyboardHandler(getState, actions) {
-  return async function handleKeydown(event) {
+export function createKeyboardHandler(
+  getState: () => AppState, 
+  actions: Actions
+): (event: KeyboardEvent) => Promise<void> {
+  return async function handleKeydown(event: KeyboardEvent): Promise<void> {
     const state = getState();
 
     if (state.showConfigDialog) return;
 
-    const context = { state, actions };
+    const context: ActionContext = { state, actions };
     let handled = false;
 
     if (state.isSearchInputFocused) {
