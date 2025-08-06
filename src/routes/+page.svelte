@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 import { invoke } from "@tauri-apps/api/core";
 import { onMount, tick } from "svelte";
 import { listen } from "@tauri-apps/api/event";
@@ -7,46 +7,53 @@ import NoteList from "../lib/components/NoteList.svelte";
 import NoteView from "../lib/components/NoteView.svelte";
 import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
-import { createKeyboardHandler } from '../lib/keyboardHandler.ts';
+import { createKeyboardHandler } from '../lib/keyboardHandler';
 
-let filteredNotes = $state([]);
-let selectedNote = $state(null);
-let selectedIndex = $state(-1);
-let searchInput = $state('');
-let noteContent = $state('');
-let searchElement = $state();
-let noteListElement = $state();
-let noteContentElement = $state();
-let isSearchInputFocused = $state(false);
-let isNoteContentFocused = $state(false);
-let isLoading = $state(false);
-let query = $state('');
-let highlightedContent = $state('');
-let isEditMode = $state(false);
-let editContent = $state('');
-let showDeleteDialog = $state(false);
-let showCreateDialog = $state(false);
-let newNoteName = $state('');
-let showRenameDialog = $state(false);
-let newNoteNameForRename = $state('');
-let renameDialogInputElement = $state();
-let areHighlightsCleared = $state(false);
-let createDialogInputElement = $state();
-let deleteKeyPressCount = $state(0);
-let deleteKeyResetTimeout = $state();
+// Tauri API Response Types
+interface SearchNotesResponse {
+  [key: string]: string[];
+}
+
+type TauriInvokeResponse<T> = Promise<T>;
+
+let filteredNotes = $state<string[]>([]);
+let selectedNote = $state<string | null>(null);
+let selectedIndex = $state<number>(-1);
+let searchInput = $state<string>('');
+let noteContent = $state<string>('');
+let searchElement = $state<HTMLInputElement | null>();
+let noteListElement = $state<HTMLElement | null>();
+let noteContentElement = $state<HTMLElement | null>();
+let isSearchInputFocused = $state<boolean>(false);
+let isNoteContentFocused = $state<boolean>(false);
+let isLoading = $state<boolean>(false);
+let query = $state<string>('');
+let highlightedContent = $state<string>('');
+let isEditMode = $state<boolean>(false);
+let editContent = $state<string>('');
+let showDeleteDialog = $state<boolean>(false);
+let showCreateDialog = $state<boolean>(false);
+let newNoteName = $state<string>('');
+let showRenameDialog = $state<boolean>(false);
+let newNoteNameForRename = $state<string>('');
+let renameDialogInputElement = $state<HTMLInputElement | null>();
+let areHighlightsCleared = $state<boolean>(false);
+let createDialogInputElement = $state<HTMLInputElement | null>();
+let deleteKeyPressCount = $state<number>(0);
+let deleteKeyResetTimeout = $state<number | undefined>();
 // svelte-ignore non_reactive_update
-let deleteDialogElement;
-let showConfigDialog = $state(false);
-let configContent = $state('');
-let showUnsavedChangesDialog = $state(false);
-let isEditorDirty = $state(false);
+let deleteDialogElement: HTMLElement;
+let showConfigDialog = $state<boolean>(false);
+let configContent = $state<string>('');
+let showUnsavedChangesDialog = $state<boolean>(false);
+let isEditorDirty = $state<boolean>(false);
 
-let searchRequestController = null;
-let contentRequestController = null;
-let highlightCache = new Map();
+let searchRequestController: AbortController | null = null;
+let contentRequestController: AbortController | null = null;
+let highlightCache = new Map<string, string>();
 
 
-function processContentForDisplay(content, query) {
+function processContentForDisplay(content: string, query: string): string {
   if (!query.trim() || areHighlightsCleared) {
     return content;
   }
@@ -71,7 +78,7 @@ function processContentForDisplay(content, query) {
   return result;
 }
 
-function scrollToFirstMatch() {
+function scrollToFirstMatch(): void {
   if (noteContentElement && query.trim() && !areHighlightsCleared) {
     setTimeout(() => {
       const firstMatch = noteContentElement.querySelector('.highlight');
@@ -82,7 +89,7 @@ function scrollToFirstMatch() {
   }
 }
 
-function scrollToSelected() {
+function scrollToSelected(): void {
   if (noteListElement && selectedIndex >= 0) {
     const selectedButton = noteListElement.children[selectedIndex]?.querySelector('button');
     if (selectedButton) {
@@ -91,8 +98,8 @@ function scrollToSelected() {
   }
 }
 
-let searchTimeout;
-function debounceSearch(newQuery) {
+let searchTimeout: number;
+function debounceSearch(newQuery: string): void {
   if (newQuery === query) return;
   // Update query immediately for highlighting
   query = newQuery;
@@ -109,7 +116,7 @@ function debounceSearch(newQuery) {
   }, 100);
 }
 
-async function loadNotesImmediate(searchQuery) {
+async function loadNotesImmediate(searchQuery: string): Promise<void> {
   if (searchRequestController) {
     searchRequestController.abort();
   }
@@ -117,7 +124,7 @@ async function loadNotesImmediate(searchQuery) {
   const currentController = searchRequestController;
   try {
     isLoading = true;
-    const newNotes = await invoke("search_notes", { query: searchQuery });
+    const newNotes = await invoke<string[]>("search_notes", { query: searchQuery });
     if (currentController.signal.aborted) {
       return;
     }
@@ -142,16 +149,16 @@ async function loadNotesImmediate(searchQuery) {
   }
 }
 
-async function getNoteContent(noteName) {
-  const content = await invoke("get_note_content", { noteName });
+async function getNoteContent(noteName: string): Promise<string> {
+  const content = await invoke<string>("get_note_content", { noteName });
   return content;
 }
 
-async function deleteNote() {
+async function deleteNote(): Promise<void> {
   if (!selectedNote) return;
 
   try {
-    await invoke("delete_note", { noteName: selectedNote });
+    await invoke<void>("delete_note", { noteName: selectedNote });
     // Refresh the notes list
     await loadNotesImmediate(searchInput);
     showDeleteDialog = false;
@@ -166,7 +173,7 @@ async function deleteNote() {
   }
 }
 
-async function createNote() {
+async function createNote(): Promise<void> {
   if (!newNoteName.trim()) return;
 
   let noteName = newNoteName.trim();
@@ -176,7 +183,7 @@ async function createNote() {
   }
 
   try {
-    await invoke("create_new_note", { noteName });
+    await invoke<void>("create_new_note", { noteName });
     // Refresh the notes list
     await loadNotesImmediate(searchInput);
     // Select the new note
@@ -195,7 +202,7 @@ async function createNote() {
   }
 }
 
-async function renameNote() {
+async function renameNote(): Promise<void> {
   if (!newNoteNameForRename.trim() || !selectedNote) return;
 
   let newName = newNoteNameForRename.trim();
@@ -204,7 +211,7 @@ async function renameNote() {
   }
 
   try {
-    await invoke("rename_note", { oldName: selectedNote, newName: newName });
+    await invoke<void>("rename_note", { oldName: selectedNote, newName: newName });
     await loadNotesImmediate(searchInput);
     const noteIndex = filteredNotes.findIndex(note => note === newName);
     if (noteIndex >= 0) {
@@ -217,20 +224,20 @@ async function renameNote() {
   }
 }
 
-function openRenameDialog() {
+function openRenameDialog(): void {
   if (selectedNote) {
     newNoteNameForRename = selectedNote.endsWith('.md') ? selectedNote.slice(0, -3) : selectedNote;
     showRenameDialog = true;
   }
 }
 
-function closeRenameDialog() {
+function closeRenameDialog(): void {
   showRenameDialog = false;
   newNoteNameForRename = '';
   searchElement?.focus();
 }
 
-function openCreateDialog() {
+function openCreateDialog(): void {
   // Pre-fill with search query if no results and query exists
   if (!highlightedContent.trim() && query.trim()) {
     newNoteName = query.trim();
@@ -240,28 +247,28 @@ function openCreateDialog() {
   showCreateDialog = true;
 }
 
-function closeCreateDialog() {
+function closeCreateDialog(): void {
   showCreateDialog = false;
   newNoteName = '';
   searchElement?.focus();
 }
 
-function openDeleteDialog() {
+function openDeleteDialog(): void {
   showDeleteDialog = true;
   deleteKeyPressCount = 0;
   clearTimeout(deleteKeyResetTimeout);
 }
 
-function closeDeleteDialog() {
+function closeDeleteDialog(): void {
   showDeleteDialog = false;
   deleteKeyPressCount = 0;
   clearTimeout(deleteKeyResetTimeout);
   searchElement?.focus();
 }
 
-async function openConfigDialog() {
+async function openConfigDialog(): Promise<void> {
   try {
-    const content = await invoke("get_config_content");
+    const content = await invoke<string>("get_config_content");
     configContent = content;
     showConfigDialog = true;
   } catch (e) {
@@ -269,18 +276,18 @@ async function openConfigDialog() {
   }
 }
 
-function closeConfigDialog() {
+function closeConfigDialog(): void {
   showConfigDialog = false;
   configContent = '';
   searchElement?.focus();
 }
 
-async function saveConfig() {
+async function saveConfig(): Promise<void> {
   try {
-    await invoke("save_config_content", { content: configContent });
-    await invoke("refresh_cache");
+    await invoke<void>("save_config_content", { content: configContent });
+    await invoke<void>("refresh_cache");
     closeConfigDialog();
-    searchElement.focus();
+    searchElement?.focus();
     loadNotesImmediate('');
   } catch (e) {
     console.error("Failed to save config:", e);
@@ -288,7 +295,7 @@ async function saveConfig() {
   }
 }
 
-function handleDeleteKeyPress() {
+function handleDeleteKeyPress(): void {
   deleteKeyPressCount++;
   if (deleteKeyPressCount === 1) {
     // Start timeout for first 'D' press
@@ -302,12 +309,12 @@ function handleDeleteKeyPress() {
   }
 }
 
-function clearHighlights() {
+function clearHighlights(): void {
   areHighlightsCleared = true;
   highlightedContent = processContentForDisplay(noteContent, query);
 }
 
-function clearSearch() {
+function clearSearch(): void {
   searchInput = '';
   areHighlightsCleared = false;
 }
@@ -408,16 +415,16 @@ $effect(() => {
   }
 });
 
-function selectNote(note, index) {
+function selectNote(note: string, index: number): void {
   if (selectedIndex !== index) {
     selectedIndex = index;
   }
 }
 
-async function enterEditMode() {
+async function enterEditMode(): Promise<void> {
   if (selectedNote) {
     try {
-      const rawContent = await invoke("get_note_raw_content", { noteName: selectedNote });
+      const rawContent = await invoke<string>("get_note_raw_content", { noteName: selectedNote });
       isEditMode = true;
       editContent = rawContent;
     } catch (e) {
@@ -431,36 +438,36 @@ async function enterEditMode() {
   }
 }
 
-function exitEditMode() {
+function exitEditMode(): void {
   isEditMode = false;
   searchElement?.focus();
 }
 
-function showExitEditDialog() {
+function showExitEditDialog(): void {
   showUnsavedChangesDialog = true;
 }
 
-function handleSaveAndExit() {
+function handleSaveAndExit(): void {
   showUnsavedChangesDialog = false;
   saveNote();
   exitEditMode();
 }
 
-function handleDiscardAndExit() {
+function handleDiscardAndExit(): void {
   showUnsavedChangesDialog = false;
   exitEditMode();
 }
 
-async function saveNote() {
+async function saveNote(): Promise<void> {
   if (!selectedNote || !editContent) return;
   try {
-    await invoke("save_note", {
+    await invoke<void>("save_note", {
       noteName: selectedNote,
       content: editContent
     });
 
     // refresh the database to include the new file
-    await invoke("refresh_cache");
+    await invoke<void>("refresh_cache");
 
     // Refresh the notes list to sync with database
     await loadNotesImmediate(searchInput);
@@ -495,7 +502,7 @@ const handleKeydown = createKeyboardHandler(
     isEditorDirty,
   }),
   {
-    setSelectedIndex: (value) => selectedIndex = value,
+    setSelectedIndex: (value: number) => selectedIndex = value,
     enterEditMode,
     exitEditMode,
     showExitEditDialog,
@@ -512,14 +519,14 @@ const handleKeydown = createKeyboardHandler(
 onMount(async () => {
   await tick();
 
-  const configExists = await invoke("config_exists");
+  const configExists = await invoke<boolean>("config_exists");
   console.log("Config exists:", configExists);
   if (!configExists) {
     console.log("Opening config dialog for new user");
     openConfigDialog();
   } else {
     console.log("Config exists, focusing search");
-    searchElement.focus();
+    searchElement?.focus();
     loadNotesImmediate('');
   }
 
