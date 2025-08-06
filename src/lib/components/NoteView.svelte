@@ -54,7 +54,7 @@
       <div
         class="note-content"
         bind:this={noteContentElement}
-        tabindex="0"
+        tabindex="-1"
         on:focus={() => isNoteContentFocused = true}
         on:blur={() => isNoteContentFocused = false}
         on:dblclick={onEnterEditMode}

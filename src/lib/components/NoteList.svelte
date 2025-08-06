@@ -18,6 +18,7 @@
           <li>
             <button
               class:selected={index === selectedIndex}
+              tabindex="-1"
               on:click={() => onSelectNote(note, index)}
             >
               {note}
