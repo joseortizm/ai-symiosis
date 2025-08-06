@@ -47,6 +47,7 @@ let showConfigDialog = $state<boolean>(false);
 let configContent = $state<string>('');
 let showUnsavedChangesDialog = $state<boolean>(false);
 let isEditorDirty = $state<boolean>(false);
+let nearestHeaderText = $state<string>('');
 
 let searchRequestController: AbortController | null = null;
 let contentRequestController: AbortController | null = null;
@@ -423,6 +424,20 @@ function selectNote(note: string, index: number): void {
 
 async function enterEditMode(): Promise<void> {
   if (selectedNote) {
+    if (noteContentElement) {
+      const rect = noteContentElement.getBoundingClientRect();
+      const headers = noteContentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+      for (const header of headers) {
+        const headerRect = header.getBoundingClientRect();
+        if (headerRect.top >= rect.top) {
+          nearestHeaderText = header.textContent?.trim() || '';
+          console.log('Found nearest header:', nearestHeaderText);
+          break;
+        }
+      }
+    }
+
     try {
       const rawContent = await invoke<string>("get_note_raw_content", { noteName: selectedNote });
       isEditMode = true;
@@ -563,6 +578,7 @@ onMount(async () => {
     isEditMode={isEditMode}
     bind:editContent={editContent}
     highlightedContent={highlightedContent}
+    nearestHeaderText={nearestHeaderText}
     onSave={saveNote}
     onExitEditMode={exitEditMode}
     onRequestExitEdit={showExitEditDialog}

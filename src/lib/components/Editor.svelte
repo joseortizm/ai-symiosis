@@ -19,6 +19,7 @@
   export let onSave: () => void;
   export let onExit: (() => void) | null = null;
   export let onRequestExit: (() => void) | null = null;
+  export let nearestHeaderText: string = '';
 
   let isDirty: boolean = false;
   let initialValue: string = value;
@@ -245,11 +246,43 @@
         parent: editorContainer
       });
 
-      setTimeout(() => {
-        if (editorView) {
-          editorView.focus();
-        }
-      }, 100);
+      if (nearestHeaderText.length > 2 && editorView) {
+        setTimeout(() => {
+          if (editorView) {
+            console.log('Editor: Looking for header:', nearestHeaderText);
+            const doc = editorView.state.doc;
+            const fullText = doc.toString();
+
+            function escapeRegex(text: string): string {
+              return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            const headerRegex = new RegExp(`^#+\\s*${escapeRegex(nearestHeaderText)}\\s*$`, 'm');
+            const match = fullText.match(headerRegex);
+
+            if (match && match.index !== undefined) {
+              console.log('Found header at index:', match.index);
+              const line = doc.lineAt(match.index);
+              console.log('Positioning at line:', line.number);
+
+              editorView.dispatch({
+                selection: { anchor: match.index, head: match.index },
+                effects: EditorView.scrollIntoView(match.index, { y: "start", yMargin: 0 })
+              });
+            } else {
+              console.log('Header not found in markdown');
+            }
+
+            editorView.focus();
+          }
+        }, 150);
+      } else {
+        setTimeout(() => {
+          if (editorView) {
+            editorView.focus();
+          }
+        }, 100);
+      }
 
     } catch (error) {
       console.error('Failed to create CodeMirror editor:', error);

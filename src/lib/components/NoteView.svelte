@@ -15,6 +15,7 @@
   export let noteContentElement: HTMLElement | null = null;
   export let isNoteContentFocused: boolean = false;
   export let isEditorDirty: boolean = false;
+  export let nearestHeaderText: string = '';
 
   afterUpdate(() => {
     if (noteContentElement) {
@@ -41,6 +42,7 @@
           bind:value={editContent}
           bind:isDirty={isEditorDirty}
           filename={selectedNote}
+          nearestHeaderText={nearestHeaderText}
           onSave={onSave}
           onExit={onExitEditMode}
           onRequestExit={onRequestExitEdit}
