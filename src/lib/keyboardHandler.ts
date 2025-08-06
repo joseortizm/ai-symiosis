@@ -112,6 +112,11 @@ const actionRegistry: ActionRegistry = {
         await actions.invoke("open_note_in_editor", { noteName: state.selectedNote });
       }
     },
+    openFolder: async ({ state, actions }: ActionContext) => {
+      if (state.selectedNote) {
+        await actions.invoke("open_note_folder", { noteName: state.selectedNote });
+      }
+    },
     refreshCache: async ({ state, actions }: ActionContext) => {
       await actions.invoke("refresh_cache");
     },
@@ -147,6 +152,7 @@ const keyMappings: Record<string, KeyMappings> = {
     'Ctrl+n': 'notes.createNote',
     'Ctrl+m': 'notes.renameNote',
     'Ctrl+o': 'notes.openExternal',
+    'Ctrl+f': 'notes.openFolder',
     'Ctrl+r': 'notes.refreshCache',
     'Ctrl+x': 'notes.deleteNote',
     'Ctrl+u': 'scrolling.scrollUp200',
@@ -196,8 +202,8 @@ function formatKeyCombo(event: KeyboardEvent): string {
 }
 
 async function handleKeyAction(
-  mappings: KeyMappings, 
-  event: KeyboardEvent, 
+  mappings: KeyMappings,
+  event: KeyboardEvent,
   context: ActionContext
 ): Promise<boolean> {
   const keyString = formatKeyCombo(event);
@@ -221,7 +227,7 @@ async function handleKeyAction(
 }
 
 export function createKeyboardHandler(
-  getState: () => AppState, 
+  getState: () => AppState,
   actions: Actions
 ): (event: KeyboardEvent) => Promise<void> {
   return async function handleKeydown(event: KeyboardEvent): Promise<void> {

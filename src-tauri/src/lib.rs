@@ -81,13 +81,13 @@ fn get_data_dir() -> Option<PathBuf> {
     if let Some(home_dir) = home::home_dir() {
         #[cfg(target_os = "macos")]
         return Some(home_dir.join("Library").join("Application Support"));
-        
+
         #[cfg(target_os = "windows")]
         return std::env::var("APPDATA").ok().map(PathBuf::from);
-        
+
         #[cfg(target_os = "linux")]
         return Some(home_dir.join(".local").join("share"));
-        
+
         #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
         return Some(home_dir.join(".local").join("share"));
     }
@@ -407,6 +407,42 @@ fn open_note_in_editor(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_note_folder(note_name: &str) -> Result<(), String> {
+    validate_note_name(note_name)?;
+    let note_path = get_notes_dir().join(note_name);
+    if !note_path.exists() {
+        return Err(format!("Note not found: {}", note_name));
+    }
+
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg("-R")
+        .arg(note_path)
+        .status()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        let path_str = note_path.to_str().ok_or("Invalid path encoding")?;
+        std::process::Command::new("explorer")
+            .arg(format!("/select,\"{}\"", path_str)) // Quotes required for spaces
+            .status()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let folder_path = note_path.parent().ok_or("Unable to determine folder")?;
+        std::process::Command::new("xdg-open")
+            .arg(folder_path)
+            .status()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn get_config_content() -> Result<String, String> {
     let config_path = get_config_path();
 
@@ -595,8 +631,9 @@ pub fn run() {
             {
                 // Get main shortcut from config
                 let config = load_config();
-                let main_shortcut = parse_shortcut(&config.global_shortcut)
-                    .unwrap_or_else(|| Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN));
+                let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
+                });
 
                 // Platform-specific preferences shortcut
                 let preferences_shortcut = if cfg!(target_os = "macos") {
@@ -668,6 +705,7 @@ pub fn run() {
             save_note,
             refresh_cache,
             open_note_in_editor,
+            open_note_folder,
             list_all_notes,
             show_main_window,
             hide_main_window,
