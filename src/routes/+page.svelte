@@ -9,6 +9,7 @@ import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { setAppContext } from '../lib/context/app.svelte';
+import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
 
 // Tauri API Response Types
 interface SearchNotesResponse {
@@ -65,43 +66,11 @@ let deleteDialogElement: HTMLElement;
 
 let searchRequestController: AbortController | null = null;
 let contentRequestController: AbortController | null = null;
-let highlightCache = new Map<string, string>();
 
 
-function processContentForDisplay(content: string, query: string): string {
-  if (!query.trim() || appState.areHighlightsCleared) {
-    return content;
-  }
-
-  // Use memoization to avoid re-processing
-  const key = `${content.substring(0, 100)}:${query}`;
-  if (highlightCache.has(key)) {
-    return highlightCache.get(key)!
-  }
-
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Fixed regex
-  const regex = new RegExp(`(${escapedQuery})`, 'gi');
-  const result = content.replace(regex, '<mark class="highlight">$1</mark>');
-
-  // Cache result (limit cache size)
-  if (highlightCache.size > 50) {
-    const firstKey = highlightCache.keys().next().value!;
-    highlightCache.delete(firstKey);
-  }
-  highlightCache.set(key, result);
-
-  return result;
-}
 
 function scrollToFirstMatch(): void {
-  if (appState.noteContentElement && appState.query.trim() && !appState.areHighlightsCleared) {
-    setTimeout(() => {
-      const firstMatch = appState.noteContentElement!.querySelector('.highlight');
-      if (firstMatch) {
-        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  }
+  contentHighlighter.scrollToFirstMatch();
 }
 
 function scrollToSelected(): void {
@@ -326,7 +295,7 @@ function handleDeleteKeyPress(): void {
 
 function clearHighlights(): void {
   appState.areHighlightsCleared = true;
-  appState.highlightedContent = processContentForDisplay(appState.noteContent, appState.query);
+  appState.highlightedContent = contentHighlighter.highlighted;
 }
 
 function clearSearch(): void {
@@ -380,7 +349,7 @@ $effect(() => {
       // Only update if request wasn't cancelled
       if (!currentController.signal.aborted) {
         appState.noteContent = content;
-        appState.highlightedContent = processContentForDisplay(content, appState.query);
+        appState.highlightedContent = contentHighlighter.highlighted;
 
         // Scroll to first search match after DOM updates
         requestAnimationFrame(() => {
@@ -399,9 +368,13 @@ $effect(() => {
 });
 
 $effect(() => {
-  if (appState.noteContent) {
-    appState.highlightedContent = processContentForDisplay(appState.noteContent, appState.query);
-  }
+  contentHighlighter.updateState({
+    query: appState.query,
+    content: appState.noteContent,
+    areHighlightsCleared: appState.areHighlightsCleared,
+    noteContentElement: appState.noteContentElement
+  });
+  appState.highlightedContent = contentHighlighter.highlighted;
 });
 
 // Effect to focus and select text in create dialog
@@ -507,7 +480,7 @@ async function saveNote(): Promise<void> {
     // Reload the current note content
     const content = await getNoteContent(appState.selectedNote);
     appState.noteContent = content;
-    appState.highlightedContent = processContentForDisplay(content, appState.query);
+    appState.highlightedContent = contentHighlighter.highlighted;
     appState.isEditMode = false;
 
     // Return focus to search after UI updates
