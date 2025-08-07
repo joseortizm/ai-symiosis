@@ -27,8 +27,8 @@
         <div class="edit-header">
           <h3>Editing: {context.state.selectedNote}</h3>
           <div class="edit-controls">
-            <button on:click={context.saveNote} class="save-btn">Save (Ctrl+S)</button>
-            <button on:click={context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            <button onclick={context.saveNote} class="save-btn">Save (Ctrl+S)</button>
+            <button onclick={context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
           </div>
         </div>
         <Editor
@@ -48,9 +48,9 @@
         class="note-content"
         bind:this={context.state.noteContentElement}
         tabindex="-1"
-        on:focus={() => context.state.isNoteContentFocused = true}
-        on:blur={() => context.state.isNoteContentFocused = false}
-        on:dblclick={context.enterEditMode}
+        onfocus={() => context.state.isNoteContentFocused = true}
+        onblur={() => context.state.isNoteContentFocused = false}
+        ondblclick={context.enterEditMode}
       >
         <div class="note-text">{@html context.state.highlightedContent}</div>
       </div>
