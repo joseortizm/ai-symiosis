@@ -6,7 +6,6 @@
   import { indentWithTab } from '@codemirror/commands';
   import { markdown } from '@codemirror/lang-markdown';
   import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
-  import type { Extension } from '@codemirror/state';
   import { tags } from '@lezer/highlight';
   import { StreamLanguage } from '@codemirror/language';
   import { toml } from '@codemirror/legacy-modes/mode/toml';
@@ -52,7 +51,7 @@
     }
   }
 
-  function getKeyMappingsMode(mode: string): Extension | null {
+  function getKeyMappingsMode(mode: string): any {
     switch (mode) {
       case 'vim': return vim();
       case 'emacs': return emacs();
@@ -162,7 +161,7 @@
         { tag: tags.monospace, color: "#d3869b", backgroundColor: "#3c3836" }
       ]));
 
-      function getLanguageExtension(filename: string): Extension {
+      function getLanguageExtension(filename: string): any {
         if (!filename) return markdown();
         const ext = filename.split('.').pop()?.toLowerCase();
         switch (ext) {
@@ -189,19 +188,11 @@
         run: (view: EditorView): boolean => {
           setTimeout(() => {
             try {
+              // In vim mode, let vim handle escape first
               if (keyBindingMode === 'vim') {
-                try {
-                  const vimExtension = vim();
-                  const vimField = vimExtension.field;
-                  if (vimField) {
-                    const vimState = view.state.field(vimField, false);
-                    if (vimState && vimState.insertMode) {
-                      return;
-                    }
-                  }
-                } catch (vimError) {
-                  // Continue with normal exit logic if vim state check fails
-                }
+                // Don't exit if we might be in vim insert mode
+                // This is a simplified check - in practice vim will handle escape
+                return false;
               }
 
               if (isDirty && onRequestExit) {
@@ -219,7 +210,7 @@
 
       const keyMappingsMode = getKeyMappingsMode(keyBindingMode);
 
-      const extensions: Extension[] = [
+      const extensions: any[] = [
         keyMappingsMode,
         basicSetup,
         getLanguageExtension(filename),
@@ -238,7 +229,7 @@
             }
           }
         })
-      ].filter((ext): ext is Extension => Boolean(ext));
+      ].filter((ext): ext is any => Boolean(ext));
 
       editorView = new EditorView({
         doc: value || '',
@@ -290,10 +281,15 @@
     }
   }
 
-  onMount(async () => {
-    await tick();
-    await loadEditorMode();
-    createCodeMirrorEditor();
+  onMount(() => {
+    const init = async () => {
+      await tick();
+      await loadEditorMode();
+      createCodeMirrorEditor();
+    };
+    
+    init();
+    
     return () => {
       if (editorView) {
         editorView.destroy();

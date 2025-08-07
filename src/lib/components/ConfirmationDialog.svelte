@@ -174,12 +174,4 @@
     outline-offset: 2px;
   }
 
-  .keyboard-hint {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #504945;
-    font-size: 12px;
-    color: #a89984;
-    text-align: center;
-  }
 </style>
