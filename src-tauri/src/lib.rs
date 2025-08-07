@@ -630,7 +630,7 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 // Get main shortcut from config
-                let config = load_config();
+                let config = &*APP_CONFIG;  // Use the existing static config
                 let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
                     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
                 });
