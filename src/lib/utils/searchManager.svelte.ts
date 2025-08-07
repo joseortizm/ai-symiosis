@@ -6,6 +6,7 @@ interface SearchState {
   searchTimeout: number | undefined;
   requestController: AbortController | null;
   filteredNotes: string[];
+  onQueryCommit?: (query: string) => void;
 }
 
 const state = $state<SearchState>({
@@ -13,25 +14,26 @@ const state = $state<SearchState>({
   isLoading: false,
   searchTimeout: undefined,
   requestController: null,
-  filteredNotes: []
+  filteredNotes: [],
+  onQueryCommit: undefined
 });
 
 async function performSearch(query: string): Promise<void> {
   if (state.requestController) {
     state.requestController.abort();
   }
-  
+
   state.requestController = new AbortController();
   const currentController = state.requestController;
-  
+
   try {
     state.isLoading = true;
     const notes = await invoke<string[]>("search_notes", { query });
-    
+
     if (currentController.signal.aborted) {
       return;
     }
-    
+
     state.filteredNotes = notes;
   } catch (e) {
     if (!currentController.signal.aborted) {
@@ -51,10 +53,14 @@ export const searchManager = {
     if (newState.searchInput !== undefined && newState.searchInput !== state.searchInput) {
       clearTimeout(state.searchTimeout);
       state.requestController?.abort();
-      
+
       Object.assign(state, newState);
-      
+
       state.searchTimeout = setTimeout(async () => {
+        // Commit the query through callback
+        if (state.onQueryCommit) {
+          state.onQueryCommit(state.searchInput);
+        }
         await performSearch(state.searchInput);
       }, 100);
     } else {
@@ -76,9 +82,19 @@ export const searchManager = {
   },
 
   abort(): void {
-    clearTimeout(state.searchTimeout);
-    state.requestController?.abort();
-    state.requestController = null;
+    // Clear timeout if it exists
+    if (state.searchTimeout !== undefined) {
+      clearTimeout(state.searchTimeout);
+      state.searchTimeout = undefined;
+    }
+
+    // Abort request if it exists
+    if (state.requestController) {
+      state.requestController.abort();
+      state.requestController = null;
+    }
+
+    // Reset loading state
     state.isLoading = false;
   }
 };

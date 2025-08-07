@@ -259,23 +259,29 @@ function clearSearch(): void {
 
 $effect(() => {
   const newQuery = appState.searchInput;
-  if (newQuery === appState.query) return;
-  
-  appState.query = newQuery;
   if (newQuery.trim()) {
     appState.areHighlightsCleared = false;
   }
-  
-  searchManager.updateState({ searchInput: newQuery });
+
+  searchManager.updateState({
+    searchInput: newQuery,
+    onQueryCommit: (query) => {
+      appState.query = query;
+    }
+  });
 });
 
 $effect(() => {
   appState.isLoading = searchManager.isLoading;
 });
 
+function arraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((val, i) => val === b[i]);
+}
+
 $effect(() => {
   const notes = searchManager.filteredNotes;
-  if (JSON.stringify(notes) !== JSON.stringify(appState.filteredNotes)) {
+  if (!arraysEqual(notes, appState.filteredNotes)) {
     appState.filteredNotes = notes;
     if (notes.length === 0) {
       appState.selectedIndex = -1;
