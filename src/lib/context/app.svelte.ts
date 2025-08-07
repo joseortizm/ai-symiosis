@@ -24,16 +24,9 @@ interface AppState {
   nearestHeaderText: string;
 
   // Dialog state
-  showDeleteDialog: boolean;
-  showCreateDialog: boolean;
-  showRenameDialog: boolean;
   showConfigDialog: boolean;
   showUnsavedChangesDialog: boolean;
-  newNoteName: string;
-  newNoteNameForRename: string;
   configContent: string;
-  deleteKeyPressCount: number;
-  deleteKeyResetTimeout: number | undefined;
 
   // UI state
   isSearchInputFocused: boolean;
