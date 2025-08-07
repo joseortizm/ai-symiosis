@@ -2,17 +2,20 @@
   import Editor from './Editor.svelte';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
-  import { afterUpdate } from 'svelte';
   import { getAppContext } from '../context/app.svelte';
 
   const context = getAppContext();
 
-  afterUpdate(() => {
-    if (context.state.noteContentElement) {
-      const blocks = context.state.noteContentElement.querySelectorAll('pre code');
-      blocks.forEach((block: Element) => {
-        hljs.highlightElement(block as HTMLElement);
-      });
+  // Use $effect to highlight code blocks when content changes
+  $effect(() => {
+    // Run after highlightedContent changes and DOM updates
+    if (context.state.highlightedContent && context.state.noteContentElement) {
+      setTimeout(() => {
+        const blocks = context.state.noteContentElement!.querySelectorAll('pre code');
+        blocks.forEach((block: Element) => {
+          hljs.highlightElement(block as HTMLElement);
+        });
+      }, 0);
     }
   });
 </script>
