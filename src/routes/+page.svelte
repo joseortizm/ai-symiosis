@@ -10,6 +10,7 @@ import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { setAppContext } from '../lib/context/app.svelte';
 import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
+import { searchManager } from '../lib/utils/searchManager.svelte';
 
 // Tauri API Response Types
 interface SearchNotesResponse {
@@ -64,7 +65,6 @@ const appState = $state({
 // svelte-ignore non_reactive_update
 let deleteDialogElement: HTMLElement;
 
-let searchRequestController: AbortController | null = null;
 let contentRequestController: AbortController | null = null;
 
 
@@ -82,56 +82,6 @@ function scrollToSelected(): void {
   }
 }
 
-let searchTimeout: number;
-function debounceSearch(newQuery: string): void {
-  if (newQuery === appState.query) return;
-  // Update query immediately for highlighting
-  appState.query = newQuery;
-  // Reset highlights cleared flag when search changes
-  if (newQuery.trim()) {
-    appState.areHighlightsCleared = false;
-  }
-  // Cancel previous search request and timer
-  clearTimeout(searchTimeout);
-  searchRequestController?.abort();
-  // Start new timer to search after user stops typing
-  searchTimeout = setTimeout(() => {
-    loadNotesImmediate(newQuery);
-  }, 100);
-}
-
-async function loadNotesImmediate(searchQuery: string): Promise<void> {
-  if (searchRequestController) {
-    searchRequestController.abort();
-  }
-  searchRequestController = new AbortController();
-  const currentController = searchRequestController;
-  try {
-    appState.isLoading = true;
-    const newNotes = await invoke<string[]>("search_notes", { query: searchQuery });
-    if (currentController.signal.aborted) {
-      return;
-    }
-    if (JSON.stringify(newNotes) !== JSON.stringify(appState.filteredNotes)) {
-      appState.filteredNotes = newNotes;
-      if (newNotes.length === 0) {
-        appState.selectedIndex = -1;
-      } else {
-        appState.selectedIndex = 0;
-      }
-    }
-  } catch (e) {
-    if (!currentController.signal.aborted) {
-      console.error('❌ Failed to load notes:', e);
-      appState.filteredNotes = [];
-      appState.selectedIndex = -1;
-    }
-  } finally {
-    if (!currentController.signal.aborted) {
-      appState.isLoading = false;
-    }
-  }
-}
 
 async function getNoteContent(noteName: string): Promise<string> {
   const content = await invoke<string>("get_note_content", { noteName });
@@ -144,7 +94,8 @@ async function deleteNote(): Promise<void> {
   try {
     await invoke<void>("delete_note", { noteName: appState.selectedNote });
     // Refresh the notes list
-    await loadNotesImmediate(appState.searchInput);
+    const notes = await searchManager.searchImmediate(appState.searchInput);
+    appState.filteredNotes = notes;
     appState.showDeleteDialog = false;
     appState.deleteKeyPressCount = 0;
     clearTimeout(appState.deleteKeyResetTimeout);
@@ -169,7 +120,8 @@ async function createNote(): Promise<void> {
   try {
     await invoke<void>("create_new_note", { noteName });
     // Refresh the notes list
-    await loadNotesImmediate(appState.searchInput);
+    const notes = await searchManager.searchImmediate(appState.searchInput);
+    appState.filteredNotes = notes;
     // Select the new note
     const noteIndex = appState.filteredNotes.findIndex(note => note === noteName);
     if (noteIndex >= 0) {
@@ -196,7 +148,8 @@ async function renameNote(): Promise<void> {
 
   try {
     await invoke<void>("rename_note", { oldName: appState.selectedNote, newName: newName });
-    await loadNotesImmediate(appState.searchInput);
+    const notes = await searchManager.searchImmediate(appState.searchInput);
+    appState.filteredNotes = notes;
     const noteIndex = appState.filteredNotes.findIndex(note => note === newName);
     if (noteIndex >= 0) {
       appState.selectedIndex = noteIndex;
@@ -272,7 +225,8 @@ async function saveConfig(): Promise<void> {
     await invoke<void>("refresh_cache");
     closeConfigDialog();
     appState.searchElement?.focus();
-    loadNotesImmediate('');
+    const notes = await searchManager.searchImmediate('');
+    appState.filteredNotes = notes;
   } catch (e) {
     console.error("Failed to save config:", e);
     alert(`Failed to save config: ${e}`);
@@ -304,7 +258,31 @@ function clearSearch(): void {
 }
 
 $effect(() => {
-  debounceSearch(appState.searchInput);
+  const newQuery = appState.searchInput;
+  if (newQuery === appState.query) return;
+  
+  appState.query = newQuery;
+  if (newQuery.trim()) {
+    appState.areHighlightsCleared = false;
+  }
+  
+  searchManager.updateState({ searchInput: newQuery });
+});
+
+$effect(() => {
+  appState.isLoading = searchManager.isLoading;
+});
+
+$effect(() => {
+  const notes = searchManager.filteredNotes;
+  if (JSON.stringify(notes) !== JSON.stringify(appState.filteredNotes)) {
+    appState.filteredNotes = notes;
+    if (notes.length === 0) {
+      appState.selectedIndex = -1;
+    } else {
+      appState.selectedIndex = 0;
+    }
+  }
 });
 
 $effect(() => {
@@ -475,7 +453,8 @@ async function saveNote(): Promise<void> {
     await invoke<void>("refresh_cache");
 
     // Refresh the notes list to sync with database
-    await loadNotesImmediate(appState.searchInput);
+    const notes = await searchManager.searchImmediate(appState.searchInput);
+    appState.filteredNotes = notes;
 
     // Reload the current note content
     const content = await getNoteContent(appState.selectedNote);
@@ -561,7 +540,8 @@ onMount(() => {
       openConfigDialog();
     } else {
       appState.searchElement?.focus();
-      loadNotesImmediate('');
+      const notes = await searchManager.searchImmediate('');
+      appState.filteredNotes = notes;
     }
 
     const unlisten = await listen("open-preferences", () => {
@@ -569,9 +549,8 @@ onMount(() => {
     });
 
     return () => {
-      if (searchRequestController) searchRequestController.abort();
+      searchManager.abort();
       if (contentRequestController) contentRequestController.abort();
-      clearTimeout(searchTimeout);
       unlisten();
     };
   })();
