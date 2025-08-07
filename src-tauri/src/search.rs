@@ -107,11 +107,11 @@ impl HybridSearcher {
 
     fn get_candidates_from_sqlite(&self, query: &str) -> Result<Vec<SearchCandidate>, String> {
         let sanitized_query = Self::sanitize_fts_query(query);
-        
+
         if sanitized_query.trim().is_empty() {
             return Ok(Vec::new());
         }
-        
+
         let fts_pattern = if sanitized_query.contains(' ') {
             sanitized_query
                 .split_whitespace()

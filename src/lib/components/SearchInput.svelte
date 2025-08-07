@@ -19,11 +19,16 @@
   color: #ebdbb2;
   border: 1px solid #504945;
   border-radius: 8px;
-  font-size: 1.2em;
+  font-size: 1.3em;
   padding: 0.6em;
   margin: 0.5em;
   flex-shrink: 0;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.search-input::placeholder {
+  color: light-gray;
+  font-size: 0.8em;
+  opacity: 0.5;
 }
 .search-input:focus {
   outline: none;
