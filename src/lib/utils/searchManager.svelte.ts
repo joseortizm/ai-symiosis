@@ -78,7 +78,6 @@ export const searchManager = {
     onQueryCommit: (query: string) => void,
     onHighlightsClear: (cleared: boolean) => void
   ): void {
-    state.searchInput = newInput;
     if (newInput.trim()) {
       state.areHighlightsCleared = false;
       onHighlightsClear(false);
