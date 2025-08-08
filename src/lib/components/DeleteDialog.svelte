@@ -1,28 +1,23 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
   export let show: boolean = false;
   export let noteName: string = '';
   export let deleteKeyPressCount: number = 0;
-
-  const dispatch = createEventDispatcher<{
-    confirm: void;
-    cancel: void;
-    keyPress: void;
-  }>();
+  export let onConfirm: (() => void) | undefined = undefined;
+  export let onCancel: (() => void) | undefined = undefined;
+  export let onKeyPress: (() => void) | undefined = undefined;
 
   let dialogElement: HTMLElement;
 
   function handleConfirm(): void {
-    dispatch('confirm');
+    onConfirm?.();
   }
 
   function handleCancel(): void {
-    dispatch('cancel');
+    onCancel?.();
   }
 
   function handleKeyPress(): void {
-    dispatch('keyPress');
+    onKeyPress?.();
   }
 
   function handleKeydown(event: KeyboardEvent): void {

@@ -1,26 +1,21 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
   export let show: boolean = false;
   export let title: string = "Confirm";
   export let message: string = "";
   export let confirmText: string = "Confirm";
   export let cancelText: string = "Cancel";
   export let variant: 'default' | 'danger' = "default";
-
-  const dispatch = createEventDispatcher<{
-    confirm: void;
-    cancel: void;
-  }>();
+  export let onConfirm: (() => void) | undefined = undefined;
+  export let onCancel: (() => void) | undefined = undefined;
 
   let dialogElement: HTMLElement;
 
   function handleConfirm(): void {
-    dispatch('confirm');
+    onConfirm?.();
   }
 
   function handleCancel(): void {
-    dispatch('cancel');
+    onCancel?.();
   }
 
   function handleKeydown(event: KeyboardEvent): void {

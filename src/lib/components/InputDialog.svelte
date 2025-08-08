@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
   export let show: boolean = false;
   export let title: string = "";
   export let value: string = "";
@@ -9,30 +7,27 @@
   export let cancelText: string = "Cancel";
   export let required: boolean = true;
   export let autoSelect: boolean = false;
-
-  const dispatch = createEventDispatcher<{
-    confirm: string;
-    cancel: void;
-    input: string;
-  }>();
+  export let onConfirm: ((value: string) => void) | undefined = undefined;
+  export let onCancel: (() => void) | undefined = undefined;
+  export let onInput: ((value: string) => void) | undefined = undefined;
 
   let inputElement: HTMLInputElement;
   let dialogElement: HTMLElement;
 
   function handleConfirm(): void {
     if (!confirmDisabled) {
-      dispatch('confirm', value);
+      onConfirm?.(value);
     }
   }
 
   function handleCancel(): void {
-    dispatch('cancel');
+    onCancel?.();
   }
 
   function handleInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     value = target.value;
-    dispatch('input', value);
+    onInput?.(value);
   }
 
   function handleKeydown(event: KeyboardEvent): void {

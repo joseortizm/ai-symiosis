@@ -430,9 +430,9 @@ onMount(() => {
     show={dialogManager.showDeleteDialog}
     noteName={appState.selectedNote || ''}
     deleteKeyPressCount={dialogManager.deleteKeyPressCount}
-    on:confirm={deleteNote}
-    on:cancel={dialogManager.closeDeleteDialog}
-    on:keyPress={() => dialogManager.handleDeleteKeyPress(() => deleteNote())}
+    onConfirm={deleteNote}
+    onCancel={dialogManager.closeDeleteDialog}
+    onKeyPress={() => dialogManager.handleDeleteKeyPress(() => deleteNote())}
   />
 
   <!-- Create Note Dialog -->
@@ -443,9 +443,9 @@ onMount(() => {
     placeholder="Enter note name (extension will be .md)"
     confirmText="Create"
     cancelText="Cancel"
-    on:confirm={(e) => createNote(e.detail)}
-    on:cancel={dialogManager.closeCreateDialog}
-    on:input={(e) => dialogManager.setNewNoteName(e.detail)}
+    onConfirm={(value) => createNote(value)}
+    onCancel={dialogManager.closeCreateDialog}
+    onInput={(value) => dialogManager.setNewNoteName(value)}
   />
 
   <!-- Rename Note Dialog -->
@@ -457,9 +457,9 @@ onMount(() => {
     confirmText="Rename"
     cancelText="Cancel"
     autoSelect={true}
-    on:confirm={(e) => renameNote(e.detail)}
-    on:cancel={dialogManager.closeRenameDialog}
-    on:input={(e) => dialogManager.setNewNoteNameForRename(e.detail)}
+    onConfirm={(value) => renameNote(value)}
+    onCancel={dialogManager.closeRenameDialog}
+    onInput={(value) => dialogManager.setNewNoteNameForRename(value)}
   />
 
   <!-- Unsaved Changes Confirmation Dialog -->
@@ -470,8 +470,8 @@ onMount(() => {
     confirmText="Save and Exit"
     cancelText="Discard Changes"
     variant="default"
-    on:confirm={handleSaveAndExit}
-    on:cancel={handleDiscardAndExit}
+    onConfirm={() => dialogManager.handleSaveAndExit(saveNote, exitEditMode)}
+    onCancel={() => dialogManager.handleDiscardAndExit(exitEditMode)}
   />
 
 </main>
