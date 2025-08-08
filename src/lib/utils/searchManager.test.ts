@@ -25,7 +25,7 @@ describe('searchManager', () => {
       });
 
       expect(searchManager.isLoading).toBe(false);
-      
+
       await new Promise(resolve => setTimeout(resolve, 150)); // Wait for debounce
 
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test query' });
@@ -47,34 +47,29 @@ describe('searchManager', () => {
     it('should abort ongoing operations', () => {
       // Test the public interface behavior rather than internal implementation
       searchManager.updateState({ searchInput: 'test' });
-      
+
       // Verify abort works without errors and resets loading state
       expect(() => searchManager.abort()).not.toThrow();
       expect(searchManager.isLoading).toBe(false);
     });
   });
 
-  describe('search clearing functionality (to be added)', () => {
-    it('should have clearSearch method that resets search input', () => {
+  describe('search clearing functionality', () => {
+    it('should clear search and reset highlights flag', () => {
       searchManager.updateState({ searchInput: 'some query' });
 
-      // This should exist but doesn't yet - RED test
       searchManager.clearSearch();
-
-      // Should reset to empty and trigger effects
       expect(searchManager.searchInput).toBe('');
       expect(searchManager.areHighlightsCleared).toBe(false);
     });
 
-    it('should have searchInput getter', () => {
+    it('should provide searchInput getter', () => {
       searchManager.updateState({ searchInput: 'test input' });
 
-      // This should exist but doesn't yet - RED test
       expect(searchManager.searchInput).toBe('test input');
     });
 
-    it('should have areHighlightsCleared getter and setter', () => {
-      // This should exist but doesn't yet - RED test  
+    it('should provide areHighlightsCleared getter and setter', () => {
       searchManager.areHighlightsCleared = true;
       expect(searchManager.areHighlightsCleared).toBe(true);
     });
@@ -83,12 +78,29 @@ describe('searchManager', () => {
       const onQueryCommit = vi.fn();
       const onHighlightsClear = vi.fn();
 
-      // This functionality should be moved from main component - RED test
       searchManager.updateSearchInputWithEffects('new query', onQueryCommit, onHighlightsClear);
 
       expect(searchManager.searchInput).toBe('new query');
       expect(searchManager.areHighlightsCleared).toBe(false);
       expect(onHighlightsClear).toHaveBeenCalledWith(false);
+    });
+
+    it('should actually trigger search when using updateSearchInputWithEffects', async () => {
+      const notes = ['search-result.md', 'another-note.md'];
+      mockInvoke.mockResolvedValueOnce(notes);
+      const onQueryCommit = vi.fn();
+      const onHighlightsClear = vi.fn();
+
+      // CRITICAL: This test verifies search execution actually happens (catches state pre-setting bugs)
+      searchManager.updateSearchInputWithEffects('test search', onQueryCommit, onHighlightsClear);
+
+      // Wait for debounce to trigger
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // The critical assertion: verify search was actually performed
+      expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test search' });
+      expect(searchManager.filteredNotes).toEqual(notes);
+      expect(onQueryCommit).toHaveBeenCalledWith('test search');
     });
   });
 });

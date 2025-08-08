@@ -20,7 +20,7 @@ describe('dialogManager', () => {
   describe('create dialog', () => {
     it('should open create dialog with empty name by default', () => {
       dialogManager.updateState({ query: '', highlightedContent: '' });
-      
+
       dialogManager.openCreateDialog();
 
       expect(dialogManager.showCreateDialog).toBe(true);
@@ -28,11 +28,11 @@ describe('dialogManager', () => {
     });
 
     it('should pre-fill create dialog with query when no content and query exists', () => {
-      dialogManager.updateState({ 
-        query: 'test note', 
-        highlightedContent: '' 
+      dialogManager.updateState({
+        query: 'test note',
+        highlightedContent: ''
       });
-      
+
       dialogManager.openCreateDialog();
 
       expect(dialogManager.showCreateDialog).toBe(true);
@@ -40,11 +40,11 @@ describe('dialogManager', () => {
     });
 
     it('should not pre-fill when content exists', () => {
-      dialogManager.updateState({ 
-        query: 'test note', 
-        highlightedContent: 'some content' 
+      dialogManager.updateState({
+        query: 'test note',
+        highlightedContent: 'some content'
       });
-      
+
       dialogManager.openCreateDialog();
 
       expect(dialogManager.showCreateDialog).toBe(true);
@@ -65,7 +65,7 @@ describe('dialogManager', () => {
   describe('rename dialog', () => {
     it('should open rename dialog with note name without extension', () => {
       dialogManager.updateState({ selectedNote: 'test-note.md' });
-      
+
       dialogManager.openRenameDialog();
 
       expect(dialogManager.showRenameDialog).toBe(true);
@@ -74,7 +74,7 @@ describe('dialogManager', () => {
 
     it('should open rename dialog with full name if no .md extension', () => {
       dialogManager.updateState({ selectedNote: 'test-note.txt' });
-      
+
       dialogManager.openRenameDialog();
 
       expect(dialogManager.showRenameDialog).toBe(true);
@@ -83,7 +83,7 @@ describe('dialogManager', () => {
 
     it('should not open rename dialog if no selected note', () => {
       dialogManager.updateState({ selectedNote: null });
-      
+
       dialogManager.openRenameDialog();
 
       expect(dialogManager.showRenameDialog).toBe(false);
@@ -113,7 +113,7 @@ describe('dialogManager', () => {
       const onConfirmDelete = vi.fn();
 
       dialogManager.handleDeleteKeyPress(onConfirmDelete);
-      
+
       expect(dialogManager.deleteKeyPressCount).toBe(1);
       expect(onConfirmDelete).not.toHaveBeenCalled();
     });
@@ -200,7 +200,6 @@ describe('dialogManager', () => {
 
       dialogManager.openUnsavedChangesDialog();
 
-      // This should exist but doesn't yet - RED test
       dialogManager.handleSaveAndExit(mockSaveNote, mockExitEditMode);
 
       expect(dialogManager.showUnsavedChangesDialog).toBe(false);
@@ -213,7 +212,6 @@ describe('dialogManager', () => {
 
       dialogManager.openUnsavedChangesDialog();
 
-      // This should exist but doesn't yet - RED test
       dialogManager.handleDiscardAndExit(mockExitEditMode);
 
       expect(dialogManager.showUnsavedChangesDialog).toBe(false);
@@ -221,7 +219,6 @@ describe('dialogManager', () => {
     });
 
     it('should have showExitEditDialog method', () => {
-      // This should exist but doesn't yet - RED test
       dialogManager.showExitEditDialog();
 
       expect(dialogManager.showUnsavedChangesDialog).toBe(true);
