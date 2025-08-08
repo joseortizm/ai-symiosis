@@ -43,7 +43,7 @@ const appState = $state({
   isEditorDirty: false,
   nearestHeaderText: '',
 
-  showConfigDialog: false,
+  showSettingsPane: false,
   configContent: '',
 
   // UI state
@@ -148,18 +148,18 @@ async function renameNote(newNameParam?: string): Promise<void> {
   }
 }
 
-async function openConfigDialog(): Promise<void> {
+async function openSettingsPane(): Promise<void> {
   try {
     const content = await invoke<string>("get_config_content");
     appState.configContent = content;
-    appState.showConfigDialog = true;
+    appState.showSettingsPane = true;
   } catch (e) {
     console.error("Failed to load config:", e);
   }
 }
 
-function closeConfigDialog(): void {
-  appState.showConfigDialog = false;
+function closeSettingsPane(): void {
+  appState.showSettingsPane = false;
   appState.configContent = '';
   appState.searchElement?.focus();
 }
@@ -168,7 +168,7 @@ async function saveConfig(): Promise<void> {
   try {
     await invoke<void>("save_config_content", { content: appState.configContent });
     await invoke<void>("refresh_cache");
-    closeConfigDialog();
+    closeSettingsPane();
     appState.searchElement?.focus();
     const notes = await searchManager.searchImmediate('');
     appState.filteredNotes = notes;
@@ -398,7 +398,7 @@ const handleKeydown = createKeyboardHandler(
     searchElement: appState.searchElement,
     query: appState.query,
     areHighlightsCleared: appState.areHighlightsCleared,
-    showConfigDialog: appState.showConfigDialog,
+    showSettingsPane: appState.showSettingsPane,
     isEditorDirty: appState.isEditorDirty,
   }),
   {
@@ -438,8 +438,8 @@ setAppContext({
   closeRenameDialog: dialogManager.closeRenameDialog,
   openDeleteDialog: dialogManager.openDeleteDialog,
   closeDeleteDialog: dialogManager.closeDeleteDialog,
-  openConfigDialog,
-  closeConfigDialog,
+  openSettingsPane,
+  closeSettingsPane,
   saveConfig,
   handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(() => deleteNote()),
   clearHighlights,
@@ -453,7 +453,7 @@ onMount(() => {
 
     const configExists = await invoke<boolean>("config_exists");
     if (!configExists) {
-      openConfigDialog();
+      openSettingsPane();
     } else {
       appState.searchElement?.focus();
       const notes = await searchManager.searchImmediate('');
@@ -461,7 +461,7 @@ onMount(() => {
     }
 
     const unlisten = await listen("open-preferences", () => {
-      openConfigDialog();
+      openSettingsPane();
     });
 
     return () => {
@@ -478,6 +478,32 @@ onMount(() => {
   <SearchInput />
   <NoteList />
   <NoteView />
+
+  <!-- Settings Pane -->
+  {#if appState.showSettingsPane}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="dialog-overlay" onclick={closeSettingsPane}>
+      <div class="dialog settings-pane" onclick={(e) => e.stopPropagation()}>
+        <h3>Settings</h3>
+        <div class="settings-editor-container">
+          <Editor
+            bind:value={appState.configContent}
+            filename="config.toml"
+            onSave={saveConfig}
+            onExit={closeSettingsPane}
+          />
+        </div>
+        <div class="keyboard-hint">
+          <p>Press <kbd>Ctrl+S</kbd> to save, <kbd>Esc</kbd> in normal mode to close</p>
+        </div>
+        <div class="dialog-buttons">
+          <button class="btn-cancel" onclick={closeSettingsPane}>Cancel</button>
+          <button class="btn-create" onclick={saveConfig}>Save</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Delete Confirmation Dialog -->
   <DeleteDialog
@@ -527,32 +553,6 @@ onMount(() => {
     on:confirm={handleSaveAndExit}
     on:cancel={handleDiscardAndExit}
   />
-
-  <!-- Settings  -->
-  {#if appState.showConfigDialog}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="dialog-overlay" onclick={closeConfigDialog}>
-      <div class="dialog config-dialog" onclick={(e) => e.stopPropagation()}>
-        <h3>Configuration</h3>
-        <div class="config-editor-container">
-          <Editor
-            bind:value={appState.configContent}
-            filename="config.toml"
-            onSave={saveConfig}
-            onExit={closeConfigDialog}
-          />
-        </div>
-        <div class="keyboard-hint">
-          <p>Press <kbd>Ctrl+S</kbd> to save, <kbd>Esc</kbd> in normal mode to close</p>
-        </div>
-        <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={closeConfigDialog}>Cancel</button>
-          <button class="btn-create" onclick={saveConfig}>Save</button>
-        </div>
-      </div>
-    </div>
-  {/if}
 
 </main>
 
@@ -673,12 +673,12 @@ kbd {
   cursor: not-allowed;
 }
 
-.config-dialog {
+.settings-pane {
   width: 900px;
   max-width: 90vw;
 }
 
-.config-editor-container {
+.settings-editor-container {
   width: 100%;
   height: 500px;
   margin: 16px 0;

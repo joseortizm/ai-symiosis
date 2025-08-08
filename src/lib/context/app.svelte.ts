@@ -24,7 +24,7 @@ interface AppState {
   nearestHeaderText: string;
 
   // Dialog state
-  showConfigDialog: boolean;
+  showSettingsPane: boolean;
   configContent: string;
 
   // UI state
@@ -56,8 +56,8 @@ export interface AppContext {
   closeRenameDialog: () => void;
   openDeleteDialog: () => void;
   closeDeleteDialog: () => void;
-  openConfigDialog: () => Promise<void>;
-  closeConfigDialog: () => void;
+  openSettingsPane: () => Promise<void>;
+  closeSettingsPane: () => void;
   saveConfig: () => Promise<void>;
   handleDeleteKeyPress: () => void;
   clearHighlights: () => void;
