@@ -34,8 +34,6 @@ interface AppState {
   searchElement: HTMLInputElement | null;
   noteListElement: HTMLElement | null;
   noteContentElement: HTMLElement | null;
-  renameDialogInputElement: HTMLInputElement | null;
-  createDialogInputElement: HTMLInputElement | null;
 }
 
 export interface AppContext {
@@ -45,8 +43,8 @@ export interface AppContext {
   // Actions
   selectNote: (note: string, index: number) => void;
   deleteNote: () => Promise<void>;
-  createNote: () => Promise<void>;
-  renameNote: () => Promise<void>;
+  createNote: (noteNameParam?: string) => Promise<void>;
+  renameNote: (newNameParam?: string) => Promise<void>;
   saveNote: () => Promise<void>;
   enterEditMode: () => Promise<void>;
   exitEditMode: () => void;

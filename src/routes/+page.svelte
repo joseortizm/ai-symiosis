@@ -7,6 +7,7 @@ import NoteList from "../lib/components/NoteList.svelte";
 import NoteView from "../lib/components/NoteView.svelte";
 import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
+import InputDialog from "../lib/components/InputDialog.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { setAppContext } from '../lib/context/app.svelte';
 import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
@@ -51,16 +52,12 @@ const appState = $state({
   searchElement: null as HTMLInputElement | null,
   noteListElement: null as HTMLElement | null,
   noteContentElement: null as HTMLElement | null,
-  renameDialogInputElement: null as HTMLInputElement | null,
-  createDialogInputElement: null as HTMLInputElement | null,
 });
 
 // svelte-ignore non_reactive_update
 let deleteDialogElement: HTMLElement;
 
 let contentRequestController: AbortController | null = null;
-
-
 
 function scrollToFirstMatch(): void {
   contentHighlighter.scrollToFirstMatch();
@@ -74,7 +71,6 @@ function scrollToSelected(): void {
     }
   }
 }
-
 
 async function getNoteContent(noteName: string): Promise<string> {
   const content = await invoke<string>("get_note_content", { noteName });
@@ -99,10 +95,11 @@ async function deleteNote(): Promise<void> {
   }
 }
 
-async function createNote(): Promise<void> {
-  if (!dialogManager.newNoteName.trim()) return;
+async function createNote(noteNameParam?: string): Promise<void> {
+  const inputNoteName = noteNameParam || dialogManager.newNoteName.trim();
+  if (!inputNoteName.trim()) return;
 
-  let noteName = dialogManager.newNoteName.trim();
+  let noteName = inputNoteName.trim();
   // Auto-add .md extension if no extension provided
   if (!noteName.includes('.')) {
     noteName += '.md';
@@ -128,10 +125,11 @@ async function createNote(): Promise<void> {
   }
 }
 
-async function renameNote(): Promise<void> {
-  if (!dialogManager.newNoteNameForRename.trim() || !appState.selectedNote) return;
+async function renameNote(newNameParam?: string): Promise<void> {
+  const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
+  if (!inputNewName.trim() || !appState.selectedNote) return;
 
-  let newName = dialogManager.newNoteNameForRename.trim();
+  let newName = inputNewName.trim();
   if (!newName.includes('.')) {
     newName += '.md';
   }
@@ -150,7 +148,6 @@ async function renameNote(): Promise<void> {
     alert(`Failed to rename note: ${e}`);
   }
 }
-
 
 async function openConfigDialog(): Promise<void> {
   try {
@@ -181,7 +178,6 @@ async function saveConfig(): Promise<void> {
     alert(`Failed to save config: ${e}`);
   }
 }
-
 
 function clearHighlights(): void {
   appState.areHighlightsCleared = true;
@@ -307,19 +303,6 @@ $effect(() => {
 });
 
 
-// Effect to focus and select text in create dialog
-$effect(() => {
-  if (dialogManager.showCreateDialog && appState.createDialogInputElement) {
-    tick().then(() => {
-      appState.createDialogInputElement!.focus();
-      // If text was pre-filled from search query, select all
-      if (dialogManager.newNoteName.trim()) {
-        appState.createDialogInputElement!.select();
-      }
-    });
-  }
-});
-
 $effect(() => {
   if (dialogManager.showDeleteDialog && deleteDialogElement) {
     tick().then(() => {
@@ -328,14 +311,6 @@ $effect(() => {
   }
 });
 
-$effect(() => {
-  if (dialogManager.showRenameDialog && appState.renameDialogInputElement) {
-    tick().then(() => {
-      appState.renameDialogInputElement!.focus();
-      appState.renameDialogInputElement!.select();
-    });
-  }
-});
 
 function selectNote(note: string, index: number): void {
   if (appState.selectedIndex !== index) {
@@ -553,66 +528,31 @@ onMount(() => {
   {/if}
 
   <!-- Create Note Dialog -->
-  {#if dialogManager.showCreateDialog}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="dialog-overlay" onclick={dialogManager.closeCreateDialog}>
-      <div class="dialog" onclick={(e) => e.stopPropagation()}>
-        <h3>Create New Note</h3>
-        <input
-          bind:this={appState.createDialogInputElement}
-          value={dialogManager.newNoteName}
-          oninput={(e) => dialogManager.setNewNoteName(e.target?.value || '')}
-          placeholder="Enter note name (extension will be .md)"
-          class="note-name-input"
-          onkeydown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              createNote();
-            } else if (e.key === 'Escape') {
-              e.preventDefault();
-              dialogManager.closeCreateDialog();
-            }
-          }}
-        />
-        <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={dialogManager.closeCreateDialog}>Cancel</button>
-          <button class="btn-create" onclick={createNote} disabled={!dialogManager.newNoteName.trim()}>Create</button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <InputDialog
+    show={dialogManager.showCreateDialog}
+    title="Create New Note"
+    value={dialogManager.newNoteName}
+    placeholder="Enter note name (extension will be .md)"
+    confirmText="Create"
+    cancelText="Cancel"
+    on:confirm={(e) => createNote(e.detail)}
+    on:cancel={dialogManager.closeCreateDialog}
+    on:input={(e) => dialogManager.setNewNoteName(e.detail)}
+  />
 
   <!-- Rename Note Dialog -->
-  {#if dialogManager.showRenameDialog}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="dialog-overlay" onclick={dialogManager.closeRenameDialog}>
-      <div class="dialog" onclick={(e) => e.stopPropagation()}>
-        <h3>Rename Note</h3>
-        <input
-          bind:this={appState.renameDialogInputElement}
-          value={dialogManager.newNoteNameForRename}
-          oninput={(e) => dialogManager.setNewNoteNameForRename(e.target?.value || '')}
-          placeholder="Enter new note name"
-          class="note-name-input"
-          onkeydown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              renameNote();
-            } else if (e.key === 'Escape') {
-              e.preventDefault();
-              dialogManager.closeRenameDialog();
-            }
-          }}
-        />
-        <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={dialogManager.closeRenameDialog}>Cancel</button>
-          <button class="btn-create" onclick={renameNote} disabled={!dialogManager.newNoteNameForRename.trim()}>Rename</button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <InputDialog
+    show={dialogManager.showRenameDialog}
+    title="Rename Note"
+    value={dialogManager.newNoteNameForRename}
+    placeholder="Enter new note name"
+    confirmText="Rename"
+    cancelText="Cancel"
+    autoSelect={true}
+    on:confirm={(e) => renameNote(e.detail)}
+    on:cancel={dialogManager.closeRenameDialog}
+    on:input={(e) => dialogManager.setNewNoteNameForRename(e.detail)}
+  />
 
   <!-- Config Dialog -->
   {#if appState.showConfigDialog}
@@ -710,25 +650,6 @@ onMount(() => {
   font-style: italic;
 }
 
-.note-name-input {
-  width: 100%;
-  padding: 12px;
-  margin: 16px 0;
-  background-color: #282828;
-  border: 1px solid #504945;
-  border-radius: 6px;
-  color: #ebdbb2;
-  font-size: 14px;
-  font-family: inherit;
-  box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.note-name-input:focus {
-  outline: none;
-  border-color: #83a598;
-  box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
-}
 
 .keyboard-hint {
   margin: 16px 0;
