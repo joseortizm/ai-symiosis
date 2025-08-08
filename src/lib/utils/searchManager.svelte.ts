@@ -7,6 +7,7 @@ interface SearchState {
   requestController: AbortController | null;
   filteredNotes: string[];
   onQueryCommit?: (query: string) => void;
+  areHighlightsCleared: boolean;
 }
 
 const state = $state<SearchState>({
@@ -15,7 +16,8 @@ const state = $state<SearchState>({
   searchTimeout: undefined,
   requestController: null,
   filteredNotes: [],
-  onQueryCommit: undefined
+  onQueryCommit: undefined,
+  areHighlightsCleared: false
 });
 
 async function performSearch(query: string): Promise<void> {
@@ -49,7 +51,6 @@ async function performSearch(query: string): Promise<void> {
 
 export const searchManager = {
   updateState(newState: Partial<SearchState>): void {
-    // Handle search input change with debouncing
     if (newState.searchInput !== undefined && newState.searchInput !== state.searchInput) {
       clearTimeout(state.searchTimeout);
       state.requestController?.abort();
@@ -57,7 +58,6 @@ export const searchManager = {
       Object.assign(state, newState);
 
       state.searchTimeout = setTimeout(async () => {
-        // Commit the query through callback
         if (state.onQueryCommit) {
           state.onQueryCommit(state.searchInput);
         }
@@ -68,6 +68,28 @@ export const searchManager = {
     }
   },
 
+  clearSearch(): void {
+    state.searchInput = '';
+    state.areHighlightsCleared = false;
+  },
+
+  updateSearchInputWithEffects(
+    newInput: string,
+    onQueryCommit: (query: string) => void,
+    onHighlightsClear: (cleared: boolean) => void
+  ): void {
+    state.searchInput = newInput;
+    if (newInput.trim()) {
+      state.areHighlightsCleared = false;
+      onHighlightsClear(false);
+    }
+
+    this.updateState({
+      searchInput: newInput,
+      onQueryCommit
+    });
+  },
+
   get isLoading(): boolean {
     return state.isLoading;
   },
@@ -76,25 +98,34 @@ export const searchManager = {
     return state.filteredNotes;
   },
 
+  get searchInput(): string {
+    return state.searchInput;
+  },
+
+  get areHighlightsCleared(): boolean {
+    return state.areHighlightsCleared;
+  },
+
+  set areHighlightsCleared(value: boolean) {
+    state.areHighlightsCleared = value;
+  },
+
   async searchImmediate(query: string): Promise<string[]> {
     await performSearch(query);
     return state.filteredNotes;
   },
 
   abort(): void {
-    // Clear timeout if it exists
     if (state.searchTimeout !== undefined) {
       clearTimeout(state.searchTimeout);
       state.searchTimeout = undefined;
     }
 
-    // Abort request if it exists
     if (state.requestController) {
       state.requestController.abort();
       state.requestController = null;
     }
 
-    // Reset loading state
     state.isLoading = false;
   }
 };

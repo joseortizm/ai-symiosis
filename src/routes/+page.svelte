@@ -149,23 +149,17 @@ function clearHighlights(): void {
   appState.highlightedContent = contentHighlighter.highlighted;
 }
 
-function clearSearch(): void {
-  appState.searchInput = '';
-  appState.areHighlightsCleared = false;
-}
 
 $effect(() => {
-  const newQuery = appState.searchInput;
-  if (newQuery.trim()) {
-    appState.areHighlightsCleared = false;
-  }
-
-  searchManager.updateState({
-    searchInput: newQuery,
-    onQueryCommit: (query) => {
+  searchManager.updateSearchInputWithEffects(
+    appState.searchInput,
+    (query) => {
       appState.query = query;
+    },
+    (cleared) => {
+      appState.areHighlightsCleared = cleared;
     }
-  });
+  );
 });
 
 $effect(() => {
@@ -308,20 +302,6 @@ function exitEditMode(): void {
   appState.searchElement?.focus();
 }
 
-function showExitEditDialog(): void {
-  dialogManager.openUnsavedChangesDialog();
-}
-
-function handleSaveAndExit(): void {
-  dialogManager.closeUnsavedChangesDialog();
-  saveNote();
-  exitEditMode();
-}
-
-function handleDiscardAndExit(): void {
-  dialogManager.closeUnsavedChangesDialog();
-  exitEditMode();
-}
 
 async function saveNote(): Promise<void> {
   if (!appState.selectedNote || !appState.editContent) return;
@@ -370,14 +350,14 @@ const handleKeydown = createKeyboardHandler(
     setSelectedIndex: (value: number) => appState.selectedIndex = value,
     enterEditMode,
     exitEditMode,
-    showExitEditDialog,
+    showExitEditDialog: dialogManager.showExitEditDialog,
     saveNote,
     invoke,
     showDeleteDialog: () => dialogManager.openDeleteDialog(),
     showCreateDialog: () => dialogManager.openCreateDialog(),
     showRenameDialog: () => dialogManager.openRenameDialog(),
     clearHighlights,
-    clearSearch,
+    clearSearch: searchManager.clearSearch,
   }
 );
 
@@ -394,9 +374,9 @@ setAppContext({
   saveNote,
   enterEditMode,
   exitEditMode,
-  showExitEditDialog,
-  handleSaveAndExit,
-  handleDiscardAndExit,
+  showExitEditDialog: dialogManager.showExitEditDialog,
+  handleSaveAndExit: () => dialogManager.handleSaveAndExit(saveNote, exitEditMode),
+  handleDiscardAndExit: () => dialogManager.handleDiscardAndExit(exitEditMode),
   openCreateDialog: dialogManager.openCreateDialog,
   closeCreateDialog: dialogManager.closeCreateDialog,
   openRenameDialog: dialogManager.openRenameDialog,
@@ -408,7 +388,7 @@ setAppContext({
   saveConfig,
   handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(() => deleteNote()),
   clearHighlights,
-  clearSearch,
+  clearSearch: searchManager.clearSearch,
   invoke,
 });
 

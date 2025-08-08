@@ -12,17 +12,14 @@ const context = $state<DialogContext>({
   searchElement: null
 });
 
-// Dialog visibility states
 let showCreateDialog = $state(false);
 let showRenameDialog = $state(false);
 let showDeleteDialog = $state(false);
 let showUnsavedChangesDialog = $state(false);
 
-// Input values
 let newNoteName = $state('');
 let newNoteNameForRename = $state('');
 
-// Delete dialog timer
 let deleteKeyPressCount = $state(0);
 let deleteKeyResetTimeout: number | undefined = undefined;
 
@@ -101,12 +98,26 @@ function closeUnsavedChangesDialog(): void {
   context.searchElement?.focus();
 }
 
+function showExitEditDialog(): void {
+  openUnsavedChangesDialog();
+}
+
+function handleSaveAndExit(saveNote: () => void, exitEditMode: () => void): void {
+  closeUnsavedChangesDialog();
+  saveNote();
+  exitEditMode();
+}
+
+function handleDiscardAndExit(exitEditMode: () => void): void {
+  closeUnsavedChangesDialog();
+  exitEditMode();
+}
+
 export const dialogManager = {
   updateState(newState: Partial<DialogContext>): void {
     Object.assign(context, newState);
   },
 
-  // Actions
   openCreateDialog,
   closeCreateDialog,
   openRenameDialog,
@@ -115,9 +126,11 @@ export const dialogManager = {
   closeDeleteDialog,
   openUnsavedChangesDialog,
   closeUnsavedChangesDialog,
+  showExitEditDialog,
+  handleSaveAndExit,
+  handleDiscardAndExit,
   handleDeleteKeyPress,
 
-  // Setters
   setNewNoteName(value: string): void {
     newNoteName = value;
   },
@@ -126,7 +139,6 @@ export const dialogManager = {
     newNoteNameForRename = value;
   },
 
-  // Reactive getters
   get showCreateDialog(): boolean {
     return showCreateDialog;
   },
