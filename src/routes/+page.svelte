@@ -6,10 +6,10 @@ import AppLayout from "../lib/components/AppLayout.svelte";
 import SearchInput from "../lib/components/SearchInput.svelte";
 import NoteList from "../lib/components/NoteList.svelte";
 import NoteView from "../lib/components/NoteView.svelte";
-import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import InputDialog from "../lib/components/InputDialog.svelte";
 import DeleteDialog from "../lib/components/DeleteDialog.svelte";
+import SettingsPane from "../lib/components/SettingsPane.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { setAppContext } from '../lib/context/app.svelte';
 import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
@@ -128,13 +128,6 @@ function closeSettingsPane(): void {
   configService.close(() => appState.searchElement?.focus());
 }
 
-async function saveConfig(): Promise<void> {
-  await configService.save(
-    searchManager,
-    (notes) => { appState.filteredNotes = notes; },
-    () => appState.searchElement?.focus()
-  );
-}
 
 function clearHighlights(): void {
   appState.areHighlightsCleared = true;
@@ -335,6 +328,7 @@ const handleKeydown = createKeyboardHandler(
     showDeleteDialog: () => dialogManager.openDeleteDialog(),
     showCreateDialog: () => dialogManager.openCreateDialog(),
     showRenameDialog: () => dialogManager.openRenameDialog(),
+    openSettingsPane,
     clearHighlights,
     clearSearch: searchManager.clearSearch,
   }
@@ -361,7 +355,6 @@ setAppContext({
   closeDeleteDialog: dialogManager.closeDeleteDialog,
   openSettingsPane,
   closeSettingsPane,
-  saveConfig,
   handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(() => deleteNote()),
   clearHighlights,
   clearSearch: searchManager.clearSearch,
@@ -402,32 +395,13 @@ onMount(() => {
   <NoteView slot="view" />
 
   <div slot="modals">
-    {#if configService.isVisible}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="dialog-overlay" onclick={closeSettingsPane}>
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="dialog settings-pane" onclick={(e) => e.stopPropagation()}>
-          <h3>Settings</h3>
-          <div class="settings-editor-container">
-            <Editor
-              bind:value={configService.content}
-              filename="config.toml"
-              onSave={saveConfig}
-              onExit={closeSettingsPane}
-            />
-          </div>
-          <div class="keyboard-hint">
-            <p>Press <kbd>Ctrl+S</kbd> to save, <kbd>Esc</kbd> in normal mode to close</p>
-          </div>
-          <div class="dialog-buttons">
-            <button class="btn-cancel" onclick={closeSettingsPane}>Cancel</button>
-            <button class="btn-create" onclick={saveConfig}>Save</button>
-          </div>
-        </div>
-      </div>
-    {/if}
+    <SettingsPane
+      show={configService.isVisible}
+      onClose={closeSettingsPane}
+      onRefresh={(notes) => {
+        appState.filteredNotes = notes;
+      }}
+    />
 
     <DeleteDialog
       show={dialogManager.showDeleteDialog}
@@ -477,121 +451,6 @@ onMount(() => {
 </AppLayout>
 
 <style>
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
 
-.dialog {
-  background-color: #3c3836;
-  border: 1px solid #504945;
-  border-radius: 8px;
-  padding: 24px;
-  min-width: 400px;
-  max-width: 500px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-
-.dialog h3 {
-  margin: 0 0 16px 0;
-  color: #ebdbb2;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.dialog p {
-  margin: 8px 0;
-  color: #d5c4a1;
-  line-height: 1.5;
-}
-
-.keyboard-hint {
-  margin: 16px 0;
-  padding: 12px;
-  background-color: #32302f;
-  border-radius: 4px;
-  border-left: 3px solid #83a598;
-}
-
-.keyboard-hint p {
-  margin: 4px 0;
-  font-size: 13px;
-  color: #a89984;
-}
-
-kbd {
-  background-color: #504945;
-  color: #ebdbb2;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  border: 1px solid #665c54;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.dialog-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 24px;
-}
-
-.dialog-buttons button {
-  padding: 8px 16px;
-  border-radius: 4px;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-cancel {
-  background-color: #504945;
-  color: #d5c4a1;
-}
-
-.btn-cancel:hover {
-  background-color: #665c54;
-}
-
-.btn-create {
-  background-color: #b8bb26;
-  color: #282828;
-}
-
-.btn-create:hover:not(:disabled) {
-  background-color: #98971a;
-}
-
-.btn-create:disabled {
-  background-color: #504945;
-  color: #7c6f64;
-  cursor: not-allowed;
-}
-
-.settings-pane {
-  width: 900px;
-  max-width: 90vw;
-}
-
-.settings-editor-container {
-  width: 100%;
-  height: 500px;
-  margin: 16px 0;
-  border: 1px solid #504945;
-  border-radius: 6px;
-  overflow: hidden;
-  background-color: #282828;
-}
 </style>
 

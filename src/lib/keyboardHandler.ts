@@ -22,6 +22,7 @@ export interface Actions {
   showDeleteDialog: () => void;
   showCreateDialog: () => void;
   showRenameDialog: () => void;
+  openSettingsPane: () => Promise<void>;
   clearHighlights: () => void;
   clearSearch: () => void;
 }
@@ -140,6 +141,12 @@ const actionRegistry: ActionRegistry = {
         actions.clearSearch();
       }
     },
+  },
+
+  settings: {
+    openSettings: async ({ actions }: ActionContext) => {
+      await actions.openSettingsPane();
+    },
   }
 };
 
@@ -161,11 +168,13 @@ const keyMappings: Record<string, KeyMappings> = {
     'Ctrl+k': 'navigation.moveUp',
     'Ctrl+j': 'navigation.moveDown',
     'Escape': 'search.clearHighlights',
+    'Meta+,': 'settings.openSettings',
   },
 
   editMode: {
     'Escape': 'editing.smartExitEdit',
     'Ctrl+s': 'editing.save',
+    'Meta+,': 'settings.openSettings',
   },
 
   noteContent: {
@@ -176,6 +185,7 @@ const keyMappings: Record<string, KeyMappings> = {
     'Escape': 'navigation.focusSearch',
     'e': 'editing.enterEdit',
     'Ctrl+x': 'notes.deleteNote',
+    'Meta+,': 'settings.openSettings',
   },
 
   default: {
@@ -185,6 +195,7 @@ const keyMappings: Record<string, KeyMappings> = {
     'Ctrl+Enter': 'notes.createNote',
     'Ctrl+x': 'notes.deleteNote',
     'Escape': 'navigation.focusSearch',
+    'Meta+,': 'settings.openSettings',
   }
 };
 
@@ -234,6 +245,14 @@ export function createKeyboardHandler(
 
     const context: ActionContext = { state, actions };
     let handled = false;
+
+
+    // Global shortcuts that should work from anywhere
+    if (event.metaKey && event.key === ',') {
+      event.preventDefault();
+      await actions.openSettingsPane();
+      return;
+    }
 
     if (state.isSearchInputFocused) {
       handled = await handleKeyAction(keyMappings.searchInput, event, context);

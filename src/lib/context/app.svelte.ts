@@ -47,7 +47,6 @@ export interface AppContext {
   closeDeleteDialog: () => void;
   openSettingsPane: () => Promise<void>;
   closeSettingsPane: () => void;
-  saveConfig: () => Promise<void>;
   handleDeleteKeyPress: () => void;
   clearHighlights: () => void;
   clearSearch: () => void;
