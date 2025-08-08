@@ -1,21 +1,17 @@
 import { getContext, setContext } from 'svelte';
 
-// Unique context key
 const key = {};
 
 interface AppState {
-  // Search state
   searchInput: string;
   query: string;
   isLoading: boolean;
   areHighlightsCleared: boolean;
 
-  // Selection state
   filteredNotes: string[];
   selectedNote: string | null;
   selectedIndex: number;
 
-  // Editor state
   noteContent: string;
   highlightedContent: string;
   isEditMode: boolean;
@@ -23,8 +19,6 @@ interface AppState {
   isEditorDirty: boolean;
   nearestHeaderText: string;
 
-
-  // UI state
   isSearchInputFocused: boolean;
   isNoteContentFocused: boolean;
   searchElement: HTMLInputElement | null;
@@ -33,10 +27,8 @@ interface AppState {
 }
 
 export interface AppContext {
-  // Reactive state object
   state: AppState;
 
-  // Actions
   selectNote: (note: string, index: number) => void;
   deleteNote: () => Promise<void>;
   createNote: (noteNameParam?: string) => Promise<void>;

@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
 class ConfigService {
-  // Reactive state using Svelte 5 runes
   state = $state({
     content: '',
     isVisible: false,
@@ -9,7 +8,6 @@ class ConfigService {
     error: null as string | null
   });
 
-  // Load config content and show settings pane
   async open(onFocus?: () => void): Promise<void> {
     this.state.isLoading = true;
     this.state.error = null;
@@ -26,7 +24,6 @@ class ConfigService {
     }
   }
 
-  // Close settings pane and clear content
   close(onFocus?: () => void): void {
     this.state.isVisible = false;
     this.state.content = '';
@@ -34,7 +31,6 @@ class ConfigService {
     onFocus?.();
   }
 
-  // Save config content and refresh cache
   async save(searchManager: any, onRefresh: (notes: string[]) => void, onFocus?: () => void): Promise<void> {
     this.state.isLoading = true;
     this.state.error = null;
@@ -62,7 +58,6 @@ class ConfigService {
     this.state.content = content;
   }
 
-  // Check if config file exists
   async exists(): Promise<boolean> {
     try {
       return await invoke<boolean>("config_exists");
@@ -72,7 +67,6 @@ class ConfigService {
     }
   }
 
-  // Refresh cache manually
   async refreshCache(): Promise<void> {
     try {
       await invoke<void>("refresh_cache");
@@ -82,7 +76,6 @@ class ConfigService {
     }
   }
 
-  // Clear any error state
   clearError(): void {
     this.state.error = null;
   }
@@ -109,5 +102,4 @@ class ConfigService {
   }
 }
 
-// Export singleton instance
 export const configService = new ConfigService();

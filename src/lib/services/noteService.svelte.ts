@@ -2,14 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { tick } from "svelte";
 
 class NoteService {
-  // Reactive state using Svelte 5 runes
   state = $state({
     isLoading: false,
     error: null as string | null,
     lastOperation: null as 'create' | 'delete' | 'rename' | null
   });
 
-  // Create a new note with automatic extension handling
   async create(noteName: string, searchManager: any, dialogManager: any, onRefresh: (notes: string[]) => void, onFocus?: () => void): Promise<void> {
     if (!noteName.trim()) return;
 
@@ -41,7 +39,6 @@ class NoteService {
     }
   }
 
-  // Delete a note
   async delete(noteName: string, searchManager: any, dialogManager: any, onRefresh: (notes: string[]) => void, currentSearchInput: string, onFocus?: () => void): Promise<void> {
     if (!noteName) return;
 
@@ -70,7 +67,6 @@ class NoteService {
     }
   }
 
-  // Rename a note
   async rename(oldName: string, newName: string, searchManager: any, dialogManager: any, onRefresh: (notes: string[]) => void, onSelectNote: (noteName: string) => void, currentSearchInput: string): Promise<void> {
     if (!newName.trim() || !oldName) return;
 
@@ -101,7 +97,6 @@ class NoteService {
     }
   }
 
-  // Get note content for display
   async getContent(noteName: string): Promise<string> {
     try {
       return await invoke<string>("get_note_content", { noteName });
@@ -111,7 +106,6 @@ class NoteService {
     }
   }
 
-  // Get raw note content for editing
   async getRawContent(noteName: string): Promise<string> {
     try {
       return await invoke<string>("get_note_raw_content", { noteName });
@@ -121,7 +115,6 @@ class NoteService {
     }
   }
 
-  // Save note content
   async save(noteName: string, content: string): Promise<void> {
     try {
       await invoke<void>("save_note", { noteName, content });
@@ -151,12 +144,10 @@ class NoteService {
     }
   }
 
-  // Clear any error state
   clearError(): void {
     this.state.error = null;
   }
 
-  // Getters for reactive state
   get isLoading(): boolean {
     return this.state.isLoading;
   }

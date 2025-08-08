@@ -40,14 +40,14 @@
 
   let editorContainer: HTMLElement;
   let editorView: EditorView | null;
-  let keyBindingMode: string = 'basic'; // default
+  let keyBindingMode: string = 'basic';
 
   async function loadEditorMode(): Promise<void> {
     try {
       keyBindingMode = await invoke<string>("get_editor_mode");
     } catch (e) {
       console.error("Failed to load editor mode:", e);
-      keyBindingMode = 'basic'; // fallback
+      keyBindingMode = 'basic';
     }
   }
 
@@ -56,7 +56,7 @@
       case 'vim': return vim();
       case 'emacs': return emacs();
       case 'basic': return null;
-      default: return null; // basic mode as default
+      default: return null;
     }
   }
 

@@ -17,27 +17,22 @@ import { dialogManager } from '../lib/utils/dialogManager.svelte';
 import { noteService } from '../lib/services/noteService.svelte';
 import { configService } from '../lib/services/configService.svelte';
 
-// Tauri API Response Types
 interface SearchNotesResponse {
   [key: string]: string[];
 }
 
 type TauriInvokeResponse<T> = Promise<T>;
 
-// Create reactive state with $state rune
 const appState = $state({
-  // Search state
   searchInput: '',
   query: '',
   isLoading: false,
   areHighlightsCleared: false,
 
-  // Selection state
   filteredNotes: [] as string[],
   selectedNote: null as string | null,
   selectedIndex: -1,
 
-  // Editor state
   noteContent: '',
   highlightedContent: '',
   isEditMode: false,
@@ -45,16 +40,12 @@ const appState = $state({
   isEditorDirty: false,
   nearestHeaderText: '',
 
-
-  // UI state
   isSearchInputFocused: false,
   isNoteContentFocused: false,
   searchElement: null as HTMLInputElement | null,
   noteListElement: null as HTMLElement | null,
   noteContentElement: null as HTMLElement | null,
 });
-
-// svelte-ignore non_reactive_update
 
 let contentRequestController: AbortController | null = null;
 
@@ -149,7 +140,6 @@ function clearHighlights(): void {
   appState.highlightedContent = contentHighlighter.highlighted;
 }
 
-
 $effect(() => {
   searchManager.updateSearchInputWithEffects(
     appState.searchInput,
@@ -201,38 +191,31 @@ $effect(() => {
 });
 
 $effect(() => {
-  // Clear content when no note is selected
   if (!appState.selectedNote) {
     appState.noteContent = '';
     appState.highlightedContent = '';
     return;
   }
 
-  // Cancel any previous content loading request
   if (contentRequestController) {
     contentRequestController.abort();
   }
   contentRequestController = new AbortController();
   const currentController = contentRequestController;
 
-  // Handle async loading
   (async () => {
     try {
-      // Load the note content from backend
       const content = await getNoteContent(appState.selectedNote!);
 
-      // Only update if request wasn't cancelled
       if (!currentController.signal.aborted) {
         appState.noteContent = content;
         appState.highlightedContent = contentHighlighter.highlighted;
 
-        // Scroll to first search match after DOM updates
         requestAnimationFrame(() => {
           scrollToFirstMatch();
         });
       }
     } catch (e) {
-      // Handle errors only if request wasn't cancelled
       if (!currentController.signal.aborted) {
         console.error("Failed to load note content:", e);
         appState.noteContent = `Error loading note: ${e}`;
@@ -302,7 +285,6 @@ function exitEditMode(): void {
   appState.searchElement?.focus();
 }
 
-
 async function saveNote(): Promise<void> {
   if (!appState.selectedNote || !appState.editContent) return;
   try {
@@ -311,20 +293,16 @@ async function saveNote(): Promise<void> {
       content: appState.editContent
     });
 
-    // refresh the database to include the new file
     await invoke<void>("refresh_cache");
 
-    // Refresh the notes list to sync with database
     const notes = await searchManager.searchImmediate(appState.searchInput);
     appState.filteredNotes = notes;
 
-    // Reload the current note content
     const content = await getNoteContent(appState.selectedNote);
     appState.noteContent = content;
     appState.highlightedContent = contentHighlighter.highlighted;
     appState.isEditMode = false;
 
-    // Return focus to search after UI updates
     await tick();
     appState.searchElement?.focus();
   } catch (e) {
@@ -361,12 +339,9 @@ const handleKeydown = createKeyboardHandler(
   }
 );
 
-// Set up the context - pass the state object directly with actions
 setAppContext({
-  // Pass the reactive state object directly (don't spread it)
   state: appState,
 
-  // Action functions
   selectNote,
   deleteNote,
   createNote,

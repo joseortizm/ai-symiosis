@@ -39,7 +39,6 @@
     }
   }
 
-  // Focus management
   $: if (show && dialogElement) {
     setTimeout(() => dialogElement.focus(), 10);
   }

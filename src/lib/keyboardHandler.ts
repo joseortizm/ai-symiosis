@@ -232,7 +232,6 @@ export function createKeyboardHandler(
   return async function handleKeydown(event: KeyboardEvent): Promise<void> {
     const state = getState();
 
-
     const context: ActionContext = { state, actions };
     let handled = false;
 
