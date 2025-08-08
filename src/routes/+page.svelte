@@ -14,6 +14,8 @@ import { setAppContext } from '../lib/context/app.svelte';
 import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
 import { searchManager } from '../lib/utils/searchManager.svelte';
 import { dialogManager } from '../lib/utils/dialogManager.svelte';
+import { noteService } from '../lib/services/noteService.svelte';
+import { configService } from '../lib/services/configService.svelte';
 
 // Tauri API Response Types
 interface SearchNotesResponse {
@@ -43,8 +45,6 @@ const appState = $state({
   isEditorDirty: false,
   nearestHeaderText: '',
 
-  showSettingsPane: false,
-  configContent: '',
 
   // UI state
   isSearchInputFocused: false,
@@ -72,110 +72,76 @@ function scrollToSelected(): void {
 }
 
 async function getNoteContent(noteName: string): Promise<string> {
-  const content = await invoke<string>("get_note_content", { noteName });
-  return content;
+  return await noteService.getContent(noteName);
 }
 
 async function deleteNote(): Promise<void> {
   if (!appState.selectedNote) return;
 
-  try {
-    await invoke<void>("delete_note", { noteName: appState.selectedNote });
-    // Refresh the notes list
-    const notes = await searchManager.searchImmediate(appState.searchInput);
-    appState.filteredNotes = notes;
-    dialogManager.closeDeleteDialog();
-    // Return focus to search
-    await tick();
-    appState.searchElement?.focus();
-  } catch (e) {
-    console.error("Failed to delete note:", e);
-    alert(`Failed to delete note: ${e}`);
-  }
+  await noteService.delete(
+    appState.selectedNote,
+    searchManager,
+    dialogManager,
+    (notes) => { appState.filteredNotes = notes; },
+    appState.searchInput,
+    () => appState.searchElement?.focus()
+  );
 }
 
 async function createNote(noteNameParam?: string): Promise<void> {
   const inputNoteName = noteNameParam || dialogManager.newNoteName.trim();
   if (!inputNoteName.trim()) return;
 
-  let noteName = inputNoteName.trim();
-  // Auto-add .md extension if no extension provided
-  if (!noteName.includes('.')) {
-    noteName += '.md';
-  }
-
-  try {
-    await invoke<void>("create_new_note", { noteName });
-    // Refresh the notes list
-    const notes = await searchManager.searchImmediate(appState.searchInput);
-    appState.filteredNotes = notes;
-    // Select the new note
-    const noteIndex = appState.filteredNotes.findIndex(note => note === noteName);
-    if (noteIndex >= 0) {
-      appState.selectedIndex = noteIndex;
-    }
-    dialogManager.closeCreateDialog();
-    // Return focus to search
-    await tick();
-    appState.searchElement?.focus();
-  } catch (e) {
-    console.error("Failed to create note:", e);
-    alert(`Failed to create note: ${e}`);
-  }
+  const finalNoteName = await noteService.create(
+    inputNoteName,
+    searchManager,
+    dialogManager,
+    (notes) => {
+      appState.filteredNotes = notes;
+      // Select the new note
+      const noteIndex = notes.findIndex(note => note === (inputNoteName.includes('.') ? inputNoteName : `${inputNoteName}.md`));
+      if (noteIndex >= 0) {
+        appState.selectedIndex = noteIndex;
+      }
+    },
+    () => appState.searchElement?.focus()
+  );
 }
 
 async function renameNote(newNameParam?: string): Promise<void> {
   const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
   if (!inputNewName.trim() || !appState.selectedNote) return;
 
-  let newName = inputNewName.trim();
-  if (!newName.includes('.')) {
-    newName += '.md';
-  }
-
-  try {
-    await invoke<void>("rename_note", { oldName: appState.selectedNote, newName: newName });
-    const notes = await searchManager.searchImmediate(appState.searchInput);
-    appState.filteredNotes = notes;
-    const noteIndex = appState.filteredNotes.findIndex(note => note === newName);
-    if (noteIndex >= 0) {
-      appState.selectedIndex = noteIndex;
-    }
-    dialogManager.closeRenameDialog();
-  } catch (e) {
-    console.error("Failed to rename note:", e);
-    alert(`Failed to rename note: ${e}`);
-  }
+  await noteService.rename(
+    appState.selectedNote,
+    inputNewName,
+    searchManager,
+    dialogManager,
+    (notes) => { appState.filteredNotes = notes; },
+    (noteName) => {
+      const noteIndex = appState.filteredNotes.findIndex(note => note === noteName);
+      if (noteIndex >= 0) {
+        appState.selectedIndex = noteIndex;
+      }
+    },
+    appState.searchInput
+  );
 }
 
 async function openSettingsPane(): Promise<void> {
-  try {
-    const content = await invoke<string>("get_config_content");
-    appState.configContent = content;
-    appState.showSettingsPane = true;
-  } catch (e) {
-    console.error("Failed to load config:", e);
-  }
+  await configService.open(() => appState.searchElement?.focus());
 }
 
 function closeSettingsPane(): void {
-  appState.showSettingsPane = false;
-  appState.configContent = '';
-  appState.searchElement?.focus();
+  configService.close(() => appState.searchElement?.focus());
 }
 
 async function saveConfig(): Promise<void> {
-  try {
-    await invoke<void>("save_config_content", { content: appState.configContent });
-    await invoke<void>("refresh_cache");
-    closeSettingsPane();
-    appState.searchElement?.focus();
-    const notes = await searchManager.searchImmediate('');
-    appState.filteredNotes = notes;
-  } catch (e) {
-    console.error("Failed to save config:", e);
-    alert(`Failed to save config: ${e}`);
-  }
+  await configService.save(
+    searchManager,
+    (notes) => { appState.filteredNotes = notes; },
+    () => appState.searchElement?.focus()
+  );
 }
 
 function clearHighlights(): void {
@@ -398,7 +364,6 @@ const handleKeydown = createKeyboardHandler(
     searchElement: appState.searchElement,
     query: appState.query,
     areHighlightsCleared: appState.areHighlightsCleared,
-    showSettingsPane: appState.showSettingsPane,
     isEditorDirty: appState.isEditorDirty,
   }),
   {
@@ -480,7 +445,7 @@ onMount(() => {
   <NoteView />
 
   <!-- Settings Pane -->
-  {#if appState.showSettingsPane}
+  {#if configService.isVisible}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="dialog-overlay" onclick={closeSettingsPane}>
@@ -488,7 +453,7 @@ onMount(() => {
         <h3>Settings</h3>
         <div class="settings-editor-container">
           <Editor
-            bind:value={appState.configContent}
+            bind:value={configService.content}
             filename="config.toml"
             onSave={saveConfig}
             onExit={closeSettingsPane}

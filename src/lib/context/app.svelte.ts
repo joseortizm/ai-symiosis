@@ -23,9 +23,6 @@ interface AppState {
   isEditorDirty: boolean;
   nearestHeaderText: string;
 
-  // Dialog state
-  showSettingsPane: boolean;
-  configContent: string;
 
   // UI state
   isSearchInputFocused: boolean;

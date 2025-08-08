@@ -9,7 +9,6 @@ export interface AppState {
   searchElement: HTMLInputElement | null;
   query: string;
   areHighlightsCleared: boolean;
-  showSettingsPane: boolean;
   isEditorDirty: boolean;
 }
 
@@ -233,7 +232,6 @@ export function createKeyboardHandler(
   return async function handleKeydown(event: KeyboardEvent): Promise<void> {
     const state = getState();
 
-    if (state.showSettingsPane) return;
 
     const context: ActionContext = { state, actions };
     let handled = false;
