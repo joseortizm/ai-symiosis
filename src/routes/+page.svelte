@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { onMount, tick } from "svelte";
 import { listen } from "@tauri-apps/api/event";
+import AppLayout from "../lib/components/AppLayout.svelte";
 import SearchInput from "../lib/components/SearchInput.svelte";
 import NoteList from "../lib/components/NoteList.svelte";
 import NoteView from "../lib/components/NoteView.svelte";
@@ -394,103 +395,88 @@ onMount(() => {
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<main class="container">
-  <SearchInput />
-  <NoteList />
-  <NoteView />
 
-  <!-- Settings Pane -->
-  {#if configService.isVisible}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="dialog-overlay" onclick={closeSettingsPane}>
-      <div class="dialog settings-pane" onclick={(e) => e.stopPropagation()}>
-        <h3>Settings</h3>
-        <div class="settings-editor-container">
-          <Editor
-            bind:value={configService.content}
-            filename="config.toml"
-            onSave={saveConfig}
-            onExit={closeSettingsPane}
-          />
-        </div>
-        <div class="keyboard-hint">
-          <p>Press <kbd>Ctrl+S</kbd> to save, <kbd>Esc</kbd> in normal mode to close</p>
-        </div>
-        <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={closeSettingsPane}>Cancel</button>
-          <button class="btn-create" onclick={saveConfig}>Save</button>
+<AppLayout>
+  <SearchInput slot="search" />
+  <NoteList slot="list" />
+  <NoteView slot="view" />
+
+  <div slot="modals">
+    {#if configService.isVisible}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="dialog-overlay" onclick={closeSettingsPane}>
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="dialog settings-pane" onclick={(e) => e.stopPropagation()}>
+          <h3>Settings</h3>
+          <div class="settings-editor-container">
+            <Editor
+              bind:value={configService.content}
+              filename="config.toml"
+              onSave={saveConfig}
+              onExit={closeSettingsPane}
+            />
+          </div>
+          <div class="keyboard-hint">
+            <p>Press <kbd>Ctrl+S</kbd> to save, <kbd>Esc</kbd> in normal mode to close</p>
+          </div>
+          <div class="dialog-buttons">
+            <button class="btn-cancel" onclick={closeSettingsPane}>Cancel</button>
+            <button class="btn-create" onclick={saveConfig}>Save</button>
+          </div>
         </div>
       </div>
-    </div>
-  {/if}
+    {/if}
 
-  <!-- Delete Confirmation Dialog -->
-  <DeleteDialog
-    show={dialogManager.showDeleteDialog}
-    noteName={appState.selectedNote || ''}
-    deleteKeyPressCount={dialogManager.deleteKeyPressCount}
-    onConfirm={deleteNote}
-    onCancel={dialogManager.closeDeleteDialog}
-    onKeyPress={() => dialogManager.handleDeleteKeyPress(() => deleteNote())}
-  />
+    <DeleteDialog
+      show={dialogManager.showDeleteDialog}
+      noteName={appState.selectedNote || ''}
+      deleteKeyPressCount={dialogManager.deleteKeyPressCount}
+      onConfirm={deleteNote}
+      onCancel={dialogManager.closeDeleteDialog}
+      onKeyPress={() => dialogManager.handleDeleteKeyPress(() => deleteNote())}
+    />
 
-  <!-- Create Note Dialog -->
-  <InputDialog
-    show={dialogManager.showCreateDialog}
-    title="Create New Note"
-    value={dialogManager.newNoteName}
-    placeholder="Enter note name (extension will be .md)"
-    confirmText="Create"
-    cancelText="Cancel"
-    onConfirm={(value) => createNote(value)}
-    onCancel={dialogManager.closeCreateDialog}
-    onInput={(value) => dialogManager.setNewNoteName(value)}
-  />
+    <InputDialog
+      show={dialogManager.showCreateDialog}
+      title="Create New Note"
+      value={dialogManager.newNoteName}
+      placeholder="Enter note name (extension will be .md)"
+      confirmText="Create"
+      cancelText="Cancel"
+      onConfirm={(value) => createNote(value)}
+      onCancel={dialogManager.closeCreateDialog}
+      onInput={(value) => dialogManager.setNewNoteName(value)}
+    />
 
-  <!-- Rename Note Dialog -->
-  <InputDialog
-    show={dialogManager.showRenameDialog}
-    title="Rename Note"
-    value={dialogManager.newNoteNameForRename}
-    placeholder="Enter new note name"
-    confirmText="Rename"
-    cancelText="Cancel"
-    autoSelect={true}
-    onConfirm={(value) => renameNote(value)}
-    onCancel={dialogManager.closeRenameDialog}
-    onInput={(value) => dialogManager.setNewNoteNameForRename(value)}
-  />
+    <InputDialog
+      show={dialogManager.showRenameDialog}
+      title="Rename Note"
+      value={dialogManager.newNoteNameForRename}
+      placeholder="Enter new note name"
+      confirmText="Rename"
+      cancelText="Cancel"
+      autoSelect={true}
+      onConfirm={(value) => renameNote(value)}
+      onCancel={dialogManager.closeRenameDialog}
+      onInput={(value) => dialogManager.setNewNoteNameForRename(value)}
+    />
 
-  <!-- Unsaved Changes Confirmation Dialog -->
-  <ConfirmationDialog
-    show={dialogManager.showUnsavedChangesDialog}
-    title="Unsaved Changes"
-    message="You have unsaved changes. What would you like to do?"
-    confirmText="Save and Exit"
-    cancelText="Discard Changes"
-    variant="default"
-    onConfirm={() => dialogManager.handleSaveAndExit(saveNote, exitEditMode)}
-    onCancel={() => dialogManager.handleDiscardAndExit(exitEditMode)}
-  />
-
-</main>
+    <ConfirmationDialog
+      show={dialogManager.showUnsavedChangesDialog}
+      title="Unsaved Changes"
+      message="You have unsaved changes. What would you like to do?"
+      confirmText="Save and Exit"
+      cancelText="Discard Changes"
+      variant="default"
+      onConfirm={() => dialogManager.handleSaveAndExit(saveNote, exitEditMode)}
+      onCancel={() => dialogManager.handleDiscardAndExit(exitEditMode)}
+    />
+  </div>
+</AppLayout>
 
 <style>
-:global(body) {
-  margin: 0;
-  background-color: #282c34;
-}
-.container {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #282828;
-  color: #ebdbb2;
-  font-family: 'Inter', sans-serif;
-}
-
 .dialog-overlay {
   position: fixed;
   top: 0;
@@ -608,3 +594,4 @@ kbd {
   background-color: #282828;
 }
 </style>
+
