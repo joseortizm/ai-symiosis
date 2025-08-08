@@ -21,7 +21,7 @@
     onCancel
   }: Props = $props();
 
-  let dialogElement: HTMLElement | undefined;
+  let dialogElement = $state<HTMLElement | undefined>(undefined);
 
   function handleConfirm(): void {
     onConfirm?.();

@@ -11,7 +11,7 @@
 
   const { show, onClose, onRefresh }: Props = $props();
 
-  let dialogElement: HTMLElement | undefined;
+  let dialogElement = $state<HTMLElement | undefined>(undefined);
 
   async function handleSave(): Promise<void> {
     await configService.save(searchManager, onRefresh);
