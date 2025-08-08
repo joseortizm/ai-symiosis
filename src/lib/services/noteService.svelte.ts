@@ -18,15 +18,15 @@ class NoteService {
     try {
       // Auto-add .md extension if no extension provided
       const finalNoteName = noteName.includes('.') ? noteName : `${noteName}.md`;
-      
+
       await invoke<void>("create_new_note", { noteName: finalNoteName });
-      
+
       // Refresh the notes list
       const notes = await searchManager.searchImmediate('');
       onRefresh(notes);
-      
+
       dialogManager.closeCreateDialog();
-      
+
       // Return focus to search
       await tick();
       onFocus?.();
@@ -48,13 +48,13 @@ class NoteService {
 
     try {
       await invoke<void>("delete_note", { noteName });
-      
+
       // Refresh the notes list
       const notes = await searchManager.searchImmediate(currentSearchInput);
       onRefresh(notes);
-      
+
       dialogManager.closeDeleteDialog();
-      
+
       // Return focus to search
       await tick();
       onFocus?.();
@@ -77,16 +77,16 @@ class NoteService {
     try {
       // Auto-add .md extension if no extension provided
       const finalNewName = newName.includes('.') ? newName : `${newName}.md`;
-      
+
       await invoke<void>("rename_note", { oldName, newName: finalNewName });
-      
+
       // Refresh the notes list
       const notes = await searchManager.searchImmediate(currentSearchInput);
       onRefresh(notes);
-      
+
       // Select the renamed note
       onSelectNote(finalNewName);
-      
+
       dialogManager.closeRenameDialog();
     } catch (e) {
       this.state.error = `Failed to rename note: ${e}`;

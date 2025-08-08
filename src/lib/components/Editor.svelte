@@ -299,9 +299,9 @@
       await loadEditorMode();
       createCodeMirrorEditor();
     };
-    
+
     init();
-    
+
     return () => {
       if (editorView) {
         editorView.destroy();

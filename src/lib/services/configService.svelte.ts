@@ -38,9 +38,9 @@ class ConfigService {
     try {
       await invoke<void>("save_config_content", { content: this.state.content });
       await invoke<void>("refresh_cache");
-      
+
       this.close(onFocus);
-      
+
       // Refresh the notes list after config change
       const notes = await searchManager.searchImmediate('');
       onRefresh(notes);
