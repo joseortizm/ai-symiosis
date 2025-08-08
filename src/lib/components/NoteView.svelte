@@ -22,7 +22,7 @@
 
 <div class="note-preview">
   {#if context.state.selectedNote}
-    {#if context.state.isEditMode}
+    {#if context.editorManager.isEditMode}
       <div class="edit-mode">
         <div class="edit-header">
           <h3>Editing: {context.state.selectedNote}</h3>
@@ -32,10 +32,11 @@
           </div>
         </div>
         <Editor
-          bind:value={context.state.editContent}
-          bind:isDirty={context.state.isEditorDirty}
+          value={context.editorManager.editContent}
+          isDirty={context.editorManager.isDirty}
           filename={context.state.selectedNote}
-          nearestHeaderText={context.state.nearestHeaderText}
+          nearestHeaderText={context.editorManager.nearestHeaderText}
+          onContentChange={context.editorManager.updateContent}
           onSave={context.saveNote}
           onExit={context.exitEditMode}
           onRequestExit={context.showExitEditDialog}

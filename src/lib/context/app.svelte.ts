@@ -14,10 +14,6 @@ interface AppState {
 
   noteContent: string;
   highlightedContent: string;
-  isEditMode: boolean;
-  editContent: string;
-  isEditorDirty: boolean;
-  nearestHeaderText: string;
 
   isSearchInputFocused: boolean;
   isNoteContentFocused: boolean;
@@ -28,6 +24,7 @@ interface AppState {
 
 export interface AppContext {
   state: AppState;
+  editorManager: any; // TODO: import proper type
 
   selectNote: (note: string, index: number) => void;
   deleteNote: () => Promise<void>;

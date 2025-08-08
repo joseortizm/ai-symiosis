@@ -17,6 +17,7 @@ import { searchManager } from '../lib/utils/searchManager.svelte';
 import { dialogManager } from '../lib/utils/dialogManager.svelte';
 import { noteService } from '../lib/services/noteService.svelte';
 import { configService } from '../lib/services/configService.svelte';
+import { editorManager } from '../lib/utils/editorManager.svelte';
 
 interface SearchNotesResponse {
   [key: string]: string[];
@@ -36,10 +37,6 @@ const appState = $state({
 
   noteContent: '',
   highlightedContent: '',
-  isEditMode: false,
-  editContent: '',
-  isEditorDirty: false,
-  nearestHeaderText: '',
 
   isSearchInputFocused: false,
   isNoteContentFocused: false,
@@ -172,7 +169,7 @@ $effect(() => {
     : null;
   if (newSelectedNote !== appState.selectedNote) {
     appState.selectedNote = newSelectedNote;
-    appState.isEditMode = false;
+    editorManager.exitEditMode();
   }
 });
 
@@ -246,68 +243,49 @@ function selectNote(note: string, index: number): void {
 
 async function enterEditMode(): Promise<void> {
   if (appState.selectedNote) {
-    if (appState.noteContentElement) {
-      const rect = appState.noteContentElement.getBoundingClientRect();
-      const headers = appState.noteContentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-
-      for (const header of headers) {
-        const headerRect = header.getBoundingClientRect();
-        if (headerRect.top >= rect.top) {
-          appState.nearestHeaderText = header.textContent?.trim() || '';
-          break;
-        }
-      }
-    }
-
-    try {
-      const rawContent = await invoke<string>("get_note_raw_content", { noteName: appState.selectedNote });
-      appState.isEditMode = true;
-      appState.editContent = rawContent;
-    } catch (e) {
-      console.error("Failed to load raw note content:", e);
-      // Fallback: try to extract text from HTML content
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = appState.noteContent;
-      appState.editContent = tempDiv.textContent || tempDiv.innerText || '';
-      appState.isEditMode = true;
-    }
+    await editorManager.enterEditMode(
+      appState.selectedNote,
+      appState.noteContent,
+      appState.noteContentElement || undefined
+    );
   }
 }
 
 function exitEditMode(): void {
-  appState.isEditMode = false;
+  editorManager.exitEditMode();
   appState.searchElement?.focus();
 }
 
 async function saveNote(): Promise<void> {
-  if (!appState.selectedNote || !appState.editContent) return;
-  try {
-    await invoke<void>("save_note", {
-      noteName: appState.selectedNote,
-      content: appState.editContent
-    });
+  if (!appState.selectedNote) return;
 
-    await invoke<void>("refresh_cache");
+  const result = await editorManager.saveAndExit(appState.selectedNote);
 
-    const notes = await searchManager.searchImmediate(appState.searchInput);
-    appState.filteredNotes = notes;
+  if (result.success) {
+    try {
+      await invoke<void>("refresh_cache");
 
-    const content = await getNoteContent(appState.selectedNote);
-    appState.noteContent = content;
-    appState.highlightedContent = contentHighlighter.highlighted;
-    appState.isEditMode = false;
+      const notes = await searchManager.searchImmediate(appState.searchInput);
+      appState.filteredNotes = notes;
 
-    await tick();
-    appState.searchElement?.focus();
-  } catch (e) {
-    console.error("Failed to save note:", e);
+      const content = await getNoteContent(appState.selectedNote);
+      appState.noteContent = content;
+      appState.highlightedContent = contentHighlighter.highlighted;
+
+      await tick();
+      appState.searchElement?.focus();
+    } catch (e) {
+      console.error("Failed to refresh after save:", e);
+    }
+  } else {
+    console.error("Failed to save note:", result.error);
   }
 }
 
 const handleKeydown = createKeyboardHandler(
   () => ({
     isSearchInputFocused: appState.isSearchInputFocused,
-    isEditMode: appState.isEditMode,
+    isEditMode: editorManager.isEditMode,
     isNoteContentFocused: appState.isNoteContentFocused,
     selectedIndex: appState.selectedIndex,
     filteredNotes: appState.filteredNotes,
@@ -316,7 +294,7 @@ const handleKeydown = createKeyboardHandler(
     searchElement: appState.searchElement,
     query: appState.query,
     areHighlightsCleared: appState.areHighlightsCleared,
-    isEditorDirty: appState.isEditorDirty,
+    isEditorDirty: editorManager.isDirty,
   }),
   {
     setSelectedIndex: (value: number) => appState.selectedIndex = value,
@@ -336,6 +314,7 @@ const handleKeydown = createKeyboardHandler(
 
 setAppContext({
   state: appState,
+  editorManager,
 
   selectNote,
   deleteNote,

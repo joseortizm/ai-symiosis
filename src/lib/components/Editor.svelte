@@ -19,6 +19,7 @@
     onSave: () => void;
     onExit?: (() => void) | null;
     onRequestExit?: (() => void) | null;
+    onContentChange?: ((newValue: string) => void) | null;
     nearestHeaderText?: string;
     isDirty?: boolean;
   }
@@ -29,6 +30,7 @@
     onSave,
     onExit = null,
     onRequestExit = null,
+    onContentChange = null,
     nearestHeaderText = '',
     isDirty = $bindable(false)
   }: Props = $props();
@@ -80,6 +82,7 @@
       textarea.value = value || '';
       textarea.addEventListener('input', () => {
         value = textarea.value;
+        onContentChange?.(textarea.value);
       });
       setTimeout(() => textarea.focus(), 10);
     }
@@ -236,6 +239,7 @@
             const newValue = update.state.doc.toString();
             value = newValue;
             lastPropsValue = newValue;
+            onContentChange?.(newValue);
             if (!isDirty && newValue !== initialValue) {
               isDirty = true;
             }
