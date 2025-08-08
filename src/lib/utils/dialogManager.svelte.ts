@@ -16,6 +16,7 @@ const context = $state<DialogContext>({
 let showCreateDialog = $state(false);
 let showRenameDialog = $state(false);
 let showDeleteDialog = $state(false);
+let showUnsavedChangesDialog = $state(false);
 
 // Input values
 let newNoteName = $state('');
@@ -91,6 +92,15 @@ function handleDeleteKeyPress(onConfirmDelete: () => void): void {
   }
 }
 
+function openUnsavedChangesDialog(): void {
+  showUnsavedChangesDialog = true;
+}
+
+function closeUnsavedChangesDialog(): void {
+  showUnsavedChangesDialog = false;
+  context.searchElement?.focus();
+}
+
 export const dialogManager = {
   updateState(newState: Partial<DialogContext>): void {
     Object.assign(context, newState);
@@ -103,6 +113,8 @@ export const dialogManager = {
   closeRenameDialog,
   openDeleteDialog,
   closeDeleteDialog,
+  openUnsavedChangesDialog,
+  closeUnsavedChangesDialog,
   handleDeleteKeyPress,
 
   // Setters
@@ -125,6 +137,10 @@ export const dialogManager = {
 
   get showDeleteDialog(): boolean {
     return showDeleteDialog;
+  },
+
+  get showUnsavedChangesDialog(): boolean {
+    return showUnsavedChangesDialog;
   },
 
   get newNoteName(): string {

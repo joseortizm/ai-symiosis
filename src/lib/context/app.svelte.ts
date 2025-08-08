@@ -25,7 +25,6 @@ interface AppState {
 
   // Dialog state
   showConfigDialog: boolean;
-  showUnsavedChangesDialog: boolean;
   configContent: string;
 
   // UI state

@@ -8,6 +8,7 @@ import NoteView from "../lib/components/NoteView.svelte";
 import Editor from "../lib/components/Editor.svelte";
 import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import InputDialog from "../lib/components/InputDialog.svelte";
+import DeleteDialog from "../lib/components/DeleteDialog.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { setAppContext } from '../lib/context/app.svelte';
 import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
@@ -43,7 +44,6 @@ const appState = $state({
   nearestHeaderText: '',
 
   showConfigDialog: false,
-  showUnsavedChangesDialog: false,
   configContent: '',
 
   // UI state
@@ -55,7 +55,6 @@ const appState = $state({
 });
 
 // svelte-ignore non_reactive_update
-let deleteDialogElement: HTMLElement;
 
 let contentRequestController: AbortController | null = null;
 
@@ -302,16 +301,6 @@ $effect(() => {
   });
 });
 
-
-$effect(() => {
-  if (dialogManager.showDeleteDialog && deleteDialogElement) {
-    tick().then(() => {
-      deleteDialogElement.focus();
-    });
-  }
-});
-
-
 function selectNote(note: string, index: number): void {
   if (appState.selectedIndex !== index) {
     appState.selectedIndex = index;
@@ -354,17 +343,17 @@ function exitEditMode(): void {
 }
 
 function showExitEditDialog(): void {
-  appState.showUnsavedChangesDialog = true;
+  dialogManager.openUnsavedChangesDialog();
 }
 
 function handleSaveAndExit(): void {
-  appState.showUnsavedChangesDialog = false;
+  dialogManager.closeUnsavedChangesDialog();
   saveNote();
   exitEditMode();
 }
 
 function handleDiscardAndExit(): void {
-  appState.showUnsavedChangesDialog = false;
+  dialogManager.closeUnsavedChangesDialog();
   exitEditMode();
 }
 
@@ -491,41 +480,14 @@ onMount(() => {
   <NoteView />
 
   <!-- Delete Confirmation Dialog -->
-  {#if dialogManager.showDeleteDialog}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="dialog-overlay" onclick={dialogManager.closeDeleteDialog}>
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-      <div
-        class="dialog"
-        bind:this={deleteDialogElement}
-        tabindex="0"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => {
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            dialogManager.closeDeleteDialog();
-          } else if (e.key === 'D' || e.key === 'd') {
-            e.preventDefault();
-            dialogManager.handleDeleteKeyPress(() => deleteNote());
-          }
-        }}>
-        <h3>Delete Note</h3>
-        <p>Are you sure you want to delete "{appState.selectedNote}"?</p>
-        <p class="warning">This action cannot be undone.</p>
-        <div class="keyboard-hint">
-          <p>Press <kbd>DD</kbd> to confirm or <kbd>Esc</kbd> to cancel</p>
-          {#if dialogManager.deleteKeyPressCount === 1}
-            <p class="delete-progress">Press <kbd>D</kbd> again to confirm deletion</p>
-          {/if}
-        </div>
-        <div class="dialog-buttons">
-          <button class="btn-cancel" onclick={dialogManager.closeDeleteDialog}>Cancel</button>
-          <button class="btn-delete" onclick={deleteNote}>Delete</button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <DeleteDialog
+    show={dialogManager.showDeleteDialog}
+    noteName={appState.selectedNote || ''}
+    deleteKeyPressCount={dialogManager.deleteKeyPressCount}
+    on:confirm={deleteNote}
+    on:cancel={dialogManager.closeDeleteDialog}
+    on:keyPress={() => dialogManager.handleDeleteKeyPress(() => deleteNote())}
+  />
 
   <!-- Create Note Dialog -->
   <InputDialog
@@ -554,7 +516,19 @@ onMount(() => {
     on:input={(e) => dialogManager.setNewNoteNameForRename(e.detail)}
   />
 
-  <!-- Config Dialog -->
+  <!-- Unsaved Changes Confirmation Dialog -->
+  <ConfirmationDialog
+    show={dialogManager.showUnsavedChangesDialog}
+    title="Unsaved Changes"
+    message="You have unsaved changes. What would you like to do?"
+    confirmText="Save and Exit"
+    cancelText="Discard Changes"
+    variant="default"
+    on:confirm={handleSaveAndExit}
+    on:cancel={handleDiscardAndExit}
+  />
+
+  <!-- Settings  -->
   {#if appState.showConfigDialog}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -580,17 +554,6 @@ onMount(() => {
     </div>
   {/if}
 
-  <!-- Unsaved Changes Confirmation Dialog -->
-  <ConfirmationDialog
-    show={appState.showUnsavedChangesDialog}
-    title="Unsaved Changes"
-    message="You have unsaved changes. What would you like to do?"
-    confirmText="Save and Exit"
-    cancelText="Discard Changes"
-    variant="default"
-    on:confirm={handleSaveAndExit}
-    on:cancel={handleDiscardAndExit}
-  />
 </main>
 
 <style>
@@ -644,13 +607,6 @@ onMount(() => {
   line-height: 1.5;
 }
 
-.warning {
-  color: #fb4934 !important;
-  font-size: 14px;
-  font-style: italic;
-}
-
-
 .keyboard-hint {
   margin: 16px 0;
   padding: 12px;
@@ -663,11 +619,6 @@ onMount(() => {
   margin: 4px 0;
   font-size: 13px;
   color: #a89984;
-}
-
-.delete-progress {
-  color: #fe8019 !important;
-  font-weight: 500;
 }
 
 kbd {
@@ -705,15 +656,6 @@ kbd {
 
 .btn-cancel:hover {
   background-color: #665c54;
-}
-
-.btn-delete {
-  background-color: #fb4934;
-  color: #fbf1c7;
-}
-
-.btn-delete:hover {
-  background-color: #cc241d;
 }
 
 .btn-create {

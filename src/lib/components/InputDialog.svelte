@@ -64,7 +64,10 @@
 </script>
 
 {#if show}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="dialog-overlay" onclick={handleOverlayClick}>
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div
       class="dialog"
       bind:this={dialogElement}
