@@ -1,18 +1,34 @@
 <script lang="ts">
-  export let show: boolean = false;
-  export let title: string = "";
-  export let value: string = "";
-  export let placeholder: string = "";
-  export let confirmText: string = "Confirm";
-  export let cancelText: string = "Cancel";
-  export let required: boolean = true;
-  export let autoSelect: boolean = false;
-  export let onConfirm: ((value: string) => void) | undefined = undefined;
-  export let onCancel: (() => void) | undefined = undefined;
-  export let onInput: ((value: string) => void) | undefined = undefined;
+  interface Props {
+    show: boolean;
+    title?: string;
+    value: string;
+    placeholder?: string;
+    confirmText?: string;
+    cancelText?: string;
+    required?: boolean;
+    autoSelect?: boolean;
+    onConfirm?: (value: string) => void;
+    onCancel?: () => void;
+    onInput?: (value: string) => void;
+  }
 
-  let inputElement: HTMLInputElement;
-  let dialogElement: HTMLElement;
+  let {
+    show,
+    title = "",
+    value = $bindable(),
+    placeholder = "",
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+    required = true,
+    autoSelect = false,
+    onConfirm,
+    onCancel,
+    onInput
+  }: Props = $props();
+
+  let inputElement: HTMLInputElement | undefined;
+  let dialogElement: HTMLElement | undefined;
 
   function handleConfirm(): void {
     if (!confirmDisabled) {
@@ -46,16 +62,18 @@
     }
   }
 
-  $: if (show && inputElement) {
-    setTimeout(() => {
-      inputElement.focus();
-      if (autoSelect) {
-        inputElement.select();
-      }
-    }, 10);
-  }
+  $effect(() => {
+    if (show && inputElement) {
+      setTimeout(() => {
+        inputElement!.focus();
+        if (autoSelect) {
+          inputElement!.select();
+        }
+      }, 10);
+    }
+  });
 
-  $: confirmDisabled = required && !value.trim();
+  const confirmDisabled = $derived(required && !value.trim());
 </script>
 
 {#if show}

@@ -1,12 +1,16 @@
 <script lang="ts">
-  export let show: boolean = false;
-  export let noteName: string = '';
-  export let deleteKeyPressCount: number = 0;
-  export let onConfirm: (() => void) | undefined = undefined;
-  export let onCancel: (() => void) | undefined = undefined;
-  export let onKeyPress: (() => void) | undefined = undefined;
+  interface Props {
+    show: boolean;
+    noteName: string;
+    deleteKeyPressCount: number;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+    onKeyPress?: () => void;
+  }
 
-  let dialogElement: HTMLElement;
+  const { show, noteName, deleteKeyPressCount, onConfirm, onCancel, onKeyPress }: Props = $props();
+
+  let dialogElement: HTMLElement | undefined;
 
   function handleConfirm(): void {
     onConfirm?.();
@@ -36,9 +40,11 @@
     }
   }
 
-  $: if (show && dialogElement) {
-    setTimeout(() => dialogElement.focus(), 10);
-  }
+  $effect(() => {
+    if (show && dialogElement) {
+      setTimeout(() => dialogElement!.focus(), 10);
+    }
+  });
 </script>
 
 {#if show}

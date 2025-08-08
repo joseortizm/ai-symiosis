@@ -13,22 +13,35 @@
   import { emacs } from "@replit/codemirror-emacs";
   import type { Command } from '@codemirror/view';
 
-  export let value: string;
-  export let filename: string;
-  export let onSave: () => void;
-  export let onExit: (() => void) | null = null;
-  export let onRequestExit: (() => void) | null = null;
-  export let nearestHeaderText: string = '';
+  interface Props {
+    value: string;
+    filename: string;
+    onSave: () => void;
+    onExit?: (() => void) | null;
+    onRequestExit?: (() => void) | null;
+    nearestHeaderText?: string;
+    isDirty?: boolean;
+  }
 
-  let isDirty: boolean = false;
+  let {
+    value = $bindable(),
+    filename,
+    onSave,
+    onExit = null,
+    onRequestExit = null,
+    nearestHeaderText = '',
+    isDirty = $bindable(false)
+  }: Props = $props();
   let initialValue: string = value;
   let lastPropsValue: string = value;
 
-  $: if (value !== lastPropsValue) {
-    initialValue = value;
-    lastPropsValue = value;
-    isDirty = false;
-  }
+  $effect(() => {
+    if (value !== lastPropsValue) {
+      initialValue = value;
+      lastPropsValue = value;
+      isDirty = false;
+    }
+  });
 
   function resetDirtyFlag(): void {
     isDirty = false;
@@ -36,7 +49,6 @@
     lastPropsValue = value;
   }
 
-  export { isDirty };
 
   let editorContainer: HTMLElement;
   let editorView: EditorView | null;

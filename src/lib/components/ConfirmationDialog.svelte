@@ -1,14 +1,27 @@
 <script lang="ts">
-  export let show: boolean = false;
-  export let title: string = "Confirm";
-  export let message: string = "";
-  export let confirmText: string = "Confirm";
-  export let cancelText: string = "Cancel";
-  export let variant: 'default' | 'danger' = "default";
-  export let onConfirm: (() => void) | undefined = undefined;
-  export let onCancel: (() => void) | undefined = undefined;
+  interface Props {
+    show: boolean;
+    title?: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'default' | 'danger';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  }
 
-  let dialogElement: HTMLElement;
+  const {
+    show,
+    title = "Confirm",
+    message,
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+    variant = "default",
+    onConfirm,
+    onCancel
+  }: Props = $props();
+
+  let dialogElement: HTMLElement | undefined;
 
   function handleConfirm(): void {
     onConfirm?.();
@@ -34,9 +47,11 @@
     }
   }
 
-  $: if (show && dialogElement) {
-    setTimeout(() => dialogElement.focus(), 10);
-  }
+  $effect(() => {
+    if (show && dialogElement) {
+      setTimeout(() => dialogElement!.focus(), 10);
+    }
+  });
 </script>
 
 {#if show}
