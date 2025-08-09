@@ -103,6 +103,18 @@ describe('contentManager', () => {
   });
 
   describe('content refresh workflows', () => {
+    it('should get note content', async () => {
+      const { noteService } = await import('../services/noteService.svelte');
+      const noteName = 'test.md';
+      const expectedContent = 'note content';
+      noteService.getContent.mockResolvedValue(expectedContent);
+
+      const result = await contentManager.getNoteContent(noteName);
+
+      expect(noteService.getContent).toHaveBeenCalledWith(noteName);
+      expect(result).toBe(expectedContent);
+    });
+
     it('should refresh content for a note', async () => {
       const { noteService } = await import('../services/noteService.svelte');
       const noteName = 'test.md';

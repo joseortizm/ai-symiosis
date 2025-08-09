@@ -39,17 +39,8 @@ const appState = $state({
 
 let contentRequestController: AbortController | null = null;
 
-function scrollToFirstMatch(): void {
-  contentManager.scrollToFirstMatch();
-}
 
-function scrollToSelected(): void {
-  focusManager.scrollToSelectedInList(appState.selectedIndex);
-}
 
-async function getNoteContent(noteName: string): Promise<string> {
-  return await noteService.getContent(noteName);
-}
 
 async function deleteNote(): Promise<void> {
   if (!appState.selectedNote) return;
@@ -112,7 +103,6 @@ function closeSettingsPane(): void {
   configService.close(() => focusManager.focusSearch());
 }
 
-
 function clearHighlights(): void {
   contentManager.clearHighlights();
 }
@@ -162,7 +152,7 @@ $effect(() => {
 $effect(() => {
   if (appState.selectedIndex >= 0) {
     requestAnimationFrame(() => {
-      scrollToSelected();
+      focusManager.scrollToSelected(appState.selectedIndex);
     });
   }
 });
@@ -181,13 +171,13 @@ $effect(() => {
 
   (async () => {
     try {
-      const content = await getNoteContent(appState.selectedNote!);
+      const content = await contentManager.getNoteContent(appState.selectedNote!);
 
       if (!currentController.signal.aborted) {
         contentManager.setNoteContent(content);
 
         requestAnimationFrame(() => {
-          scrollToFirstMatch();
+          contentManager.scrollToFirstMatch();
         });
       }
     } catch (e) {

@@ -131,5 +131,19 @@ describe('focusManager', () => {
       expect(() => focusManager.scrollNoteContentUp()).not.toThrow();
       expect(() => focusManager.scrollToSelectedInList(0)).not.toThrow();
     });
+
+    it('should scroll to selected item by index', () => {
+      const mockButton = new MockHTMLElement();
+      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) };
+      noteListElement.children = [mockLi];
+
+      focusManager.scrollToSelected(0);
+
+      expect(mockLi.querySelector).toHaveBeenCalledWith('button');
+      expect(mockButton.scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    });
   });
 });

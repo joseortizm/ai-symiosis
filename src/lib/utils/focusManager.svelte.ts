@@ -85,5 +85,9 @@ export const focusManager = {
         selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
+  },
+
+  scrollToSelected(selectedIndex: number): void {
+    this.scrollToSelectedInList(selectedIndex);
   }
 };

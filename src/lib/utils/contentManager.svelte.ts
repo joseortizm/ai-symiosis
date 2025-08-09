@@ -48,6 +48,11 @@ export const contentManager = {
     }
   },
 
+  // Content access
+  async getNoteContent(noteName: string): Promise<string> {
+    return await noteService.getContent(noteName);
+  },
+
   // Content refresh workflows
   async refreshContent(noteName: string): Promise<string> {
     const content = await noteService.getContent(noteName);
