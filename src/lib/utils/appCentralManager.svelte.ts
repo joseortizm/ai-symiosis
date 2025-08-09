@@ -10,19 +10,17 @@ import { focusManager } from './focusManager.svelte';
 import { contentManager } from './contentManager.svelte';
 
 interface CentralAppState {
-  searchInput: string;
   selectedIndex: number;
 }
 
 const state = $state<CentralAppState>({
-  searchInput: '',
   selectedIndex: -1,
 });
 
 const isLoading = $derived(searchManager.isLoading);
 const areHighlightsCleared = $derived(searchManager.areHighlightsCleared);
 const filteredNotes = $derived(searchManager.filteredNotes);
-const query = $derived(state.searchInput);
+const query = $derived(searchManager.searchInput);
 
 const selectedNote = $derived.by(() => {
   const notes = filteredNotes;
@@ -42,13 +40,6 @@ const selectedNote = $derived.by(() => {
 let contentRequestController: AbortController | null = null;
 
 function setupReactiveEffects() {
-  $effect(() => {
-    searchManager.updateSearchInputWithEffects(
-      state.searchInput,
-      () => {}
-    );
-  });
-
   $effect(() => {
     const notes = filteredNotes;
     if (notes.length === 0) {
@@ -119,10 +110,6 @@ function setupReactiveEffects() {
 }
 
 // State setters
-function setSearchInput(value: string): void {
-  state.searchInput = value;
-}
-
 function setSelectedIndex(value: number): void {
   state.selectedIndex = value;
 }
@@ -136,7 +123,7 @@ async function deleteNote(): Promise<void> {
     searchManager,
     dialogManager,
     (notes) => { searchManager.updateState({ filteredNotes: notes }); },
-    state.searchInput,
+    searchManager.searchInput,
     () => focusManager.focusSearch()
   );
 }
@@ -176,7 +163,7 @@ async function renameNote(newNameParam?: string): Promise<void> {
         state.selectedIndex = noteIndex;
       }
     },
-    state.searchInput
+    searchManager.searchInput
   );
 }
 
@@ -187,7 +174,7 @@ async function saveNote(): Promise<void> {
 
   if (result.success) {
     try {
-      const refreshResult = await contentManager.refreshAfterSave(selectedNote, state.searchInput);
+      const refreshResult = await contentManager.refreshAfterSave(selectedNote, searchManager.searchInput);
       searchManager.updateState({ filteredNotes: refreshResult.searchResults });
 
       await tick();
@@ -225,10 +212,6 @@ export const appCentralManager = {
   // Setup method for reactive effects
   setupReactiveEffects,
   // Reactive getters for state
-  get searchInput(): string {
-    return state.searchInput;
-  },
-
   get query(): string {
     return query;
   },
@@ -254,14 +237,13 @@ export const appCentralManager = {
   },
 
   // State setters
-  setSearchInput,
 
   updateFilteredNotes(notes: string[]): void {
     searchManager.updateState({ filteredNotes: notes });
   },
 
   resetState(): void {
-    state.searchInput = '';
+    searchManager.searchInput = '';
     state.selectedIndex = -1;
     searchManager.updateState({
       filteredNotes: [],
@@ -323,8 +305,6 @@ export const appCentralManager = {
   get context() {
     return {
       state: {
-        get searchInput() { return state.searchInput; },
-        set searchInput(value: string) { setSearchInput(value); },
         get query() { return query; },
         get isLoading() { return isLoading; },
         get areHighlightsCleared() { return areHighlightsCleared; },

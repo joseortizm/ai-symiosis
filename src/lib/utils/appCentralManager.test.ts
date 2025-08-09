@@ -25,18 +25,12 @@ describe('appCentralManager', () => {
 
   describe('state management', () => {
     it('should provide reactive getters for central state', () => {
-      expect(appCentralManager.searchInput).toBe('');
       expect(appCentralManager.query).toBe('');
       expect(appCentralManager.isLoading).toBe(false);
       expect(appCentralManager.areHighlightsCleared).toBe(false);
       expect(appCentralManager.filteredNotes).toEqual([]);
       expect(appCentralManager.selectedNote).toBe(null);
       expect(appCentralManager.selectedIndex).toBe(-1);
-    });
-
-    it('should update searchInput state', () => {
-      appCentralManager.setSearchInput('test query');
-      expect(appCentralManager.searchInput).toBe('test query');
     });
 
     it('should update selectedIndex state', () => {
@@ -168,12 +162,10 @@ describe('appCentralManager', () => {
     });
 
     it('should provide current state in context', () => {
-      appCentralManager.setSearchInput('test');
       appCentralManager.setSelectedIndex(1);
 
       const context = appCentralManager.context;
 
-      expect(context.state.searchInput).toBe('test');
       expect(context.state.selectedIndex).toBe(1);
     });
   });

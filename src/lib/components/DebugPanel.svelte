@@ -95,7 +95,7 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>searchInput:</strong>
-          <code>{JSON.stringify(appCentralManager.searchInput)}</code>
+          <code>{JSON.stringify(searchManager.searchInput)}</code>
         </div>
         <div class="debug-item">
           <strong>query:</strong>
@@ -147,7 +147,7 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>searchInput:</strong>
-          <code>{JSON.stringify(appCentralManager.searchInput)}</code>
+          <code>{JSON.stringify(searchManager.searchInput)}</code>
         </div>
         <div class="debug-item">
           <strong>isLoading:</strong>
@@ -162,7 +162,7 @@ function handleKeydown(event: KeyboardEvent) {
         <div class="debug-item">
           <strong>Search Sync Check:</strong>
           <small>appCentral.searchInput === searchMgr.searchInput?</small>
-          <code>{appCentralManager.searchInput === searchManager.searchInput ? '✅ MATCH' : '❌ MISMATCH'}</code>
+          <code>{searchManager.searchInput === searchManager.searchInput ? '✅ MATCH' : '❌ MISMATCH'}</code>
         </div>
         <div class="debug-item">
           <strong>Notes Sync Check:</strong>
@@ -193,10 +193,10 @@ function handleKeydown(event: KeyboardEvent) {
           Trigger searchManager.searchImmediate('test')
         </button>
         <button onclick={() => {
-          console.log('📝 Setting appCentralManager.setSearchInput("debug")');
-          appCentralManager.setSearchInput('debug');
+          console.log('📝 Setting searchManager.searchInput = "debug"');
+          searchManager.searchInput = 'debug';
         }}>
-          Set appCentralManager.setSearchInput('debug')
+          Set searchManager.searchInput = 'debug'
         </button>
         <button onclick={() => {
           console.log('📝 Setting searchManager.updateState({searchInput: "direct"})');

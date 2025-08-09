@@ -1,5 +1,6 @@
 <script lang="ts">
   import { appCentralManager } from '../utils/appCentralManager.svelte';
+  import { searchManager } from '../utils/searchManager.svelte';
 
   let searchElement: HTMLInputElement;
 
@@ -12,7 +13,7 @@
 
 <input
   type="text"
-  bind:value={appCentralManager.context.state.searchInput}
+  bind:value={searchManager.searchInput}
   placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
   bind:this={searchElement}

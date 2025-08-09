@@ -102,6 +102,10 @@ export const searchManager = {
     return state.searchInput;
   },
 
+  set searchInput(value: string) {
+    updateSearchInputWithEffects(value, () => {});
+  },
+
   get query(): string {
     return state.query;
   },
