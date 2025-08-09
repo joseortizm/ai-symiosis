@@ -11,15 +11,13 @@ interface AppState {
   filteredNotes: string[];
   selectedNote: string | null;
   selectedIndex: number;
-
-  noteContent: string;
-  highlightedContent: string;
 }
 
 export interface AppContext {
   state: AppState;
   editorManager: any; // TODO: import proper type
   focusManager: any; // TODO: import proper type
+  contentManager: any; // TODO: import proper type
 
   selectNote: (note: string, index: number) => void;
   deleteNote: () => Promise<void>;

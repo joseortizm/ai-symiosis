@@ -17,7 +17,7 @@
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
     // Run after highlightedContent changes and DOM updates
-    if (context.state.highlightedContent && context.focusManager.noteContentElement) {
+    if (context.contentManager.highlightedContent && context.focusManager.noteContentElement) {
       setTimeout(() => {
         const blocks = context.focusManager.noteContentElement!.querySelectorAll('pre code');
         blocks.forEach((block: Element) => {
@@ -61,7 +61,7 @@
         onblur={() => context.focusManager.setNoteContentFocused(false)}
         ondblclick={context.enterEditMode}
       >
-        <div class="note-text">{@html context.state.highlightedContent}</div>
+        <div class="note-text">{@html context.contentManager.highlightedContent}</div>
       </div>
     {/if}
   {:else}

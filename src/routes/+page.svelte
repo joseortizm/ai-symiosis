@@ -12,13 +12,13 @@ import DeleteDialog from "../lib/components/DeleteDialog.svelte";
 import SettingsPane from "../lib/components/SettingsPane.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { setAppContext } from '../lib/context/app.svelte';
-import { contentHighlighter } from '../lib/utils/contentHighlighting.svelte';
 import { searchManager } from '../lib/utils/searchManager.svelte';
 import { dialogManager } from '../lib/utils/dialogManager.svelte';
 import { noteService } from '../lib/services/noteService.svelte';
 import { configService } from '../lib/services/configService.svelte';
 import { editorManager } from '../lib/utils/editorManager.svelte';
 import { focusManager } from '../lib/utils/focusManager.svelte';
+import { contentManager } from '../lib/utils/contentManager.svelte';
 
 interface SearchNotesResponse {
   [key: string]: string[];
@@ -35,15 +35,12 @@ const appState = $state({
   filteredNotes: [] as string[],
   selectedNote: null as string | null,
   selectedIndex: -1,
-
-  noteContent: '',
-  highlightedContent: '',
 });
 
 let contentRequestController: AbortController | null = null;
 
 function scrollToFirstMatch(): void {
-  contentHighlighter.scrollToFirstMatch();
+  contentManager.scrollToFirstMatch();
 }
 
 function scrollToSelected(): void {
@@ -117,8 +114,7 @@ function closeSettingsPane(): void {
 
 
 function clearHighlights(): void {
-  appState.areHighlightsCleared = true;
-  appState.highlightedContent = contentHighlighter.highlighted;
+  contentManager.clearHighlights();
 }
 
 $effect(() => {
@@ -173,8 +169,7 @@ $effect(() => {
 
 $effect(() => {
   if (!appState.selectedNote) {
-    appState.noteContent = '';
-    appState.highlightedContent = '';
+    contentManager.setNoteContent('');
     return;
   }
 
@@ -189,8 +184,7 @@ $effect(() => {
       const content = await getNoteContent(appState.selectedNote!);
 
       if (!currentController.signal.aborted) {
-        appState.noteContent = content;
-        appState.highlightedContent = contentHighlighter.highlighted;
+        contentManager.setNoteContent(content);
 
         requestAnimationFrame(() => {
           scrollToFirstMatch();
@@ -199,28 +193,24 @@ $effect(() => {
     } catch (e) {
       if (!currentController.signal.aborted) {
         console.error("Failed to load note content:", e);
-        appState.noteContent = `Error loading note: ${e}`;
-        appState.highlightedContent = appState.noteContent;
+        contentManager.setNoteContent(`Error loading note: ${e}`);
       }
     }
   })();
 });
 
 $effect(() => {
-  contentHighlighter.updateState({
+  contentManager.updateHighlighterState({
     query: appState.query,
-    content: appState.noteContent,
-    areHighlightsCleared: appState.areHighlightsCleared,
-    noteContentElement: focusManager.noteContentElement
+    areHighlightsCleared: appState.areHighlightsCleared
   });
-  appState.highlightedContent = contentHighlighter.highlighted;
 });
 
 $effect(() => {
   dialogManager.updateState({
     selectedNote: appState.selectedNote,
     query: appState.query,
-    highlightedContent: appState.highlightedContent,
+    highlightedContent: contentManager.highlightedContent,
     searchElement: focusManager.searchElement
   });
 });
@@ -235,7 +225,7 @@ async function enterEditMode(): Promise<void> {
   if (appState.selectedNote) {
     await editorManager.enterEditMode(
       appState.selectedNote,
-      appState.noteContent,
+      contentManager.noteContent,
       focusManager.noteContentElement || undefined
     );
   }
@@ -253,14 +243,8 @@ async function saveNote(): Promise<void> {
 
   if (result.success) {
     try {
-      await invoke<void>("refresh_cache");
-
-      const notes = await searchManager.searchImmediate(appState.searchInput);
-      appState.filteredNotes = notes;
-
-      const content = await getNoteContent(appState.selectedNote);
-      appState.noteContent = content;
-      appState.highlightedContent = contentHighlighter.highlighted;
+      const refreshResult = await contentManager.refreshAfterSave(appState.selectedNote, appState.searchInput);
+      appState.filteredNotes = refreshResult.searchResults;
 
       await tick();
       focusManager.focusSearch();
@@ -306,6 +290,7 @@ setAppContext({
   state: appState,
   editorManager,
   focusManager,
+  contentManager,
 
   selectNote,
   deleteNote,

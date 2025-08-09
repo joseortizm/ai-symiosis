@@ -2,14 +2,12 @@ interface HighlighterState {
   query: string;
   content: string;
   areHighlightsCleared: boolean;
-  noteContentElement: HTMLElement | null;
 }
 
 const state = $state<HighlighterState>({
   query: '',
   content: '',
-  areHighlightsCleared: false,
-  noteContentElement: null
+  areHighlightsCleared: false
 });
 
 const highlightCache = new Map<string, string>();
@@ -48,17 +46,6 @@ const highlighted = $derived(() => {
   return highlightMatches(state.content, state.query);
 });
 
-function scrollToFirstMatch(): void {
-  if (state.noteContentElement && state.query.trim() && !state.areHighlightsCleared) {
-    setTimeout(() => {
-      const firstMatch = state.noteContentElement!.querySelector('.highlight');
-      if (firstMatch) {
-        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  }
-}
-
 export const contentHighlighter = {
   updateState(newState: Partial<HighlighterState>): void {
     Object.assign(state, newState);
@@ -67,8 +54,6 @@ export const contentHighlighter = {
   get highlighted(): string {
     return highlighted();
   },
-
-  scrollToFirstMatch,
 
   clearCache(): void {
     highlightCache.clear();
