@@ -11,31 +11,37 @@ import { contentManager } from './contentManager.svelte';
 
 interface CentralAppState {
   searchInput: string;
-  query: string;
-  isLoading: boolean;
-  areHighlightsCleared: boolean;
-  filteredNotes: string[];
-  selectedNote: string | null;
   selectedIndex: number;
+  query: string;
 }
 
 const state = $state<CentralAppState>({
   searchInput: '',
-  query: '',
-  isLoading: false,
-  areHighlightsCleared: false,
-  filteredNotes: [],
-  selectedNote: null,
   selectedIndex: -1,
+  query: '',
+});
+
+const isLoading = $derived(searchManager.isLoading);
+const areHighlightsCleared = $derived(searchManager.areHighlightsCleared);
+const filteredNotes = $derived(searchManager.filteredNotes);
+
+const selectedNote = $derived.by(() => {
+  const notes = filteredNotes;
+  let index = state.selectedIndex;
+
+  if (notes.length === 0) {
+    return null;
+  }
+
+  if (index === -1 || index >= notes.length) {
+    index = 0;
+  }
+
+  return notes[index] || null;
 });
 
 let contentRequestController: AbortController | null = null;
 
-function arraysEqual(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((val, i) => val === b[i]);
-}
-
-// Reactive coordination effects - these will be called from a component context
 function setupReactiveEffects() {
   $effect(() => {
     searchManager.updateSearchInputWithEffects(
@@ -43,34 +49,18 @@ function setupReactiveEffects() {
       (query) => {
         state.query = query;
       },
-      (cleared) => {
-        state.areHighlightsCleared = cleared;
-      }
+      () => {}
     );
   });
 
   $effect(() => {
-    state.isLoading = searchManager.isLoading;
-  });
-
-  $effect(() => {
-    const notes = searchManager.filteredNotes;
-    if (!arraysEqual(notes, state.filteredNotes)) {
-      state.filteredNotes = notes;
-      if (notes.length === 0) {
+    const notes = filteredNotes;
+    if (notes.length === 0) {
+      if (state.selectedIndex !== -1) {
         state.selectedIndex = -1;
-      } else {
-        state.selectedIndex = 0;
       }
-    }
-  });
-
-  $effect(() => {
-    const newSelectedNote = state.filteredNotes.length > 0 && state.selectedIndex !== -1
-      ? state.filteredNotes[state.selectedIndex]
-      : null;
-    if (newSelectedNote !== state.selectedNote) {
-      state.selectedNote = newSelectedNote;
+    } else if (state.selectedIndex === -1 || state.selectedIndex >= notes.length) {
+      state.selectedIndex = 0;
       editorManager.exitEditMode();
     }
   });
@@ -84,7 +74,7 @@ function setupReactiveEffects() {
   });
 
   $effect(() => {
-    if (!state.selectedNote) {
+    if (!selectedNote) {
       contentManager.setNoteContent('');
       return;
     }
@@ -97,7 +87,7 @@ function setupReactiveEffects() {
 
     (async () => {
       try {
-        const content = await contentManager.getNoteContent(state.selectedNote!);
+        const content = await contentManager.getNoteContent(selectedNote!);
 
         if (!currentController.signal.aborted) {
           contentManager.setNoteContent(content);
@@ -118,13 +108,13 @@ function setupReactiveEffects() {
   $effect(() => {
     contentManager.updateHighlighterState({
       query: state.query,
-      areHighlightsCleared: state.areHighlightsCleared
+      areHighlightsCleared: areHighlightsCleared
     });
   });
 
   $effect(() => {
     dialogManager.updateState({
-      selectedNote: state.selectedNote,
+      selectedNote: selectedNote,
       query: state.query,
       highlightedContent: contentManager.highlightedContent,
       searchElement: focusManager.searchElement
@@ -143,13 +133,13 @@ function setSelectedIndex(value: number): void {
 
 // Business logic functions
 async function deleteNote(): Promise<void> {
-  if (!state.selectedNote) return;
+  if (!selectedNote) return;
 
   await noteService.delete(
-    state.selectedNote,
+    selectedNote,
     searchManager,
     dialogManager,
-    (notes) => { state.filteredNotes = notes; },
+    (notes) => { searchManager.updateState({ filteredNotes: notes }); },
     state.searchInput,
     () => focusManager.focusSearch()
   );
@@ -164,8 +154,7 @@ async function createNote(noteNameParam?: string): Promise<void> {
     searchManager,
     dialogManager,
     (notes) => {
-      state.filteredNotes = notes;
-      // Select the new note
+      searchManager.updateState({ filteredNotes: notes });
       const noteIndex = notes.findIndex(note => note === (inputNoteName.includes('.') ? inputNoteName : `${inputNoteName}.md`));
       if (noteIndex >= 0) {
         state.selectedIndex = noteIndex;
@@ -177,16 +166,16 @@ async function createNote(noteNameParam?: string): Promise<void> {
 
 async function renameNote(newNameParam?: string): Promise<void> {
   const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
-  if (!inputNewName.trim() || !state.selectedNote) return;
+  if (!inputNewName.trim() || !selectedNote) return;
 
   await noteService.rename(
-    state.selectedNote,
+    selectedNote,
     inputNewName,
     searchManager,
     dialogManager,
-    (notes) => { state.filteredNotes = notes; },
+    (notes) => { searchManager.updateState({ filteredNotes: notes }); },
     (noteName) => {
-      const noteIndex = state.filteredNotes.findIndex(note => note === noteName);
+      const noteIndex = filteredNotes.findIndex(note => note === noteName);
       if (noteIndex >= 0) {
         state.selectedIndex = noteIndex;
       }
@@ -196,14 +185,14 @@ async function renameNote(newNameParam?: string): Promise<void> {
 }
 
 async function saveNote(): Promise<void> {
-  if (!state.selectedNote) return;
+  if (!selectedNote) return;
 
-  const result = await editorManager.saveAndExit(state.selectedNote);
+  const result = await editorManager.saveAndExit(selectedNote);
 
   if (result.success) {
     try {
-      const refreshResult = await contentManager.refreshAfterSave(state.selectedNote, state.searchInput);
-      state.filteredNotes = refreshResult.searchResults;
+      const refreshResult = await contentManager.refreshAfterSave(selectedNote, state.searchInput);
+      searchManager.updateState({ filteredNotes: refreshResult.searchResults });
 
       await tick();
       focusManager.focusSearch();
@@ -222,9 +211,9 @@ function selectNote(note: string, index: number): void {
 }
 
 async function enterEditMode(): Promise<void> {
-  if (state.selectedNote) {
+  if (selectedNote) {
     await editorManager.enterEditMode(
-      state.selectedNote,
+      selectedNote,
       contentManager.noteContent,
       focusManager.noteContentElement || undefined
     );
@@ -249,19 +238,19 @@ export const appCentralManager = {
   },
 
   get isLoading(): boolean {
-    return state.isLoading;
+    return isLoading;
   },
 
   get areHighlightsCleared(): boolean {
-    return state.areHighlightsCleared;
+    return areHighlightsCleared;
   },
 
   get filteredNotes(): string[] {
-    return state.filteredNotes;
+    return filteredNotes;
   },
 
   get selectedNote(): string | null {
-    return state.selectedNote;
+    return selectedNote;
   },
 
   get selectedIndex(): number {
@@ -271,20 +260,19 @@ export const appCentralManager = {
   // State setters
   setSearchInput,
 
-  // Add an update method for external state updates from components
   updateFilteredNotes(notes: string[]): void {
-    state.filteredNotes = notes;
+    searchManager.updateState({ filteredNotes: notes });
   },
 
-  // Reset state for testing
   resetState(): void {
     state.searchInput = '';
     state.query = '';
-    state.isLoading = false;
-    state.areHighlightsCleared = false;
-    state.filteredNotes = [];
-    state.selectedNote = null;
     state.selectedIndex = -1;
+    searchManager.updateState({
+      filteredNotes: [],
+      isLoading: false,
+      areHighlightsCleared: false
+    });
     if (contentRequestController) {
       contentRequestController.abort();
       contentRequestController = null;
@@ -309,12 +297,12 @@ export const appCentralManager = {
       isEditMode: editorManager.isEditMode,
       isNoteContentFocused: focusManager.isNoteContentFocused,
       selectedIndex: state.selectedIndex,
-      filteredNotes: state.filteredNotes,
-      selectedNote: state.selectedNote,
+      filteredNotes: filteredNotes,
+      selectedNote: selectedNote,
       noteContentElement: focusManager.noteContentElement,
       searchElement: focusManager.searchElement,
       query: state.query,
-      areHighlightsCleared: state.areHighlightsCleared,
+      areHighlightsCleared: areHighlightsCleared,
       isEditorDirty: editorManager.isDirty,
     };
   },
@@ -344,10 +332,10 @@ export const appCentralManager = {
         get searchInput() { return state.searchInput; },
         set searchInput(value: string) { setSearchInput(value); },
         get query() { return state.query; },
-        get isLoading() { return state.isLoading; },
-        get areHighlightsCleared() { return state.areHighlightsCleared; },
-        get filteredNotes() { return state.filteredNotes; },
-        get selectedNote() { return state.selectedNote; },
+        get isLoading() { return isLoading; },
+        get areHighlightsCleared() { return areHighlightsCleared; },
+        get filteredNotes() { return filteredNotes; },
+        get selectedNote() { return selectedNote; },
         get selectedIndex() { return state.selectedIndex; },
       },
       editorManager,
@@ -387,8 +375,7 @@ export const appCentralManager = {
       await configService.openPane(() => focusManager.focusSearch());
     } else {
       focusManager.focusSearch();
-      const notes = await searchManager.searchImmediate('');
-      state.filteredNotes = notes;
+      await searchManager.searchImmediate('');
     }
 
     const unlisten = await listen("open-preferences", async () => {
