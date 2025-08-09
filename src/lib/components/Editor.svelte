@@ -11,7 +11,6 @@
   import { toml } from '@codemirror/legacy-modes/mode/toml';
   import { vim } from "@replit/codemirror-vim";
   import { emacs } from "@replit/codemirror-emacs";
-  import type { Command } from '@codemirror/view';
 
   interface Props {
     value: string;
@@ -34,11 +33,17 @@
     nearestHeaderText = '',
     isDirty = $bindable(false)
   }: Props = $props();
-  let initialValue: string = value;
-  let lastPropsValue: string = value;
 
-  $effect(() => {
-    if (value !== lastPropsValue) {
+  // Track the initial value when props change
+  let initialValue = $state(value);
+  let lastPropsValue = $state(value);
+
+  // Derived value to detect when external props change
+  const propsChanged = $derived(value !== lastPropsValue);
+
+  // Update tracking values when props change
+  $effect.pre(() => {
+    if (propsChanged) {
       initialValue = value;
       lastPropsValue = value;
       isDirty = false;
@@ -200,7 +205,7 @@
 
       const escapeKeymap = (onExit || onRequestExit) ? keymap.of([{
         key: "Escape",
-        run: (view: EditorView): boolean => {
+        run: (): boolean => {
           setTimeout(() => {
             try {
               // In vim mode, let vim handle escape first
@@ -267,8 +272,6 @@
             const match = fullText.match(headerRegex);
 
             if (match && match.index !== undefined) {
-              const line = doc.lineAt(match.index);
-
               editorView.dispatch({
                 selection: { anchor: match.index, head: match.index },
                 effects: EditorView.scrollIntoView(match.index, { y: "start", yMargin: 80 })
