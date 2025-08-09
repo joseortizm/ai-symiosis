@@ -145,6 +145,7 @@ async function createNote(noteNameParam?: string): Promise<void> {
     },
     () => focusManager.focusSearch()
   );
+  enterEditMode();
 }
 
 async function renameNote(newNameParam?: string): Promise<void> {
