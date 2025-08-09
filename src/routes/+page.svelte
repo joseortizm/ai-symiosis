@@ -39,6 +39,52 @@ const appState = $state({
 
 let contentRequestController: AbortController | null = null;
 
+// =============================================================================
+// KEY COMMANDS HANDLING
+// =============================================================================
+
+const handleKeydown = createKeyboardHandler(
+  () => ({
+    isSearchInputFocused: focusManager.isSearchInputFocused,
+    isEditMode: editorManager.isEditMode,
+    isNoteContentFocused: focusManager.isNoteContentFocused,
+    selectedIndex: appState.selectedIndex,
+    filteredNotes: appState.filteredNotes,
+    selectedNote: appState.selectedNote,
+    noteContentElement: focusManager.noteContentElement,
+    searchElement: focusManager.searchElement,
+    query: appState.query,
+    areHighlightsCleared: appState.areHighlightsCleared,
+    isEditorDirty: editorManager.isDirty,
+  }),
+  {
+    setSelectedIndex: (value: number) => appState.selectedIndex = value,
+    enterEditMode,
+    exitEditMode,
+    showExitEditDialog: dialogManager.showExitEditDialog,
+    saveNote,
+    invoke,
+    showDeleteDialog: () => dialogManager.openDeleteDialog(),
+    showCreateDialog: () => dialogManager.openCreateDialog(),
+    showRenameDialog: () => dialogManager.openRenameDialog(),
+    openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
+    clearHighlights: contentManager.clearHighlights,
+    clearSearch: searchManager.clearSearch,
+  }
+);
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+function arraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((val, i) => val === b[i]);
+}
+
+// =============================================================================
+// BUSINESS LOGIC FUNCTIONS
+// =============================================================================
+
 async function deleteNote(): Promise<void> {
   if (!appState.selectedNote) return;
 
@@ -92,6 +138,54 @@ async function renameNote(newNameParam?: string): Promise<void> {
   );
 }
 
+async function saveNote(): Promise<void> {
+  if (!appState.selectedNote) return;
+
+  const result = await editorManager.saveAndExit(appState.selectedNote);
+
+  if (result.success) {
+    try {
+      const refreshResult = await contentManager.refreshAfterSave(appState.selectedNote, appState.searchInput);
+      appState.filteredNotes = refreshResult.searchResults;
+
+      await tick();
+      focusManager.focusSearch();
+    } catch (e) {
+      console.error("Failed to refresh after save:", e);
+    }
+  } else {
+    console.error("Failed to save note:", result.error);
+  }
+}
+
+function selectNote(note: string, index: number): void {
+  if (appState.selectedIndex !== index) {
+    appState.selectedIndex = index;
+  }
+}
+
+// =============================================================================
+// EDITOR COORDINATION FUNCTIONS
+// =============================================================================
+
+async function enterEditMode(): Promise<void> {
+  if (appState.selectedNote) {
+    await editorManager.enterEditMode(
+      appState.selectedNote,
+      contentManager.noteContent,
+      focusManager.noteContentElement || undefined
+    );
+  }
+}
+
+function exitEditMode(): void {
+  editorManager.exitEditMode();
+  focusManager.focusSearch();
+}
+
+// =============================================================================
+// REACTIVE EFFECTS
+// =============================================================================
 
 $effect(() => {
   searchManager.updateSearchInputWithEffects(
@@ -108,10 +202,6 @@ $effect(() => {
 $effect(() => {
   appState.isLoading = searchManager.isLoading;
 });
-
-function arraysEqual(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((val, i) => val === b[i]);
-}
 
 $effect(() => {
   const notes = searchManager.filteredNotes;
@@ -190,77 +280,6 @@ $effect(() => {
     searchElement: focusManager.searchElement
   });
 });
-
-function selectNote(note: string, index: number): void {
-  if (appState.selectedIndex !== index) {
-    appState.selectedIndex = index;
-  }
-}
-
-async function enterEditMode(): Promise<void> {
-  if (appState.selectedNote) {
-    await editorManager.enterEditMode(
-      appState.selectedNote,
-      contentManager.noteContent,
-      focusManager.noteContentElement || undefined
-    );
-  }
-}
-
-function exitEditMode(): void {
-  editorManager.exitEditMode();
-  focusManager.focusSearch();
-}
-
-async function saveNote(): Promise<void> {
-  if (!appState.selectedNote) return;
-
-  const result = await editorManager.saveAndExit(appState.selectedNote);
-
-  if (result.success) {
-    try {
-      const refreshResult = await contentManager.refreshAfterSave(appState.selectedNote, appState.searchInput);
-      appState.filteredNotes = refreshResult.searchResults;
-
-      await tick();
-      focusManager.focusSearch();
-    } catch (e) {
-      console.error("Failed to refresh after save:", e);
-    }
-  } else {
-    console.error("Failed to save note:", result.error);
-  }
-}
-
-const handleKeydown = createKeyboardHandler(
-  () => ({
-    isSearchInputFocused: focusManager.isSearchInputFocused,
-    isEditMode: editorManager.isEditMode,
-    isNoteContentFocused: focusManager.isNoteContentFocused,
-    selectedIndex: appState.selectedIndex,
-    filteredNotes: appState.filteredNotes,
-    selectedNote: appState.selectedNote,
-    noteContentElement: focusManager.noteContentElement,
-    searchElement: focusManager.searchElement,
-    query: appState.query,
-    areHighlightsCleared: appState.areHighlightsCleared,
-    isEditorDirty: editorManager.isDirty,
-  }),
-  {
-    setSelectedIndex: (value: number) => appState.selectedIndex = value,
-    enterEditMode,
-    exitEditMode,
-    showExitEditDialog: dialogManager.showExitEditDialog,
-    saveNote,
-    invoke,
-    showDeleteDialog: () => dialogManager.openDeleteDialog(),
-    showCreateDialog: () => dialogManager.openCreateDialog(),
-    showRenameDialog: () => dialogManager.openRenameDialog(),
-    openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
-    clearHighlights: contentManager.clearHighlights,
-    clearSearch: searchManager.clearSearch,
-  }
-);
 
 setAppContext({
   state: appState,
@@ -380,8 +399,3 @@ onMount(() => {
     />
   </div>
 </AppLayout>
-
-<style>
-
-</style>
-
