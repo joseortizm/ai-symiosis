@@ -14,6 +14,19 @@ const state = $state<FocusState>({
   noteListElement: null
 });
 
+function scrollToSelectedInList(selectedIndex: number): void {
+  if (state.noteListElement && selectedIndex >= 0) {
+    const selectedButton = state.noteListElement.children[selectedIndex]?.querySelector('button');
+    if (selectedButton) {
+      selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
+function scrollToSelected(selectedIndex: number): void {
+  scrollToSelectedInList(selectedIndex);
+}
+
 export const focusManager = {
   // Reactive getters
   get isSearchInputFocused(): boolean {
@@ -78,16 +91,6 @@ export const focusManager = {
     });
   },
 
-  scrollToSelectedInList(selectedIndex: number): void {
-    if (state.noteListElement && selectedIndex >= 0) {
-      const selectedButton = state.noteListElement.children[selectedIndex]?.querySelector('button');
-      if (selectedButton) {
-        selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }
-  },
-
-  scrollToSelected(selectedIndex: number): void {
-    this.scrollToSelectedInList(selectedIndex);
-  }
+  scrollToSelectedInList,
+  scrollToSelected
 };

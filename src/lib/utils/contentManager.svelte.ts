@@ -17,6 +17,60 @@ interface RefreshAfterSaveResult {
   content: string;
 }
 
+function setNoteContent(content: string): void {
+  state.noteContent = content;
+  contentHighlighter.updateState({ content });
+}
+
+function clearHighlights(): void {
+  searchManager.areHighlightsCleared = true;
+}
+
+function scrollToFirstMatch(): void {
+  if (focusManager.noteContentElement && !searchManager.areHighlightsCleared) {
+    setTimeout(() => {
+      const firstMatch = focusManager.noteContentElement!.querySelector('.highlight');
+      if (firstMatch) {
+        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  }
+}
+
+async function getNoteContent(noteName: string): Promise<string> {
+  return await noteService.getContent(noteName);
+}
+
+async function refreshContent(noteName: string): Promise<string> {
+  const content = await noteService.getContent(noteName);
+  setNoteContent(content);
+  return content;
+}
+
+async function refreshAfterSave(noteName: string, searchInput: string): Promise<RefreshAfterSaveResult> {
+  // Refresh cache
+  await invoke<void>("refresh_cache");
+
+  // Refresh search
+  const searchResults = await searchManager.searchImmediate(searchInput);
+
+  // Refresh content
+  const content = await refreshContent(noteName);
+
+  return {
+    searchResults,
+    content
+  };
+}
+
+function updateHighlighterState(newState: {
+  content?: string;
+  query?: string;
+  areHighlightsCleared?: boolean;
+}): void {
+  contentHighlighter.updateState(newState);
+}
+
 export const contentManager = {
   // Reactive getters
   get noteContent(): string {
@@ -28,60 +82,17 @@ export const contentManager = {
   },
 
   // Content actions
-  setNoteContent(content: string): void {
-    state.noteContent = content;
-    contentHighlighter.updateState({ content });
-  },
-
-  clearHighlights(): void {
-    searchManager.areHighlightsCleared = true;
-  },
-
-  scrollToFirstMatch(): void {
-    if (focusManager.noteContentElement && !searchManager.areHighlightsCleared) {
-      setTimeout(() => {
-        const firstMatch = focusManager.noteContentElement!.querySelector('.highlight');
-        if (firstMatch) {
-          firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  },
+  setNoteContent,
+  clearHighlights,
+  scrollToFirstMatch,
 
   // Content access
-  async getNoteContent(noteName: string): Promise<string> {
-    return await noteService.getContent(noteName);
-  },
+  getNoteContent,
 
   // Content refresh workflows
-  async refreshContent(noteName: string): Promise<string> {
-    const content = await noteService.getContent(noteName);
-    this.setNoteContent(content);
-    return content;
-  },
-
-  async refreshAfterSave(noteName: string, searchInput: string): Promise<RefreshAfterSaveResult> {
-    // Refresh cache
-    await invoke<void>("refresh_cache");
-
-    // Refresh search
-    const searchResults = await searchManager.searchImmediate(searchInput);
-
-    // Refresh content
-    const content = await this.refreshContent(noteName);
-
-    return {
-      searchResults,
-      content
-    };
-  },
+  refreshContent,
+  refreshAfterSave,
 
   // Integration helper for updating contentHighlighter state
-  updateHighlighterState(newState: {
-    content?: string;
-    query?: string;
-    areHighlightsCleared?: boolean;
-  }): void {
-    contentHighlighter.updateState(newState);
-  }
+  updateHighlighterState
 };

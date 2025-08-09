@@ -49,45 +49,49 @@ async function performSearch(query: string): Promise<void> {
   }
 }
 
-export const searchManager = {
-  updateState(newState: Partial<SearchState>): void {
-    if (newState.searchInput !== undefined && newState.searchInput !== state.searchInput) {
-      clearTimeout(state.searchTimeout);
-      state.requestController?.abort();
+function updateState(newState: Partial<SearchState>): void {
+  if (newState.searchInput !== undefined && newState.searchInput !== state.searchInput) {
+    clearTimeout(state.searchTimeout);
+    state.requestController?.abort();
 
-      Object.assign(state, newState);
+    Object.assign(state, newState);
 
-      state.searchTimeout = setTimeout(async () => {
-        if (state.onQueryCommit) {
-          state.onQueryCommit(state.searchInput);
-        }
-        await performSearch(state.searchInput);
-      }, 100);
-    } else {
-      Object.assign(state, newState);
-    }
-  },
+    state.searchTimeout = setTimeout(async () => {
+      if (state.onQueryCommit) {
+        state.onQueryCommit(state.searchInput);
+      }
+      await performSearch(state.searchInput);
+    }, 100);
+  } else {
+    Object.assign(state, newState);
+  }
+}
 
-  clearSearch(): void {
-    state.searchInput = '';
+function updateSearchInputWithEffects(
+  newInput: string,
+  onQueryCommit: (query: string) => void,
+  onHighlightsClear: (cleared: boolean) => void
+): void {
+  if (newInput.trim()) {
     state.areHighlightsCleared = false;
-  },
+    onHighlightsClear(false);
+  }
 
-  updateSearchInputWithEffects(
-    newInput: string,
-    onQueryCommit: (query: string) => void,
-    onHighlightsClear: (cleared: boolean) => void
-  ): void {
-    if (newInput.trim()) {
-      state.areHighlightsCleared = false;
-      onHighlightsClear(false);
-    }
+  updateState({
+    searchInput: newInput,
+    onQueryCommit
+  });
+}
 
-    this.updateState({
-      searchInput: newInput,
-      onQueryCommit
-    });
-  },
+function clearSearch(): void {
+  state.searchInput = '';
+  state.areHighlightsCleared = false;
+}
+
+export const searchManager = {
+  updateState,
+  clearSearch,
+  updateSearchInputWithEffects,
 
   get isLoading(): boolean {
     return state.isLoading;

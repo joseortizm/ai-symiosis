@@ -132,6 +132,110 @@ function setupReactiveEffects() {
   });
 }
 
+// State setters
+function setSearchInput(value: string): void {
+  state.searchInput = value;
+}
+
+function setSelectedIndex(value: number): void {
+  state.selectedIndex = value;
+}
+
+// Business logic functions
+async function deleteNote(): Promise<void> {
+  if (!state.selectedNote) return;
+
+  await noteService.delete(
+    state.selectedNote,
+    searchManager,
+    dialogManager,
+    (notes) => { state.filteredNotes = notes; },
+    state.searchInput,
+    () => focusManager.focusSearch()
+  );
+}
+
+async function createNote(noteNameParam?: string): Promise<void> {
+  const inputNoteName = noteNameParam || dialogManager.newNoteName.trim();
+  if (!inputNoteName.trim()) return;
+
+  const finalNoteName = await noteService.create(
+    inputNoteName,
+    searchManager,
+    dialogManager,
+    (notes) => {
+      state.filteredNotes = notes;
+      // Select the new note
+      const noteIndex = notes.findIndex(note => note === (inputNoteName.includes('.') ? inputNoteName : `${inputNoteName}.md`));
+      if (noteIndex >= 0) {
+        state.selectedIndex = noteIndex;
+      }
+    },
+    () => focusManager.focusSearch()
+  );
+}
+
+async function renameNote(newNameParam?: string): Promise<void> {
+  const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
+  if (!inputNewName.trim() || !state.selectedNote) return;
+
+  await noteService.rename(
+    state.selectedNote,
+    inputNewName,
+    searchManager,
+    dialogManager,
+    (notes) => { state.filteredNotes = notes; },
+    (noteName) => {
+      const noteIndex = state.filteredNotes.findIndex(note => note === noteName);
+      if (noteIndex >= 0) {
+        state.selectedIndex = noteIndex;
+      }
+    },
+    state.searchInput
+  );
+}
+
+async function saveNote(): Promise<void> {
+  if (!state.selectedNote) return;
+
+  const result = await editorManager.saveAndExit(state.selectedNote);
+
+  if (result.success) {
+    try {
+      const refreshResult = await contentManager.refreshAfterSave(state.selectedNote, state.searchInput);
+      state.filteredNotes = refreshResult.searchResults;
+
+      await tick();
+      focusManager.focusSearch();
+    } catch (e) {
+      console.error("Failed to refresh after save:", e);
+    }
+  } else {
+    console.error("Failed to save note:", result.error);
+  }
+}
+
+function selectNote(note: string, index: number): void {
+  if (state.selectedIndex !== index) {
+    state.selectedIndex = index;
+  }
+}
+
+async function enterEditMode(): Promise<void> {
+  if (state.selectedNote) {
+    await editorManager.enterEditMode(
+      state.selectedNote,
+      contentManager.noteContent,
+      focusManager.noteContentElement || undefined
+    );
+  }
+}
+
+function exitEditMode(): void {
+  editorManager.exitEditMode();
+  focusManager.focusSearch();
+}
+
 export const appCentralManager = {
   // Setup method for reactive effects
   setupReactiveEffects,
@@ -165,9 +269,7 @@ export const appCentralManager = {
   },
 
   // State setters
-  setSearchInput(value: string): void {
-    state.searchInput = value;
-  },
+  setSearchInput,
 
   // Add an update method for external state updates from components
   updateFilteredNotes(notes: string[]): void {
@@ -189,104 +291,16 @@ export const appCentralManager = {
     }
   },
 
-  setSelectedIndex(value: number): void {
-    state.selectedIndex = value;
-  },
+  setSelectedIndex,
 
   // Business logic functions
-  async deleteNote(): Promise<void> {
-    if (!state.selectedNote) return;
-
-    await noteService.delete(
-      state.selectedNote,
-      searchManager,
-      dialogManager,
-      (notes) => { state.filteredNotes = notes; },
-      state.searchInput,
-      () => focusManager.focusSearch()
-    );
-  },
-
-  async createNote(noteNameParam?: string): Promise<void> {
-    const inputNoteName = noteNameParam || dialogManager.newNoteName.trim();
-    if (!inputNoteName.trim()) return;
-
-    const finalNoteName = await noteService.create(
-      inputNoteName,
-      searchManager,
-      dialogManager,
-      (notes) => {
-        state.filteredNotes = notes;
-        // Select the new note
-        const noteIndex = notes.findIndex(note => note === (inputNoteName.includes('.') ? inputNoteName : `${inputNoteName}.md`));
-        if (noteIndex >= 0) {
-          state.selectedIndex = noteIndex;
-        }
-      },
-      () => focusManager.focusSearch()
-    );
-  },
-
-  async renameNote(newNameParam?: string): Promise<void> {
-    const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
-    if (!inputNewName.trim() || !state.selectedNote) return;
-
-    await noteService.rename(
-      state.selectedNote,
-      inputNewName,
-      searchManager,
-      dialogManager,
-      (notes) => { state.filteredNotes = notes; },
-      (noteName) => {
-        const noteIndex = state.filteredNotes.findIndex(note => note === noteName);
-        if (noteIndex >= 0) {
-          state.selectedIndex = noteIndex;
-        }
-      },
-      state.searchInput
-    );
-  },
-
-  async saveNote(): Promise<void> {
-    if (!state.selectedNote) return;
-
-    const result = await editorManager.saveAndExit(state.selectedNote);
-
-    if (result.success) {
-      try {
-        const refreshResult = await contentManager.refreshAfterSave(state.selectedNote, state.searchInput);
-        state.filteredNotes = refreshResult.searchResults;
-
-        await tick();
-        focusManager.focusSearch();
-      } catch (e) {
-        console.error("Failed to refresh after save:", e);
-      }
-    } else {
-      console.error("Failed to save note:", result.error);
-    }
-  },
-
-  selectNote(note: string, index: number): void {
-    if (state.selectedIndex !== index) {
-      state.selectedIndex = index;
-    }
-  },
-
-  async enterEditMode(): Promise<void> {
-    if (state.selectedNote) {
-      await editorManager.enterEditMode(
-        state.selectedNote,
-        contentManager.noteContent,
-        focusManager.noteContentElement || undefined
-      );
-    }
-  },
-
-  exitEditMode(): void {
-    editorManager.exitEditMode();
-    focusManager.focusSearch();
-  },
+  deleteNote,
+  createNote,
+  renameNote,
+  saveNote,
+  selectNote,
+  enterEditMode,
+  exitEditMode,
 
   // Keyboard handler state aggregation
   get keyboardState() {
@@ -308,11 +322,11 @@ export const appCentralManager = {
   // Keyboard handler actions
   get keyboardActions() {
     return {
-      setSelectedIndex: this.setSelectedIndex.bind(this),
-      enterEditMode: this.enterEditMode.bind(this),
-      exitEditMode: this.exitEditMode.bind(this),
+      setSelectedIndex,
+      enterEditMode,
+      exitEditMode,
       showExitEditDialog: dialogManager.showExitEditDialog,
-      saveNote: this.saveNote.bind(this),
+      saveNote,
       invoke,
       showDeleteDialog: () => dialogManager.openDeleteDialog(),
       showCreateDialog: () => dialogManager.openCreateDialog(),
@@ -325,11 +339,10 @@ export const appCentralManager = {
 
   // Context provider
   get context() {
-    const self = this;
     return {
       state: {
         get searchInput() { return state.searchInput; },
-        set searchInput(value: string) { self.setSearchInput(value); },
+        set searchInput(value: string) { setSearchInput(value); },
         get query() { return state.query; },
         get isLoading() { return state.isLoading; },
         get areHighlightsCleared() { return state.areHighlightsCleared; },
@@ -340,16 +353,16 @@ export const appCentralManager = {
       editorManager,
       focusManager,
       contentManager,
-      selectNote: this.selectNote.bind(this),
-      deleteNote: this.deleteNote.bind(this),
-      createNote: this.createNote.bind(this),
-      renameNote: this.renameNote.bind(this),
-      saveNote: this.saveNote.bind(this),
-      enterEditMode: this.enterEditMode.bind(this),
-      exitEditMode: this.exitEditMode.bind(this),
+      selectNote,
+      deleteNote,
+      createNote,
+      renameNote,
+      saveNote,
+      enterEditMode,
+      exitEditMode,
       showExitEditDialog: dialogManager.showExitEditDialog,
-      handleSaveAndExit: () => dialogManager.handleSaveAndExit(this.saveNote.bind(this), this.exitEditMode.bind(this)),
-      handleDiscardAndExit: () => dialogManager.handleDiscardAndExit(this.exitEditMode.bind(this)),
+      handleSaveAndExit: () => dialogManager.handleSaveAndExit(saveNote, exitEditMode),
+      handleDiscardAndExit: () => dialogManager.handleDiscardAndExit(exitEditMode),
       openCreateDialog: dialogManager.openCreateDialog,
       closeCreateDialog: dialogManager.closeCreateDialog,
       openRenameDialog: dialogManager.openRenameDialog,
@@ -358,7 +371,7 @@ export const appCentralManager = {
       closeDeleteDialog: dialogManager.closeDeleteDialog,
       openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
       closeSettingsPane: () => configService.closePane(() => focusManager.focusSearch()),
-      handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(() => this.deleteNote()),
+      handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(deleteNote),
       clearHighlights: contentManager.clearHighlights,
       clearSearch: searchManager.clearSearch,
       invoke,
