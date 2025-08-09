@@ -87,7 +87,7 @@ onMount(() => {
       confirmText="Save and Exit"
       cancelText="Discard Changes"
       variant="default"
-      onConfirm={() => dialogManager.handleSaveAndExit(appCentralManager.saveNote, appCentralManager.exitEditMode)}
+      onConfirm={() => dialogManager.handleSaveAndExit(appCentralManager.saveAndExitNote)}
       onCancel={() => dialogManager.handleDiscardAndExit(appCentralManager.exitEditMode)}
     />
   </div>

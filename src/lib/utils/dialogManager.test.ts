@@ -194,17 +194,15 @@ describe('dialogManager', () => {
   });
 
   describe('unsaved changes workflow (functions that should exist in dialogManager)', () => {
-    it('should have handleSaveAndExit method', () => {
-      const mockSaveNote = vi.fn();
-      const mockExitEditMode = vi.fn();
+    it('should have handleSaveAndExit method', async () => {
+      const mockSaveAndExitNote = vi.fn().mockResolvedValue(undefined);
 
       dialogManager.openUnsavedChangesDialog();
 
-      dialogManager.handleSaveAndExit(mockSaveNote, mockExitEditMode);
+      await dialogManager.handleSaveAndExit(mockSaveAndExitNote);
 
       expect(dialogManager.showUnsavedChangesDialog).toBe(false);
-      expect(mockSaveNote).toHaveBeenCalled();
-      expect(mockExitEditMode).toHaveBeenCalled();
+      expect(mockSaveAndExitNote).toHaveBeenCalled();
     });
 
     it('should have handleDiscardAndExit method', () => {

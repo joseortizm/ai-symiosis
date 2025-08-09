@@ -125,15 +125,6 @@ async function saveNote(noteName: string): Promise<SaveResult> {
   }
 }
 
-async function saveAndExit(noteName: string): Promise<SaveResult> {
-  const result = await saveNote(noteName);
-
-  if (result.success) {
-    exitEditMode();
-  }
-
-  return result;
-}
 
 export const editorManager = {
   // Reactive getters
@@ -157,6 +148,5 @@ export const editorManager = {
   enterEditMode,
   exitEditMode,
   updateContent,
-  saveNote,
-  saveAndExit
+  saveNote
 };

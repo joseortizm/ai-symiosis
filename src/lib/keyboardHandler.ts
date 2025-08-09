@@ -19,6 +19,7 @@ export interface Actions {
   exitEditMode: () => void;
   showExitEditDialog: () => void;
   saveNote: () => Promise<void>;
+  saveAndExitNote: () => Promise<void>;
   invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
   showDeleteDialog: () => void;
   showCreateDialog: () => void;
@@ -103,7 +104,7 @@ const actionRegistry: ActionRegistry = {
       }
     },
     save: async ({ actions }: ActionContext) => {
-      await actions.saveNote();
+      await actions.saveAndExitNote();
     },
   },
 

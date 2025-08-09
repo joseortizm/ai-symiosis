@@ -107,10 +107,9 @@ function showExitEditDialog(): void {
   openUnsavedChangesDialog();
 }
 
-function handleSaveAndExit(saveNote: () => void, exitEditMode: () => void): void {
+async function handleSaveAndExit(saveAndExitNote: () => Promise<void>): Promise<void> {
   closeUnsavedChangesDialog();
-  saveNote();
-  exitEditMode();
+  await saveAndExitNote();
 }
 
 function handleDiscardAndExit(exitEditMode: () => void): void {

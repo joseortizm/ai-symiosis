@@ -96,23 +96,24 @@ describe('editorManager integration', () => {
       expect(editorManager.isEditMode).toBe(true);
     });
 
-    it('should provide method to save and exit in one action', async () => {
+    it('should allow saving and exiting separately for clean architecture', async () => {
       // Setup: enter edit mode
       mockInvoke.mockResolvedValue('test content');
       await editorManager.enterEditMode('test.md');
       editorManager.updateContent('modified content');
 
-      // Test: should have a method to save and exit together
+      // Test: save should work without exiting edit mode
       mockInvoke.mockResolvedValue(undefined);
 
-      // This method should exist for the save button to use
-      expect(typeof editorManager.saveAndExit).toBe('function');
-
-      const result = await editorManager.saveAndExit('test.md');
+      const result = await editorManager.saveNote('test.md');
 
       expect(result.success).toBe(true);
+      expect(editorManager.isEditMode).toBe(true); // Still in edit mode after save
+      expect(editorManager.isDirty).toBe(false); // But not dirty anymore
+
+      // And exit should be separate
+      editorManager.exitEditMode();
       expect(editorManager.isEditMode).toBe(false);
-      expect(editorManager.isDirty).toBe(false);
     });
   });
 });

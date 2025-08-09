@@ -171,21 +171,23 @@ async function renameNote(newNameParam?: string): Promise<void> {
 async function saveNote(): Promise<void> {
   if (!selectedNote) return;
 
-  const result = await editorManager.saveAndExit(selectedNote);
+  const result = await editorManager.saveNote(selectedNote);
 
   if (result.success) {
     try {
       const refreshResult = await contentManager.refreshAfterSave(selectedNote, searchManager.searchInput);
       searchManager.updateState({ filteredNotes: refreshResult.searchResults });
-
-      await tick();
-      focusManager.focusSearch();
     } catch (e) {
       console.error("Failed to refresh after save:", e);
     }
   } else {
     console.error("Failed to save note:", result.error);
   }
+}
+
+async function saveAndExitNote(): Promise<void> {
+  await saveNote();
+  exitEditMode();
 }
 
 function selectNote(note: string, index: number): void {
@@ -264,6 +266,7 @@ export const appCentralManager = {
   createNote,
   renameNote,
   saveNote,
+  saveAndExitNote,
   selectNote,
   enterEditMode,
   exitEditMode,
@@ -292,6 +295,7 @@ export const appCentralManager = {
       exitEditMode,
       showExitEditDialog: dialogManager.showExitEditDialog,
       saveNote,
+      saveAndExitNote,
       invoke,
       showDeleteDialog: () => dialogManager.openDeleteDialog(),
       showCreateDialog: () => dialogManager.openCreateDialog(query, contentManager.highlightedContent),
@@ -321,10 +325,11 @@ export const appCentralManager = {
       createNote,
       renameNote,
       saveNote,
+      saveAndExitNote,
       enterEditMode,
       exitEditMode,
       showExitEditDialog: dialogManager.showExitEditDialog,
-      handleSaveAndExit: () => dialogManager.handleSaveAndExit(saveNote, exitEditMode),
+      handleSaveAndExit: () => dialogManager.handleSaveAndExit(saveAndExitNote),
       handleDiscardAndExit: () => dialogManager.handleDiscardAndExit(exitEditMode),
       openCreateDialog: () => dialogManager.openCreateDialog(query, contentManager.highlightedContent),
       closeCreateDialog: dialogManager.closeCreateDialog,
