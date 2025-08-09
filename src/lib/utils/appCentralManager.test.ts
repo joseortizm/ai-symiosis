@@ -14,6 +14,7 @@ vi.mock('svelte', () => ({
 }));
 
 const { appCentralManager } = await import('./appCentralManager.svelte');
+const { searchManager } = await import('./searchManager.svelte');
 
 describe('appCentralManager', () => {
   beforeEach(() => {
@@ -52,6 +53,53 @@ describe('appCentralManager', () => {
       appCentralManager.setSelectedIndex(5);
       appCentralManager.selectNote('note.md', 5);
       expect(appCentralManager.selectedIndex).toBe(5);
+    });
+
+    it('should auto-select first note when notes are loaded', () => {
+      // Reset state to ensure clean start
+      appCentralManager.resetState();
+      expect(appCentralManager.selectedNote).toBe(null);
+      expect(appCentralManager.selectedIndex).toBe(-1);
+
+      // Simulate notes being loaded via searchManager
+      searchManager.updateState({
+        filteredNotes: ['note1.md', 'note2.md', 'note3.md']
+      });
+
+      // The derived selectedNote should return the first note
+      expect(appCentralManager.selectedNote).toBe('note1.md');
+      expect(typeof appCentralManager.selectedNote).toBe('string');
+
+      // selectedIndex might not auto-update since effects aren't running in test
+      // But the derived selectedNote should still work correctly
+    });
+
+    it('should handle selectedNote properly when no notes available', () => {
+      appCentralManager.resetState();
+
+      // Ensure no notes
+      searchManager.updateState({ filteredNotes: [] });
+
+      // selectedNote should be null (not a function)
+      expect(appCentralManager.selectedNote).toBe(null);
+      expect(typeof appCentralManager.selectedNote).not.toBe('function');
+      expect(appCentralManager.selectedIndex).toBe(-1);
+    });
+
+    it('should reset selection when notes become empty', () => {
+      // Start with notes
+      searchManager.updateState({
+        filteredNotes: ['note1.md', 'note2.md']
+      });
+      appCentralManager.setSelectedIndex(1);
+      expect(appCentralManager.selectedNote).toBe('note2.md');
+
+      // Clear notes
+      searchManager.updateState({ filteredNotes: [] });
+
+      // Should reset selection (selectedNote should be null with empty notes)
+      expect(appCentralManager.selectedNote).toBe(null);
+      // selectedIndex won't auto-reset without effects running, but that's ok for this test
     });
   });
 
