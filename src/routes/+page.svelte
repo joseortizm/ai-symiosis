@@ -39,9 +39,6 @@ const appState = $state({
 
 let contentRequestController: AbortController | null = null;
 
-
-
-
 async function deleteNote(): Promise<void> {
   if (!appState.selectedNote) return;
 
@@ -95,17 +92,6 @@ async function renameNote(newNameParam?: string): Promise<void> {
   );
 }
 
-async function openSettingsPane(): Promise<void> {
-  await configService.open(() => focusManager.focusSearch());
-}
-
-function closeSettingsPane(): void {
-  configService.close(() => focusManager.focusSearch());
-}
-
-function clearHighlights(): void {
-  contentManager.clearHighlights();
-}
 
 $effect(() => {
   searchManager.updateSearchInputWithEffects(
@@ -270,8 +256,8 @@ const handleKeydown = createKeyboardHandler(
     showDeleteDialog: () => dialogManager.openDeleteDialog(),
     showCreateDialog: () => dialogManager.openCreateDialog(),
     showRenameDialog: () => dialogManager.openRenameDialog(),
-    openSettingsPane,
-    clearHighlights,
+    openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
+    clearHighlights: contentManager.clearHighlights,
     clearSearch: searchManager.clearSearch,
   }
 );
@@ -298,10 +284,10 @@ setAppContext({
   closeRenameDialog: dialogManager.closeRenameDialog,
   openDeleteDialog: dialogManager.openDeleteDialog,
   closeDeleteDialog: dialogManager.closeDeleteDialog,
-  openSettingsPane,
-  closeSettingsPane,
+  openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
+  closeSettingsPane: () => configService.closePane(() => focusManager.focusSearch()),
   handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(() => deleteNote()),
-  clearHighlights,
+  clearHighlights: contentManager.clearHighlights,
   clearSearch: searchManager.clearSearch,
   invoke,
 });
@@ -312,15 +298,15 @@ onMount(() => {
 
     const configExists = await invoke<boolean>("config_exists");
     if (!configExists) {
-      openSettingsPane();
+      await configService.openPane(() => focusManager.focusSearch());
     } else {
       focusManager.focusSearch();
       const notes = await searchManager.searchImmediate('');
       appState.filteredNotes = notes;
     }
 
-    const unlisten = await listen("open-preferences", () => {
-      openSettingsPane();
+    const unlisten = await listen("open-preferences", async () => {
+      await configService.openPane(() => focusManager.focusSearch());
     });
 
     return () => {
@@ -342,7 +328,7 @@ onMount(() => {
   <div slot="modals">
     <SettingsPane
       show={configService.isVisible}
-      onClose={closeSettingsPane}
+      onClose={() => configService.closePane(() => focusManager.focusSearch())}
       onRefresh={(notes) => {
         appState.filteredNotes = notes;
       }}

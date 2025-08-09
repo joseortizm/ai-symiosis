@@ -80,6 +80,15 @@ class ConfigService {
     this.state.error = null;
   }
 
+  // Pane management methods for direct use in +page.svelte
+  async openPane(focusFunction?: () => void): Promise<void> {
+    await this.open(focusFunction);
+  }
+
+  closePane(focusFunction?: () => void): void {
+    this.close(focusFunction);
+  }
+
   // Getters and setters for reactive state (to support bind:value)
   get content(): string {
     return this.state.content;

@@ -213,4 +213,30 @@ describe('configService', () => {
       expect(configService.error).toBe('test error');
     });
   });
+
+  describe('pane management methods', () => {
+    it('should open pane with focus management', async () => {
+      const configContent = 'notes_directory = "/path/to/notes"';
+      mockInvoke.mockResolvedValueOnce(configContent);
+      const mockFocusFunction = vi.fn();
+
+      await configService.openPane(mockFocusFunction);
+
+      expect(mockInvoke).toHaveBeenCalledWith('get_config_content');
+      expect(configService.content).toBe(configContent);
+      expect(configService.isVisible).toBe(true);
+    });
+
+    it('should close pane with focus management', () => {
+      configService.state.isVisible = true;
+      configService.state.content = 'some content';
+      const mockFocusFunction = vi.fn();
+
+      configService.closePane(mockFocusFunction);
+
+      expect(configService.isVisible).toBe(false);
+      expect(configService.content).toBe('');
+      expect(mockFocusFunction).toHaveBeenCalled();
+    });
+  });
 });
