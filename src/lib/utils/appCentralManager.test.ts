@@ -115,7 +115,6 @@ describe('appCentralManager', () => {
       expect(keyboardState).toHaveProperty('selectedNote');
       expect(keyboardState).toHaveProperty('noteContentElement');
       expect(keyboardState).toHaveProperty('searchElement');
-      expect(keyboardState).toHaveProperty('query');
       expect(keyboardState).toHaveProperty('areHighlightsCleared');
       expect(keyboardState).toHaveProperty('isEditorDirty');
     });

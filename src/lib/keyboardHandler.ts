@@ -1,3 +1,5 @@
+import { searchManager } from './utils/searchManager.svelte';
+
 export interface AppState {
   isSearchInputFocused: boolean;
   isEditMode: boolean;
@@ -7,7 +9,6 @@ export interface AppState {
   selectedNote: string | null;
   noteContentElement: HTMLElement | null;
   searchElement: HTMLInputElement | null;
-  query: string;
   areHighlightsCleared: boolean;
   isEditorDirty: boolean;
 }
@@ -135,9 +136,9 @@ const actionRegistry: ActionRegistry = {
 
   search: {
     clearHighlights: ({ state, actions }: ActionContext) => {
-      if (state.query.trim() && !state.areHighlightsCleared) {
+      if (searchManager.query.trim() && !state.areHighlightsCleared) {
         actions.clearHighlights();
-      } else if (state.areHighlightsCleared || !state.query.trim()) {
+      } else if (state.areHighlightsCleared || !searchManager.query.trim()) {
         actions.clearSearch();
       }
     },

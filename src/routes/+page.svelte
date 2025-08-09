@@ -21,7 +21,6 @@ const handleKeydown = createKeyboardHandler(
   appCentralManager.keyboardActions
 );
 
-// Setup reactive coordination
 appCentralManager.setupReactiveEffects();
 
 setAppContext(appCentralManager.context);

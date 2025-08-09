@@ -17,11 +17,9 @@ describe('searchManager', () => {
     it('should update search state with debouncing', async () => {
       const notes = ['note1.md', 'note2.md'];
       mockInvoke.mockResolvedValueOnce(notes);
-      const onQueryCommit = vi.fn();
 
       searchManager.updateState({
-        searchInput: 'test query',
-        onQueryCommit
+        searchInput: 'test query'
       });
 
       expect(searchManager.isLoading).toBe(false);
@@ -29,7 +27,7 @@ describe('searchManager', () => {
       await new Promise(resolve => setTimeout(resolve, 150)); // Wait for debounce
 
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test query' });
-      expect(onQueryCommit).toHaveBeenCalledWith('test query');
+      expect(searchManager.query).toBe('test query');
       expect(searchManager.filteredNotes).toEqual(notes);
     });
 
@@ -75,10 +73,9 @@ describe('searchManager', () => {
     });
 
     it('should handle search input coordination with highlight clearing', () => {
-      const onQueryCommit = vi.fn();
       const onHighlightsClear = vi.fn();
 
-      searchManager.updateSearchInputWithEffects('new query', onQueryCommit, onHighlightsClear);
+      searchManager.updateSearchInputWithEffects('new query', onHighlightsClear);
 
       expect(searchManager.searchInput).toBe('new query');
       expect(searchManager.areHighlightsCleared).toBe(false);
@@ -88,11 +85,10 @@ describe('searchManager', () => {
     it('should actually trigger search when using updateSearchInputWithEffects', async () => {
       const notes = ['search-result.md', 'another-note.md'];
       mockInvoke.mockResolvedValueOnce(notes);
-      const onQueryCommit = vi.fn();
       const onHighlightsClear = vi.fn();
 
       // CRITICAL: This test verifies search execution actually happens (catches state pre-setting bugs)
-      searchManager.updateSearchInputWithEffects('test search', onQueryCommit, onHighlightsClear);
+      searchManager.updateSearchInputWithEffects('test search', onHighlightsClear);
 
       // Wait for debounce to trigger
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -100,7 +96,7 @@ describe('searchManager', () => {
       // The critical assertion: verify search was actually performed
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test search' });
       expect(searchManager.filteredNotes).toEqual(notes);
-      expect(onQueryCommit).toHaveBeenCalledWith('test search');
+      expect(searchManager.query).toBe('test search');
     });
   });
 });

@@ -12,13 +12,11 @@ import { contentManager } from './contentManager.svelte';
 interface CentralAppState {
   searchInput: string;
   selectedIndex: number;
-  query: string;
 }
 
 const state = $state<CentralAppState>({
   searchInput: '',
   selectedIndex: -1,
-  query: '',
 });
 
 const isLoading = $derived(searchManager.isLoading);
@@ -46,9 +44,6 @@ function setupReactiveEffects() {
   $effect(() => {
     searchManager.updateSearchInputWithEffects(
       state.searchInput,
-      (query) => {
-        state.query = query;
-      },
       () => {}
     );
   });
@@ -107,7 +102,7 @@ function setupReactiveEffects() {
 
   $effect(() => {
     contentManager.updateHighlighterState({
-      query: state.query,
+      query: searchManager.query,
       areHighlightsCleared: areHighlightsCleared
     });
   });
@@ -115,7 +110,7 @@ function setupReactiveEffects() {
   $effect(() => {
     dialogManager.updateState({
       selectedNote: selectedNote,
-      query: state.query,
+      query: searchManager.query,
       highlightedContent: contentManager.highlightedContent,
       searchElement: focusManager.searchElement
     });
@@ -234,7 +229,7 @@ export const appCentralManager = {
   },
 
   get query(): string {
-    return state.query;
+    return searchManager.query;
   },
 
   get isLoading(): boolean {
@@ -266,7 +261,6 @@ export const appCentralManager = {
 
   resetState(): void {
     state.searchInput = '';
-    state.query = '';
     state.selectedIndex = -1;
     searchManager.updateState({
       filteredNotes: [],
@@ -301,7 +295,6 @@ export const appCentralManager = {
       selectedNote: selectedNote,
       noteContentElement: focusManager.noteContentElement,
       searchElement: focusManager.searchElement,
-      query: state.query,
       areHighlightsCleared: areHighlightsCleared,
       isEditorDirty: editorManager.isDirty,
     };
@@ -331,7 +324,7 @@ export const appCentralManager = {
       state: {
         get searchInput() { return state.searchInput; },
         set searchInput(value: string) { setSearchInput(value); },
-        get query() { return state.query; },
+        get query() { return searchManager.query; },
         get isLoading() { return isLoading; },
         get areHighlightsCleared() { return areHighlightsCleared; },
         get filteredNotes() { return filteredNotes; },

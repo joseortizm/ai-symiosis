@@ -2,21 +2,21 @@ import { invoke } from "@tauri-apps/api/core";
 
 interface SearchState {
   searchInput: string;
+  query: string;
   isLoading: boolean;
-  searchTimeout: number | undefined;
+  searchTimeout: NodeJS.Timeout | undefined;
   requestController: AbortController | null;
   filteredNotes: string[];
-  onQueryCommit?: (query: string) => void;
   areHighlightsCleared: boolean;
 }
 
 const state = $state<SearchState>({
   searchInput: '',
+  query: '',
   isLoading: false,
   searchTimeout: undefined,
   requestController: null,
   filteredNotes: [],
-  onQueryCommit: undefined,
   areHighlightsCleared: false
 });
 
@@ -57,9 +57,7 @@ function updateState(newState: Partial<SearchState>): void {
     Object.assign(state, newState);
 
     state.searchTimeout = setTimeout(async () => {
-      if (state.onQueryCommit) {
-        state.onQueryCommit(state.searchInput);
-      }
+      state.query = state.searchInput;
       await performSearch(state.searchInput);
     }, 100);
   } else {
@@ -69,7 +67,6 @@ function updateState(newState: Partial<SearchState>): void {
 
 function updateSearchInputWithEffects(
   newInput: string,
-  onQueryCommit: (query: string) => void,
   onHighlightsClear: (cleared: boolean) => void
 ): void {
   if (newInput.trim()) {
@@ -78,13 +75,13 @@ function updateSearchInputWithEffects(
   }
 
   updateState({
-    searchInput: newInput,
-    onQueryCommit
+    searchInput: newInput
   });
 }
 
 function clearSearch(): void {
   state.searchInput = '';
+  state.query = '';
   state.areHighlightsCleared = false;
 }
 
@@ -103,6 +100,10 @@ export const searchManager = {
 
   get searchInput(): string {
     return state.searchInput;
+  },
+
+  get query(): string {
+    return state.query;
   },
 
   get areHighlightsCleared(): boolean {
