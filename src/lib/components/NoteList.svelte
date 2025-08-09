@@ -1,6 +1,14 @@
 <script lang="ts">
   import { getAppContext } from '../context/app.svelte';
   const context = getAppContext();
+
+  let noteListElement = $state<HTMLElement | undefined>(undefined);
+
+  $effect(() => {
+    if (noteListElement) {
+      context.focusManager.setNoteListElement(noteListElement);
+    }
+  });
 </script>
 
 <div class="notes-list-container">
@@ -10,13 +18,13 @@
     {:else if context.state.filteredNotes.length === 0}
       <div class="no-notes">No notes found</div>
     {:else}
-      <ul bind:this={context.state.noteListElement} tabindex="-1">
+      <ul bind:this={noteListElement} tabindex="-1">
         {#each context.state.filteredNotes as note, index (note)}
           <li>
             <button
               class:selected={index === context.state.selectedIndex}
               tabindex="-1"
-              on:click={() => context.selectNote(note, index)}
+              onclick={() => context.selectNote(note, index)}
             >
               {note}
             </button>

@@ -14,17 +14,12 @@ interface AppState {
 
   noteContent: string;
   highlightedContent: string;
-
-  isSearchInputFocused: boolean;
-  isNoteContentFocused: boolean;
-  searchElement: HTMLInputElement | null;
-  noteListElement: HTMLElement | null;
-  noteContentElement: HTMLElement | null;
 }
 
 export interface AppContext {
   state: AppState;
   editorManager: any; // TODO: import proper type
+  focusManager: any; // TODO: import proper type
 
   selectNote: (note: string, index: number) => void;
   deleteNote: () => Promise<void>;

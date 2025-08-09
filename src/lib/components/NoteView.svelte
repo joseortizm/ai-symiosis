@@ -6,12 +6,20 @@
 
   const context = getAppContext();
 
+  let noteContentElement = $state<HTMLElement | undefined>(undefined);
+
+  $effect(() => {
+    if (noteContentElement) {
+      context.focusManager.setNoteContentElement(noteContentElement);
+    }
+  });
+
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
     // Run after highlightedContent changes and DOM updates
-    if (context.state.highlightedContent && context.state.noteContentElement) {
+    if (context.state.highlightedContent && context.focusManager.noteContentElement) {
       setTimeout(() => {
-        const blocks = context.state.noteContentElement!.querySelectorAll('pre code');
+        const blocks = context.focusManager.noteContentElement!.querySelectorAll('pre code');
         blocks.forEach((block: Element) => {
           hljs.highlightElement(block as HTMLElement);
         });
@@ -47,10 +55,10 @@
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="note-content"
-        bind:this={context.state.noteContentElement}
+        bind:this={noteContentElement}
         tabindex="-1"
-        onfocus={() => context.state.isNoteContentFocused = true}
-        onblur={() => context.state.isNoteContentFocused = false}
+        onfocus={() => context.focusManager.setNoteContentFocused(true)}
+        onblur={() => context.focusManager.setNoteContentFocused(false)}
         ondblclick={context.enterEditMode}
       >
         <div class="note-text">{@html context.state.highlightedContent}</div>

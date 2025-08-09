@@ -1,6 +1,14 @@
 <script lang="ts">
   import { getAppContext } from '../context/app.svelte';
   const context = getAppContext();
+
+  let searchElement: HTMLInputElement;
+
+  $effect(() => {
+    if (searchElement) {
+      context.focusManager.setSearchElement(searchElement);
+    }
+  });
 </script>
 
 <input
@@ -8,9 +16,9 @@
   bind:value={context.state.searchInput}
   placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
-  bind:this={context.state.searchElement}
-  on:focus={() => context.state.isSearchInputFocused = true}
-  on:blur={() => context.state.isSearchInputFocused = false}
+  bind:this={searchElement}
+  onfocus={() => context.focusManager.setSearchInputFocused(true)}
+  onblur={() => context.focusManager.setSearchInputFocused(false)}
 />
 
 <style>

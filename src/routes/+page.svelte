@@ -18,6 +18,7 @@ import { dialogManager } from '../lib/utils/dialogManager.svelte';
 import { noteService } from '../lib/services/noteService.svelte';
 import { configService } from '../lib/services/configService.svelte';
 import { editorManager } from '../lib/utils/editorManager.svelte';
+import { focusManager } from '../lib/utils/focusManager.svelte';
 
 interface SearchNotesResponse {
   [key: string]: string[];
@@ -37,12 +38,6 @@ const appState = $state({
 
   noteContent: '',
   highlightedContent: '',
-
-  isSearchInputFocused: false,
-  isNoteContentFocused: false,
-  searchElement: null as HTMLInputElement | null,
-  noteListElement: null as HTMLElement | null,
-  noteContentElement: null as HTMLElement | null,
 });
 
 let contentRequestController: AbortController | null = null;
@@ -52,12 +47,7 @@ function scrollToFirstMatch(): void {
 }
 
 function scrollToSelected(): void {
-  if (appState.noteListElement && appState.selectedIndex >= 0) {
-    const selectedButton = appState.noteListElement.children[appState.selectedIndex]?.querySelector('button');
-    if (selectedButton) {
-      selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }
+  focusManager.scrollToSelectedInList(appState.selectedIndex);
 }
 
 async function getNoteContent(noteName: string): Promise<string> {
@@ -73,7 +63,7 @@ async function deleteNote(): Promise<void> {
     dialogManager,
     (notes) => { appState.filteredNotes = notes; },
     appState.searchInput,
-    () => appState.searchElement?.focus()
+    () => focusManager.focusSearch()
   );
 }
 
@@ -93,7 +83,7 @@ async function createNote(noteNameParam?: string): Promise<void> {
         appState.selectedIndex = noteIndex;
       }
     },
-    () => appState.searchElement?.focus()
+    () => focusManager.focusSearch()
   );
 }
 
@@ -118,11 +108,11 @@ async function renameNote(newNameParam?: string): Promise<void> {
 }
 
 async function openSettingsPane(): Promise<void> {
-  await configService.open(() => appState.searchElement?.focus());
+  await configService.open(() => focusManager.focusSearch());
 }
 
 function closeSettingsPane(): void {
-  configService.close(() => appState.searchElement?.focus());
+  configService.close(() => focusManager.focusSearch());
 }
 
 
@@ -221,7 +211,7 @@ $effect(() => {
     query: appState.query,
     content: appState.noteContent,
     areHighlightsCleared: appState.areHighlightsCleared,
-    noteContentElement: appState.noteContentElement
+    noteContentElement: focusManager.noteContentElement
   });
   appState.highlightedContent = contentHighlighter.highlighted;
 });
@@ -231,7 +221,7 @@ $effect(() => {
     selectedNote: appState.selectedNote,
     query: appState.query,
     highlightedContent: appState.highlightedContent,
-    searchElement: appState.searchElement
+    searchElement: focusManager.searchElement
   });
 });
 
@@ -246,14 +236,14 @@ async function enterEditMode(): Promise<void> {
     await editorManager.enterEditMode(
       appState.selectedNote,
       appState.noteContent,
-      appState.noteContentElement || undefined
+      focusManager.noteContentElement || undefined
     );
   }
 }
 
 function exitEditMode(): void {
   editorManager.exitEditMode();
-  appState.searchElement?.focus();
+  focusManager.focusSearch();
 }
 
 async function saveNote(): Promise<void> {
@@ -273,7 +263,7 @@ async function saveNote(): Promise<void> {
       appState.highlightedContent = contentHighlighter.highlighted;
 
       await tick();
-      appState.searchElement?.focus();
+      focusManager.focusSearch();
     } catch (e) {
       console.error("Failed to refresh after save:", e);
     }
@@ -284,14 +274,14 @@ async function saveNote(): Promise<void> {
 
 const handleKeydown = createKeyboardHandler(
   () => ({
-    isSearchInputFocused: appState.isSearchInputFocused,
+    isSearchInputFocused: focusManager.isSearchInputFocused,
     isEditMode: editorManager.isEditMode,
-    isNoteContentFocused: appState.isNoteContentFocused,
+    isNoteContentFocused: focusManager.isNoteContentFocused,
     selectedIndex: appState.selectedIndex,
     filteredNotes: appState.filteredNotes,
     selectedNote: appState.selectedNote,
-    noteContentElement: appState.noteContentElement,
-    searchElement: appState.searchElement,
+    noteContentElement: focusManager.noteContentElement,
+    searchElement: focusManager.searchElement,
     query: appState.query,
     areHighlightsCleared: appState.areHighlightsCleared,
     isEditorDirty: editorManager.isDirty,
@@ -315,6 +305,7 @@ const handleKeydown = createKeyboardHandler(
 setAppContext({
   state: appState,
   editorManager,
+  focusManager,
 
   selectNote,
   deleteNote,
@@ -348,7 +339,7 @@ onMount(() => {
     if (!configExists) {
       openSettingsPane();
     } else {
-      appState.searchElement?.focus();
+      focusManager.focusSearch();
       const notes = await searchManager.searchImmediate('');
       appState.filteredNotes = notes;
     }
