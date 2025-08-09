@@ -223,7 +223,7 @@ function handleKeydown(event: KeyboardEvent) {
   .debug-toggle {
     position: fixed;
     bottom: 20px;
-    left: 20px;
+    right: 30px;
     z-index: 10000;
     background: rgba(220, 38, 38, 0.7);
     border: none;
