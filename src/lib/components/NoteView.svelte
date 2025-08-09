@@ -2,24 +2,22 @@
   import Editor from './Editor.svelte';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
-  import { getAppContext } from '../context/app.svelte';
-
-  const context = getAppContext();
+  import { appCentralManager } from '../utils/appCentralManager.svelte';
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
 
   $effect(() => {
     if (noteContentElement) {
-      context.focusManager.setNoteContentElement(noteContentElement);
+      appCentralManager.context.focusManager.setNoteContentElement(noteContentElement);
     }
   });
 
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
     // Run after highlightedContent changes and DOM updates
-    if (context.contentManager.highlightedContent && context.focusManager.noteContentElement) {
+    if (appCentralManager.context.contentManager.highlightedContent && appCentralManager.context.focusManager.noteContentElement) {
       setTimeout(() => {
-        const blocks = context.focusManager.noteContentElement!.querySelectorAll('pre code');
+        const blocks = appCentralManager.context.focusManager.noteContentElement!.querySelectorAll('pre code');
         blocks.forEach((block: Element) => {
           hljs.highlightElement(block as HTMLElement);
         });
@@ -29,25 +27,25 @@
 </script>
 
 <div class="note-preview">
-  {#if context.state.selectedNote}
-    {#if context.editorManager.isEditMode}
+  {#if appCentralManager.context.state.selectedNote}
+    {#if appCentralManager.context.editorManager.isEditMode}
       <div class="edit-mode">
         <div class="edit-header">
-          <h3>Editing: {context.state.selectedNote}</h3>
+          <h3>Editing: {appCentralManager.context.state.selectedNote}</h3>
           <div class="edit-controls">
-            <button onclick={context.saveNote} class="save-btn">Save (Ctrl+S)</button>
-            <button onclick={context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            <button onclick={appCentralManager.context.saveNote} class="save-btn">Save (Ctrl+S)</button>
+            <button onclick={appCentralManager.context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
           </div>
         </div>
         <Editor
-          value={context.editorManager.editContent}
-          isDirty={context.editorManager.isDirty}
-          filename={context.state.selectedNote}
-          nearestHeaderText={context.editorManager.nearestHeaderText}
-          onContentChange={context.editorManager.updateContent}
-          onSave={context.saveNote}
-          onExit={context.exitEditMode}
-          onRequestExit={context.showExitEditDialog}
+          value={appCentralManager.context.editorManager.editContent}
+          isDirty={appCentralManager.context.editorManager.isDirty}
+          filename={appCentralManager.context.state.selectedNote}
+          nearestHeaderText={appCentralManager.context.editorManager.nearestHeaderText}
+          onContentChange={appCentralManager.context.editorManager.updateContent}
+          onSave={appCentralManager.context.saveNote}
+          onExit={appCentralManager.context.exitEditMode}
+          onRequestExit={appCentralManager.context.showExitEditDialog}
         />
       </div>
     {:else}
@@ -57,11 +55,11 @@
         class="note-content"
         bind:this={noteContentElement}
         tabindex="-1"
-        onfocus={() => context.focusManager.setNoteContentFocused(true)}
-        onblur={() => context.focusManager.setNoteContentFocused(false)}
-        ondblclick={context.enterEditMode}
+        onfocus={() => appCentralManager.context.focusManager.setNoteContentFocused(true)}
+        onblur={() => appCentralManager.context.focusManager.setNoteContentFocused(false)}
+        ondblclick={appCentralManager.context.enterEditMode}
       >
-        <div class="note-text">{@html context.contentManager.highlightedContent}</div>
+        <div class="note-text">{@html appCentralManager.context.contentManager.highlightedContent}</div>
       </div>
     {/if}
   {:else}

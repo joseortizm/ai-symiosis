@@ -1,24 +1,23 @@
 <script lang="ts">
-  import { getAppContext } from '../context/app.svelte';
-  const context = getAppContext();
+  import { appCentralManager } from '../utils/appCentralManager.svelte';
 
   let searchElement: HTMLInputElement;
 
   $effect(() => {
     if (searchElement) {
-      context.focusManager.setSearchElement(searchElement);
+      appCentralManager.context.focusManager.setSearchElement(searchElement);
     }
   });
 </script>
 
 <input
   type="text"
-  bind:value={context.state.searchInput}
+  bind:value={appCentralManager.context.state.searchInput}
   placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
   bind:this={searchElement}
-  onfocus={() => context.focusManager.setSearchInputFocused(true)}
-  onblur={() => context.focusManager.setSearchInputFocused(false)}
+  onfocus={() => appCentralManager.context.focusManager.setSearchInputFocused(true)}
+  onblur={() => appCentralManager.context.focusManager.setSearchInputFocused(false)}
 />
 
 <style>

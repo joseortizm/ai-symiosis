@@ -10,7 +10,6 @@ import DeleteDialog from "../lib/components/DeleteDialog.svelte";
 import SettingsPane from "../lib/components/SettingsPane.svelte";
 import DebugPanel from "../lib/components/DebugPanel.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
-import { setAppContext } from '../lib/context/app.svelte';
 import { appCentralManager } from '../lib/utils/appCentralManager.svelte';
 import { dialogManager } from '../lib/utils/dialogManager.svelte';
 import { configService } from '../lib/services/configService.svelte';
@@ -22,8 +21,6 @@ const handleKeydown = createKeyboardHandler(
 );
 
 appCentralManager.setupReactiveEffects();
-
-setAppContext(appCentralManager.context);
 
 onMount(() => {
   (async () => {

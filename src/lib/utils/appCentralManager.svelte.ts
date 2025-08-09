@@ -22,6 +22,7 @@ const state = $state<CentralAppState>({
 const isLoading = $derived(searchManager.isLoading);
 const areHighlightsCleared = $derived(searchManager.areHighlightsCleared);
 const filteredNotes = $derived(searchManager.filteredNotes);
+const query = $derived(state.searchInput);
 
 const selectedNote = $derived.by(() => {
   const notes = filteredNotes;
@@ -102,7 +103,7 @@ function setupReactiveEffects() {
 
   $effect(() => {
     contentManager.updateHighlighterState({
-      query: searchManager.query,
+      query: query,
       areHighlightsCleared: areHighlightsCleared
     });
   });
@@ -110,7 +111,7 @@ function setupReactiveEffects() {
   $effect(() => {
     dialogManager.updateState({
       selectedNote: selectedNote,
-      query: searchManager.query,
+      query: query,
       highlightedContent: contentManager.highlightedContent,
       searchElement: focusManager.searchElement
     });
@@ -229,7 +230,7 @@ export const appCentralManager = {
   },
 
   get query(): string {
-    return searchManager.query;
+    return query;
   },
 
   get isLoading(): boolean {
@@ -324,7 +325,7 @@ export const appCentralManager = {
       state: {
         get searchInput() { return state.searchInput; },
         set searchInput(value: string) { setSearchInput(value); },
-        get query() { return searchManager.query; },
+        get query() { return query; },
         get isLoading() { return isLoading; },
         get areHighlightsCleared() { return areHighlightsCleared; },
         get filteredNotes() { return filteredNotes; },

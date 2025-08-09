@@ -1,30 +1,29 @@
 <script lang="ts">
-  import { getAppContext } from '../context/app.svelte';
-  const context = getAppContext();
+  import { appCentralManager } from '../utils/appCentralManager.svelte';
 
   let noteListElement = $state<HTMLElement | undefined>(undefined);
 
   $effect(() => {
     if (noteListElement) {
-      context.focusManager.setNoteListElement(noteListElement);
+      appCentralManager.context.focusManager.setNoteListElement(noteListElement);
     }
   });
 </script>
 
 <div class="notes-list-container">
   <div class="notes-list">
-    {#if context.state.isLoading && context.state.filteredNotes.length === 0}
+    {#if appCentralManager.context.state.isLoading && appCentralManager.context.state.filteredNotes.length === 0}
       <div class="loading">Loading...</div>
-    {:else if context.state.filteredNotes.length === 0}
+    {:else if appCentralManager.context.state.filteredNotes.length === 0}
       <div class="no-notes">No notes found</div>
     {:else}
       <ul bind:this={noteListElement} tabindex="-1">
-        {#each context.state.filteredNotes as note, index (note)}
+        {#each appCentralManager.context.state.filteredNotes as note, index (note)}
           <li>
             <button
-              class:selected={index === context.state.selectedIndex}
+              class:selected={index === appCentralManager.context.state.selectedIndex}
               tabindex="-1"
-              onclick={() => context.selectNote(note, index)}
+              onclick={() => appCentralManager.context.selectNote(note, index)}
             >
               {note}
             </button>

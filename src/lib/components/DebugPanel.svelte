@@ -1,9 +1,6 @@
 <script lang="ts">
-import { getAppContext } from '../context/app.svelte';
 import { searchManager } from '../utils/searchManager.svelte';
 import { appCentralManager } from '../utils/appCentralManager.svelte';
-
-const context = getAppContext();
 
 // Debug panel visibility and configuration
 let isVisible = $state(false);
@@ -138,23 +135,23 @@ function handleKeydown(event: KeyboardEvent) {
         <h4>🎪 Context State (what components see)</h4>
         <div class="debug-item">
           <strong>filteredNotes:</strong>
-          <code>{formatArray(context.state.filteredNotes)}</code>
+          <code>{formatArray(appCentralManager.filteredNotes)}</code>
         </div>
         <div class="debug-item">
           <strong>selectedNote:</strong>
-          <code>{JSON.stringify(context.state.selectedNote)}</code>
+          <code>{JSON.stringify(appCentralManager.selectedNote)}</code>
         </div>
         <div class="debug-item">
           <strong>selectedIndex:</strong>
-          <code>{context.state.selectedIndex}</code>
+          <code>{appCentralManager.selectedIndex}</code>
         </div>
         <div class="debug-item">
           <strong>searchInput:</strong>
-          <code>{JSON.stringify(context.state.searchInput)}</code>
+          <code>{JSON.stringify(appCentralManager.searchInput)}</code>
         </div>
         <div class="debug-item">
           <strong>isLoading:</strong>
-          <code>{context.state.isLoading}</code>
+          <code>{appCentralManager.isLoading}</code>
         </div>
       </div>
       {/if}
