@@ -33,7 +33,6 @@ class NoteService {
     } catch (e) {
       this.state.error = `Failed to create note: ${e}`;
       console.error("Failed to create note:", e);
-      throw e;
     } finally {
       this.state.isLoading = false;
     }
@@ -61,7 +60,6 @@ class NoteService {
     } catch (e) {
       this.state.error = `Failed to delete note: ${e}`;
       console.error("Failed to delete note:", e);
-      throw e;
     } finally {
       this.state.isLoading = false;
     }
@@ -91,7 +89,6 @@ class NoteService {
     } catch (e) {
       this.state.error = `Failed to rename note: ${e}`;
       console.error("Failed to rename note:", e);
-      throw e;
     } finally {
       this.state.isLoading = false;
     }

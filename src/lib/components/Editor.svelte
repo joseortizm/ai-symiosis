@@ -256,7 +256,6 @@
       if (nearestHeaderText.length > 2 && editorView) {
         setTimeout(() => {
           if (editorView) {
-            console.log('Editor: Looking for header:', nearestHeaderText);
             const doc = editorView.state.doc;
             const fullText = doc.toString();
 
@@ -268,9 +267,7 @@
             const match = fullText.match(headerRegex);
 
             if (match && match.index !== undefined) {
-              console.log('Found header at index:', match.index);
               const line = doc.lineAt(match.index);
-              console.log('Positioning at line:', line.number);
 
               editorView.dispatch({
                 selection: { anchor: match.index, head: match.index },

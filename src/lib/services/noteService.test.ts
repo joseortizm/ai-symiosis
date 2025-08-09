@@ -53,8 +53,7 @@ describe('noteService', () => {
       const error = new Error('Failed to create');
       mockInvoke.mockRejectedValueOnce(error);
 
-      await expect(noteService.create('test', mockSearchManager, mockDialogManager, vi.fn(), vi.fn()))
-        .rejects.toThrow(error);
+      await noteService.create('test', mockSearchManager, mockDialogManager, vi.fn(), vi.fn());
 
       expect(noteService.error).toBe('Failed to create note: Error: Failed to create');
       expect(noteService.isLoading).toBe(false);
@@ -94,8 +93,7 @@ describe('noteService', () => {
       const error = new Error('Failed to delete');
       mockInvoke.mockRejectedValueOnce(error);
 
-      await expect(noteService.delete('test.md', mockSearchManager, mockDialogManager, vi.fn(), '', vi.fn()))
-        .rejects.toThrow(error);
+      await noteService.delete('test.md', mockSearchManager, mockDialogManager, vi.fn(), '', vi.fn());
 
       expect(noteService.error).toBe('Failed to delete note: Error: Failed to delete');
     });
@@ -135,8 +133,7 @@ describe('noteService', () => {
       const error = new Error('Failed to rename');
       mockInvoke.mockRejectedValueOnce(error);
 
-      await expect(noteService.rename('old.md', 'new', mockSearchManager, mockDialogManager, vi.fn(), vi.fn(), ''))
-        .rejects.toThrow(error);
+      await noteService.rename('old.md', 'new', mockSearchManager, mockDialogManager, vi.fn(), vi.fn(), '');
 
       expect(noteService.error).toBe('Failed to rename note: Error: Failed to rename');
     });
