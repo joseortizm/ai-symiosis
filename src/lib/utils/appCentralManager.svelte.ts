@@ -37,31 +37,39 @@ const selectedNote = $derived.by(() => {
   return notes[index] || null;
 });
 
+
 let contentRequestController: AbortController | null = null;
 
 function setupReactiveEffects() {
   $effect(() => {
     const notes = filteredNotes;
-    if (notes.length === 0) {
-      if (state.selectedIndex !== -1) {
-        state.selectedIndex = -1;
-      }
-    } else if (state.selectedIndex === -1 || state.selectedIndex >= notes.length) {
-      state.selectedIndex = 0;
+    const currentIndex = state.selectedIndex;
+    
+    // Exit edit mode when selection gets normalized (e.g., when filtered notes change)
+    if (notes.length > 0 && (currentIndex === -1 || currentIndex >= notes.length)) {
       editorManager.exitEditMode();
     }
   });
 
   $effect(() => {
-    if (state.selectedIndex >= 0) {
+    const notes = filteredNotes;
+    let index = state.selectedIndex;
+    
+    // Normalize for scrolling purposes only
+    if (notes.length > 0) {
+      if (index === -1 || index >= notes.length) {
+        index = 0;
+      }
       requestAnimationFrame(() => {
-        focusManager.scrollToSelected(state.selectedIndex);
+        focusManager.scrollToSelected(index);
       });
     }
   });
 
   $effect(() => {
-    if (!selectedNote) {
+    const note = selectedNote;
+    
+    if (!note) {
       contentManager.setNoteContent('');
       return;
     }
@@ -74,7 +82,7 @@ function setupReactiveEffects() {
 
     (async () => {
       try {
-        const content = await contentManager.getNoteContent(selectedNote!);
+        const content = await contentManager.getNoteContent(note);
 
         if (!currentController.signal.aborted) {
           contentManager.setNoteContent(content);
@@ -92,19 +100,11 @@ function setupReactiveEffects() {
     })();
   });
 
+  // Update content highlighting reactively
   $effect(() => {
     contentManager.updateHighlighterState({
       query: query,
       areHighlightsCleared: areHighlightsCleared
-    });
-  });
-
-  $effect(() => {
-    dialogManager.updateState({
-      selectedNote: selectedNote,
-      query: query,
-      highlightedContent: contentManager.highlightedContent,
-      searchElement: focusManager.searchElement
     });
   });
 }
@@ -293,8 +293,8 @@ export const appCentralManager = {
       saveNote,
       invoke,
       showDeleteDialog: () => dialogManager.openDeleteDialog(),
-      showCreateDialog: () => dialogManager.openCreateDialog(),
-      showRenameDialog: () => dialogManager.openRenameDialog(),
+      showCreateDialog: () => dialogManager.openCreateDialog(query, contentManager.highlightedContent),
+      showRenameDialog: () => dialogManager.openRenameDialog(selectedNote ?? undefined),
       openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
       clearHighlights: contentManager.clearHighlights,
       clearSearch: searchManager.clearSearch,
@@ -325,9 +325,9 @@ export const appCentralManager = {
       showExitEditDialog: dialogManager.showExitEditDialog,
       handleSaveAndExit: () => dialogManager.handleSaveAndExit(saveNote, exitEditMode),
       handleDiscardAndExit: () => dialogManager.handleDiscardAndExit(exitEditMode),
-      openCreateDialog: dialogManager.openCreateDialog,
+      openCreateDialog: () => dialogManager.openCreateDialog(query, contentManager.highlightedContent),
       closeCreateDialog: dialogManager.closeCreateDialog,
-      openRenameDialog: dialogManager.openRenameDialog,
+      openRenameDialog: () => dialogManager.openRenameDialog(selectedNote ?? undefined),
       closeRenameDialog: dialogManager.closeRenameDialog,
       openDeleteDialog: dialogManager.openDeleteDialog,
       closeDeleteDialog: dialogManager.closeDeleteDialog,

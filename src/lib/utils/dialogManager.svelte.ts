@@ -23,10 +23,14 @@ let newNoteNameForRename = $state('');
 let deleteKeyPressCount = $state(0);
 let deleteKeyResetTimeout: number | undefined = undefined;
 
-function openCreateDialog(): void {
+function openCreateDialog(query?: string, highlightedContent?: string): void {
+  // Use provided parameters or fallback to context
+  const currentQuery = query ?? context.query;
+  const currentHighlightedContent = highlightedContent ?? context.highlightedContent;
+  
   // Pre-fill with search query if no results and query exists
-  if (!context.highlightedContent.trim() && context.query.trim()) {
-    newNoteName = context.query.trim();
+  if (!currentHighlightedContent.trim() && currentQuery.trim()) {
+    newNoteName = currentQuery.trim();
   } else {
     newNoteName = '';
   }
@@ -39,11 +43,12 @@ function closeCreateDialog(): void {
   context.searchElement?.focus();
 }
 
-function openRenameDialog(): void {
-  if (context.selectedNote) {
-    newNoteNameForRename = context.selectedNote.endsWith('.md')
-      ? context.selectedNote.slice(0, -3)
-      : context.selectedNote;
+function openRenameDialog(selectedNote?: string): void {
+  const currentSelectedNote = selectedNote ?? context.selectedNote;
+  if (currentSelectedNote) {
+    newNoteNameForRename = currentSelectedNote.endsWith('.md')
+      ? currentSelectedNote.slice(0, -3)
+      : currentSelectedNote;
     showRenameDialog = true;
   }
 }

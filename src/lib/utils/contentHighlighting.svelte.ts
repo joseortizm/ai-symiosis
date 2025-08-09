@@ -1,14 +1,13 @@
 interface HighlighterState {
-  query: string;
   content: string;
-  areHighlightsCleared: boolean;
 }
 
 const state = $state<HighlighterState>({
-  query: '',
-  content: '',
-  areHighlightsCleared: false
+  content: ''
 });
+
+let externalQuery = $state('');
+let externalAreHighlightsCleared = $state(false);
 
 const highlightCache = new Map<string, string>();
 
@@ -40,15 +39,28 @@ function highlightMatches(content: string, query: string): string {
 }
 
 const highlighted = $derived(() => {
-  if (!state.query.trim() || state.areHighlightsCleared) {
+  if (!externalQuery.trim() || externalAreHighlightsCleared) {
     return state.content;
   }
-  return highlightMatches(state.content, state.query);
+  return highlightMatches(state.content, externalQuery);
 });
 
 export const contentHighlighter = {
-  updateState(newState: Partial<HighlighterState>): void {
-    Object.assign(state, newState);
+  updateState(newState: { content?: string; query?: string; areHighlightsCleared?: boolean }): void {
+    if (newState.content !== undefined) {
+      state.content = newState.content;
+    }
+    if (newState.query !== undefined) {
+      externalQuery = newState.query;
+    }
+    if (newState.areHighlightsCleared !== undefined) {
+      externalAreHighlightsCleared = newState.areHighlightsCleared;
+    }
+  },
+
+  setExternalState(query: string, areHighlightsCleared: boolean): void {
+    externalQuery = query;
+    externalAreHighlightsCleared = areHighlightsCleared;
   },
 
   get highlighted(): string {
