@@ -34,6 +34,7 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <!-- Debug toggle button - small subtle red circle -->
+<!-- svelte-ignore a11y_consider_explicit_label -->
 <button
   class="debug-toggle"
   onclick={togglePanel}
