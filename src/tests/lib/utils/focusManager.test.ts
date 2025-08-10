@@ -8,7 +8,7 @@ class MockHTMLElement {
   children: any[] = [];
 }
 
-const { focusManager } = await import('./focusManager.svelte');
+const { focusManager } = await import('../../../lib/utils/focusManager.svelte');
 
 describe('focusManager', () => {
   let searchElement: MockHTMLElement;

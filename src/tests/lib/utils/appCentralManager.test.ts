@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, resetAllMocks } from '../test-utils';
+import { mockInvoke, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
@@ -13,8 +13,8 @@ vi.mock('svelte', () => ({
   tick: vi.fn(() => Promise.resolve()),
 }));
 
-const { appCentralManager } = await import('./appCentralManager.svelte');
-const { searchManager } = await import('./searchManager.svelte');
+const { appCentralManager } = await import('../../../lib/utils/appCentralManager.svelte');
+const { searchManager } = await import('../../../lib/utils/searchManager.svelte');
 
 describe('appCentralManager', () => {
   beforeEach(() => {

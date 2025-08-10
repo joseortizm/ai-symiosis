@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, resetAllMocks } from '../test-utils';
+import { mockInvoke, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
 // Import after mocking
-const { editorManager } = await import('./editorManager.svelte');
+const { editorManager } = await import('../../../lib/utils/editorManager.svelte');
 
 describe('editorManager integration', () => {
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe('editorManager integration', () => {
 
     it('should match noteService API call format', async () => {
       // This test ensures editorManager uses same API as noteService
-      const { noteService } = await import('../services/noteService.svelte');
+      const { noteService } = await import('../../../lib/services/noteService.svelte');
 
       // Setup editorManager
       mockInvoke.mockResolvedValue('test content');

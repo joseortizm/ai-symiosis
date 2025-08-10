@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, resetAllMocks } from '../test-utils';
+import { mockInvoke, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
@@ -11,8 +11,8 @@ describe('Highlight Clear Integration', () => {
   });
 
   it('should re-enable highlights when user types after clearing with ESC', async () => {
-    const { searchManager } = await import('./searchManager.svelte');
-    const { contentManager } = await import('./contentManager.svelte');
+    const { searchManager } = await import('../../../lib/utils/searchManager.svelte');
+    const { contentManager } = await import('../../../lib/utils/contentManager.svelte');
 
     searchManager.searchInput = 'test query';
     contentManager.setHighlightsClearedState(false);

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, mockSearchManager, mockDialogManager, resetAllMocks } from '../test-utils';
+import { mockInvoke, mockSearchManager, mockDialogManager, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
 // Import after mocking
-const { noteService } = await import('./noteService.svelte');
+const { noteService } = await import('../../../lib/services/noteService.svelte');
 
 describe('noteService', () => {
   beforeEach(() => {

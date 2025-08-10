@@ -74,31 +74,31 @@ const mockContentManager = {
 };
 
 // Mock all modules
-vi.mock('./searchManager.svelte', () => ({
+vi.mock('../../../lib/utils/searchManager.svelte', () => ({
   searchManager: mockSearchManager,
 }));
 
-vi.mock('./dialogManager.svelte', () => ({
+vi.mock('../../../lib/utils/dialogManager.svelte', () => ({
   dialogManager: mockDialogManager,
 }));
 
-vi.mock('../services/noteService.svelte', () => ({
+vi.mock('../../../lib/services/noteService.svelte', () => ({
   noteService: mockNoteService,
 }));
 
-vi.mock('../services/configService.svelte', () => ({
+vi.mock('../../../lib/services/configService.svelte', () => ({
   configService: mockConfigService,
 }));
 
-vi.mock('./focusManager.svelte', () => ({
+vi.mock('../../../lib/utils/focusManager.svelte', () => ({
   focusManager: mockFocusManager,
 }));
 
-vi.mock('./editorManager.svelte', () => ({
+vi.mock('../../../lib/utils/editorManager.svelte', () => ({
   editorManager: mockEditorManager,
 }));
 
-vi.mock('./contentManager.svelte', () => ({
+vi.mock('../../../lib/utils/contentManager.svelte', () => ({
   contentManager: mockContentManager,
 }));
 
@@ -120,7 +120,7 @@ describe('appCentralManager Integration Tests', () => {
     mockSearchManager.filteredNotes = ['existing-note.md'];
 
     // Import the module after mocks are set up
-    const module = await import('./appCentralManager.svelte');
+    const module = await import('../../../lib/utils/appCentralManager.svelte');
     appCentralManager = module.appCentralManager;
   });
 

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, mockSearchManager, resetAllMocks } from '../test-utils';
+import { mockInvoke, mockSearchManager, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
 // Import after mocking
-const { configService } = await import('./configService.svelte');
+const { configService } = await import('../../../lib/services/configService.svelte');
 
 describe('configService', () => {
   beforeEach(() => {

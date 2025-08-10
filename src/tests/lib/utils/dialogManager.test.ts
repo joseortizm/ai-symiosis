@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockSearchManager, resetAllMocks } from '../test-utils';
+import { mockSearchManager, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
@@ -9,11 +9,11 @@ const mockFocusManager = {
   focusSearch: vi.fn()
 };
 
-vi.mock('./focusManager.svelte', () => ({
+vi.mock('../../../lib/utils/focusManager.svelte', () => ({
   focusManager: mockFocusManager
 }));
 
-const { dialogManager } = await import('./dialogManager.svelte');
+const { dialogManager } = await import('../../../lib/utils/dialogManager.svelte');
 
 describe('dialogManager', () => {
   beforeEach(() => {

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, resetAllMocks } from '../test-utils';
+import { mockInvoke, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
 // Mock the dependencies
-vi.mock('./contentHighlighting.svelte', () => ({
+vi.mock('../../../lib/utils/contentHighlighting.svelte', () => ({
   contentHighlighter: {
     updateState: vi.fn(),
     highlighted: 'mocked highlighted content',
@@ -16,27 +16,27 @@ vi.mock('./contentHighlighting.svelte', () => ({
   }
 }));
 
-vi.mock('./focusManager.svelte', () => ({
+vi.mock('../../../lib/utils/focusManager.svelte', () => ({
   focusManager: {
     noteContentElement: null,
     scrollToFirstMatch: vi.fn()
   }
 }));
 
-vi.mock('./searchManager.svelte', () => ({
+vi.mock('../../../lib/utils/searchManager.svelte', () => ({
   searchManager: {
     searchImmediate: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
     setHighlightsClearCallback: vi.fn()
   }
 }));
 
-vi.mock('../services/noteService.svelte', () => ({
+vi.mock('../../../lib/services/noteService.svelte', () => ({
   noteService: {
     getContent: vi.fn().mockResolvedValue('mock note content')
   }
 }));
 
-const { contentManager } = await import('./contentManager.svelte');
+const { contentManager } = await import('../../../lib/utils/contentManager.svelte');
 
 describe('contentManager', () => {
   beforeEach(() => {
@@ -53,7 +53,7 @@ describe('contentManager', () => {
     });
 
     it('should return highlighted content from contentHighlighter', async () => {
-      const { contentHighlighter } = await import('./contentHighlighting.svelte');
+      const { contentHighlighter } = await import('../../../lib/utils/contentHighlighting.svelte');
 
       const result = contentManager.highlightedContent;
 
@@ -71,7 +71,7 @@ describe('contentManager', () => {
     });
 
     it('should update contentHighlighter when content changes', async () => {
-      const { contentHighlighter } = await import('./contentHighlighting.svelte');
+      const { contentHighlighter } = await import('../../../lib/utils/contentHighlighting.svelte');
       const testContent = 'New content';
 
       contentManager.setNoteContent(testContent);
@@ -117,7 +117,7 @@ describe('contentManager', () => {
   describe('content refresh workflows', () => {
 
     it('should refresh content for a note', async () => {
-      const { noteService } = await import('../services/noteService.svelte');
+      const { noteService } = await import('../../../lib/services/noteService.svelte');
       const noteName = 'test.md';
       const expectedContent = 'refreshed content';
       (noteService.getContent as any).mockResolvedValue(expectedContent);
@@ -130,7 +130,7 @@ describe('contentManager', () => {
     });
 
     it('should handle errors when refreshing content', async () => {
-      const { noteService } = await import('../services/noteService.svelte');
+      const { noteService } = await import('../../../lib/services/noteService.svelte');
       const noteName = 'test.md';
       const error = new Error('Failed to load');
       (noteService.getContent as any).mockRejectedValue(error);
@@ -142,13 +142,13 @@ describe('contentManager', () => {
     });
 
     it('should refresh after save workflow', async () => {
-      const { searchManager } = await import('./searchManager.svelte');
+      const { searchManager } = await import('../../../lib/utils/searchManager.svelte');
       const noteName = 'test.md';
       const searchInput = 'test search';
       const refreshedContent = 'content after save';
 
       // Mock noteService.getContent for the refresh
-      const { noteService } = await import('../services/noteService.svelte');
+      const { noteService } = await import('../../../lib/services/noteService.svelte');
       (noteService.getContent as any).mockResolvedValue(refreshedContent);
 
       const result = await contentManager.refreshAfterSave(noteName, searchInput);
@@ -179,7 +179,7 @@ describe('contentManager', () => {
 
   describe('integration with other services', () => {
     it('should update contentHighlighter state when dependencies change', async () => {
-      const { contentHighlighter } = await import('./contentHighlighting.svelte');
+      const { contentHighlighter } = await import('../../../lib/utils/contentHighlighting.svelte');
 
       const testContent = 'test content';
       const testQuery = 'test query';
@@ -198,7 +198,7 @@ describe('contentManager', () => {
     });
 
     it('should update contentHighlighter with partial state', async () => {
-      const { contentHighlighter } = await import('./contentHighlighting.svelte');
+      const { contentHighlighter } = await import('../../../lib/utils/contentHighlighting.svelte');
 
       contentManager.updateHighlighterState({
         query: 'test query'

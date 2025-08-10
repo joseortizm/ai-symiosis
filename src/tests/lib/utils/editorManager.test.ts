@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, resetAllMocks } from '../test-utils';
+import { mockInvoke, resetAllMocks } from '../../test-utils';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
 // Import after mocking
-const { editorManager } = await import('./editorManager.svelte');
+const { editorManager } = await import('../../../lib/utils/editorManager.svelte');
 
 describe('editorManager', () => {
   beforeEach(() => {
