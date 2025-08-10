@@ -235,7 +235,7 @@ function exitEditMode(): void {
   focusManager.focusSearch();
 }
 
-export const appCentralManager = {
+export const appCoordinator = {
   // Setup method for reactive effects
   setupReactiveEffects,
   // Reactive getters for state

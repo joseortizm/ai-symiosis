@@ -2,22 +2,22 @@
   import Editor from './Editor.svelte';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
-  import { appCentralManager } from '../utils/appCentralManager.svelte';
+  import { appCoordinator } from '../utils/appCoordinator.svelte';
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
 
   $effect(() => {
     if (noteContentElement) {
-      appCentralManager.context.focusManager.setNoteContentElement(noteContentElement);
+      appCoordinator.context.focusManager.setNoteContentElement(noteContentElement);
     }
   });
 
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
     // Run after highlightedContent changes and DOM updates
-    if (appCentralManager.context.contentManager.highlightedContent && appCentralManager.context.focusManager.noteContentElement) {
+    if (appCoordinator.context.contentManager.highlightedContent && appCoordinator.context.focusManager.noteContentElement) {
       setTimeout(() => {
-        const blocks = appCentralManager.context.focusManager.noteContentElement!.querySelectorAll('pre code');
+        const blocks = appCoordinator.context.focusManager.noteContentElement!.querySelectorAll('pre code');
         blocks.forEach((block: Element) => {
           hljs.highlightElement(block as HTMLElement);
         });
@@ -27,25 +27,25 @@
 </script>
 
 <div class="note-preview">
-  {#if appCentralManager.context.state.selectedNote}
-    {#if appCentralManager.context.editorManager.isEditMode}
+  {#if appCoordinator.context.state.selectedNote}
+    {#if appCoordinator.context.editorManager.isEditMode}
       <div class="edit-mode">
         <div class="edit-header">
-          <h3>Editing: {appCentralManager.context.state.selectedNote}</h3>
+          <h3>Editing: {appCoordinator.context.state.selectedNote}</h3>
           <div class="edit-controls">
-            <button onclick={appCentralManager.context.saveNote} class="save-btn">Save (Ctrl+S)</button>
-            <button onclick={appCentralManager.context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            <button onclick={appCoordinator.context.saveNote} class="save-btn">Save (Ctrl+S)</button>
+            <button onclick={appCoordinator.context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
           </div>
         </div>
         <Editor
-          value={appCentralManager.context.editorManager.editContent}
-          isDirty={appCentralManager.context.editorManager.isDirty}
-          filename={appCentralManager.context.state.selectedNote}
-          nearestHeaderText={appCentralManager.context.editorManager.nearestHeaderText}
-          onContentChange={appCentralManager.context.editorManager.updateContent}
-          onSave={appCentralManager.context.saveNote}
-          onExit={appCentralManager.context.exitEditMode}
-          onRequestExit={appCentralManager.context.showExitEditDialog}
+          value={appCoordinator.context.editorManager.editContent}
+          isDirty={appCoordinator.context.editorManager.isDirty}
+          filename={appCoordinator.context.state.selectedNote}
+          nearestHeaderText={appCoordinator.context.editorManager.nearestHeaderText}
+          onContentChange={appCoordinator.context.editorManager.updateContent}
+          onSave={appCoordinator.context.saveNote}
+          onExit={appCoordinator.context.exitEditMode}
+          onRequestExit={appCoordinator.context.showExitEditDialog}
         />
       </div>
     {:else}
@@ -55,11 +55,11 @@
         class="note-content"
         bind:this={noteContentElement}
         tabindex="-1"
-        onfocus={() => appCentralManager.context.focusManager.setNoteContentFocused(true)}
-        onblur={() => appCentralManager.context.focusManager.setNoteContentFocused(false)}
-        ondblclick={appCentralManager.context.enterEditMode}
+        onfocus={() => appCoordinator.context.focusManager.setNoteContentFocused(true)}
+        onblur={() => appCoordinator.context.focusManager.setNoteContentFocused(false)}
+        ondblclick={appCoordinator.context.enterEditMode}
       >
-        <div class="note-text">{@html appCentralManager.context.contentManager.highlightedContent}</div>
+        <div class="note-text">{@html appCoordinator.context.contentManager.highlightedContent}</div>
       </div>
     {/if}
   {:else}

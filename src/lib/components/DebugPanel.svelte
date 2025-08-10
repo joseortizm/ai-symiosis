@@ -1,14 +1,15 @@
 <script lang="ts">
 import { searchManager } from '../utils/searchManager.svelte';
-import { appCentralManager } from '../utils/appCentralManager.svelte';
-import { contentManager } from '../utils/contentManager.svelte';
+import { appCoordinator } from '../utils/appCoordinator.svelte';
+
+const context = appCoordinator.context;
 
 // Debug panel visibility and configuration
 let isVisible = $state(false);
 let isEnabled = $state(true); // Always available in desktop app
 
 // Filter toggles for different sections
-let showAppCentralState = $state(true);
+let showAppCoordinatorState = $state(true);
 let showSearchManagerState = $state(true);
 let showContextState = $state(true);
 let showSearchFlow = $state(true);
@@ -58,8 +59,8 @@ function handleKeydown(event: KeyboardEvent) {
     <!-- Filter Controls -->
     <div class="debug-filters">
       <label class="filter-checkbox">
-        <input type="checkbox" bind:checked={showAppCentralState} />
-        AppCentral State
+        <input type="checkbox" bind:checked={showAppCoordinatorState} />
+        AppCoordinator State
       </label>
       <label class="filter-checkbox">
         <input type="checkbox" bind:checked={showSearchManagerState} />
@@ -80,20 +81,20 @@ function handleKeydown(event: KeyboardEvent) {
     </div>
 
     <div class="debug-content">
-      {#if showAppCentralState}
+      {#if showAppCoordinatorState}
       <div class="debug-section">
-        <h4>🎯 AppCentralManager State</h4>
+        <h4>🎯 AppCoordinator State</h4>
         <div class="debug-item">
           <strong>filteredNotes:</strong>
-          <code>{formatArray(appCentralManager.filteredNotes)}</code>
+          <code>{formatArray(appCoordinator.filteredNotes)}</code>
         </div>
         <div class="debug-item">
           <strong>selectedNote:</strong>
-          <code>{JSON.stringify(appCentralManager.selectedNote)}</code>
+          <code>{JSON.stringify(appCoordinator.selectedNote)}</code>
         </div>
         <div class="debug-item">
           <strong>selectedIndex:</strong>
-          <code>{appCentralManager.selectedIndex}</code>
+          <code>{appCoordinator.selectedIndex}</code>
         </div>
         <div class="debug-item">
           <strong>searchInput:</strong>
@@ -101,11 +102,11 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>query:</strong>
-          <code>{JSON.stringify(appCentralManager.query)}</code>
+          <code>{JSON.stringify(appCoordinator.query)}</code>
         </div>
         <div class="debug-item">
           <strong>isLoading:</strong>
-          <code>{appCentralManager.isLoading}</code>
+          <code>{appCoordinator.isLoading}</code>
         </div>
       </div>
       {/if}
@@ -127,7 +128,7 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>areHighlightsCleared:</strong>
-          <code>{contentManager.areHighlightsCleared}</code>
+          <code>{context.contentManager.areHighlightsCleared}</code>
         </div>
       </div>
       {/if}
@@ -137,15 +138,15 @@ function handleKeydown(event: KeyboardEvent) {
         <h4>🎪 Context State (what components see)</h4>
         <div class="debug-item">
           <strong>filteredNotes:</strong>
-          <code>{formatArray(appCentralManager.filteredNotes)}</code>
+          <code>{formatArray(appCoordinator.filteredNotes)}</code>
         </div>
         <div class="debug-item">
           <strong>selectedNote:</strong>
-          <code>{JSON.stringify(appCentralManager.selectedNote)}</code>
+          <code>{JSON.stringify(appCoordinator.selectedNote)}</code>
         </div>
         <div class="debug-item">
           <strong>selectedIndex:</strong>
-          <code>{appCentralManager.selectedIndex}</code>
+          <code>{appCoordinator.selectedIndex}</code>
         </div>
         <div class="debug-item">
           <strong>searchInput:</strong>
@@ -153,7 +154,7 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>isLoading:</strong>
-          <code>{appCentralManager.isLoading}</code>
+          <code>{appCoordinator.isLoading}</code>
         </div>
       </div>
       {/if}
@@ -168,8 +169,8 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>Notes Sync Check:</strong>
-          <small>appCentral.filteredNotes === searchMgr.filteredNotes?</small>
-          <code>{appCentralManager.filteredNotes.length === searchManager.filteredNotes.length ? '✅ MATCH' : '❌ MISMATCH'} ({appCentralManager.filteredNotes.length} vs {searchManager.filteredNotes.length})</code>
+          <small>appCoordinator.filteredNotes === searchMgr.filteredNotes?</small>
+          <code>{appCoordinator.filteredNotes.length === searchManager.filteredNotes.length ? '✅ MATCH' : '❌ MISMATCH'} ({appCoordinator.filteredNotes.length} vs {searchManager.filteredNotes.length})</code>
         </div>
         <div class="debug-item">
           <strong>Reactive Effects Active?</strong>
@@ -207,8 +208,8 @@ function handleKeydown(event: KeyboardEvent) {
           Set searchManager.updateState('direct')
         </button>
         <button onclick={() => {
-          console.log('🔄 Manual appCentralManager.initialize()');
-          appCentralManager.initialize().then(() => console.log('✅ Initialize complete'));
+          console.log('🔄 Manual appCoordinator.initialize()');}
+          appCoordinator.initialize().then(() => console.log('✅ Initialize complete'));
         }}>
           Re-run initialize()
         </button>

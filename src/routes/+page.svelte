@@ -10,22 +10,22 @@ import DeleteDialog from "../lib/components/DeleteDialog.svelte";
 import SettingsPane from "../lib/components/SettingsPane.svelte";
 import DebugPanel from "../lib/components/DebugPanel.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
-import { appCentralManager } from '../lib/utils/appCentralManager.svelte';
+import { appCoordinator } from '../lib/utils/appCoordinator.svelte';
 import { configService } from '../lib/services/configService.svelte';
 import { focusManager } from '../lib/utils/focusManager.svelte';
 
-const context = appCentralManager.context;
+const context = appCoordinator.context;
 
 const handleKeydown = createKeyboardHandler(
-  () => appCentralManager.keyboardState,
-  appCentralManager.keyboardActions
+  () => appCoordinator.keyboardState,
+  appCoordinator.keyboardActions
 );
 
-appCentralManager.setupReactiveEffects();
+appCoordinator.setupReactiveEffects();
 
 onMount(() => {
   (async () => {
-    const cleanup = await appCentralManager.initialize();
+    const cleanup = await appCoordinator.initialize();
     return cleanup;
   })();
 });
@@ -46,17 +46,17 @@ onMount(() => {
         focusManager.focusSearch();
       }}
       onRefresh={(notes) => {
-        appCentralManager.updateFilteredNotes(notes);
+        appCoordinator.updateFilteredNotes(notes);
       }}
     />
 
     <DeleteDialog
       show={context.dialogManager.showDeleteDialog}
-      noteName={appCentralManager.selectedNote || ''}
+      noteName={appCoordinator.selectedNote || ''}
       deleteKeyPressCount={context.dialogManager.deleteKeyPressCount}
-      onConfirm={appCentralManager.deleteNote}
+      onConfirm={appCoordinator.deleteNote}
       onCancel={context.dialogManager.closeDeleteDialog}
-      onKeyPress={() => context.dialogManager.handleDeleteKeyPress(() => appCentralManager.deleteNote())}
+      onKeyPress={() => context.dialogManager.handleDeleteKeyPress(() => appCoordinator.deleteNote())}
     />
 
     <InputDialog
@@ -66,7 +66,7 @@ onMount(() => {
       placeholder="Enter note name (extension will be .md)"
       confirmText="Create"
       cancelText="Cancel"
-      onConfirm={(value) => appCentralManager.createNote(value)}
+      onConfirm={(value) => appCoordinator.createNote(value)}
       onCancel={context.dialogManager.closeCreateDialog}
       onInput={(value) => context.dialogManager.setNewNoteName(value)}
     />
@@ -79,7 +79,7 @@ onMount(() => {
       confirmText="Rename"
       cancelText="Cancel"
       autoSelect={true}
-      onConfirm={(value) => appCentralManager.renameNote(value)}
+      onConfirm={(value) => appCoordinator.renameNote(value)}
       onCancel={context.dialogManager.closeRenameDialog}
       onInput={(value) => context.dialogManager.setNewNoteNameForRename(value)}
     />
@@ -91,8 +91,8 @@ onMount(() => {
       confirmText="Save and Exit"
       cancelText="Discard Changes"
       variant="default"
-      onConfirm={() => context.dialogManager.handleSaveAndExit(appCentralManager.saveAndExitNote)}
-      onCancel={() => context.dialogManager.handleDiscardAndExit(appCentralManager.exitEditMode)}
+      onConfirm={() => context.dialogManager.handleSaveAndExit(appCoordinator.saveAndExitNote)}
+      onCancel={() => context.dialogManager.handleDiscardAndExit(appCoordinator.exitEditMode)}
     />
   </div>
 </AppLayout>

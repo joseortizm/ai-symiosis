@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { appCentralManager } from '../utils/appCentralManager.svelte';
+  import { appCoordinator } from '../utils/appCoordinator.svelte';
   import { searchManager } from '../utils/searchManager.svelte';
 
   let searchElement: HTMLInputElement;
 
   $effect(() => {
     if (searchElement) {
-      appCentralManager.context.focusManager.setSearchElement(searchElement);
+      appCoordinator.context.focusManager.setSearchElement(searchElement);
     }
   });
 </script>
@@ -17,8 +17,8 @@
   placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
   bind:this={searchElement}
-  onfocus={() => appCentralManager.context.focusManager.setSearchInputFocused(true)}
-  onblur={() => appCentralManager.context.focusManager.setSearchInputFocused(false)}
+  onfocus={() => appCoordinator.context.focusManager.setSearchInputFocused(true)}
+  onblur={() => appCoordinator.context.focusManager.setSearchInputFocused(false)}
 />
 
 <style>

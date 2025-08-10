@@ -13,47 +13,47 @@ vi.mock('svelte', () => ({
   tick: vi.fn(() => Promise.resolve()),
 }));
 
-const { appCentralManager } = await import('../../../lib/utils/appCentralManager.svelte');
+const { appCoordinator } = await import('../../../lib/utils/appCoordinator.svelte');
 const { searchManager } = await import('../../../lib/utils/searchManager.svelte');
 
-describe('appCentralManager', () => {
+describe('appCoordinator', () => {
   beforeEach(() => {
     resetAllMocks();
-    // Reset the appCentralManager state between tests
-    appCentralManager.resetState();
+    // Reset the appCoordinator state between tests
+    appCoordinator.resetState();
   });
 
   describe('state management', () => {
     it('should provide reactive getters for central state', () => {
-      expect(appCentralManager.query).toBe('');
-      expect(appCentralManager.isLoading).toBe(false);
-      expect(appCentralManager.areHighlightsCleared).toBe(false);
-      expect(appCentralManager.filteredNotes).toEqual([]);
-      expect(appCentralManager.selectedNote).toBe(null);
-      expect(appCentralManager.selectedIndex).toBe(-1);
+      expect(appCoordinator.query).toBe('');
+      expect(appCoordinator.isLoading).toBe(false);
+      expect(appCoordinator.areHighlightsCleared).toBe(false);
+      expect(appCoordinator.filteredNotes).toEqual([]);
+      expect(appCoordinator.selectedNote).toBe(null);
+      expect(appCoordinator.selectedIndex).toBe(-1);
     });
 
     it('should update selectedIndex state', () => {
-      appCentralManager.setSelectedIndex(3);
-      expect(appCentralManager.selectedIndex).toBe(3);
+      appCoordinator.setSelectedIndex(3);
+      expect(appCoordinator.selectedIndex).toBe(3);
     });
 
     it('should handle selectNote correctly', () => {
-      appCentralManager.selectNote('note1.md', 2);
-      expect(appCentralManager.selectedIndex).toBe(2);
+      appCoordinator.selectNote('note1.md', 2);
+      expect(appCoordinator.selectedIndex).toBe(2);
     });
 
     it('should not update selectedIndex if it is the same', () => {
-      appCentralManager.setSelectedIndex(5);
-      appCentralManager.selectNote('note.md', 5);
-      expect(appCentralManager.selectedIndex).toBe(5);
+      appCoordinator.setSelectedIndex(5);
+      appCoordinator.selectNote('note.md', 5);
+      expect(appCoordinator.selectedIndex).toBe(5);
     });
 
     it('should auto-select first note when notes are loaded', () => {
       // Reset state to ensure clean start
-      appCentralManager.resetState();
-      expect(appCentralManager.selectedNote).toBe(null);
-      expect(appCentralManager.selectedIndex).toBe(-1);
+      appCoordinator.resetState();
+      expect(appCoordinator.selectedNote).toBe(null);
+      expect(appCoordinator.selectedIndex).toBe(-1);
 
       // Simulate notes being loaded via searchManager
       searchManager.updateState({
@@ -61,23 +61,23 @@ describe('appCentralManager', () => {
       });
 
       // The derived selectedNote should return the first note
-      expect(appCentralManager.selectedNote).toBe('note1.md');
-      expect(typeof appCentralManager.selectedNote).toBe('string');
+      expect(appCoordinator.selectedNote).toBe('note1.md');
+      expect(typeof appCoordinator.selectedNote).toBe('string');
 
       // selectedIndex might not auto-update since effects aren't running in test
       // But the derived selectedNote should still work correctly
     });
 
     it('should handle selectedNote properly when no notes available', () => {
-      appCentralManager.resetState();
+      appCoordinator.resetState();
 
       // Ensure no notes
       searchManager.updateState({ filteredNotes: [] });
 
       // selectedNote should be null (not a function)
-      expect(appCentralManager.selectedNote).toBe(null);
-      expect(typeof appCentralManager.selectedNote).not.toBe('function');
-      expect(appCentralManager.selectedIndex).toBe(-1);
+      expect(appCoordinator.selectedNote).toBe(null);
+      expect(typeof appCoordinator.selectedNote).not.toBe('function');
+      expect(appCoordinator.selectedIndex).toBe(-1);
     });
 
     it('should reset selection when notes become empty', () => {
@@ -85,21 +85,21 @@ describe('appCentralManager', () => {
       searchManager.updateState({
         filteredNotes: ['note1.md', 'note2.md']
       });
-      appCentralManager.setSelectedIndex(1);
-      expect(appCentralManager.selectedNote).toBe('note2.md');
+      appCoordinator.setSelectedIndex(1);
+      expect(appCoordinator.selectedNote).toBe('note2.md');
 
       // Clear notes
       searchManager.updateState({ filteredNotes: [] });
 
       // Should reset selection (selectedNote should be null with empty notes)
-      expect(appCentralManager.selectedNote).toBe(null);
+      expect(appCoordinator.selectedNote).toBe(null);
       // selectedIndex won't auto-reset without effects running, but that's ok for this test
     });
   });
 
   describe('keyboard handler integration', () => {
     it('should provide keyboardState aggregation', () => {
-      const keyboardState = appCentralManager.keyboardState;
+      const keyboardState = appCoordinator.keyboardState;
 
       expect(keyboardState).toHaveProperty('isSearchInputFocused');
       expect(keyboardState).toHaveProperty('isEditMode');
@@ -113,7 +113,7 @@ describe('appCentralManager', () => {
     });
 
     it('should provide keyboardActions', () => {
-      const keyboardActions = appCentralManager.keyboardActions;
+      const keyboardActions = appCoordinator.keyboardActions;
 
       expect(keyboardActions).toHaveProperty('setSelectedIndex');
       expect(keyboardActions).toHaveProperty('enterEditMode');
@@ -132,7 +132,7 @@ describe('appCentralManager', () => {
 
   describe('context provider', () => {
     it('should provide comprehensive context object', () => {
-      const context = appCentralManager.context;
+      const context = appCoordinator.context;
 
       expect(context).toHaveProperty('state');
       expect(context).toHaveProperty('editorManager');
@@ -161,9 +161,9 @@ describe('appCentralManager', () => {
     });
 
     it('should provide current state in context', () => {
-      appCentralManager.setSelectedIndex(1);
+      appCoordinator.setSelectedIndex(1);
 
-      const context = appCentralManager.context;
+      const context = appCoordinator.context;
 
       expect(context.state.selectedIndex).toBe(1);
     });
@@ -171,40 +171,40 @@ describe('appCentralManager', () => {
 
   describe('placeholder business logic methods', () => {
     it('should have deleteNote method that is callable', async () => {
-      expect(typeof appCentralManager.deleteNote).toBe('function');
-      await expect(appCentralManager.deleteNote()).resolves.toBeUndefined();
+      expect(typeof appCoordinator.deleteNote).toBe('function');
+      await expect(appCoordinator.deleteNote()).resolves.toBeUndefined();
     });
 
     it('should have createNote method that is callable', async () => {
-      expect(typeof appCentralManager.createNote).toBe('function');
-      await expect(appCentralManager.createNote()).resolves.toBeUndefined();
+      expect(typeof appCoordinator.createNote).toBe('function');
+      await expect(appCoordinator.createNote()).resolves.toBeUndefined();
     });
 
     it('should have renameNote method that is callable', async () => {
-      expect(typeof appCentralManager.renameNote).toBe('function');
-      await expect(appCentralManager.renameNote()).resolves.toBeUndefined();
+      expect(typeof appCoordinator.renameNote).toBe('function');
+      await expect(appCoordinator.renameNote()).resolves.toBeUndefined();
     });
 
     it('should have saveNote method that is callable', async () => {
-      expect(typeof appCentralManager.saveNote).toBe('function');
-      await expect(appCentralManager.saveNote()).resolves.toBeUndefined();
+      expect(typeof appCoordinator.saveNote).toBe('function');
+      await expect(appCoordinator.saveNote()).resolves.toBeUndefined();
     });
 
     it('should have enterEditMode method that is callable', async () => {
-      expect(typeof appCentralManager.enterEditMode).toBe('function');
-      await expect(appCentralManager.enterEditMode()).resolves.toBeUndefined();
+      expect(typeof appCoordinator.enterEditMode).toBe('function');
+      await expect(appCoordinator.enterEditMode()).resolves.toBeUndefined();
     });
 
     it('should have exitEditMode method that is callable', () => {
-      expect(typeof appCentralManager.exitEditMode).toBe('function');
-      expect(() => appCentralManager.exitEditMode()).not.toThrow();
+      expect(typeof appCoordinator.exitEditMode).toBe('function');
+      expect(() => appCoordinator.exitEditMode()).not.toThrow();
     });
   });
 
   describe('initialization', () => {
     it('should provide initialize method that returns cleanup function', async () => {
-      expect(typeof appCentralManager.initialize).toBe('function');
-      const cleanup = await appCentralManager.initialize();
+      expect(typeof appCoordinator.initialize).toBe('function');
+      const cleanup = await appCoordinator.initialize();
       expect(typeof cleanup).toBe('function');
     });
 
@@ -223,14 +223,14 @@ describe('appCentralManager', () => {
       });
 
       // Before initialization, filteredNotes should be empty
-      expect(appCentralManager.filteredNotes).toEqual([]);
+      expect(appCoordinator.filteredNotes).toEqual([]);
 
       // Initialize the manager
-      const cleanup = await appCentralManager.initialize();
+      const cleanup = await appCoordinator.initialize();
 
       // After initialization, filteredNotes should be populated
       // This should come from searchManager.filteredNotes via reactive effects
-      expect(appCentralManager.filteredNotes).toEqual(mockNotes);
+      expect(appCoordinator.filteredNotes).toEqual(mockNotes);
       expect(mockInvoke).toHaveBeenCalledWith('config_exists');
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: '' });
 
@@ -240,14 +240,14 @@ describe('appCentralManager', () => {
 
     it('should provide reactive context that updates when state changes', async () => {
       // Get initial context
-      let context = appCentralManager.context;
+      let context = appCoordinator.context;
       expect(context.state.filteredNotes).toEqual([]);
 
       // Simulate state change (like what happens during initialization)
-      appCentralManager.updateFilteredNotes(['test1.md', 'test2.md']);
+      appCoordinator.updateFilteredNotes(['test1.md', 'test2.md']);
 
       // Get context again - this should reflect the updated state
-      context = appCentralManager.context;
+      context = appCoordinator.context;
       expect(context.state.filteredNotes).toEqual(['test1.md', 'test2.md']);
     });
 
@@ -261,13 +261,13 @@ describe('appCentralManager', () => {
       });
 
       // Before initialization, filteredNotes should be empty
-      expect(appCentralManager.filteredNotes).toEqual([]);
+      expect(appCoordinator.filteredNotes).toEqual([]);
 
       // Initialize the manager
-      const cleanup = await appCentralManager.initialize();
+      const cleanup = await appCoordinator.initialize();
 
       // After initialization, filteredNotes should still be empty since no config exists
-      expect(appCentralManager.filteredNotes).toEqual([]);
+      expect(appCoordinator.filteredNotes).toEqual([]);
       expect(mockInvoke).toHaveBeenCalledWith('config_exists');
       expect(mockInvoke).not.toHaveBeenCalledWith('search_notes', { query: '' });
 

@@ -1,29 +1,29 @@
 <script lang="ts">
-  import { appCentralManager } from '../utils/appCentralManager.svelte';
+  import { appCoordinator } from '../utils/appCoordinator.svelte';
 
   let noteListElement = $state<HTMLElement | undefined>(undefined);
 
   $effect(() => {
     if (noteListElement) {
-      appCentralManager.context.focusManager.setNoteListElement(noteListElement);
+      appCoordinator.context.focusManager.setNoteListElement(noteListElement);
     }
   });
 </script>
 
 <div class="notes-list-container">
   <div class="notes-list">
-    {#if appCentralManager.context.state.isLoading && appCentralManager.context.state.filteredNotes.length === 0}
+    {#if appCoordinator.context.state.isLoading && appCoordinator.context.state.filteredNotes.length === 0}
       <div class="loading">Loading...</div>
-    {:else if appCentralManager.context.state.filteredNotes.length === 0}
+    {:else if appCoordinator.context.state.filteredNotes.length === 0}
       <div class="no-notes">No notes found</div>
     {:else}
       <ul bind:this={noteListElement} tabindex="-1">
-        {#each appCentralManager.context.state.filteredNotes as note, index (note)}
+        {#each appCoordinator.context.state.filteredNotes as note, index (note)}
           <li>
             <button
-              class:selected={index === appCentralManager.context.state.selectedIndex}
+              class:selected={index === appCoordinator.context.state.selectedIndex}
               tabindex="-1"
-              onclick={() => appCentralManager.context.selectNote(note, index)}
+              onclick={() => appCoordinator.context.selectNote(note, index)}
             >
               {note}
             </button>
