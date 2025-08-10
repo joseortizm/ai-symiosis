@@ -52,7 +52,7 @@ async function refreshAfterSave(noteName: string, searchInput: string): Promise<
   await invoke<void>("refresh_cache");
 
   // Refresh search
-  const searchResults = await searchManager.searchImmediate(searchInput);
+  const searchResults = await searchManager.refreshSearch(searchInput);
 
   // Refresh content
   const content = await refreshContent(noteName);

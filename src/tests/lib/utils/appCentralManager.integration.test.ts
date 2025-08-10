@@ -136,6 +136,7 @@ describe('appCentralManager Integration Tests', () => {
         noteName: expectedFileName,
       });
       mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes);
+      mockSearchManager.filteredNotes = updatedNotes;
 
       // Simulate user opening create dialog and typing
       mockDialogManager.newNoteName = noteName;
@@ -146,9 +147,6 @@ describe('appCentralManager Integration Tests', () => {
       // Verify the complete workflow
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName);
       expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('');
-      expect(mockSearchManager.updateState).toHaveBeenCalledWith({
-        filteredNotes: updatedNotes
-      });
       expect(mockDialogManager.closeCreateDialog).toHaveBeenCalled();
       expect(mockFocusManager.focusSearch).toHaveBeenCalled();
 
@@ -213,9 +211,6 @@ describe('appCentralManager Integration Tests', () => {
       // Verify the complete workflow
       expect(mockNoteService.delete).toHaveBeenCalledWith(noteToDelete);
       expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('');
-      expect(mockSearchManager.updateState).toHaveBeenCalledWith({
-        filteredNotes: updatedNotes
-      });
       expect(mockDialogManager.closeDeleteDialog).toHaveBeenCalled();
       expect(mockFocusManager.focusSearch).toHaveBeenCalled();
     });
@@ -288,9 +283,6 @@ describe('appCentralManager Integration Tests', () => {
       // Verify the complete workflow
       expect(mockNoteService.rename).toHaveBeenCalledWith(oldName, newName);
       expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('existing');
-      expect(mockSearchManager.updateState).toHaveBeenCalledWith({
-        filteredNotes: updatedNotes
-      });
       expect(mockDialogManager.closeRenameDialog).toHaveBeenCalled();
 
       // Verify renamed note is selected
@@ -368,9 +360,6 @@ describe('appCentralManager Integration Tests', () => {
       // Verify the workflow
       expect(mockConfigService.save).toHaveBeenCalled();
       expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('');
-      expect(mockSearchManager.updateState).toHaveBeenCalledWith({
-        filteredNotes: updatedNotes
-      });
     });
 
     it('should handle settings save failure gracefully', async () => {
@@ -445,7 +434,6 @@ describe('appCentralManager Integration Tests', () => {
       // Verify all managers were coordinated properly
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName); // Service handles data
       expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith(''); // Search refreshes
-      expect(mockSearchManager.updateState).toHaveBeenCalledWith({ filteredNotes: updatedNotes }); // Search updates
       expect(mockDialogManager.closeCreateDialog).toHaveBeenCalled(); // Dialog closes
       expect(mockFocusManager.focusSearch).toHaveBeenCalled(); // Focus returns
       // Note: editorManager.enterEditMode() is called but we don't mock it in this test

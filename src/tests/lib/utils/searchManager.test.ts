@@ -93,5 +93,16 @@ describe('searchManager', () => {
       expect(searchManager.filteredNotes).toEqual(notes);
       expect(searchManager.query).toBe('test search');
     });
+
+    it('should provide refreshSearch method', async () => {
+      const notes = ['refresh.md', 'test.md'];
+      mockInvoke.mockResolvedValueOnce(notes);
+
+      const result = await searchManager.refreshSearch('refresh query');
+
+      expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'refresh query' });
+      expect(result).toEqual(notes);
+      expect(searchManager.filteredNotes).toEqual(notes);
+    });
   });
 });

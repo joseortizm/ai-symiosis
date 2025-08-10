@@ -122,8 +122,7 @@ async function deleteNote(): Promise<void> {
 
   if (result.success) {
     // Refresh the notes list
-    const notes = await searchManager.searchImmediate(searchManager.searchInput);
-    searchManager.updateState({ filteredNotes: notes });
+    await searchManager.searchImmediate(searchManager.searchInput);
 
     // Close dialog and focus search
     dialogManager.closeDeleteDialog();
@@ -140,11 +139,10 @@ async function createNote(noteNameParam?: string): Promise<void> {
 
   if (result.success) {
     // Refresh the notes list
-    const notes = await searchManager.searchImmediate('');
-    searchManager.updateState({ filteredNotes: notes });
+    await searchManager.searchImmediate('');
 
     // Find and select the new note
-    const noteIndex = notes.findIndex(note => note === result.noteName);
+    const noteIndex = searchManager.filteredNotes.findIndex(note => note === result.noteName);
     if (noteIndex >= 0) {
       state.selectedIndex = noteIndex;
     }
@@ -166,11 +164,10 @@ async function renameNote(newNameParam?: string): Promise<void> {
 
   if (result.success) {
     // Refresh the notes list
-    const notes = await searchManager.searchImmediate(searchManager.searchInput);
-    searchManager.updateState({ filteredNotes: notes });
+    await searchManager.searchImmediate(searchManager.searchInput);
 
     // Select the renamed note
-    const noteIndex = notes.findIndex(note => note === result.newName);
+    const noteIndex = searchManager.filteredNotes.findIndex(note => note === result.newName);
     if (noteIndex >= 0) {
       state.selectedIndex = noteIndex;
     }

@@ -26,6 +26,7 @@ vi.mock('../../../lib/utils/focusManager.svelte', () => ({
 vi.mock('../../../lib/utils/searchManager.svelte', () => ({
   searchManager: {
     searchImmediate: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
+    refreshSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
     setHighlightsClearCallback: vi.fn()
   }
 }));
@@ -157,7 +158,7 @@ describe('contentManager', () => {
       expect(mockInvoke).toHaveBeenCalledWith('refresh_cache');
 
       // Should refresh search
-      expect(searchManager.searchImmediate).toHaveBeenCalledWith(searchInput);
+      expect(searchManager.refreshSearch).toHaveBeenCalledWith(searchInput);
 
       // Should refresh content
       expect(noteService.getContent).toHaveBeenCalledWith(noteName);

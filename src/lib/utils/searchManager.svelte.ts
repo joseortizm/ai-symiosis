@@ -118,6 +118,11 @@ export const searchManager = {
     return state.filteredNotes;
   },
 
+  async refreshSearch(searchInput: string): Promise<string[]> {
+    const results = await this.searchImmediate(searchInput);
+    return results;
+  },
+
   abort(): void {
     if (state.searchTimeout !== undefined) {
       clearTimeout(state.searchTimeout);
