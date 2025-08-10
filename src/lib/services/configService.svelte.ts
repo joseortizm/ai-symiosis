@@ -8,7 +8,7 @@ class ConfigService {
     error: null as string | null
   });
 
-  async open(onFocus?: () => void): Promise<void> {
+  async open(): Promise<void> {
     this.state.isLoading = true;
     this.state.error = null;
 
@@ -79,8 +79,8 @@ class ConfigService {
   }
 
   // Pane management methods for direct use in +page.svelte
-  async openPane(focusFunction?: () => void): Promise<void> {
-    await this.open(focusFunction);
+  async openPane(): Promise<void> {
+    await this.open();
   }
 
   closePane(): void {

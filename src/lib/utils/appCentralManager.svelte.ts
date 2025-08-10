@@ -308,7 +308,10 @@ export const appCentralManager = {
       showDeleteDialog: () => dialogManager.openDeleteDialog(),
       showCreateDialog: () => dialogManager.openCreateDialog(query, contentManager.highlightedContent),
       showRenameDialog: () => dialogManager.openRenameDialog(selectedNote ?? undefined),
-      openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
+      openSettingsPane: async () => {
+        await configService.openPane();
+        focusManager.focusSearch();
+      },
       clearHighlights: contentManager.clearHighlights,
       clearSearch: searchManager.clearSearch,
     };
@@ -345,7 +348,10 @@ export const appCentralManager = {
       closeRenameDialog: dialogManager.closeRenameDialog,
       openDeleteDialog: dialogManager.openDeleteDialog,
       closeDeleteDialog: dialogManager.closeDeleteDialog,
-      openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
+      openSettingsPane: async () => {
+        await configService.openPane();
+        focusManager.focusSearch();
+      },
       closeSettingsPane: () => {
         configService.closePane();
         focusManager.focusSearch();
@@ -363,14 +369,16 @@ export const appCentralManager = {
 
     const configExists = await invoke<boolean>("config_exists");
     if (!configExists) {
-      await configService.openPane(() => focusManager.focusSearch());
+      await configService.openPane();
+      focusManager.focusSearch();
     } else {
       focusManager.focusSearch();
       await searchManager.searchImmediate('');
     }
 
     const unlisten = await listen("open-preferences", async () => {
-      await configService.openPane(() => focusManager.focusSearch());
+      await configService.openPane();
+      focusManager.focusSearch();
     });
 
     return () => {
