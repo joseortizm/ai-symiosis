@@ -76,6 +76,7 @@ const mockContentManager = {
 // Mock all modules
 vi.mock('../../../lib/utils/searchManager.svelte', () => ({
   searchManager: mockSearchManager,
+  createSearchManager: vi.fn(() => mockSearchManager),
 }));
 
 vi.mock('../../../lib/utils/dialogManager.svelte', () => ({
@@ -93,10 +94,12 @@ vi.mock('../../../lib/services/configService.svelte', () => ({
 
 vi.mock('../../../lib/utils/focusManager.svelte', () => ({
   focusManager: mockFocusManager,
+  createFocusManager: vi.fn(() => mockFocusManager),
 }));
 
 vi.mock('../../../lib/utils/editorManager.svelte', () => ({
   editorManager: mockEditorManager,
+  createEditorManager: vi.fn(() => mockEditorManager),
 }));
 
 vi.mock('../../../lib/utils/contentManager.svelte', () => ({
@@ -129,9 +132,21 @@ describe('appCoordinator Integration Tests', () => {
     mockConfigService.content = '';
     mockSearchManager.filteredNotes = ['existing-note.md'];
 
-    // Import the module after mocks are set up
-    const module = await import('../../../lib/utils/appCoordinator.svelte');
-    appCoordinator = module.appCoordinator;
+    // Import the factories after mocks are set up
+    const { createAppCoordinator } = await import('../../../lib/utils/appCoordinator.svelte');
+    const { createSearchManager } = await import('../../../lib/utils/searchManager.svelte');
+    const { createEditorManager } = await import('../../../lib/utils/editorManager.svelte');
+    const { createFocusManager } = await import('../../../lib/utils/focusManager.svelte');
+
+    // Create manager instances for testing
+    const searchManager = createSearchManager();
+    const editorManager = createEditorManager();
+    const focusManager = createFocusManager();
+    appCoordinator = createAppCoordinator({
+      searchManager,
+      editorManager,
+      focusManager
+    });
   });
 
   describe('Note Creation End-to-End Flow', () => {

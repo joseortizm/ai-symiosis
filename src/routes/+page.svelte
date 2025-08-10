@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from "svelte";
+import { onMount, setContext } from "svelte";
 import AppLayout from "../lib/components/AppLayout.svelte";
 import SearchInput from "../lib/components/SearchInput.svelte";
 import NoteList from "../lib/components/NoteList.svelte";
@@ -8,13 +8,34 @@ import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import InputDialog from "../lib/components/InputDialog.svelte";
 import DeleteDialog from "../lib/components/DeleteDialog.svelte";
 import SettingsPane from "../lib/components/SettingsPane.svelte";
-import DebugPanel from "../lib/components/DebugPanel.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
-import { appCoordinator } from '../lib/utils/appCoordinator.svelte';
+import { createAppCoordinator } from '../lib/utils/appCoordinator.svelte';
+import { createSearchManager } from '../lib/utils/searchManager.svelte';
+import { createEditorManager } from '../lib/utils/editorManager.svelte';
+import { createFocusManager } from '../lib/utils/focusManager.svelte';
 import { configService } from '../lib/services/configService.svelte';
-import { focusManager } from '../lib/utils/focusManager.svelte';
+
+// Create all managers using factories
+const searchManager = createSearchManager();
+const editorManager = createEditorManager();
+const focusManager = createFocusManager();
+
+// Create the coordinator with dependencies
+const appCoordinator = createAppCoordinator({
+  searchManager,
+  editorManager,
+  focusManager
+});
 
 const context = appCoordinator.context;
+
+// Set context for child components
+setContext('managers', {
+  searchManager,
+  editorManager,
+  focusManager,
+  appCoordinator
+});
 
 const handleKeydown = createKeyboardHandler(
   () => appCoordinator.keyboardState,
@@ -97,4 +118,3 @@ onMount(() => {
   </div>
 </AppLayout>
 
-<DebugPanel />

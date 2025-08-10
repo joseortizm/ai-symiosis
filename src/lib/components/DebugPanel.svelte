@@ -1,6 +1,7 @@
 <script lang="ts">
-import { searchManager } from '../utils/searchManager.svelte';
-import { appCoordinator } from '../utils/appCoordinator.svelte';
+import { getContext } from 'svelte';
+
+const { searchManager, appCoordinator } = getContext('managers');
 
 const context = appCoordinator.context;
 

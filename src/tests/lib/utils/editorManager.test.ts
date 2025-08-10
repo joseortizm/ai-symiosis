@@ -6,13 +6,16 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 // Import after mocking
-const { editorManager } = await import('../../../lib/utils/editorManager.svelte');
+const { createEditorManager } = await import('../../../lib/utils/editorManager.svelte');
+
+// Create a fresh instance for each test
+let editorManager: ReturnType<typeof createEditorManager>;
 
 describe('editorManager', () => {
   beforeEach(() => {
     resetAllMocks();
-    // Reset editor state
-    editorManager.exitEditMode();
+    // Create fresh editor manager instance
+    editorManager = createEditorManager();
   });
 
   describe('state getters', () => {

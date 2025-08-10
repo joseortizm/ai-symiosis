@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { appCoordinator } from '../utils/appCoordinator.svelte';
+  import { getContext } from 'svelte';
+
+  const { appCoordinator } = getContext('managers');
 
   let noteListElement = $state<HTMLElement | undefined>(undefined);
 

@@ -8,7 +8,10 @@ class MockHTMLElement {
   children: any[] = [];
 }
 
-const { focusManager } = await import('../../../lib/utils/focusManager.svelte');
+const { createFocusManager } = await import('../../../lib/utils/focusManager.svelte');
+
+// Create a fresh instance for each test
+let focusManager: ReturnType<typeof createFocusManager>;
 
 describe('focusManager', () => {
   let searchElement: MockHTMLElement;
@@ -16,6 +19,9 @@ describe('focusManager', () => {
   let noteListElement: MockHTMLElement;
 
   beforeEach(() => {
+    // Create fresh manager instance
+    focusManager = createFocusManager();
+
     // Create fresh mock elements
     searchElement = new MockHTMLElement();
     noteContentElement = new MockHTMLElement();

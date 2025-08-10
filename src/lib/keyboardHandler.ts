@@ -1,5 +1,4 @@
-import { searchManager } from './utils/searchManager.svelte';
-import { focusManager } from './utils/focusManager.svelte';
+// All interactions are handled via actions parameter, no direct manager imports needed
 
 export interface AppState {
   isSearchInputFocused: boolean;
@@ -11,6 +10,7 @@ export interface AppState {
   noteContentElement: HTMLElement | null;
   areHighlightsCleared: boolean;
   isEditorDirty: boolean;
+  query: string;
 }
 
 export interface Actions {
@@ -27,6 +27,7 @@ export interface Actions {
   openSettingsPane: () => Promise<void>;
   clearHighlights: () => void;
   clearSearch: () => void;
+  focusSearch: () => void;
 }
 
 export interface ActionContext {
@@ -55,8 +56,8 @@ const actionRegistry: ActionRegistry = {
       const newIndex = Math.min(maxIndex, state.selectedIndex + 1);
       actions.setSelectedIndex(newIndex);
     },
-    focusSearch: ({ state }: ActionContext) => {
-      focusManager.focusSearch();
+    focusSearch: ({ actions }: ActionContext) => {
+      actions.focusSearch();
     },
   },
 
@@ -137,9 +138,9 @@ const actionRegistry: ActionRegistry = {
 
   search: {
     clearHighlights: ({ state, actions }: ActionContext) => {
-      if (searchManager.query.trim() && !state.areHighlightsCleared) {
+      if (state.query.trim() && !state.areHighlightsCleared) {
         actions.clearHighlights();
-      } else if (state.areHighlightsCleared || !searchManager.query.trim()) {
+      } else if (state.areHighlightsCleared || !state.query.trim()) {
         actions.clearSearch();
       }
     },

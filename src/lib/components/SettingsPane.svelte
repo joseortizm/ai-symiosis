@@ -1,7 +1,7 @@
 <script lang="ts">
   import Editor from './Editor.svelte';
   import { configService } from '../services/configService.svelte';
-  import { searchManager } from '../utils/searchManager.svelte';
+  import { getContext } from 'svelte';
 
   interface Props {
     show: boolean;
@@ -10,6 +10,7 @@
   }
 
   const { show, onClose, onRefresh }: Props = $props();
+  const { searchManager } = getContext('managers');
 
   let dialogElement = $state<HTMLElement | undefined>(undefined);
 
