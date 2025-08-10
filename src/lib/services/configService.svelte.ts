@@ -24,14 +24,13 @@ class ConfigService {
     }
   }
 
-  close(onFocus?: () => void): void {
+  close(): void {
     this.state.isVisible = false;
     this.state.content = '';
     this.state.error = null;
-    onFocus?.();
   }
 
-  async save(searchManager: any, onRefresh: (notes: string[]) => void, onFocus?: () => void): Promise<void> {
+  async save(): Promise<{ success: boolean; error?: string }> {
     this.state.isLoading = true;
     this.state.error = null;
 
@@ -39,15 +38,14 @@ class ConfigService {
       await invoke<void>("save_config_content", { content: this.state.content });
       await invoke<void>("refresh_cache");
 
-      this.close(onFocus);
+      this.close();
 
-      // Refresh the notes list after config change
-      const notes = await searchManager.searchImmediate('');
-      onRefresh(notes);
+      return { success: true };
     } catch (e) {
-      this.state.error = `Failed to save config: ${e}`;
+      const error = `Failed to save config: ${e}`;
+      this.state.error = error;
       console.error("Failed to save config:", e);
-      throw e;
+      return { success: false, error };
     } finally {
       this.state.isLoading = false;
     }
@@ -85,8 +83,8 @@ class ConfigService {
     await this.open(focusFunction);
   }
 
-  closePane(focusFunction?: () => void): void {
-    this.close(focusFunction);
+  closePane(): void {
+    this.close();
   }
 
   // Getters and setters for reactive state (to support bind:value)

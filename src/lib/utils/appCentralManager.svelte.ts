@@ -44,7 +44,7 @@ function setupReactiveEffects() {
   $effect(() => {
     const notes = filteredNotes;
     const currentIndex = state.selectedIndex;
-    
+
     // Exit edit mode when selection gets normalized (e.g., when filtered notes change)
     if (notes.length > 0 && (currentIndex === -1 || currentIndex >= notes.length)) {
       editorManager.exitEditMode();
@@ -54,7 +54,7 @@ function setupReactiveEffects() {
   $effect(() => {
     const notes = filteredNotes;
     let index = state.selectedIndex;
-    
+
     // Normalize for scrolling purposes only
     if (notes.length > 0) {
       if (index === -1 || index >= notes.length) {
@@ -68,7 +68,7 @@ function setupReactiveEffects() {
 
   $effect(() => {
     const note = selectedNote;
-    
+
     if (!note) {
       contentManager.setNoteContent('');
       return;
@@ -118,54 +118,66 @@ function setSelectedIndex(value: number): void {
 async function deleteNote(): Promise<void> {
   if (!selectedNote) return;
 
-  await noteService.delete(
-    selectedNote,
-    searchManager,
-    dialogManager,
-    (notes) => { searchManager.updateState({ filteredNotes: notes }); },
-    searchManager.searchInput,
-    () => focusManager.focusSearch()
-  );
+  const result = await noteService.delete(selectedNote);
+
+  if (result.success) {
+    // Refresh the notes list
+    const notes = await searchManager.searchImmediate(searchManager.searchInput);
+    searchManager.updateState({ filteredNotes: notes });
+
+    // Close dialog and focus search
+    dialogManager.closeDeleteDialog();
+    await tick();
+    focusManager.focusSearch();
+  }
 }
 
 async function createNote(noteNameParam?: string): Promise<void> {
   const inputNoteName = noteNameParam || dialogManager.newNoteName.trim();
   if (!inputNoteName.trim()) return;
 
-  const finalNoteName = await noteService.create(
-    inputNoteName,
-    searchManager,
-    dialogManager,
-    (notes) => {
-      searchManager.updateState({ filteredNotes: notes });
-      const noteIndex = notes.findIndex(note => note === (inputNoteName.includes('.') ? inputNoteName : `${inputNoteName}.md`));
-      if (noteIndex >= 0) {
-        state.selectedIndex = noteIndex;
-      }
-    },
-    () => focusManager.focusSearch()
-  );
-  enterEditMode();
+  const result = await noteService.create(inputNoteName);
+
+  if (result.success) {
+    // Refresh the notes list
+    const notes = await searchManager.searchImmediate('');
+    searchManager.updateState({ filteredNotes: notes });
+
+    // Find and select the new note
+    const noteIndex = notes.findIndex(note => note === result.noteName);
+    if (noteIndex >= 0) {
+      state.selectedIndex = noteIndex;
+    }
+
+    // Close dialog and focus search
+    dialogManager.closeCreateDialog();
+    await tick();
+    focusManager.focusSearch();
+
+    enterEditMode();
+  }
 }
 
 async function renameNote(newNameParam?: string): Promise<void> {
   const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
   if (!inputNewName.trim() || !selectedNote) return;
 
-  await noteService.rename(
-    selectedNote,
-    inputNewName,
-    searchManager,
-    dialogManager,
-    (notes) => { searchManager.updateState({ filteredNotes: notes }); },
-    (noteName) => {
-      const noteIndex = filteredNotes.findIndex(note => note === noteName);
-      if (noteIndex >= 0) {
-        state.selectedIndex = noteIndex;
-      }
-    },
-    searchManager.searchInput
-  );
+  const result = await noteService.rename(selectedNote, inputNewName);
+
+  if (result.success) {
+    // Refresh the notes list
+    const notes = await searchManager.searchImmediate(searchManager.searchInput);
+    searchManager.updateState({ filteredNotes: notes });
+
+    // Select the renamed note
+    const noteIndex = notes.findIndex(note => note === result.newName);
+    if (noteIndex >= 0) {
+      state.selectedIndex = noteIndex;
+    }
+
+    // Close dialog
+    dialogManager.closeRenameDialog();
+  }
 }
 
 async function saveNote(): Promise<void> {
@@ -337,7 +349,10 @@ export const appCentralManager = {
       openDeleteDialog: dialogManager.openDeleteDialog,
       closeDeleteDialog: dialogManager.closeDeleteDialog,
       openSettingsPane: () => configService.openPane(() => focusManager.focusSearch()),
-      closeSettingsPane: () => configService.closePane(() => focusManager.focusSearch()),
+      closeSettingsPane: () => {
+        configService.closePane();
+        focusManager.focusSearch();
+      },
       handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(deleteNote),
       clearHighlights: contentManager.clearHighlights,
       clearSearch: searchManager.clearSearch,

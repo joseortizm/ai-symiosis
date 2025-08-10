@@ -14,7 +14,13 @@
   let dialogElement = $state<HTMLElement | undefined>(undefined);
 
   async function handleSave(): Promise<void> {
-    await configService.save(searchManager, onRefresh);
+    const result = await configService.save();
+
+    if (result.success) {
+      // Refresh the notes list after config change
+      const notes = await searchManager.searchImmediate('');
+      onRefresh(notes);
+    }
   }
 
   function handleCancel(): void {

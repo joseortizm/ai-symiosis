@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { tick } from "svelte";
 
 class NoteService {
   state = $state({
@@ -8,8 +7,8 @@ class NoteService {
     lastOperation: null as 'create' | 'delete' | 'rename' | null
   });
 
-  async create(noteName: string, searchManager: any, dialogManager: any, onRefresh: (notes: string[]) => void, onFocus?: () => void): Promise<void> {
-    if (!noteName.trim()) return;
+  async create(noteName: string): Promise<{ success: boolean; noteName?: string; error?: string }> {
+    if (!noteName.trim()) return { success: false, error: 'Note name cannot be empty' };
 
     this.state.isLoading = true;
     this.state.error = null;
@@ -21,25 +20,19 @@ class NoteService {
 
       await invoke<void>("create_new_note", { noteName: finalNoteName });
 
-      // Refresh the notes list
-      const notes = await searchManager.searchImmediate('');
-      onRefresh(notes);
-
-      dialogManager.closeCreateDialog();
-
-      // Return focus to search
-      await tick();
-      onFocus?.();
+      return { success: true, noteName: finalNoteName };
     } catch (e) {
-      this.state.error = `Failed to create note: ${e}`;
+      const error = `Failed to create note: ${e}`;
+      this.state.error = error;
       console.error("Failed to create note:", e);
+      return { success: false, error };
     } finally {
       this.state.isLoading = false;
     }
   }
 
-  async delete(noteName: string, searchManager: any, dialogManager: any, onRefresh: (notes: string[]) => void, currentSearchInput: string, onFocus?: () => void): Promise<void> {
-    if (!noteName) return;
+  async delete(noteName: string): Promise<{ success: boolean; error?: string }> {
+    if (!noteName) return { success: false, error: 'Note name cannot be empty' };
 
     this.state.isLoading = true;
     this.state.error = null;
@@ -48,25 +41,19 @@ class NoteService {
     try {
       await invoke<void>("delete_note", { noteName });
 
-      // Refresh the notes list
-      const notes = await searchManager.searchImmediate(currentSearchInput);
-      onRefresh(notes);
-
-      dialogManager.closeDeleteDialog();
-
-      // Return focus to search
-      await tick();
-      onFocus?.();
+      return { success: true };
     } catch (e) {
-      this.state.error = `Failed to delete note: ${e}`;
+      const error = `Failed to delete note: ${e}`;
+      this.state.error = error;
       console.error("Failed to delete note:", e);
+      return { success: false, error };
     } finally {
       this.state.isLoading = false;
     }
   }
 
-  async rename(oldName: string, newName: string, searchManager: any, dialogManager: any, onRefresh: (notes: string[]) => void, onSelectNote: (noteName: string) => void, currentSearchInput: string): Promise<void> {
-    if (!newName.trim() || !oldName) return;
+  async rename(oldName: string, newName: string): Promise<{ success: boolean; newName?: string; error?: string }> {
+    if (!newName.trim() || !oldName) return { success: false, error: 'Both old and new names are required' };
 
     this.state.isLoading = true;
     this.state.error = null;
@@ -78,17 +65,12 @@ class NoteService {
 
       await invoke<void>("rename_note", { oldName, newName: finalNewName });
 
-      // Refresh the notes list
-      const notes = await searchManager.searchImmediate(currentSearchInput);
-      onRefresh(notes);
-
-      // Select the renamed note
-      onSelectNote(finalNewName);
-
-      dialogManager.closeRenameDialog();
+      return { success: true, newName: finalNewName };
     } catch (e) {
-      this.state.error = `Failed to rename note: ${e}`;
+      const error = `Failed to rename note: ${e}`;
+      this.state.error = error;
       console.error("Failed to rename note:", e);
+      return { success: false, error };
     } finally {
       this.state.isLoading = false;
     }

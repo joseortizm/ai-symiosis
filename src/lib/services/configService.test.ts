@@ -63,14 +63,11 @@ describe('configService', () => {
       configService.state.content = 'some content';
       configService.state.error = 'some error';
 
-      const onFocus = vi.fn();
-
-      configService.close(onFocus);
+      configService.close();
 
       expect(configService.isVisible).toBe(false);
       expect(configService.content).toBe('');
       expect(configService.error).toBeNull();
-      expect(onFocus).toHaveBeenCalled();
     });
 
     it('should work without onFocus callback', () => {
@@ -87,22 +84,15 @@ describe('configService', () => {
       configService.state.content = configContent;
       configService.state.isVisible = true;
 
-      const notes = ['note1.md', 'note2.md'];
       mockInvoke
         .mockResolvedValueOnce(undefined) // save_config_content
         .mockResolvedValueOnce(undefined); // refresh_cache
-      mockSearchManager.searchImmediate.mockResolvedValueOnce(notes);
 
-      const onRefresh = vi.fn();
-      const onFocus = vi.fn();
+      const result = await configService.save();
 
-      await configService.save(mockSearchManager, onRefresh, onFocus);
-
+      expect(result.success).toBe(true);
       expect(mockInvoke).toHaveBeenCalledWith('save_config_content', { content: configContent });
       expect(mockInvoke).toHaveBeenCalledWith('refresh_cache');
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('');
-      expect(onRefresh).toHaveBeenCalledWith(notes);
-      expect(onFocus).toHaveBeenCalled();
       expect(configService.isVisible).toBe(false);
       expect(configService.content).toBe('');
       expect(configService.isLoading).toBe(false);
@@ -114,9 +104,10 @@ describe('configService', () => {
       configService.state.content = 'some content';
       mockInvoke.mockRejectedValueOnce(error);
 
-      await expect(configService.save(mockSearchManager, vi.fn(), vi.fn()))
-        .rejects.toThrow(error);
+      const result = await configService.save();
 
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to save config: Error: Permission denied');
       expect(configService.error).toBe('Failed to save config: Error: Permission denied');
       expect(configService.isLoading).toBe(false);
     });
@@ -130,7 +121,7 @@ describe('configService', () => {
         return Promise.resolve();
       });
 
-      await configService.save(mockSearchManager, vi.fn(), vi.fn());
+      await configService.save();
 
       expect(loadingDuringOperation).toBe(true);
       expect(configService.isLoading).toBe(false);
@@ -230,13 +221,11 @@ describe('configService', () => {
     it('should close pane with focus management', () => {
       configService.state.isVisible = true;
       configService.state.content = 'some content';
-      const mockFocusFunction = vi.fn();
 
-      configService.closePane(mockFocusFunction);
+      configService.closePane();
 
       expect(configService.isVisible).toBe(false);
       expect(configService.content).toBe('');
-      expect(mockFocusFunction).toHaveBeenCalled();
     });
   });
 });

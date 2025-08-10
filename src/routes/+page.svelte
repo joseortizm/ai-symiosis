@@ -40,7 +40,10 @@ onMount(() => {
   <div slot="modals">
     <SettingsPane
       show={configService.isVisible}
-      onClose={() => configService.closePane(() => focusManager.focusSearch())}
+      onClose={() => {
+        configService.closePane();
+        focusManager.focusSearch();
+      }}
       onRefresh={(notes) => {
         appCentralManager.updateFilteredNotes(notes);
       }}

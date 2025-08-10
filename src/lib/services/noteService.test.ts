@@ -18,21 +18,14 @@ describe('noteService', () => {
     it('should create a note with .md extension', async () => {
       const noteName = 'test-note';
       const finalName = 'test-note.md';
-      const notes = ['test-note.md', 'other-note.md'];
 
       mockInvoke.mockResolvedValueOnce(undefined);
-      mockSearchManager.searchImmediate.mockResolvedValueOnce(notes);
 
-      const onRefresh = vi.fn();
-      const onFocus = vi.fn();
+      const result = await noteService.create(noteName);
 
-      await noteService.create(noteName, mockSearchManager, mockDialogManager, onRefresh, onFocus);
-
+      expect(result.success).toBe(true);
+      expect(result.noteName).toBe(finalName);
       expect(mockInvoke).toHaveBeenCalledWith('create_new_note', { noteName: finalName });
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('');
-      expect(onRefresh).toHaveBeenCalledWith(notes);
-      expect(mockDialogManager.closeCreateDialog).toHaveBeenCalled();
-      expect(onFocus).toHaveBeenCalled();
       expect(noteService.isLoading).toBe(false);
       expect(noteService.error).toBeNull();
       expect(noteService.lastOperation).toBe('create');
@@ -42,10 +35,11 @@ describe('noteService', () => {
       const noteName = 'test-note.md';
 
       mockInvoke.mockResolvedValueOnce(undefined);
-      mockSearchManager.searchImmediate.mockResolvedValueOnce([]);
 
-      await noteService.create(noteName, mockSearchManager, mockDialogManager, vi.fn(), vi.fn());
+      const result = await noteService.create(noteName);
 
+      expect(result.success).toBe(true);
+      expect(result.noteName).toBe(noteName);
       expect(mockInvoke).toHaveBeenCalledWith('create_new_note', { noteName });
     });
 
@@ -53,16 +47,20 @@ describe('noteService', () => {
       const error = new Error('Failed to create');
       mockInvoke.mockRejectedValueOnce(error);
 
-      await noteService.create('test', mockSearchManager, mockDialogManager, vi.fn(), vi.fn());
+      const result = await noteService.create('test');
 
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to create note: Error: Failed to create');
       expect(noteService.error).toBe('Failed to create note: Error: Failed to create');
       expect(noteService.isLoading).toBe(false);
     });
 
     it('should not create note with empty name', async () => {
-      await noteService.create('', mockSearchManager, mockDialogManager, vi.fn(), vi.fn());
-      await noteService.create('   ', mockSearchManager, mockDialogManager, vi.fn(), vi.fn());
+      const result1 = await noteService.create('');
+      const result2 = await noteService.create('   ');
 
+      expect(result1.success).toBe(false);
+      expect(result2.success).toBe(false);
       expect(mockInvoke).not.toHaveBeenCalled();
     });
   });
@@ -70,22 +68,13 @@ describe('noteService', () => {
   describe('delete', () => {
     it('should delete a note successfully', async () => {
       const noteName = 'test-note.md';
-      const searchInput = 'test';
-      const notes = ['other-note.md'];
 
       mockInvoke.mockResolvedValueOnce(undefined);
-      mockSearchManager.searchImmediate.mockResolvedValueOnce(notes);
 
-      const onRefresh = vi.fn();
-      const onFocus = vi.fn();
+      const result = await noteService.delete(noteName);
 
-      await noteService.delete(noteName, mockSearchManager, mockDialogManager, onRefresh, searchInput, onFocus);
-
+      expect(result.success).toBe(true);
       expect(mockInvoke).toHaveBeenCalledWith('delete_note', { noteName });
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith(searchInput);
-      expect(onRefresh).toHaveBeenCalledWith(notes);
-      expect(mockDialogManager.closeDeleteDialog).toHaveBeenCalled();
-      expect(onFocus).toHaveBeenCalled();
       expect(noteService.lastOperation).toBe('delete');
     });
 
@@ -93,14 +82,17 @@ describe('noteService', () => {
       const error = new Error('Failed to delete');
       mockInvoke.mockRejectedValueOnce(error);
 
-      await noteService.delete('test.md', mockSearchManager, mockDialogManager, vi.fn(), '', vi.fn());
+      const result = await noteService.delete('test.md');
 
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to delete note: Error: Failed to delete');
       expect(noteService.error).toBe('Failed to delete note: Error: Failed to delete');
     });
 
     it('should not delete with empty name', async () => {
-      await noteService.delete('', mockSearchManager, mockDialogManager, vi.fn(), '', vi.fn());
+      const result = await noteService.delete('');
 
+      expect(result.success).toBe(false);
       expect(mockInvoke).not.toHaveBeenCalled();
     });
   });
@@ -110,22 +102,14 @@ describe('noteService', () => {
       const oldName = 'old-note.md';
       const newName = 'new-note';
       const finalNewName = 'new-note.md';
-      const searchInput = '';
-      const notes = ['new-note.md', 'other-note.md'];
 
       mockInvoke.mockResolvedValueOnce(undefined);
-      mockSearchManager.searchImmediate.mockResolvedValueOnce(notes);
 
-      const onRefresh = vi.fn();
-      const onSelectNote = vi.fn();
+      const result = await noteService.rename(oldName, newName);
 
-      await noteService.rename(oldName, newName, mockSearchManager, mockDialogManager, onRefresh, onSelectNote, searchInput);
-
+      expect(result.success).toBe(true);
+      expect(result.newName).toBe(finalNewName);
       expect(mockInvoke).toHaveBeenCalledWith('rename_note', { oldName, newName: finalNewName });
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith(searchInput);
-      expect(onRefresh).toHaveBeenCalledWith(notes);
-      expect(onSelectNote).toHaveBeenCalledWith(finalNewName);
-      expect(mockDialogManager.closeRenameDialog).toHaveBeenCalled();
       expect(noteService.lastOperation).toBe('rename');
     });
 
@@ -133,8 +117,10 @@ describe('noteService', () => {
       const error = new Error('Failed to rename');
       mockInvoke.mockRejectedValueOnce(error);
 
-      await noteService.rename('old.md', 'new', mockSearchManager, mockDialogManager, vi.fn(), vi.fn(), '');
+      const result = await noteService.rename('old.md', 'new');
 
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to rename note: Error: Failed to rename');
       expect(noteService.error).toBe('Failed to rename note: Error: Failed to rename');
     });
   });
