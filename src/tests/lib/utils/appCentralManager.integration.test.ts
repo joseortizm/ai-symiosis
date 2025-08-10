@@ -80,6 +80,7 @@ vi.mock('../../../lib/utils/searchManager.svelte', () => ({
 
 vi.mock('../../../lib/utils/dialogManager.svelte', () => ({
   dialogManager: mockDialogManager,
+  createDialogManager: vi.fn(() => mockDialogManager),
 }));
 
 vi.mock('../../../lib/services/noteService.svelte', () => ({
@@ -100,6 +101,15 @@ vi.mock('../../../lib/utils/editorManager.svelte', () => ({
 
 vi.mock('../../../lib/utils/contentManager.svelte', () => ({
   contentManager: mockContentManager,
+  createContentManager: vi.fn(() => mockContentManager),
+}));
+
+vi.mock('../../../lib/utils/contentHighlighting.svelte', () => ({
+  contentHighlighter: {
+    updateState: vi.fn(),
+    highlighted: 'mocked highlighted content',
+    areHighlightsCleared: false
+  }
 }));
 
 describe('appCentralManager Integration Tests', () => {

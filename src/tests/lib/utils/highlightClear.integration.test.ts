@@ -12,7 +12,9 @@ describe('Highlight Clear Integration', () => {
 
   it('should re-enable highlights when user types after clearing with ESC', async () => {
     const { searchManager } = await import('../../../lib/utils/searchManager.svelte');
-    const { contentManager } = await import('../../../lib/utils/contentManager.svelte');
+    const { appCentralManager } = await import('../../../lib/utils/appCentralManager.svelte');
+
+    const contentManager = appCentralManager.context.contentManager;
 
     searchManager.searchInput = 'test query';
     contentManager.setHighlightsClearedState(false);

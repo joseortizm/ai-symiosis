@@ -2,12 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { tick } from "svelte";
 import { listen } from "@tauri-apps/api/event";
 import { searchManager } from './searchManager.svelte';
-import { dialogManager } from './dialogManager.svelte';
+import { createDialogManager } from './dialogManager.svelte';
+import { createContentManager } from './contentManager.svelte';
 import { noteService } from '../services/noteService.svelte';
 import { configService } from '../services/configService.svelte';
 import { editorManager } from './editorManager.svelte';
 import { focusManager } from './focusManager.svelte';
-import { contentManager } from './contentManager.svelte';
+import { contentHighlighter } from './contentHighlighting.svelte';
 
 interface CentralAppState {
   selectedIndex: number;
@@ -15,6 +16,20 @@ interface CentralAppState {
 
 const state = $state<CentralAppState>({
   selectedIndex: -1,
+});
+
+const dialogManager = createDialogManager({
+  focusSearch: () => focusManager.focusSearch()
+});
+
+const contentManager = createContentManager({
+  contentHighlighter,
+  noteService,
+  getNoteContentElement: () => focusManager.noteContentElement,
+  refreshSearch: (query: string) => searchManager.refreshSearch(query),
+  setHighlightsClearCallback: (callback: (cleared: boolean) => void) =>
+    searchManager.setHighlightsClearCallback(callback),
+  invoke
 });
 
 const isLoading = $derived(searchManager.isLoading);
@@ -328,6 +343,7 @@ export const appCentralManager = {
         get selectedNote() { return selectedNote; },
         get selectedIndex() { return state.selectedIndex; },
       },
+      dialogManager,
       editorManager,
       focusManager,
       contentManager,

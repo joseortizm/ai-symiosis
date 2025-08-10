@@ -11,9 +11,10 @@ import SettingsPane from "../lib/components/SettingsPane.svelte";
 import DebugPanel from "../lib/components/DebugPanel.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { appCentralManager } from '../lib/utils/appCentralManager.svelte';
-import { dialogManager } from '../lib/utils/dialogManager.svelte';
 import { configService } from '../lib/services/configService.svelte';
 import { focusManager } from '../lib/utils/focusManager.svelte';
+
+const context = appCentralManager.context;
 
 const handleKeydown = createKeyboardHandler(
   () => appCentralManager.keyboardState,
@@ -50,48 +51,48 @@ onMount(() => {
     />
 
     <DeleteDialog
-      show={dialogManager.showDeleteDialog}
+      show={context.dialogManager.showDeleteDialog}
       noteName={appCentralManager.selectedNote || ''}
-      deleteKeyPressCount={dialogManager.deleteKeyPressCount}
+      deleteKeyPressCount={context.dialogManager.deleteKeyPressCount}
       onConfirm={appCentralManager.deleteNote}
-      onCancel={dialogManager.closeDeleteDialog}
-      onKeyPress={() => dialogManager.handleDeleteKeyPress(() => appCentralManager.deleteNote())}
+      onCancel={context.dialogManager.closeDeleteDialog}
+      onKeyPress={() => context.dialogManager.handleDeleteKeyPress(() => appCentralManager.deleteNote())}
     />
 
     <InputDialog
-      show={dialogManager.showCreateDialog}
+      show={context.dialogManager.showCreateDialog}
       title="Create New Note"
-      value={dialogManager.newNoteName}
+      value={context.dialogManager.newNoteName}
       placeholder="Enter note name (extension will be .md)"
       confirmText="Create"
       cancelText="Cancel"
       onConfirm={(value) => appCentralManager.createNote(value)}
-      onCancel={dialogManager.closeCreateDialog}
-      onInput={(value) => dialogManager.setNewNoteName(value)}
+      onCancel={context.dialogManager.closeCreateDialog}
+      onInput={(value) => context.dialogManager.setNewNoteName(value)}
     />
 
     <InputDialog
-      show={dialogManager.showRenameDialog}
+      show={context.dialogManager.showRenameDialog}
       title="Rename Note"
-      value={dialogManager.newNoteNameForRename}
+      value={context.dialogManager.newNoteNameForRename}
       placeholder="Enter new note name"
       confirmText="Rename"
       cancelText="Cancel"
       autoSelect={true}
       onConfirm={(value) => appCentralManager.renameNote(value)}
-      onCancel={dialogManager.closeRenameDialog}
-      onInput={(value) => dialogManager.setNewNoteNameForRename(value)}
+      onCancel={context.dialogManager.closeRenameDialog}
+      onInput={(value) => context.dialogManager.setNewNoteNameForRename(value)}
     />
 
     <ConfirmationDialog
-      show={dialogManager.showUnsavedChangesDialog}
+      show={context.dialogManager.showUnsavedChangesDialog}
       title="Unsaved Changes"
       message="You have unsaved changes. What would you like to do?"
       confirmText="Save and Exit"
       cancelText="Discard Changes"
       variant="default"
-      onConfirm={() => dialogManager.handleSaveAndExit(appCentralManager.saveAndExitNote)}
-      onCancel={() => dialogManager.handleDiscardAndExit(appCentralManager.exitEditMode)}
+      onConfirm={() => context.dialogManager.handleSaveAndExit(appCentralManager.saveAndExitNote)}
+      onCancel={() => context.dialogManager.handleDiscardAndExit(appCentralManager.exitEditMode)}
     />
   </div>
 </AppLayout>
