@@ -53,12 +53,12 @@ describe('searchManager', () => {
   });
 
   describe('search clearing functionality', () => {
-    it('should clear search and reset highlights flag', () => {
+    it('should clear search input and query', () => {
       searchManager.updateState({ searchInput: 'some query' });
 
       searchManager.clearSearch();
       expect(searchManager.searchInput).toBe('');
-      expect(searchManager.areHighlightsCleared).toBe(false);
+      expect(searchManager.query).toBe('');
     });
 
     it('should provide searchInput getter', () => {
@@ -67,10 +67,6 @@ describe('searchManager', () => {
       expect(searchManager.searchInput).toBe('test input');
     });
 
-    it('should provide areHighlightsCleared getter and setter', () => {
-      searchManager.areHighlightsCleared = true;
-      expect(searchManager.areHighlightsCleared).toBe(true);
-    });
 
     it('should handle search input coordination with highlight clearing', () => {
       const onHighlightsClear = vi.fn();
@@ -78,7 +74,6 @@ describe('searchManager', () => {
       searchManager.updateSearchInputWithEffects('new query', onHighlightsClear);
 
       expect(searchManager.searchInput).toBe('new query');
-      expect(searchManager.areHighlightsCleared).toBe(false);
       expect(onHighlightsClear).toHaveBeenCalledWith(false);
     });
 

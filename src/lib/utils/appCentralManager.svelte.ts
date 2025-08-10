@@ -18,7 +18,7 @@ const state = $state<CentralAppState>({
 });
 
 const isLoading = $derived(searchManager.isLoading);
-const areHighlightsCleared = $derived(searchManager.areHighlightsCleared);
+const areHighlightsCleared = $derived(contentManager.areHighlightsCleared);
 const filteredNotes = $derived(searchManager.filteredNotes);
 const query = $derived(searchManager.searchInput);
 
@@ -262,9 +262,9 @@ export const appCentralManager = {
     state.selectedIndex = -1;
     searchManager.updateState({
       filteredNotes: [],
-      isLoading: false,
-      areHighlightsCleared: false
+      isLoading: false
     });
+    contentManager.areHighlightsCleared = false;
     if (contentRequestController) {
       contentRequestController.abort();
       contentRequestController = null;

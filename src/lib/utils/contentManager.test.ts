@@ -11,7 +11,8 @@ vi.mock('./contentHighlighting.svelte', () => ({
     updateState: vi.fn(),
     highlighted: 'mocked highlighted content',
     scrollToFirstMatch: vi.fn(),
-    clearCache: vi.fn()
+    clearCache: vi.fn(),
+    areHighlightsCleared: false
   }
 }));
 
@@ -24,7 +25,6 @@ vi.mock('./focusManager.svelte', () => ({
 
 vi.mock('./searchManager.svelte', () => ({
   searchManager: {
-    areHighlightsCleared: false,
     searchImmediate: vi.fn().mockResolvedValue(['note1.md', 'note2.md'])
   }
 }));
@@ -83,11 +83,9 @@ describe('contentManager', () => {
 
   describe('highlight actions', () => {
     it('should clear highlights', async () => {
-      const { searchManager } = await import('./searchManager.svelte');
-
       contentManager.clearHighlights();
 
-      expect(searchManager.areHighlightsCleared).toBe(true);
+      expect(contentManager.areHighlightsCleared).toBe(true);
     });
 
     it('should scroll to first match', () => {

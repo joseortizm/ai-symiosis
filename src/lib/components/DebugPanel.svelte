@@ -1,6 +1,7 @@
 <script lang="ts">
 import { searchManager } from '../utils/searchManager.svelte';
 import { appCentralManager } from '../utils/appCentralManager.svelte';
+import { contentManager } from '../utils/contentManager.svelte';
 
 // Debug panel visibility and configuration
 let isVisible = $state(false);
@@ -126,7 +127,7 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>areHighlightsCleared:</strong>
-          <code>{searchManager.areHighlightsCleared}</code>
+          <code>{contentManager.areHighlightsCleared}</code>
         </div>
       </div>
       {/if}

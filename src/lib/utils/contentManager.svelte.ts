@@ -6,10 +6,12 @@ import { noteService } from '../services/noteService.svelte';
 
 interface ContentState {
   noteContent: string;
+  areHighlightsCleared: boolean;
 }
 
 const state = $state<ContentState>({
-  noteContent: ''
+  noteContent: '',
+  areHighlightsCleared: false
 });
 
 interface RefreshAfterSaveResult {
@@ -23,11 +25,12 @@ function setNoteContent(content: string): void {
 }
 
 function clearHighlights(): void {
-  searchManager.areHighlightsCleared = true;
+  state.areHighlightsCleared = true;
+  contentHighlighter.areHighlightsCleared = true;
 }
 
 function scrollToFirstMatch(): void {
-  if (focusManager.noteContentElement && !searchManager.areHighlightsCleared) {
+  if (focusManager.noteContentElement && !state.areHighlightsCleared) {
     setTimeout(() => {
       const firstMatch = focusManager.noteContentElement!.querySelector('.highlight');
       if (firstMatch) {
@@ -66,6 +69,14 @@ function updateHighlighterState(newState: {
   areHighlightsCleared?: boolean;
 }): void {
   contentHighlighter.updateState(newState);
+  if (newState.areHighlightsCleared !== undefined) {
+    state.areHighlightsCleared = newState.areHighlightsCleared;
+  }
+}
+
+function setHighlightsClearedState(cleared: boolean): void {
+  state.areHighlightsCleared = cleared;
+  contentHighlighter.areHighlightsCleared = cleared;
 }
 
 export const contentManager = {
@@ -78,6 +89,14 @@ export const contentManager = {
     return contentHighlighter.highlighted;
   },
 
+  get areHighlightsCleared(): boolean {
+    return state.areHighlightsCleared;
+  },
+
+  set areHighlightsCleared(value: boolean) {
+    setHighlightsClearedState(value);
+  },
+
   // Content actions
   setNoteContent,
   clearHighlights,
@@ -88,5 +107,6 @@ export const contentManager = {
   refreshAfterSave,
 
   // Integration helper for updating contentHighlighter state
-  updateHighlighterState
+  updateHighlighterState,
+  setHighlightsClearedState
 };

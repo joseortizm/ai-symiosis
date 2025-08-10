@@ -7,7 +7,6 @@ interface SearchState {
   searchTimeout: NodeJS.Timeout | undefined;
   requestController: AbortController | null;
   filteredNotes: string[];
-  areHighlightsCleared: boolean;
 }
 
 const state = $state<SearchState>({
@@ -16,8 +15,7 @@ const state = $state<SearchState>({
   isLoading: false,
   searchTimeout: undefined,
   requestController: null,
-  filteredNotes: [],
-  areHighlightsCleared: false
+  filteredNotes: []
 });
 
 async function performSearch(query: string): Promise<void> {
@@ -70,7 +68,6 @@ function updateSearchInputWithEffects(
   onHighlightsClear: (cleared: boolean) => void
 ): void {
   if (newInput.trim()) {
-    state.areHighlightsCleared = false;
     onHighlightsClear(false);
   }
 
@@ -82,7 +79,6 @@ function updateSearchInputWithEffects(
 function clearSearch(): void {
   state.searchInput = '';
   state.query = '';
-  state.areHighlightsCleared = false;
 }
 
 export const searchManager = {
@@ -110,13 +106,6 @@ export const searchManager = {
     return state.query;
   },
 
-  get areHighlightsCleared(): boolean {
-    return state.areHighlightsCleared;
-  },
-
-  set areHighlightsCleared(value: boolean) {
-    state.areHighlightsCleared = value;
-  },
 
   async searchImmediate(query: string): Promise<string[]> {
     await performSearch(query);
