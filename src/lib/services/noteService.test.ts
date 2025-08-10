@@ -182,7 +182,7 @@ describe('noteService', () => {
         return Promise.resolve();
       });
 
-      await noteService.create('test', mockSearchManager, mockDialogManager, vi.fn(), vi.fn());
+      await noteService.create('test');
 
       expect(loadingDuringOperation).toBe(true);
       expect(noteService.isLoading).toBe(false);

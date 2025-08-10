@@ -199,7 +199,7 @@ describe('appCentralManager Integration Tests', () => {
 
     it('should complete full note deletion workflow', async () => {
       const noteToDelete = 'existing-note.md';
-      const updatedNotes = []; // Note was deleted
+      const updatedNotes: string[] = []; // Note was deleted
 
       // Mock successful deletion
       mockNoteService.delete.mockResolvedValue({

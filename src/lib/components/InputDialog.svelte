@@ -27,7 +27,7 @@
     onInput
   }: Props = $props();
 
-  let inputElement = $state<HTMLElement | undefined>(undefined);
+  let inputElement = $state<HTMLInputElement | undefined>(undefined);
   let dialogElement = $state<HTMLElement | undefined>(undefined);
 
   function handleConfirm(): void {

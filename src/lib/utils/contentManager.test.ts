@@ -108,7 +108,7 @@ describe('contentManager', () => {
       const { noteService } = await import('../services/noteService.svelte');
       const noteName = 'test.md';
       const expectedContent = 'refreshed content';
-      noteService.getContent.mockResolvedValue(expectedContent);
+      (noteService.getContent as any).mockResolvedValue(expectedContent);
 
       const result = await contentManager.refreshContent(noteName);
 
@@ -121,7 +121,7 @@ describe('contentManager', () => {
       const { noteService } = await import('../services/noteService.svelte');
       const noteName = 'test.md';
       const error = new Error('Failed to load');
-      noteService.getContent.mockRejectedValue(error);
+      (noteService.getContent as any).mockRejectedValue(error);
 
       await expect(contentManager.refreshContent(noteName)).rejects.toThrow('Failed to load');
 
@@ -137,7 +137,7 @@ describe('contentManager', () => {
 
       // Mock noteService.getContent for the refresh
       const { noteService } = await import('../services/noteService.svelte');
-      noteService.getContent.mockResolvedValue(refreshedContent);
+      (noteService.getContent as any).mockResolvedValue(refreshedContent);
 
       const result = await contentManager.refreshAfterSave(noteName, searchInput);
 

@@ -21,7 +21,7 @@ let newNoteName = $state('');
 let newNoteNameForRename = $state('');
 
 let deleteKeyPressCount = $state(0);
-let deleteKeyResetTimeout: number | undefined = undefined;
+let deleteKeyResetTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 
 function openCreateDialog(query?: string, highlightedContent?: string): void {
   // Use provided parameters or fallback to context
