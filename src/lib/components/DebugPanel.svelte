@@ -2,40 +2,60 @@
 import { getContext } from 'svelte';
 import type { createSearchManager } from '../utils/searchManager.svelte';
 import type { createAppCoordinator } from '../utils/appCoordinator.svelte';
+import type { createEditorManager } from '../utils/editorManager.svelte';
+import type { createFocusManager } from '../utils/focusManager.svelte';
+import { noteService } from '../services/noteService.svelte';
+import { configService } from '../services/configService.svelte';
 
-const { searchManager, appCoordinator } = getContext<{
+const { searchManager, appCoordinator, editorManager, focusManager } = getContext<{
   searchManager: ReturnType<typeof createSearchManager>;
   appCoordinator: ReturnType<typeof createAppCoordinator>;
+  editorManager: ReturnType<typeof createEditorManager>;
+  focusManager: ReturnType<typeof createFocusManager>;
 }>('managers');
 
 const context = appCoordinator.context;
 
 // Debug panel visibility and configuration
 let isVisible = $state(false);
-let isEnabled = $state(true); // Always available in desktop app
+let isEnabled = $state(true);
 
 // Filter toggles for different sections
-let showAppCoordinatorState = $state(true);
-let showSearchManagerState = $state(true);
-let showContextState = $state(true);
-let showSearchFlow = $state(true);
-let showActions = $state(false);
+let showServices = $state(true);
+let showManagers = $state(true);
+let showAppCoordinator = $state(true);
+let showDialogs = $state(true);
+let showContent = $state(true);
 
 function togglePanel() {
   isVisible = !isVisible;
 }
 
-function formatArray(arr: string[]) {
-  if (arr.length === 0) return '[]';
-  if (arr.length <= 2) return JSON.stringify(arr);
-  return `[${JSON.stringify(arr[0])}, ${JSON.stringify(arr[1])}, ...] (${arr.length} total)`;
+function formatValue(value: any): string {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'string') return `"${value}"`;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    if (value.length <= 3) return JSON.stringify(value);
+    return `[${value.slice(0, 2).map(v => JSON.stringify(v)).join(', ')}, ...] (${value.length} total)`;
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 0) return '{}';
+    if (keys.length <= 3) return JSON.stringify(value);
+    return `{${keys.slice(0, 2).join(', ')}, ...} (${keys.length} keys)`;
+  }
+  return String(value);
 }
 
-
-// Keyboard shortcut support
+// Keyboard shortcut support - handle at capture phase for highest precedence
 function handleKeydown(event: KeyboardEvent) {
-  if (isEnabled && event.ctrlKey && event.shiftKey && event.code === 'KeyD') {
+  if (isEnabled && event.metaKey &&  event.altKey && event.key === 'd') {
     event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
     togglePanel();
   }
 }
@@ -46,7 +66,7 @@ function handleKeydown(event: KeyboardEvent) {
 <button
   class="debug-toggle"
   onclick={togglePanel}
-  title="Debug Panel (Ctrl+Shift+D)"
+  title="Debug Panel (Cmd+Alt+D)"
   class:active={isVisible}
 >
 </button>
@@ -65,160 +85,206 @@ function handleKeydown(event: KeyboardEvent) {
     <!-- Filter Controls -->
     <div class="debug-filters">
       <label class="filter-checkbox">
-        <input type="checkbox" bind:checked={showAppCoordinatorState} />
-        AppCoordinator State
+        <input type="checkbox" bind:checked={showServices} />
+        Services
       </label>
       <label class="filter-checkbox">
-        <input type="checkbox" bind:checked={showSearchManagerState} />
-        SearchManager State
+        <input type="checkbox" bind:checked={showManagers} />
+        Managers
       </label>
       <label class="filter-checkbox">
-        <input type="checkbox" bind:checked={showContextState} />
-        Context State
+        <input type="checkbox" bind:checked={showAppCoordinator} />
+        AppCoordinator
       </label>
       <label class="filter-checkbox">
-        <input type="checkbox" bind:checked={showSearchFlow} />
-        Search Flow Debug
+        <input type="checkbox" bind:checked={showDialogs} />
+        Dialogs
       </label>
       <label class="filter-checkbox">
-        <input type="checkbox" bind:checked={showActions} />
-        Debug Actions
+        <input type="checkbox" bind:checked={showContent} />
+        Content
       </label>
     </div>
 
     <div class="debug-content">
-      {#if showAppCoordinatorState}
+      {#if showServices}
       <div class="debug-section">
-        <h4>🎯 AppCoordinator State</h4>
-        <div class="debug-item">
-          <strong>filteredNotes:</strong>
-          <code>{formatArray(appCoordinator.filteredNotes)}</code>
+        <h4>🛠️ Services</h4>
+        <div class="debug-subsection">
+          <h5>NoteService</h5>
+          <div class="debug-item">
+            <strong>isLoading:</strong>
+            <code>{formatValue(noteService.isLoading)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>error:</strong>
+            <code>{formatValue(noteService.error)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>lastOperation:</strong>
+            <code>{formatValue(noteService.lastOperation)}</code>
+          </div>
         </div>
-        <div class="debug-item">
-          <strong>selectedNote:</strong>
-          <code>{JSON.stringify(appCoordinator.selectedNote)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>selectedIndex:</strong>
-          <code>{appCoordinator.selectedIndex}</code>
-        </div>
-        <div class="debug-item">
-          <strong>searchInput:</strong>
-          <code>{JSON.stringify(searchManager.searchInput)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>query:</strong>
-          <code>{JSON.stringify(appCoordinator.query)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isLoading:</strong>
-          <code>{appCoordinator.isLoading}</code>
+        <div class="debug-subsection">
+          <h5>ConfigService</h5>
+          <div class="debug-item">
+            <strong>isVisible:</strong>
+            <code>{formatValue(configService.isVisible)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isLoading:</strong>
+            <code>{formatValue(configService.isLoading)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>error:</strong>
+            <code>{formatValue(configService.error)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>content length:</strong>
+            <code>{formatValue(configService.content?.length || 0)} chars</code>
+          </div>
         </div>
       </div>
       {/if}
 
-      {#if showSearchManagerState}
+      {#if showManagers}
       <div class="debug-section">
-        <h4>🔍 SearchManager State</h4>
+        <h4>⚙️ Managers</h4>
+        <div class="debug-subsection">
+          <h5>SearchManager</h5>
+          <div class="debug-item">
+            <strong>searchInput:</strong>
+            <code>{formatValue(searchManager.searchInput)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>filteredNotes:</strong>
+            <code>{formatValue(searchManager.filteredNotes)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isLoading:</strong>
+            <code>{formatValue(searchManager.isLoading)}</code>
+          </div>
+        </div>
+        <div class="debug-subsection">
+          <h5>EditorManager</h5>
+          <div class="debug-item">
+            <strong>isEditMode:</strong>
+            <code>{formatValue(editorManager.isEditMode)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isDirty:</strong>
+            <code>{formatValue(editorManager.isDirty)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>nearestHeaderText:</strong>
+            <code>{formatValue(editorManager.nearestHeaderText)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>editContent length:</strong>
+            <code>{formatValue(editorManager.editContent?.length || 0)} chars</code>
+          </div>
+        </div>
+        <div class="debug-subsection">
+          <h5>FocusManager</h5>
+          <div class="debug-item">
+            <strong>isSearchInputFocused:</strong>
+            <code>{formatValue(focusManager.isSearchInputFocused)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isNoteContentFocused:</strong>
+            <code>{formatValue(focusManager.isNoteContentFocused)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>searchElement:</strong>
+            <code>{formatValue(focusManager.searchElement ? 'HTMLInputElement' : 'null')}</code>
+          </div>
+          <div class="debug-item">
+            <strong>noteContentElement:</strong>
+            <code>{formatValue(focusManager.noteContentElement ? 'HTMLElement' : 'null')}</code>
+          </div>
+          <div class="debug-item">
+            <strong>noteListElement:</strong>
+            <code>{formatValue(focusManager.noteListElement ? 'HTMLElement' : 'null')}</code>
+          </div>
+        </div>
+      </div>
+      {/if}
+
+      {#if showAppCoordinator}
+      <div class="debug-section">
+        <h4>🎯 AppCoordinator</h4>
         <div class="debug-item">
-          <strong>filteredNotes:</strong>
-          <code>{formatArray(searchManager.filteredNotes)}</code>
+          <strong>query:</strong>
+          <code>{formatValue(appCoordinator.query)}</code>
         </div>
         <div class="debug-item">
-          <strong>searchInput:</strong>
-          <code>{JSON.stringify(searchManager.searchInput)}</code>
+          <strong>selectedNote:</strong>
+          <code>{formatValue(appCoordinator.selectedNote)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>selectedIndex:</strong>
+          <code>{formatValue(appCoordinator.selectedIndex)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>filteredNotes:</strong>
+          <code>{formatValue(appCoordinator.filteredNotes)}</code>
         </div>
         <div class="debug-item">
           <strong>isLoading:</strong>
-          <code>{searchManager.isLoading}</code>
+          <code>{formatValue(appCoordinator.isLoading)}</code>
+        </div>
+      </div>
+      {/if}
+
+      {#if showDialogs}
+      <div class="debug-section">
+        <h4>💬 Dialogs</h4>
+        <div class="debug-item">
+          <strong>showCreateDialog:</strong>
+          <code>{formatValue(context.dialogManager.showCreateDialog)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>showRenameDialog:</strong>
+          <code>{formatValue(context.dialogManager.showRenameDialog)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>showDeleteDialog:</strong>
+          <code>{formatValue(context.dialogManager.showDeleteDialog)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>showUnsavedChangesDialog:</strong>
+          <code>{formatValue(context.dialogManager.showUnsavedChangesDialog)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>newNoteName:</strong>
+          <code>{formatValue(context.dialogManager.newNoteName)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>newNoteNameForRename:</strong>
+          <code>{formatValue(context.dialogManager.newNoteNameForRename)}</code>
+        </div>
+        <div class="debug-item">
+          <strong>deleteKeyPressCount:</strong>
+          <code>{formatValue(context.dialogManager.deleteKeyPressCount)}</code>
+        </div>
+      </div>
+      {/if}
+
+      {#if showContent}
+      <div class="debug-section">
+        <h4>📄 Content</h4>
+        <div class="debug-item">
+          <strong>noteContent length:</strong>
+          <code>{formatValue(context.contentManager.noteContent?.length || 0)} chars</code>
+        </div>
+        <div class="debug-item">
+          <strong>highlightedContent length:</strong>
+          <code>{formatValue(context.contentManager.highlightedContent?.length || 0)} chars</code>
         </div>
         <div class="debug-item">
           <strong>areHighlightsCleared:</strong>
-          <code>{context.contentManager.areHighlightsCleared}</code>
+          <code>{formatValue(context.contentManager.areHighlightsCleared)}</code>
         </div>
-      </div>
-      {/if}
-
-      {#if showContextState}
-      <div class="debug-section">
-        <h4>🎪 Context State (what components see)</h4>
-        <div class="debug-item">
-          <strong>filteredNotes:</strong>
-          <code>{formatArray(appCoordinator.filteredNotes)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>selectedNote:</strong>
-          <code>{JSON.stringify(appCoordinator.selectedNote)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>selectedIndex:</strong>
-          <code>{appCoordinator.selectedIndex}</code>
-        </div>
-        <div class="debug-item">
-          <strong>searchInput:</strong>
-          <code>{JSON.stringify(searchManager.searchInput)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isLoading:</strong>
-          <code>{appCoordinator.isLoading}</code>
-        </div>
-      </div>
-      {/if}
-
-      {#if showSearchFlow}
-      <div class="debug-section">
-        <h4>🔧 Search Flow Debug</h4>
-        <div class="debug-item">
-          <strong>Search Sync Check:</strong>
-          <small>appCentral.searchInput === searchMgr.searchInput?</small>
-          <code>{searchManager.searchInput === searchManager.searchInput ? '✅ MATCH' : '❌ MISMATCH'}</code>
-        </div>
-        <div class="debug-item">
-          <strong>Notes Sync Check:</strong>
-          <small>appCoordinator.filteredNotes === searchMgr.filteredNotes?</small>
-          <code>{appCoordinator.filteredNotes.length === searchManager.filteredNotes.length ? '✅ MATCH' : '❌ MISMATCH'} ({appCoordinator.filteredNotes.length} vs {searchManager.filteredNotes.length})</code>
-        </div>
-        <div class="debug-item">
-          <strong>Reactive Effects Active?</strong>
-          <small>Check if effects are running</small>
-          <code>✅ Working (search input updates)</code>
-        </div>
-      </div>
-      {/if}
-
-      {#if showActions}
-      <div class="debug-section">
-        <h4>🧪 Debug Actions</h4>
-        <button onclick={() => {
-          console.log('🔍 Manual searchManager.searchImmediate("")');
-          searchManager.searchImmediate('');
-        }}>
-          Trigger searchManager.searchImmediate('')
-        </button>
-        <button onclick={() => {
-          console.log('🔍 Manual searchManager.searchImmediate("test")');
-          searchManager.searchImmediate('test');
-        }}>
-          Trigger searchManager.searchImmediate('test')
-        </button>
-        <button onclick={() => {
-          console.log('📝 Setting searchManager.searchInput = "debug"');
-          searchManager.searchInput = 'debug';
-        }}>
-          Set searchManager.searchInput = 'debug'
-        </button>
-        <button onclick={() => {
-          console.log('📝 Setting searchManager.searchInput = "direct"');
-          searchManager.searchInput = 'direct';
-        }}>
-          Set searchManager.searchInput = 'direct'
-        </button>
-        <button onclick={() => {
-          console.log('🔄 Manual appCoordinator.initialize()');
-          appCoordinator.initialize().then(() => console.log('✅ Initialize complete'));
-        }}>
-          Re-run initialize()
-        </button>
       </div>
       {/if}
     </div>
@@ -357,6 +423,24 @@ function handleKeydown(event: KeyboardEvent) {
     font-weight: bold;
   }
 
+  .debug-subsection {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #444;
+  }
+
+  .debug-subsection:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .debug-subsection h5 {
+    margin: 0 0 8px 0;
+    color: #81C784;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
   .debug-item {
     margin-bottom: 8px;
     line-height: 1.4;
@@ -376,23 +460,4 @@ function handleKeydown(event: KeyboardEvent) {
     word-break: break-all;
   }
 
-  .debug-item small {
-    color: #888;
-    margin-left: 8px;
-  }
-
-  .debug-section button {
-    background: #2196F3;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    margin: 4px 4px 4px 0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-  }
-
-  .debug-section button:hover {
-    background: #1976D2;
-  }
 </style>

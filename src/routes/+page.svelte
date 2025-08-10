@@ -8,6 +8,7 @@ import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
 import InputDialog from "../lib/components/InputDialog.svelte";
 import DeleteDialog from "../lib/components/DeleteDialog.svelte";
 import SettingsPane from "../lib/components/SettingsPane.svelte";
+import DebugPanel from "../lib/components/DebugPanel.svelte";
 import { createKeyboardHandler } from '../lib/keyboardHandler';
 import { createAppCoordinator } from '../lib/utils/appCoordinator.svelte';
 import { createSearchManager } from '../lib/utils/searchManager.svelte';
@@ -122,4 +123,6 @@ onMount(() => {
     />
   </div>
 </AppLayout>
+
+<DebugPanel />
 
