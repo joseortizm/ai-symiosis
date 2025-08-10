@@ -18,6 +18,8 @@ const state = $state<SearchState>({
   filteredNotes: []
 });
 
+let onHighlightsClearCallback: ((cleared: boolean) => void) | null = null;
+
 async function performSearch(query: string): Promise<void> {
   if (state.requestController) {
     state.requestController.abort();
@@ -99,7 +101,11 @@ export const searchManager = {
   },
 
   set searchInput(value: string) {
-    updateSearchInputWithEffects(value, () => {});
+    updateSearchInputWithEffects(value, onHighlightsClearCallback || (() => {}));
+  },
+
+  setHighlightsClearCallback(callback: (cleared: boolean) => void): void {
+    onHighlightsClearCallback = callback;
   },
 
   get query(): string {

@@ -79,6 +79,10 @@ function setHighlightsClearedState(cleared: boolean): void {
   contentHighlighter.areHighlightsCleared = cleared;
 }
 
+searchManager.setHighlightsClearCallback((cleared: boolean) => {
+  setHighlightsClearedState(cleared);
+});
+
 export const contentManager = {
   // Reactive getters
   get noteContent(): string {

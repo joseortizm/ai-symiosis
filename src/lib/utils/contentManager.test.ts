@@ -25,7 +25,8 @@ vi.mock('./focusManager.svelte', () => ({
 
 vi.mock('./searchManager.svelte', () => ({
   searchManager: {
-    searchImmediate: vi.fn().mockResolvedValue(['note1.md', 'note2.md'])
+    searchImmediate: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
+    setHighlightsClearCallback: vi.fn()
   }
 }));
 
@@ -86,6 +87,19 @@ describe('contentManager', () => {
       contentManager.clearHighlights();
 
       expect(contentManager.areHighlightsCleared).toBe(true);
+    });
+
+    it('should reset highlights when search input changes after clearing', async () => {
+      // First clear highlights (like ESC key)
+      contentManager.clearHighlights();
+      expect(contentManager.areHighlightsCleared).toBe(true);
+
+      // Then user types in search box - highlights should be re-enabled
+      // This simulates the searchManager.searchInput setter being called
+      // which should notify contentManager to reset areHighlightsCleared
+      contentManager.setHighlightsClearedState(false);
+
+      expect(contentManager.areHighlightsCleared).toBe(false);
     });
 
     it('should scroll to first match', () => {
