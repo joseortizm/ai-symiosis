@@ -37,9 +37,6 @@ function scrollToFirstMatch(): void {
   }
 }
 
-async function getNoteContent(noteName: string): Promise<string> {
-  return await noteService.getContent(noteName);
-}
 
 async function refreshContent(noteName: string): Promise<string> {
   const content = await noteService.getContent(noteName);
@@ -85,9 +82,6 @@ export const contentManager = {
   setNoteContent,
   clearHighlights,
   scrollToFirstMatch,
-
-  // Content access
-  getNoteContent,
 
   // Content refresh workflows
   refreshContent,

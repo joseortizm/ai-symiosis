@@ -5,11 +5,20 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }));
 
+const mockFocusManager = {
+  focusSearch: vi.fn()
+};
+
+vi.mock('./focusManager.svelte', () => ({
+  focusManager: mockFocusManager
+}));
+
 const { dialogManager } = await import('./dialogManager.svelte');
 
 describe('dialogManager', () => {
   beforeEach(() => {
     resetAllMocks();
+    mockFocusManager.focusSearch.mockClear();
     // Reset dialog states
     if (dialogManager.showCreateDialog) dialogManager.closeCreateDialog();
     if (dialogManager.showRenameDialog) dialogManager.closeRenameDialog();

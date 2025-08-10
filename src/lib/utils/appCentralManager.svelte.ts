@@ -82,7 +82,7 @@ function setupReactiveEffects() {
 
     (async () => {
       try {
-        const content = await contentManager.getNoteContent(note);
+        const content = await noteService.getContent(note);
 
         if (!currentController.signal.aborted) {
           contentManager.setNoteContent(content);
@@ -281,7 +281,6 @@ export const appCentralManager = {
       filteredNotes: filteredNotes,
       selectedNote: selectedNote,
       noteContentElement: focusManager.noteContentElement,
-      searchElement: focusManager.searchElement,
       areHighlightsCleared: areHighlightsCleared,
       isEditorDirty: editorManager.isDirty,
     };

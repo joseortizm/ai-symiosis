@@ -1,4 +1,5 @@
 import { searchManager } from './utils/searchManager.svelte';
+import { focusManager } from './utils/focusManager.svelte';
 
 export interface AppState {
   isSearchInputFocused: boolean;
@@ -8,7 +9,6 @@ export interface AppState {
   filteredNotes: string[];
   selectedNote: string | null;
   noteContentElement: HTMLElement | null;
-  searchElement: HTMLInputElement | null;
   areHighlightsCleared: boolean;
   isEditorDirty: boolean;
 }
@@ -56,7 +56,7 @@ const actionRegistry: ActionRegistry = {
       actions.setSelectedIndex(newIndex);
     },
     focusSearch: ({ state }: ActionContext) => {
-      state.searchElement?.focus();
+      focusManager.focusSearch();
     },
   },
 

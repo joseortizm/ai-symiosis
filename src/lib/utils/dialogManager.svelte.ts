@@ -1,15 +1,15 @@
+import { focusManager } from './focusManager.svelte';
+
 interface DialogContext {
   selectedNote: string | null;
   query: string;
   highlightedContent: string;
-  searchElement: HTMLInputElement | null;
 }
 
 const context = $state<DialogContext>({
   selectedNote: null,
   query: '',
-  highlightedContent: '',
-  searchElement: null
+  highlightedContent: ''
 });
 
 let showCreateDialog = $state(false);
@@ -40,7 +40,7 @@ function openCreateDialog(query?: string, highlightedContent?: string): void {
 function closeCreateDialog(): void {
   showCreateDialog = false;
   newNoteName = '';
-  context.searchElement?.focus();
+  focusManager.focusSearch();
 }
 
 function openRenameDialog(selectedNote?: string): void {
@@ -56,7 +56,7 @@ function openRenameDialog(selectedNote?: string): void {
 function closeRenameDialog(): void {
   showRenameDialog = false;
   newNoteNameForRename = '';
-  context.searchElement?.focus();
+  focusManager.focusSearch();
 }
 
 function openDeleteDialog(): void {
@@ -75,7 +75,7 @@ function closeDeleteDialog(): void {
     clearTimeout(deleteKeyResetTimeout);
     deleteKeyResetTimeout = undefined;
   }
-  context.searchElement?.focus();
+  focusManager.focusSearch();
 }
 
 function handleDeleteKeyPress(onConfirmDelete: () => void): void {
@@ -100,7 +100,7 @@ function openUnsavedChangesDialog(): void {
 
 function closeUnsavedChangesDialog(): void {
   showUnsavedChangesDialog = false;
-  context.searchElement?.focus();
+  focusManager.focusSearch();
 }
 
 function showExitEditDialog(): void {
