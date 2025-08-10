@@ -1,7 +1,12 @@
 <script lang="ts">
 import { getContext } from 'svelte';
+import type { createSearchManager } from '../utils/searchManager.svelte';
+import type { createAppCoordinator } from '../utils/appCoordinator.svelte';
 
-const { searchManager, appCoordinator } = getContext('managers');
+const { searchManager, appCoordinator } = getContext<{
+  searchManager: ReturnType<typeof createSearchManager>;
+  appCoordinator: ReturnType<typeof createAppCoordinator>;
+}>('managers');
 
 const context = appCoordinator.context;
 
@@ -209,7 +214,7 @@ function handleKeydown(event: KeyboardEvent) {
           Set searchManager.updateState('direct')
         </button>
         <button onclick={() => {
-          console.log('🔄 Manual appCoordinator.initialize()');}
+          console.log('🔄 Manual appCoordinator.initialize()');
           appCoordinator.initialize().then(() => console.log('✅ Initialize complete'));
         }}>
           Re-run initialize()

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const { searchManager, appCoordinator } = getContext('managers');
+  const { searchManager, appCoordinator } = getContext('managers') as any;
 
   let searchElement: HTMLInputElement;
 

@@ -23,7 +23,7 @@ describe('configService', () => {
 
       const onFocus = vi.fn();
 
-      await configService.open(onFocus);
+      await configService.open();
 
       expect(mockInvoke).toHaveBeenCalledWith('get_config_content');
       expect(configService.content).toBe(configContent);
@@ -211,7 +211,7 @@ describe('configService', () => {
       mockInvoke.mockResolvedValueOnce(configContent);
       const mockFocusFunction = vi.fn();
 
-      await configService.openPane(mockFocusFunction);
+      await configService.openPane();
 
       expect(mockInvoke).toHaveBeenCalledWith('get_config_content');
       expect(configService.content).toBe(configContent);

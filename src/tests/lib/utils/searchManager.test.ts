@@ -82,14 +82,15 @@ describe('searchManager', () => {
 
     it('should actually trigger search when using updateSearchInputWithEffects', async () => {
       const notes = ['search-result.md', 'another-note.md'];
-      mockInvoke.mockResolvedValueOnce(notes);
+      mockInvoke.mockResolvedValue(notes);
       const onHighlightsClear = vi.fn();
 
       // CRITICAL: This test verifies search execution actually happens (catches state pre-setting bugs)
       searchManager.updateSearchInputWithEffects('test search', onHighlightsClear);
 
-      // Wait for debounce to trigger
+      // Wait for debounce to trigger and async operation to complete
       await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => process.nextTick(resolve));
 
       // The critical assertion: verify search was actually performed
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test search' });

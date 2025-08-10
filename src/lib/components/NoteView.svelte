@@ -4,7 +4,7 @@
   import 'highlight.js/styles/atom-one-dark.css';
   import { getContext } from 'svelte';
 
-  const { appCoordinator } = getContext('managers');
+  const { appCoordinator } = getContext('managers') as any;
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
 

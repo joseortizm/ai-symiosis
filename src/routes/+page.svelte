@@ -30,7 +30,12 @@ const appCoordinator = createAppCoordinator({
 const context = appCoordinator.context;
 
 // Set context for child components
-setContext('managers', {
+setContext<{
+  searchManager: typeof searchManager;
+  editorManager: typeof editorManager;
+  focusManager: typeof focusManager;
+  appCoordinator: typeof appCoordinator;
+}>('managers', {
   searchManager,
   editorManager,
   focusManager,
