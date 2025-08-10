@@ -21,9 +21,7 @@ describe('searchManager', () => {
       const notes = ['note1.md', 'note2.md'];
       mockInvoke.mockResolvedValueOnce(notes);
 
-      searchManager.updateState({
-        searchInput: 'test query'
-      });
+      searchManager.searchInput = 'test query';
 
       expect(searchManager.isLoading).toBe(false);
 
@@ -47,7 +45,7 @@ describe('searchManager', () => {
 
     it('should abort ongoing operations', () => {
       // Test the public interface behavior rather than internal implementation
-      searchManager.updateState({ searchInput: 'test' });
+      searchManager.searchInput = 'test';
 
       // Verify abort works without errors and resets loading state
       expect(() => searchManager.abort()).not.toThrow();
@@ -57,7 +55,7 @@ describe('searchManager', () => {
 
   describe('search clearing functionality', () => {
     it('should clear search input and query', () => {
-      searchManager.updateState({ searchInput: 'some query' });
+      searchManager.searchInput = 'some query';
 
       searchManager.clearSearch();
       expect(searchManager.searchInput).toBe('');
@@ -65,7 +63,7 @@ describe('searchManager', () => {
     });
 
     it('should provide searchInput getter', () => {
-      searchManager.updateState({ searchInput: 'test input' });
+      searchManager.searchInput = 'test input';
 
       expect(searchManager.searchInput).toBe('test input');
     });

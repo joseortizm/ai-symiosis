@@ -11,7 +11,8 @@ describe('contentManager (factory-based - TDD)', () => {
 
     mockDeps = {
       contentHighlighter: {
-        updateState: vi.fn(),
+        setContent: vi.fn(),
+        updateHighlighterState: vi.fn(),
         highlighted: 'mocked highlighted content',
         areHighlightsCleared: false
       },
@@ -47,9 +48,7 @@ describe('contentManager (factory-based - TDD)', () => {
     const testContent = 'Test content';
     contentManager.setNoteContent(testContent);
 
-    expect(mockDeps.contentHighlighter.updateState).toHaveBeenCalledWith({
-      content: testContent
-    });
+    expect(mockDeps.contentHighlighter.setContent).toHaveBeenCalledWith(testContent);
   });
 
   it('should use injected noteService for content refresh', async () => {

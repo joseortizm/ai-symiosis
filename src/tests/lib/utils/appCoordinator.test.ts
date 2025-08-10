@@ -68,9 +68,7 @@ describe('appCoordinator', () => {
       expect(appCoordinator.selectedIndex).toBe(-1);
 
       // Simulate notes being loaded via searchManager
-      searchManager.updateState({
-        filteredNotes: ['note1.md', 'note2.md', 'note3.md']
-      });
+      searchManager.setFilteredNotes(['note1.md', 'note2.md', 'note3.md']);
 
       // The derived selectedNote should return the first note
       expect(appCoordinator.selectedNote).toBe('note1.md');
@@ -84,7 +82,7 @@ describe('appCoordinator', () => {
       appCoordinator.resetState();
 
       // Ensure no notes
-      searchManager.updateState({ filteredNotes: [] });
+      searchManager.setFilteredNotes([]);
 
       // selectedNote should be null (not a function)
       expect(appCoordinator.selectedNote).toBe(null);
@@ -94,14 +92,12 @@ describe('appCoordinator', () => {
 
     it('should reset selection when notes become empty', () => {
       // Start with notes
-      searchManager.updateState({
-        filteredNotes: ['note1.md', 'note2.md']
-      });
+      searchManager.setFilteredNotes(['note1.md', 'note2.md']);
       appCoordinator.setSelectedIndex(1);
       expect(appCoordinator.selectedNote).toBe('note2.md');
 
       // Clear notes
-      searchManager.updateState({ filteredNotes: [] });
+      searchManager.setFilteredNotes([]);
 
       // Should reset selection (selectedNote should be null with empty notes)
       expect(appCoordinator.selectedNote).toBe(null);

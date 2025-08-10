@@ -13,7 +13,8 @@ vi.mock('@tauri-apps/api/event', () => ({
 // Mock all managers and services
 const mockSearchManager = {
   searchImmediate: vi.fn(),
-  updateState: vi.fn(),
+  setSearchInput: vi.fn(),
+  setFilteredNotes: vi.fn(),
   searchInput: '',
   filteredNotes: ['existing-note.md'],
   isLoading: false,
@@ -109,7 +110,8 @@ vi.mock('../../../lib/utils/contentManager.svelte', () => ({
 
 vi.mock('../../../lib/utils/contentHighlighting.svelte', () => ({
   contentHighlighter: {
-    updateState: vi.fn(),
+    setSearchInput: vi.fn(),
+  setFilteredNotes: vi.fn(),
     highlighted: 'mocked highlighted content',
     areHighlightsCleared: false
   }

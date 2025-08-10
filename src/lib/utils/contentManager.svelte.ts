@@ -2,7 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 
 interface ContentManagerDeps {
   contentHighlighter: {
-    updateState: (state: any) => void;
+    setContent: (content: string) => void;
+    updateHighlighterState: (state: { query?: string; areHighlightsCleared?: boolean }) => void;
     highlighted: string;
     areHighlightsCleared: boolean;
   };
@@ -33,7 +34,7 @@ export function createContentManager(deps: ContentManagerDeps) {
 
   function setNoteContent(content: string): void {
     state.noteContent = content;
-    deps.contentHighlighter.updateState({ content });
+    deps.contentHighlighter.setContent(content);
   }
 
   function clearHighlights(): void {
@@ -71,11 +72,10 @@ export function createContentManager(deps: ContentManagerDeps) {
   }
 
   function updateHighlighterState(newState: {
-    content?: string;
     query?: string;
     areHighlightsCleared?: boolean;
   }): void {
-    deps.contentHighlighter.updateState(newState);
+    deps.contentHighlighter.updateHighlighterState(newState);
     if (newState.areHighlightsCleared !== undefined) {
       state.areHighlightsCleared = newState.areHighlightsCleared;
     }

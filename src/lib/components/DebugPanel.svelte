@@ -208,10 +208,10 @@ function handleKeydown(event: KeyboardEvent) {
           Set searchManager.searchInput = 'debug'
         </button>
         <button onclick={() => {
-          console.log('📝 Setting searchManager.updateState({searchInput: "direct"})');
-          searchManager.updateState({searchInput: 'direct'});
+          console.log('📝 Setting searchManager.searchInput = "direct"');
+          searchManager.searchInput = 'direct';
         }}>
-          Set searchManager.updateState('direct')
+          Set searchManager.searchInput = 'direct'
         </button>
         <button onclick={() => {
           console.log('🔄 Manual appCoordinator.initialize()');

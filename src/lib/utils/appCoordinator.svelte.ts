@@ -205,7 +205,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps) {
     if (result.success) {
       try {
         const refreshResult = await contentManager.refreshAfterSave(selectedNote, searchManager.searchInput);
-        searchManager.updateState({ filteredNotes: refreshResult.searchResults });
+        searchManager.setFilteredNotes(refreshResult.searchResults);
       } catch (e) {
         console.error("Failed to refresh after save:", e);
       }
@@ -271,16 +271,13 @@ export function createAppCoordinator(deps: AppCoordinatorDeps) {
     // State setters
 
     updateFilteredNotes(notes: string[]): void {
-      searchManager.updateState({ filteredNotes: notes });
+      searchManager.setFilteredNotes(notes);
     },
 
     resetState(): void {
       searchManager.searchInput = '';
       state.selectedIndex = -1;
-      searchManager.updateState({
-        filteredNotes: [],
-        isLoading: false
-      });
+      searchManager.setFilteredNotes([]);
       contentManager.areHighlightsCleared = false;
       if (contentRequestController) {
         contentRequestController.abort();

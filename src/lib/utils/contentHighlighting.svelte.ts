@@ -47,10 +47,15 @@ const highlighted = $derived(() => {
 });
 
 export const contentHighlighter = {
-  updateState(newState: { content?: string; query?: string; areHighlightsCleared?: boolean }): void {
-    if (newState.content !== undefined) {
-      state.content = newState.content;
-    }
+  setContent(content: string): void {
+    state.content = content;
+  },
+
+  setQuery(query: string): void {
+    state.query = query;
+  },
+
+  updateHighlighterState(newState: { query?: string; areHighlightsCleared?: boolean }): void {
     if (newState.query !== undefined) {
       state.query = newState.query;
     }
@@ -61,6 +66,14 @@ export const contentHighlighter = {
 
   get highlighted(): string {
     return highlighted();
+  },
+
+  get content(): string {
+    return state.content;
+  },
+
+  get query(): string {
+    return state.query;
   },
 
   get areHighlightsCleared(): boolean {

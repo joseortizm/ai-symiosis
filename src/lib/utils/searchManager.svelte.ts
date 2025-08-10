@@ -50,20 +50,22 @@ export function createSearchManager() {
     }
   }
 
-  function updateState(newState: Partial<SearchState>): void {
-    if (newState.searchInput !== undefined && newState.searchInput !== state.searchInput) {
+  function setSearchInput(value: string): void {
+    if (value !== state.searchInput) {
       clearTimeout(state.searchTimeout);
       state.requestController?.abort();
 
-      Object.assign(state, newState);
+      state.searchInput = value;
 
       state.searchTimeout = setTimeout(async () => {
         state.query = state.searchInput;
         await performSearch(state.searchInput);
       }, 100);
-    } else {
-      Object.assign(state, newState);
     }
+  }
+
+  function setFilteredNotes(notes: string[]): void {
+    state.filteredNotes = notes;
   }
 
   function updateSearchInputWithEffects(
@@ -74,9 +76,7 @@ export function createSearchManager() {
       onHighlightsClear(false);
     }
 
-    updateState({
-      searchInput: newInput
-    });
+    setSearchInput(newInput);
   }
 
   function clearSearch(): void {
@@ -85,7 +85,8 @@ export function createSearchManager() {
   }
 
   return {
-    updateState,
+    setSearchInput,
+    setFilteredNotes,
     clearSearch,
     updateSearchInputWithEffects,
 

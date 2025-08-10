@@ -121,10 +121,6 @@ export function createDialogManager(deps: DialogManagerDeps) {
   }
 
   return {
-    updateState(newState: Partial<DialogContext>): void {
-      Object.assign(context, newState);
-    },
-
     openCreateDialog,
     closeCreateDialog,
     openRenameDialog,

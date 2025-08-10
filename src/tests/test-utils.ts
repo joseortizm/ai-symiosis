@@ -4,7 +4,8 @@ export const mockInvoke = vi.fn();
 
 export const mockSearchManager = {
   searchImmediate: vi.fn().mockResolvedValue([]),
-  updateState: vi.fn(),
+  setSearchInput: vi.fn(),
+  setFilteredNotes: vi.fn(),
 };
 
 export const mockDialogManager = {
