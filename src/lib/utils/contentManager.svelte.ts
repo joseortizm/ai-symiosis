@@ -1,12 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getHighlightedContent } from './contentHighlighting.svelte';
 
 interface ContentManagerDeps {
-  contentHighlighter: {
-    setContent: (content: string) => void;
-    updateHighlighterState: (state: { query?: string; areHighlightsCleared?: boolean }) => void;
-    highlighted: string;
-    areHighlightsCleared: boolean;
-  };
   noteService: {
     getContent: (noteName: string) => Promise<string>;
   };
@@ -35,14 +30,20 @@ export function createContentManager(deps: ContentManagerDeps) {
     noteContent: ''
   });
 
+  const highlightedContent = $derived(
+    getHighlightedContent(
+      state.noteContent,
+      deps.searchManager.query,
+      deps.searchManager.areHighlightsCleared
+    )
+  );
+
   function setNoteContent(content: string): void {
     state.noteContent = content;
-    deps.contentHighlighter.setContent(content);
   }
 
   function clearHighlights(): void {
     deps.searchManager.clearHighlights();
-    deps.contentHighlighter.areHighlightsCleared = true;
   }
 
   function scrollToFirstMatch(): void {
@@ -78,17 +79,10 @@ export function createContentManager(deps: ContentManagerDeps) {
     query?: string;
     areHighlightsCleared?: boolean;
   }): void {
-    // Use searchManager query if none provided
-    const actualQuery = newState.query !== undefined ? newState.query : deps.searchManager.query;
-    deps.contentHighlighter.updateHighlighterState({
-      query: actualQuery,
-      areHighlightsCleared: newState.areHighlightsCleared
-    });
   }
 
   function setHighlightsClearedState(cleared: boolean): void {
     deps.searchManager.areHighlightsCleared = cleared;
-    deps.contentHighlighter.areHighlightsCleared = cleared;
   }
 
   deps.searchManager.setHighlightsClearCallback((cleared: boolean) => {
@@ -101,7 +95,7 @@ export function createContentManager(deps: ContentManagerDeps) {
     },
 
     get highlightedContent(): string {
-      return deps.contentHighlighter.highlighted;
+      return highlightedContent;
     },
 
     get areHighlightsCleared(): boolean {

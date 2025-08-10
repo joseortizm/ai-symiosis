@@ -10,17 +10,11 @@ describe('contentManager (factory-based - TDD)', () => {
     resetAllMocks();
 
     mockDeps = {
-      contentHighlighter: {
-        setContent: vi.fn(),
-        updateHighlighterState: vi.fn(),
-        highlighted: 'mocked highlighted content',
-        areHighlightsCleared: false
-      },
       searchManager: {
         areHighlightsCleared: false,
         clearHighlights: vi.fn(),
         setHighlightsClearCallback: vi.fn(),
-        query: ''
+        query: 'test query'
       },
       noteService: {
         getContent: vi.fn().mockResolvedValue('mock note content')
@@ -47,13 +41,13 @@ describe('contentManager (factory-based - TDD)', () => {
     expect(typeof manager.refreshContent).toBe('function');
   });
 
-  it('should use injected contentHighlighter', () => {
+  it('should set note content correctly', () => {
     if (!contentManager) return; // Skip if factory not implemented yet
 
     const testContent = 'Test content';
     contentManager.setNoteContent(testContent);
 
-    expect(mockDeps.contentHighlighter.setContent).toHaveBeenCalledWith(testContent);
+    expect(contentManager.noteContent).toBe(testContent);
   });
 
   it('should use injected noteService for content refresh', async () => {

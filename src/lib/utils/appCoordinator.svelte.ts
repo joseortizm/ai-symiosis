@@ -5,7 +5,6 @@ import { createDialogManager } from './dialogManager.svelte';
 import { createContentManager } from './contentManager.svelte';
 import { noteService } from '../services/noteService.svelte';
 import { configService } from '../services/configService.svelte';
-import { contentHighlighter } from './contentHighlighting.svelte';
 
 interface CentralAppState {
   selectedIndex: number;
@@ -29,7 +28,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps) {
   });
 
   const contentManager = createContentManager({
-    contentHighlighter,
     noteService,
     searchManager,
     getNoteContentElement: () => focusManager.noteContentElement,

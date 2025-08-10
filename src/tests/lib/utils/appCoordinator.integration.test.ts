@@ -113,12 +113,8 @@ vi.mock('../../../lib/utils/contentManager.svelte', () => ({
 }));
 
 vi.mock('../../../lib/utils/contentHighlighting.svelte', () => ({
-  contentHighlighter: {
-    setSearchInput: vi.fn(),
-  setFilteredNotes: vi.fn(),
-    highlighted: 'mocked highlighted content',
-    areHighlightsCleared: false
-  }
+  getHighlightedContent: vi.fn(() => 'mocked highlighted content'),
+  clearHighlightCache: vi.fn()
 }));
 
 describe('appCoordinator Integration Tests', () => {
