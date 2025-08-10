@@ -6,6 +6,10 @@ export const mockSearchManager = {
   searchImmediate: vi.fn().mockResolvedValue([]),
   setSearchInput: vi.fn(),
   setFilteredNotes: vi.fn(),
+  areHighlightsCleared: false,
+  clearHighlights: vi.fn(),
+  setHighlightsClearCallback: vi.fn(),
+  query: ''
 };
 
 export const mockDialogManager = {

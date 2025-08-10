@@ -7,6 +7,7 @@ interface SearchState {
   searchTimeout: NodeJS.Timeout | undefined;
   requestController: AbortController | null;
   filteredNotes: string[];
+  areHighlightsCleared: boolean;
 }
 
 export function createSearchManager() {
@@ -16,7 +17,8 @@ export function createSearchManager() {
     isLoading: false,
     searchTimeout: undefined,
     requestController: null,
-    filteredNotes: []
+    filteredNotes: [],
+    areHighlightsCleared: false
   });
 
   let onHighlightsClearCallback: ((cleared: boolean) => void) | null = null;
@@ -74,6 +76,7 @@ export function createSearchManager() {
   ): void {
     if (newInput.trim()) {
       onHighlightsClear(false);
+      state.areHighlightsCleared = false;
     }
 
     setSearchInput(newInput);
@@ -82,6 +85,10 @@ export function createSearchManager() {
   function clearSearch(): void {
     state.searchInput = '';
     state.query = '';
+  }
+
+  function clearHighlights(): void {
+    state.areHighlightsCleared = true;
   }
 
   return {
@@ -113,6 +120,16 @@ export function createSearchManager() {
     get query(): string {
       return state.query;
     },
+
+    get areHighlightsCleared(): boolean {
+      return state.areHighlightsCleared;
+    },
+
+    set areHighlightsCleared(value: boolean) {
+      state.areHighlightsCleared = value;
+    },
+
+    clearHighlights,
 
     async searchImmediate(query: string): Promise<string[]> {
       await performSearch(query);

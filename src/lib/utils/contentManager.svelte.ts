@@ -10,15 +10,19 @@ interface ContentManagerDeps {
   noteService: {
     getContent: (noteName: string) => Promise<string>;
   };
+  searchManager: {
+    areHighlightsCleared: boolean;
+    clearHighlights: () => void;
+    setHighlightsClearCallback: (callback: (cleared: boolean) => void) => void;
+    query: string;
+  };
   getNoteContentElement: () => HTMLElement | null;
   refreshSearch: (query: string) => Promise<string[]>;
-  setHighlightsClearCallback: (callback: (cleared: boolean) => void) => void;
   invoke: typeof invoke;
 }
 
 interface ContentState {
   noteContent: string;
-  areHighlightsCleared: boolean;
 }
 
 interface RefreshAfterSaveResult {
@@ -28,8 +32,7 @@ interface RefreshAfterSaveResult {
 
 export function createContentManager(deps: ContentManagerDeps) {
   const state = $state<ContentState>({
-    noteContent: '',
-    areHighlightsCleared: false
+    noteContent: ''
   });
 
   function setNoteContent(content: string): void {
@@ -38,13 +41,13 @@ export function createContentManager(deps: ContentManagerDeps) {
   }
 
   function clearHighlights(): void {
-    state.areHighlightsCleared = true;
+    deps.searchManager.clearHighlights();
     deps.contentHighlighter.areHighlightsCleared = true;
   }
 
   function scrollToFirstMatch(): void {
     const noteContentElement = deps.getNoteContentElement();
-    if (noteContentElement && !state.areHighlightsCleared) {
+    if (noteContentElement && !deps.searchManager.areHighlightsCleared) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight');
         if (firstMatch) {
@@ -75,18 +78,20 @@ export function createContentManager(deps: ContentManagerDeps) {
     query?: string;
     areHighlightsCleared?: boolean;
   }): void {
-    deps.contentHighlighter.updateHighlighterState(newState);
-    if (newState.areHighlightsCleared !== undefined) {
-      state.areHighlightsCleared = newState.areHighlightsCleared;
-    }
+    // Use searchManager query if none provided
+    const actualQuery = newState.query !== undefined ? newState.query : deps.searchManager.query;
+    deps.contentHighlighter.updateHighlighterState({
+      query: actualQuery,
+      areHighlightsCleared: newState.areHighlightsCleared
+    });
   }
 
   function setHighlightsClearedState(cleared: boolean): void {
-    state.areHighlightsCleared = cleared;
+    deps.searchManager.areHighlightsCleared = cleared;
     deps.contentHighlighter.areHighlightsCleared = cleared;
   }
 
-  deps.setHighlightsClearCallback((cleared: boolean) => {
+  deps.searchManager.setHighlightsClearCallback((cleared: boolean) => {
     setHighlightsClearedState(cleared);
   });
 
@@ -100,7 +105,7 @@ export function createContentManager(deps: ContentManagerDeps) {
     },
 
     get areHighlightsCleared(): boolean {
-      return state.areHighlightsCleared;
+      return deps.searchManager.areHighlightsCleared;
     },
 
     set areHighlightsCleared(value: boolean) {

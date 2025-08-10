@@ -19,6 +19,10 @@ const mockSearchManager = {
   filteredNotes: ['existing-note.md'],
   isLoading: false,
   clearSearch: vi.fn(),
+  areHighlightsCleared: false,
+  clearHighlights: vi.fn(),
+  setHighlightsClearCallback: vi.fn(),
+  query: ''
 };
 
 const mockDialogManager = {

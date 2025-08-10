@@ -31,15 +31,14 @@ export function createAppCoordinator(deps: AppCoordinatorDeps) {
   const contentManager = createContentManager({
     contentHighlighter,
     noteService,
+    searchManager,
     getNoteContentElement: () => focusManager.noteContentElement,
     refreshSearch: (query: string) => searchManager.refreshSearch(query),
-    setHighlightsClearCallback: (callback: (cleared: boolean) => void) =>
-      searchManager.setHighlightsClearCallback(callback),
     invoke
   });
 
   const isLoading = $derived(searchManager.isLoading);
-  const areHighlightsCleared = $derived(contentManager.areHighlightsCleared);
+  const areHighlightsCleared = $derived(searchManager.areHighlightsCleared);
   const filteredNotes = $derived(searchManager.filteredNotes);
   const query = $derived(searchManager.searchInput);
 
@@ -123,7 +122,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps) {
     // Update content highlighting reactively
     $effect(() => {
       contentManager.updateHighlighterState({
-        query: query,
         areHighlightsCleared: areHighlightsCleared
       });
     });
@@ -278,7 +276,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps) {
       searchManager.searchInput = '';
       state.selectedIndex = -1;
       searchManager.setFilteredNotes([]);
-      contentManager.areHighlightsCleared = false;
+      searchManager.areHighlightsCleared = false;
       if (contentRequestController) {
         contentRequestController.abort();
         contentRequestController = null;
