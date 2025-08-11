@@ -1,9 +1,9 @@
 <script lang="ts">
 import { getContext } from 'svelte';
-import type { createSearchManager } from '../utils/searchManager.svelte';
-import type { createAppCoordinator } from '../utils/appCoordinator.svelte';
-import type { createEditorManager } from '../utils/editorManager.svelte';
-import type { createFocusManager } from '../utils/focusManager.svelte';
+import type { createSearchManager } from '../core/searchManager.svelte';
+import type { createAppCoordinator } from '../app/appCoordinator.svelte';
+import type { createEditorManager } from '../core/editorManager.svelte';
+import type { createFocusManager } from '../core/focusManager.svelte';
 import { noteService } from '../services/noteService.svelte';
 import { configService } from '../services/configService.svelte';
 

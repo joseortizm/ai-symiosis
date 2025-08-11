@@ -11,7 +11,7 @@ describe('dialogManager (factory-based - TDD)', () => {
     mockFocusCallback = vi.fn();
 
     try {
-      const { createDialogManager } = await import('../../../lib/utils/dialogManager.svelte');
+      const { createDialogManager } = await import('../../../lib/core/dialogManager.svelte');
       dialogManager = createDialogManager({ focusSearch: mockFocusCallback });
     } catch (e) {
       dialogManager = null;
@@ -19,7 +19,7 @@ describe('dialogManager (factory-based - TDD)', () => {
   });
 
   it('should create dialogManager with focus callback', async () => {
-    const { createDialogManager } = await import('../../../lib/utils/dialogManager.svelte');
+    const { createDialogManager } = await import('../../../lib/core/dialogManager.svelte');
     const manager = createDialogManager({ focusSearch: mockFocusCallback });
 
     expect(manager).toBeDefined();

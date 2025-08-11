@@ -79,12 +79,12 @@ const mockContentManager = {
 };
 
 // Mock all modules
-vi.mock('../../../lib/utils/searchManager.svelte', () => ({
+vi.mock('../../../lib/core/searchManager.svelte', () => ({
   searchManager: mockSearchManager,
   createSearchManager: vi.fn(() => mockSearchManager),
 }));
 
-vi.mock('../../../lib/utils/dialogManager.svelte', () => ({
+vi.mock('../../../lib/core/dialogManager.svelte', () => ({
   dialogManager: mockDialogManager,
   createDialogManager: vi.fn(() => mockDialogManager),
 }));
@@ -97,22 +97,22 @@ vi.mock('../../../lib/services/configService.svelte', () => ({
   configService: mockConfigService,
 }));
 
-vi.mock('../../../lib/utils/focusManager.svelte', () => ({
+vi.mock('../../../lib/core/focusManager.svelte', () => ({
   focusManager: mockFocusManager,
   createFocusManager: vi.fn(() => mockFocusManager),
 }));
 
-vi.mock('../../../lib/utils/editorManager.svelte', () => ({
+vi.mock('../../../lib/core/editorManager.svelte', () => ({
   editorManager: mockEditorManager,
   createEditorManager: vi.fn(() => mockEditorManager),
 }));
 
-vi.mock('../../../lib/utils/contentManager.svelte', () => ({
+vi.mock('../../../lib/core/contentManager.svelte', () => ({
   contentManager: mockContentManager,
   createContentManager: vi.fn(() => mockContentManager),
 }));
 
-vi.mock('../../../lib/utils/contentHighlighting.svelte', () => ({
+vi.mock('../../../lib/core/contentHighlighting.svelte', () => ({
   getHighlightedContent: vi.fn(() => 'mocked highlighted content'),
   clearHighlightCache: vi.fn()
 }));
@@ -135,10 +135,10 @@ describe('appCoordinator Integration Tests', () => {
     mockSearchManager.filteredNotes = ['existing-note.md'];
 
     // Import the factories after mocks are set up
-    const { createAppCoordinator } = await import('../../../lib/utils/appCoordinator.svelte');
-    const { createSearchManager } = await import('../../../lib/utils/searchManager.svelte');
-    const { createEditorManager } = await import('../../../lib/utils/editorManager.svelte');
-    const { createFocusManager } = await import('../../../lib/utils/focusManager.svelte');
+    const { createAppCoordinator } = await import('../../../lib/app/appCoordinator.svelte');
+    const { createSearchManager } = await import('../../../lib/core/searchManager.svelte');
+    const { createEditorManager } = await import('../../../lib/core/editorManager.svelte');
+    const { createFocusManager } = await import('../../../lib/core/focusManager.svelte');
 
     // Create manager instances for testing
     const searchManager = createSearchManager();

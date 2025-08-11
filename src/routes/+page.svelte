@@ -1,19 +1,19 @@
 <script lang="ts">
 import { onMount, setContext } from "svelte";
-import AppLayout from "../lib/components/AppLayout.svelte";
-import SearchInput from "../lib/components/SearchInput.svelte";
-import NoteList from "../lib/components/NoteList.svelte";
-import NoteView from "../lib/components/NoteView.svelte";
-import ConfirmationDialog from "../lib/components/ConfirmationDialog.svelte";
-import InputDialog from "../lib/components/InputDialog.svelte";
-import DeleteDialog from "../lib/components/DeleteDialog.svelte";
-import SettingsPane from "../lib/components/SettingsPane.svelte";
-import DebugPanel from "../lib/components/DebugPanel.svelte";
-import { createKeyboardHandler } from '../lib/keyboardHandler';
-import { createAppCoordinator } from '../lib/utils/appCoordinator.svelte';
-import { createSearchManager } from '../lib/utils/searchManager.svelte';
-import { createEditorManager } from '../lib/utils/editorManager.svelte';
-import { createFocusManager } from '../lib/utils/focusManager.svelte';
+import AppLayout from "../lib/ui/AppLayout.svelte";
+import SearchInput from "../lib/ui/SearchInput.svelte";
+import NoteList from "../lib/ui/NoteList.svelte";
+import NoteView from "../lib/ui/NoteView.svelte";
+import ConfirmationDialog from "../lib/ui/ConfirmationDialog.svelte";
+import InputDialog from "../lib/ui/InputDialog.svelte";
+import DeleteDialog from "../lib/ui/DeleteDialog.svelte";
+import SettingsPane from "../lib/ui/SettingsPane.svelte";
+import DebugPanel from "../lib/ui/DebugPanel.svelte";
+// Keyboard handler now integrated in appCoordinator
+import { createAppCoordinator } from '../lib/app/appCoordinator.svelte';
+import { createSearchManager } from '../lib/core/searchManager.svelte';
+import { createEditorManager } from '../lib/core/editorManager.svelte';
+import { createFocusManager } from '../lib/core/focusManager.svelte';
 import { configService } from '../lib/services/configService.svelte';
 
 // Create all managers using factories
@@ -43,10 +43,7 @@ setContext<{
   appCoordinator
 });
 
-const handleKeydown = createKeyboardHandler(
-  () => appCoordinator.keyboardState,
-  appCoordinator.keyboardActions
-);
+const handleKeydown = appCoordinator.keyboardActions;
 
 appCoordinator.setupReactiveEffects();
 

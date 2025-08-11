@@ -6,7 +6,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 // Import after mocking
-const { createEditorManager } = await import('../../../lib/utils/editorManager.svelte');
+const { createEditorManager } = await import('../../../lib/core/editorManager.svelte');
 
 // Create a fresh instance for each test
 let editorManager: ReturnType<typeof createEditorManager>;

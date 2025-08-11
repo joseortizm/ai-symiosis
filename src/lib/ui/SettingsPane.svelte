@@ -2,7 +2,7 @@
   import Editor from './Editor.svelte';
   import { configService } from '../services/configService.svelte';
   import { getContext } from 'svelte';
-  import type { createSearchManager } from '../utils/searchManager.svelte';
+  import type { createSearchManager } from '../core/searchManager.svelte';
 
   interface Props {
     show: boolean;

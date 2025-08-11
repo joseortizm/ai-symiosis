@@ -1,0 +1,30 @@
+interface SearchActionDeps {
+  searchManager: {
+    clearSearch: () => void;
+    setFilteredNotes: (notes: string[]) => void;
+  };
+  contentManager: {
+    clearHighlights: () => void;
+  };
+}
+
+export function createSearchActions(deps: SearchActionDeps) {
+  const { searchManager, contentManager } = deps;
+
+  function updateFilteredNotes(notes: string[]): void {
+    searchManager.setFilteredNotes(notes);
+  }
+
+  function resetSearchState(): void {
+    searchManager.clearSearch();
+    searchManager.setFilteredNotes([]);
+    contentManager.clearHighlights();
+  }
+
+  return {
+    updateFilteredNotes,
+    resetSearchState,
+    clearHighlights: contentManager.clearHighlights,
+    clearSearch: searchManager.clearSearch
+  };
+}

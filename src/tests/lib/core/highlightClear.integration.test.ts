@@ -11,10 +11,10 @@ describe('Highlight Clear Integration', () => {
   });
 
   it('should re-enable highlights when user types after clearing with ESC', async () => {
-    const { createSearchManager } = await import('../../../lib/utils/searchManager.svelte');
-    const { createAppCoordinator } = await import('../../../lib/utils/appCoordinator.svelte');
-    const { createEditorManager } = await import('../../../lib/utils/editorManager.svelte');
-    const { createFocusManager } = await import('../../../lib/utils/focusManager.svelte');
+    const { createSearchManager } = await import('../../../lib/core/searchManager.svelte');
+    const { createAppCoordinator } = await import('../../../lib/app/appCoordinator.svelte');
+    const { createEditorManager } = await import('../../../lib/core/editorManager.svelte');
+    const { createFocusManager } = await import('../../../lib/core/focusManager.svelte');
 
     // Create manager instances for testing
     const searchManager = createSearchManager();

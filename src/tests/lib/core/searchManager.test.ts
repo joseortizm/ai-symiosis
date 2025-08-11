@@ -5,7 +5,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
-const { createSearchManager } = await import('../../../lib/utils/searchManager.svelte');
+const { createSearchManager } = await import('../../../lib/core/searchManager.svelte');
 
 // Create a fresh instance for each test
 let searchManager: ReturnType<typeof createSearchManager>;

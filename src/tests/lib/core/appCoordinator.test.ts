@@ -13,10 +13,14 @@ vi.mock('svelte', () => ({
   tick: vi.fn(() => Promise.resolve()),
 }));
 
-const { createAppCoordinator } = await import('../../../lib/utils/appCoordinator.svelte');
-const { createSearchManager } = await import('../../../lib/utils/searchManager.svelte');
-const { createEditorManager } = await import('../../../lib/utils/editorManager.svelte');
-const { createFocusManager } = await import('../../../lib/utils/focusManager.svelte');
+vi.mock('../../../lib/app/effects/app.svelte', () => ({
+  setupAppEffects: vi.fn(() => vi.fn()), // Returns a mock cleanup function
+}));
+
+const { createAppCoordinator } = await import('../../../lib/app/appCoordinator.svelte');
+const { createSearchManager } = await import('../../../lib/core/searchManager.svelte');
+const { createEditorManager } = await import('../../../lib/core/editorManager.svelte');
+const { createFocusManager } = await import('../../../lib/core/focusManager.svelte');
 
 // Create manager instances for testing
 const searchManager = createSearchManager();
@@ -120,21 +124,9 @@ describe('appCoordinator', () => {
       expect(keyboardState).toHaveProperty('isEditorDirty');
     });
 
-    it('should provide keyboardActions', () => {
+    it('should provide keyboardActions as keyboard handler function', () => {
       const keyboardActions = appCoordinator.keyboardActions;
-
-      expect(keyboardActions).toHaveProperty('setSelectedIndex');
-      expect(keyboardActions).toHaveProperty('enterEditMode');
-      expect(keyboardActions).toHaveProperty('exitEditMode');
-      expect(keyboardActions).toHaveProperty('saveNote');
-      expect(keyboardActions).toHaveProperty('showDeleteDialog');
-      expect(keyboardActions).toHaveProperty('showCreateDialog');
-      expect(keyboardActions).toHaveProperty('showRenameDialog');
-      expect(keyboardActions).toHaveProperty('clearHighlights');
-      expect(keyboardActions).toHaveProperty('clearSearch');
-
-      expect(typeof keyboardActions.setSelectedIndex).toBe('function');
-      expect(typeof keyboardActions.saveNote).toBe('function');
+      expect(typeof keyboardActions).toBe('function');
     });
   });
 

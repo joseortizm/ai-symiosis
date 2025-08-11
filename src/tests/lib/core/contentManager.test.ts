@@ -25,7 +25,7 @@ describe('contentManager (factory-based - TDD)', () => {
     };
 
     try {
-      const { createContentManager } = await import('../../../lib/utils/contentManager.svelte');
+      const { createContentManager } = await import('../../../lib/core/contentManager.svelte');
       contentManager = createContentManager(mockDeps);
     } catch (e) {
       contentManager = null;
@@ -33,7 +33,7 @@ describe('contentManager (factory-based - TDD)', () => {
   });
 
   it('should create contentManager with injected dependencies', async () => {
-    const { createContentManager } = await import('../../../lib/utils/contentManager.svelte');
+    const { createContentManager } = await import('../../../lib/core/contentManager.svelte');
     const manager = createContentManager(mockDeps);
 
     expect(manager).toBeDefined();
