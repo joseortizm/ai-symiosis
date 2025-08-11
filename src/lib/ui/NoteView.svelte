@@ -77,7 +77,7 @@ Shows highlighted content or renders the CodeMirror editor.
   {:else}
     <div class="no-selection">
       <p>Select a note to preview its content</p>
-      <p class="help-text">Press Enter to edit, E to edit when focused, Ctrl+O to open externally</p>
+      <p class="help-text">Press Enter to edit, Ctrl+F to show in enclosing folder.</p>
     </div>
   {/if}
 </div>
