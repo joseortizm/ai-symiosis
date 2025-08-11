@@ -37,7 +37,7 @@ function togglePanel() {
   isVisible = !isVisible;
 }
 
-function formatValue(value: any): string {
+function formatValue(value: unknown): string {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
   if (typeof value === 'boolean') return value ? 'true' : 'false';

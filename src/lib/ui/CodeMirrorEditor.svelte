@@ -7,6 +7,7 @@ Focused component handling CodeMirror initialization and content editing.
   import { onMount, tick } from 'svelte';
   import { invoke } from "@tauri-apps/api/core";
   import { EditorView, basicSetup } from 'codemirror';
+  import type { Extension } from '@codemirror/state';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -77,7 +78,7 @@ Focused component handling CodeMirror initialization and content editing.
     handleDirtyChange(false);
   }
 
-  function getKeyMappingsMode(mode: string): any {
+  function getKeyMappingsMode(mode: string): Extension | null {
     switch (mode) {
       case 'vim': return vim();
       case 'emacs': return emacs();
@@ -86,7 +87,7 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
-  function getLanguageExtension(filename: string): any {
+  function getLanguageExtension(filename: string): Extension {
     if (!filename) return markdown({
       base: markdownLanguage,
       codeLanguages: languages
@@ -148,7 +149,7 @@ Focused component handling CodeMirror initialization and content editing.
         }
       }]) : null;
 
-      const extensions: any[] = [
+      const extensions: Extension[] = [
         getKeyMappingsMode(keyBindingMode),
         basicSetup,
         getLanguageExtension(filename),
@@ -165,7 +166,7 @@ Focused component handling CodeMirror initialization and content editing.
             handleDirtyChange(isDirty);
           }
         })
-      ].filter((ext): ext is any => Boolean(ext));
+      ].filter((ext): ext is Extension => Boolean(ext));
 
       const newEditorView = new EditorView({
         doc: value || '',
