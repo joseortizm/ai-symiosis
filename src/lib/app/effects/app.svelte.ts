@@ -67,40 +67,44 @@ export function setupAppEffects(deps: AppEffectsDeps) {
     }
   });
 
+  // Async content loading function (pure)
+  async function loadNoteContent(note: any, controller: AbortController): Promise<string> {
+    try {
+      const content = await noteService.getContent(note);
+      return controller.signal.aborted ? '' : content;
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        console.error("Failed to load note content:", e);
+      }
+      return `Error loading note: ${e}`;
+    }
+  }
+
   $effect(() => {
     const note = getSelectedNote();
+
+    // Cancel previous request
+    if (contentRequestController.current) {
+      contentRequestController.current.abort();
+    }
 
     if (!note) {
       contentManager.setNoteContent('');
       return;
     }
 
-    if (contentRequestController.current) {
-      contentRequestController.current.abort();
-    }
-
     const controller = new AbortController();
     contentRequestController.set(controller);
-    const currentController = controller;
 
-    (async () => {
-      try {
-        const content = await noteService.getContent(note);
-
-        if (!currentController.signal.aborted) {
-          contentManager.setNoteContent(content);
-
-          requestAnimationFrame(() => {
-            contentManager.scrollToFirstMatch();
-          });
-        }
-      } catch (e) {
-        if (!currentController.signal.aborted) {
-          console.error("Failed to load note content:", e);
-          contentManager.setNoteContent(`Error loading note: ${e}`);
-        }
+    // Trigger async loading and update state when done
+    loadNoteContent(note, controller).then(content => {
+      if (!controller.signal.aborted) {
+        contentManager.setNoteContent(content);
+        requestAnimationFrame(() => {
+          contentManager.scrollToFirstMatch();
+        });
       }
-    })();
+    });
   });
 
   $effect(() => {

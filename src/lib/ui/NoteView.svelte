@@ -14,11 +14,14 @@ Shows highlighted content or renders the CodeMirror editor.
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
 
-  $effect(() => {
-    if (noteContentElement) {
-      appCoordinator.context.focusManager.setNoteContentElement(noteContentElement);
-    }
-  });
+  function registerNoteContentElement(element: HTMLElement) {
+    appCoordinator.context.focusManager.setNoteContentElement(element);
+    return {
+      destroy() {
+        appCoordinator.context.focusManager.setNoteContentElement(null);
+      }
+    };
+  }
 
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
@@ -62,6 +65,7 @@ Shows highlighted content or renders the CodeMirror editor.
       <div
         class="note-content"
         bind:this={noteContentElement}
+        use:registerNoteContentElement
         tabindex="-1"
         onfocus={() => appCoordinator.context.focusManager.setNoteContentFocused(true)}
         onblur={() => appCoordinator.context.focusManager.setNoteContentFocused(false)}

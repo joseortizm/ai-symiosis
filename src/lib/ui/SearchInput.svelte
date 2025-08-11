@@ -11,11 +11,14 @@ Connects to search manager and handles keyboard navigation events.
 
   let searchElement: HTMLInputElement;
 
-  $effect(() => {
-    if (searchElement) {
-      appCoordinator.context.focusManager.setSearchElement(searchElement);
-    }
-  });
+  function registerElement(element: HTMLInputElement) {
+    appCoordinator.context.focusManager.setSearchElement(element);
+    return {
+      destroy() {
+        appCoordinator.context.focusManager.setSearchElement(null);
+      }
+    };
+  }
 </script>
 
 <input
@@ -24,6 +27,7 @@ Connects to search manager and handles keyboard navigation events.
   placeholder="Search notes... (Enter: edit, Ctrl+enter: new, Ctrl+u/d: scroll)"
   class="search-input"
   bind:this={searchElement}
+  use:registerElement
   onfocus={() => appCoordinator.context.focusManager.setSearchInputFocused(true)}
   onblur={() => appCoordinator.context.focusManager.setSearchInputFocused(false)}
 />

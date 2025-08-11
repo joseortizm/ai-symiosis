@@ -47,18 +47,17 @@ Focused component handling CodeMirror initialization and content editing.
 
   const propsChanged = $derived(value !== lastPropsValue);
 
-  $effect.pre(() => {
+  // Use effect only for side effect (notification), not state updates
+  $effect(() => {
     if (propsChanged) {
-      initialValue = value;
-      lastPropsValue = value;
       onDirtyChange?.(false);
     }
   });
 
   function resetDirtyFlag(): void {
-    onDirtyChange?.(false);
     initialValue = value;
     lastPropsValue = value;
+    onDirtyChange?.(false);
   }
 
   function getKeyMappingsMode(mode: string): any {
@@ -296,9 +295,14 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
+
+  let initialModeSet = $state(false);
+
   $effect(() => {
-    keyBindingMode;
-    if (editorView) {
+    // Only recreate editor when keyBindingMode changes from initial 'basic' 
+    // This handles the async mode loading from EditorModeManager
+    if (!initialModeSet && keyBindingMode !== 'basic') {
+      initialModeSet = true;
       createCodeMirrorEditor();
     }
   });
@@ -306,6 +310,10 @@ Focused component handling CodeMirror initialization and content editing.
   onMount(() => {
     const init = async () => {
       await tick();
+      // Create editor immediately if mode is already loaded, or with basic mode
+      if (keyBindingMode !== 'basic') {
+        initialModeSet = true;
+      }
       createCodeMirrorEditor();
     };
 
