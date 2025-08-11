@@ -24,7 +24,43 @@ interface AppCoordinatorDeps {
   focusManager: ReturnType<typeof import('../core/focusManager.svelte').createFocusManager>;
 }
 
-export function createAppCoordinator(deps: AppCoordinatorDeps) {
+interface AppCoordinator {
+  readonly query: string;
+  readonly isLoading: boolean;
+  readonly areHighlightsCleared: boolean;
+  readonly filteredNotes: string[];
+  readonly selectedNote: string | null;
+  readonly selectedIndex: number;
+  readonly keyboardState: {
+    isSearchInputFocused: boolean;
+    isEditMode: boolean;
+    isNoteContentFocused: boolean;
+    selectedIndex: number;
+    filteredNotes: string[];
+    selectedNote: string | null;
+    noteContentElement: HTMLElement | null;
+    areHighlightsCleared: boolean;
+    isEditorDirty: boolean;
+    query: string;
+  };
+  readonly keyboardActions: (event: KeyboardEvent) => Promise<void>;
+  readonly context: any; // Complex nested object - keeping as any for now
+  setupReactiveEffects(): () => void;
+  updateFilteredNotes(notes: string[]): void;
+  resetState(): void;
+  setSelectedIndex(index: number): void;
+  deleteNote(): Promise<void>;
+  createNote(noteName?: string): Promise<void>;
+  renameNote(newName?: string): Promise<void>;
+  saveNote(): Promise<void>;
+  saveAndExitNote(): Promise<void>;
+  selectNote(note: string, index: number): void;
+  enterEditMode(): Promise<void>;
+  exitEditMode(): void;
+  initialize(): Promise<() => void>;
+}
+
+export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   const { searchManager, editorManager, focusManager } = deps;
 
   let selectedIndex = $state(-1);

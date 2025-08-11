@@ -49,7 +49,13 @@ export interface ActionRegistry {
   };
 }
 
-export function createKeyboardActions(deps: KeyboardActionDeps) {
+interface KeyboardActions {
+  readonly actionRegistry: ActionRegistry;
+  readonly keyMappings: Record<string, KeyMappings>;
+  createKeyboardHandler(getState: () => AppState): (event: KeyboardEvent) => Promise<void>;
+}
+
+export function createKeyboardActions(deps: KeyboardActionDeps): KeyboardActions {
   const actionRegistry: ActionRegistry = {
     navigation: {
       moveUp: ({ state, actions }: ActionContext) => {

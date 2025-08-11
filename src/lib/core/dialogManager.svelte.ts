@@ -14,7 +14,31 @@ interface DialogContext {
   highlightedContent: string;
 }
 
-export function createDialogManager(deps: DialogManagerDeps) {
+interface DialogManager {
+  readonly showCreateDialog: boolean;
+  readonly showRenameDialog: boolean;
+  readonly showDeleteDialog: boolean;
+  readonly showUnsavedChangesDialog: boolean;
+  readonly newNoteName: string;
+  readonly newNoteNameForRename: string;
+  readonly deleteKeyPressCount: number;
+  openCreateDialog(query?: string, highlightedContent?: string): void;
+  closeCreateDialog(): void;
+  openRenameDialog(selectedNote?: string): void;
+  closeRenameDialog(): void;
+  openDeleteDialog(): void;
+  closeDeleteDialog(): void;
+  openUnsavedChangesDialog(): void;
+  closeUnsavedChangesDialog(): void;
+  showExitEditDialog(): void;
+  handleSaveAndExit(saveAndExitNote: () => Promise<void>): Promise<void>;
+  handleDiscardAndExit(exitEditMode: () => void): void;
+  handleDeleteKeyPress(onConfirmDelete: () => Promise<void>): void;
+  setNewNoteName(value: string): void;
+  setNewNoteNameForRename(value: string): void;
+}
+
+export function createDialogManager(deps: DialogManagerDeps): DialogManager {
   const context = $state<DialogContext>({
     selectedNote: null,
     query: '',

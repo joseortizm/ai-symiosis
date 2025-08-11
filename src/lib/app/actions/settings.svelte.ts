@@ -14,7 +14,12 @@ interface SettingsActionDeps {
   };
 }
 
-export function createSettingsActions(deps: SettingsActionDeps) {
+interface SettingsActions {
+  openSettingsPane(): Promise<void>;
+  closeSettingsPane(): void;
+}
+
+export function createSettingsActions(deps: SettingsActionDeps): SettingsActions {
   const { configService, focusManager } = deps;
 
   async function openSettingsPane(): Promise<void> {

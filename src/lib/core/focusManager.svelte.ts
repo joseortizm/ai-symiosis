@@ -12,7 +12,25 @@ interface FocusState {
   noteListElement: HTMLElement | null;
 }
 
-export function createFocusManager() {
+interface FocusManager {
+  readonly isSearchInputFocused: boolean;
+  readonly isNoteContentFocused: boolean;
+  readonly searchElement: HTMLInputElement | null;
+  readonly noteContentElement: HTMLElement | null;
+  readonly noteListElement: HTMLElement | null;
+  setSearchInputFocused(value: boolean): void;
+  setNoteContentFocused(value: boolean): void;
+  setSearchElement(element: HTMLInputElement | null): void;
+  setNoteContentElement(element: HTMLElement | null): void;
+  setNoteListElement(element: HTMLElement | null): void;
+  focusSearch(): void;
+  scrollNoteContentUp(): void;
+  scrollNoteContentDown(): void;
+  scrollToSelectedInList(selectedIndex: number): void;
+  scrollToSelected(selectedIndex: number): void;
+}
+
+export function createFocusManager(): FocusManager {
   const state = $state<FocusState>({
     isSearchInputFocused: false,
     isNoteContentFocused: false,

@@ -14,7 +14,14 @@ interface SearchActionDeps {
   };
 }
 
-export function createSearchActions(deps: SearchActionDeps) {
+interface SearchActions {
+  updateFilteredNotes(notes: string[]): void;
+  resetSearchState(): void;
+  clearHighlights(): void;
+  clearSearch(): void;
+}
+
+export function createSearchActions(deps: SearchActionDeps): SearchActions {
   const { searchManager, contentManager } = deps;
 
   function updateFilteredNotes(notes: string[]): void {

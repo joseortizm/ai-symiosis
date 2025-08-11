@@ -30,7 +30,7 @@ interface AppEffectsDeps {
   };
 }
 
-export function setupAppEffects(deps: AppEffectsDeps) {
+export function setupAppEffects(deps: AppEffectsDeps): () => void {
   const {
     getFilteredNotes,
     getSelectedIndex,
@@ -68,7 +68,7 @@ export function setupAppEffects(deps: AppEffectsDeps) {
   });
 
   // Async content loading function (pure)
-  async function loadNoteContent(note: any, controller: AbortController): Promise<string> {
+  async function loadNoteContent(note: string, controller: AbortController): Promise<string> {
     try {
       const content = await noteService.getContent(note);
       return controller.signal.aborted ? '' : content;

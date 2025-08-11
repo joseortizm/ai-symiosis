@@ -31,7 +31,20 @@ interface RefreshAfterSaveResult {
   content: string;
 }
 
-export function createContentManager(deps: ContentManagerDeps) {
+interface ContentManager {
+  readonly noteContent: string;
+  readonly highlightedContent: string;
+  areHighlightsCleared: boolean;
+  setNoteContent(content: string): void;
+  clearHighlights(): void;
+  scrollToFirstMatch(): void;
+  refreshContent(noteName: string): Promise<string>;
+  refreshAfterSave(noteName: string, searchInput: string): Promise<RefreshAfterSaveResult>;
+  updateHighlighterState(newState: { query?: string; areHighlightsCleared?: boolean }): void;
+  setHighlightsClearedState(cleared: boolean): void;
+}
+
+export function createContentManager(deps: ContentManagerDeps): ContentManager {
   const state = $state<ContentState>({
     noteContent: ''
   });

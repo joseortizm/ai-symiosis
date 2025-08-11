@@ -16,7 +16,24 @@ interface SearchState {
   areHighlightsCleared: boolean;
 }
 
-export function createSearchManager() {
+interface SearchManager {
+  readonly isLoading: boolean;
+  readonly filteredNotes: string[];
+  searchInput: string;
+  readonly query: string;
+  areHighlightsCleared: boolean;
+  setSearchInput(value: string): void;
+  setFilteredNotes(notes: string[]): void;
+  updateSearchInputWithEffects(newInput: string, onHighlightsClear: (cleared: boolean) => void): void;
+  clearSearch(): void;
+  clearHighlights(): void;
+  searchImmediate(query: string): Promise<string[]>;
+  refreshSearch(searchInput: string): Promise<string[]>;
+  setHighlightsClearCallback(callback: (cleared: boolean) => void): void;
+  abort(): void;
+}
+
+export function createSearchManager(): SearchManager {
   const state = $state<SearchState>({
     searchInput: '',
     query: '',

@@ -40,7 +40,15 @@ interface NoteActionDeps {
   setSelectedIndex: (index: number) => void;
 }
 
-export function createNoteActions(deps: NoteActionDeps) {
+interface NoteActions {
+  createNote(noteNameParam?: string): Promise<void>;
+  deleteNote(selectedNote: string | null): Promise<void>;
+  renameNote(selectedNote: string | null, newNameParam?: string): Promise<void>;
+  enterEditMode(noteName: string): Promise<void>;
+  saveNote(selectedNote: string | null): Promise<void>;
+}
+
+export function createNoteActions(deps: NoteActionDeps): NoteActions {
   const {
     noteService,
     searchManager,

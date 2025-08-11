@@ -18,7 +18,18 @@ interface SaveResult {
   error?: string;
 }
 
-export function createEditorManager() {
+interface EditorManager {
+  readonly isEditMode: boolean;
+  readonly editContent: string;
+  readonly isDirty: boolean;
+  readonly nearestHeaderText: string;
+  enterEditMode(noteName: string, fallbackHtmlContent?: string, noteContentElement?: HTMLElement): Promise<void>;
+  exitEditMode(): void;
+  updateContent(newContent: string): void;
+  saveNote(noteName: string): Promise<SaveResult>;
+}
+
+export function createEditorManager(): EditorManager {
   const state = $state<EditorState>({
     isEditMode: false,
     editContent: '',
