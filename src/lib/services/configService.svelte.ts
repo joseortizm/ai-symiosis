@@ -11,7 +11,8 @@ class ConfigService {
     content: '',
     isVisible: false,
     isLoading: false,
-    error: null as string | null
+    error: null as string | null,
+    lastSaved: 0 // Timestamp to trigger reactive updates
   });
 
   async open(): Promise<void> {
@@ -43,6 +44,9 @@ class ConfigService {
     try {
       await invoke<void>("save_config_content", { content: this.state.content });
       await invoke<void>("refresh_cache");
+
+      // Update timestamp to trigger reactive config reloads
+      this.state.lastSaved = Date.now();
 
       this.close();
 
@@ -85,7 +89,7 @@ class ConfigService {
       return await invoke<string>("get_markdown_theme");
     } catch (e) {
       console.error("Failed to get markdown theme:", e);
-      return "light";
+      return "dark_dimmed";
     }
   }
 
@@ -121,6 +125,10 @@ class ConfigService {
 
   get error(): string | null {
     return this.state.error;
+  }
+
+  get lastSaved(): number {
+    return this.state.lastSaved;
   }
 }
 

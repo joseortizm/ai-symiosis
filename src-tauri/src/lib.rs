@@ -9,7 +9,7 @@ use search::search_notes_hybrid;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -45,7 +45,7 @@ fn default_editor_mode() -> String {
 }
 
 fn default_markdown_theme() -> String {
-    "light".to_string()
+    "dark_dimmed".to_string()
 }
 
 fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
@@ -122,10 +122,20 @@ fn load_config() -> AppConfig {
     }
 }
 
-static APP_CONFIG: LazyLock<AppConfig> = LazyLock::new(load_config);
+static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
+
+fn reload_config() -> Result<(), String> {
+    let new_config = load_config();
+    let mut config = APP_CONFIG
+        .write()
+        .map_err(|e| format!("Failed to write config lock: {}", e))?;
+    *config = new_config;
+    Ok(())
+}
 
 fn get_notes_dir() -> PathBuf {
-    PathBuf::from(&APP_CONFIG.notes_directory)
+    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    PathBuf::from(&config.notes_directory)
 }
 
 fn get_database_path() -> PathBuf {
@@ -240,7 +250,8 @@ fn list_all_notes() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 fn search_notes(query: &str) -> Result<Vec<String>, String> {
-    search_notes_hybrid(query, APP_CONFIG.max_search_results)
+    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    search_notes_hybrid(query, config.max_search_results)
 }
 
 #[tauri::command]
@@ -389,6 +400,10 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn refresh_cache() -> Result<(), String> {
+    // Reload config first
+    reload_config().map_err(|e| format!("Failed to reload config: {}", e))?;
+
+    // Then refresh database
     let mut conn = get_db_connection()?;
     init_db(&conn).map_err(|e| format!("Database initialization error: {}", e))?;
     load_all_notes_into_sqlite(&mut conn).map_err(|e| format!("Failed to load notes: {}", e))?;
@@ -488,12 +503,14 @@ fn save_config_content(content: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn get_editor_mode() -> String {
-    APP_CONFIG.editor_mode.clone()
+    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    config.editor_mode.clone()
 }
 
 #[tauri::command]
 fn get_markdown_theme() -> String {
-    APP_CONFIG.markdown_theme.clone()
+    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    config.markdown_theme.clone()
 }
 
 #[tauri::command]
@@ -642,7 +659,7 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 // Get main shortcut from config
-                let config = &*APP_CONFIG;  // Use the existing static config
+                let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
                 let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
                     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
                 });

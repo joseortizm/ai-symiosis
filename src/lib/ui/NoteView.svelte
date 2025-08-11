@@ -14,7 +14,7 @@ Shows highlighted content or renders the CodeMirror editor.
   const { appCoordinator } = getContext('managers') as any;
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
-  let currentTheme = $state<string>('');
+  let currentTheme = $state<string>('dark_dimmed');
   let themeInitialized = $state<boolean>(false);
 
   function registerNoteContentElement(element: HTMLElement) {
@@ -27,11 +27,8 @@ Shows highlighted content or renders the CodeMirror editor.
   }
 
   async function loadTheme(theme: string) {
-    console.log(`[Theme Debug] Loading theme: ${theme}`);
-
     const existingLink = document.head.querySelector('link[data-markdown-theme]');
     if (existingLink) {
-      console.log(`[Theme Debug] Removing existing theme link:`, existingLink);
       existingLink.remove();
     }
 
@@ -40,64 +37,53 @@ Shows highlighted content or renders the CodeMirror editor.
     link.href = `/css/${theme}.css`;
     link.setAttribute('data-markdown-theme', theme);
 
-    console.log(`[Theme Debug] Created link element with href: ${link.href}`);
-    console.log(`[Theme Debug] Link element:`, link);
-
     document.head.appendChild(link);
-    console.log(`[Theme Debug] Appended link to document head`);
 
     return new Promise<void>((resolve) => {
       link.onload = () => {
-        console.log(`[Theme Debug] Theme ${theme} loaded successfully`);
         resolve();
       };
-      link.onerror = (error) => {
-        console.error(`[Theme Debug] Failed to load theme ${theme}:`, error);
+      link.onerror = () => {
         resolve();
       };
     });
   }
 
   async function initializeTheme() {
-    console.log('[Theme Debug] Initializing theme system...');
     try {
-      console.log('[Theme Debug] Calling configService.getMarkdownTheme()...');
       const theme = await configService.getMarkdownTheme();
-      console.log(`[Theme Debug] Got theme from config: ${theme}`);
-      console.log(`[Theme Debug] Current theme state: ${currentTheme}`);
 
       if (theme !== currentTheme || !themeInitialized) {
-        console.log(`[Theme Debug] Theme changed from ${currentTheme} to ${theme} or first load, loading theme...`);
         currentTheme = theme;
         await loadTheme(theme);
         themeInitialized = true;
-        console.log('[Theme Debug] Theme initialization complete');
-      } else {
-        console.log('[Theme Debug] Theme unchanged, skipping load');
       }
     } catch (e) {
-      console.error('[Theme Debug] Failed to load markdown theme:', e);
-      if (currentTheme !== 'light' || !themeInitialized) {
-        console.log('[Theme Debug] Falling back to light theme');
-        currentTheme = 'light';
-        await loadTheme('light');
+      console.error('Failed to load markdown theme:', e);
+      if (currentTheme !== 'dark_dimmed' || !themeInitialized) {
+        currentTheme = 'dark_dimmed';
+        await loadTheme('dark_dimmed');
         themeInitialized = true;
-      } else {
-        console.log('[Theme Debug] Already using fallback light theme');
       }
     }
   }
 
   function themeInitializer(element: HTMLElement) {
-    console.log('[Theme Debug] themeInitializer action called on element:', element);
     initializeTheme();
     return {
       destroy() {
-        console.log('[Theme Debug] themeInitializer destroy called');
         // Cleanup if needed
       }
     };
   }
+
+  // Watch for config changes and reload theme
+  $effect(() => {
+    const lastSaved = configService.lastSaved;
+    if (lastSaved > 0 && themeInitialized) {
+      initializeTheme();
+    }
+  });
 
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
