@@ -8,7 +8,8 @@ Focused component handling CodeMirror initialization and content editing.
   import { EditorView, basicSetup } from 'codemirror';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
-  import { markdown } from '@codemirror/lang-markdown';
+  import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+  import { languages } from '@codemirror/language-data';
   import { StreamLanguage } from '@codemirror/language';
   import { toml } from '@codemirror/legacy-modes/mode/toml';
   import { vim } from "@replit/codemirror-vim";
@@ -71,11 +72,17 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function getLanguageExtension(filename: string): any {
-    if (!filename) return markdown();
+    if (!filename) return markdown({
+      base: markdownLanguage,
+      codeLanguages: languages
+    });
     const ext = filename.split('.').pop()?.toLowerCase();
     switch (ext) {
       case 'toml': return StreamLanguage.define(toml);
-      case 'md': case 'markdown': default: return markdown();
+      case 'md': case 'markdown': default: return markdown({
+        base: markdownLanguage,
+        codeLanguages: languages
+      });
     }
   }
 
