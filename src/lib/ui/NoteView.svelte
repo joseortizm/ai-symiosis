@@ -223,12 +223,12 @@ Shows highlighted content or renders the CodeMirror editor.
   }
 
   :global(.highlight) {
-    background-color: rgba(254, 145, 0, 0.45);
-    border-radius: 3px;
-    padding: 0.1em 0.3em;
-    font-weight: 500;
-    color: #f0f0f0;
-    display: inline-block;
+    background-color: rgba(254, 145, 0, 0.75) !important;
+    border-radius: 3px !important;
+    padding: 0.1em 0.3em !important;
+    font-weight: 500 !important;
+    color: #f0f0f0 !important;
+    display: inline-block !important;
   }
 
   .no-selection {
