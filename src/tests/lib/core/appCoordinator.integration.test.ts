@@ -118,7 +118,7 @@ vi.mock('../../../lib/core/contentHighlighting.svelte', () => ({
 }));
 
 describe('appCoordinator Integration Tests', () => {
-  let appCoordinator: any;
+  let appCoordinator: import('../../../lib/app/appCoordinator.svelte').AppCoordinator;
 
   beforeEach(async () => {
     // Reset all mocks

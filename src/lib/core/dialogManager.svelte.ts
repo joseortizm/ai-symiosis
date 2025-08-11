@@ -4,7 +4,7 @@
  * Handles dialog input values, visibility state, and focus management after dialog actions.
  */
 
-interface DialogManagerDeps {
+export interface DialogManagerDeps {
   focusSearch: () => void;
 }
 
@@ -14,7 +14,7 @@ interface DialogContext {
   highlightedContent: string;
 }
 
-interface DialogManager {
+export interface DialogManager {
   readonly showCreateDialog: boolean;
   readonly showRenameDialog: boolean;
   readonly showDeleteDialog: boolean;

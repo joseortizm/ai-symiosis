@@ -7,7 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getHighlightedContent } from './contentHighlighting.svelte';
 
-interface ContentManagerDeps {
+export interface ContentManagerDeps {
   noteService: {
     getContent: (noteName: string) => Promise<string>;
   };
@@ -31,7 +31,7 @@ interface RefreshAfterSaveResult {
   content: string;
 }
 
-interface ContentManager {
+export interface ContentManager {
   readonly noteContent: string;
   readonly highlightedContent: string;
   areHighlightsCleared: boolean;

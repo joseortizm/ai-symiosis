@@ -24,7 +24,7 @@ interface AppCoordinatorDeps {
   focusManager: ReturnType<typeof import('../core/focusManager.svelte').createFocusManager>;
 }
 
-interface AppCoordinator {
+export interface AppCoordinator {
   readonly query: string;
   readonly isLoading: boolean;
   readonly areHighlightsCleared: boolean;
@@ -148,7 +148,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusSearch: () => focusManager.focusSearch(),
   });
 
-  function setupReactiveEffects() {
+  function setupReactiveEffects(): () => void {
     return setupAppEffects({
       getFilteredNotes: () => filteredNotes,
       getSelectedIndex: () => selectedIndex,

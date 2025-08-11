@@ -18,7 +18,7 @@ interface SaveResult {
   error?: string;
 }
 
-interface EditorManager {
+export interface EditorManager {
   readonly isEditMode: boolean;
   readonly editContent: string;
   readonly isDirty: boolean;

@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockSearchManager, resetAllMocks } from '../../test-utils';
+import type { DialogManager, DialogManagerDeps } from '../../../lib/core/dialogManager.svelte';
 
 describe('dialogManager (factory-based - TDD)', () => {
-  let dialogManager: any;
-  let mockFocusCallback: any;
+  let dialogManager: DialogManager | null;
+  let mockFocusCallback: () => void;
 
   beforeEach(async () => {
     resetAllMocks();

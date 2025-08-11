@@ -1,31 +1,42 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { FocusManager } from '../../../lib/core/focusManager.svelte';
 
-// Mock DOM elements
-class MockHTMLElement {
-  focus = vi.fn();
-  scrollBy = vi.fn();
-  scrollIntoView = vi.fn();
-  children: any[] = [];
+// Mock DOM elements - using unknown then casting for maximum flexibility
+function createMockHTMLInputElement() {
+  return {
+    focus: vi.fn(),
+    scrollIntoView: vi.fn(),
+  } as unknown as HTMLInputElement;
+}
+
+function createMockHTMLElement() {
+  return {
+    focus: vi.fn(),
+    scrollBy: vi.fn(),
+    scrollIntoView: vi.fn(),
+    children: [] as any,
+    querySelector: vi.fn(),
+  } as unknown as HTMLElement;
 }
 
 const { createFocusManager } = await import('../../../lib/core/focusManager.svelte');
 
 // Create a fresh instance for each test
-let focusManager: ReturnType<typeof createFocusManager>;
+let focusManager: FocusManager;
 
 describe('focusManager', () => {
-  let searchElement: MockHTMLElement;
-  let noteContentElement: MockHTMLElement;
-  let noteListElement: MockHTMLElement;
+  let searchElement: HTMLInputElement;
+  let noteContentElement: HTMLElement;
+  let noteListElement: HTMLElement;
 
   beforeEach(() => {
     // Create fresh manager instance
     focusManager = createFocusManager();
 
     // Create fresh mock elements
-    searchElement = new MockHTMLElement();
-    noteContentElement = new MockHTMLElement();
-    noteListElement = new MockHTMLElement();
+    searchElement = createMockHTMLInputElement();
+    noteContentElement = createMockHTMLElement();
+    noteListElement = createMockHTMLElement();
 
     // Reset focus manager state
     focusManager.setSearchInputFocused(false);
@@ -67,9 +78,9 @@ describe('focusManager', () => {
 
   describe('element management', () => {
     it('should set and get elements', () => {
-      focusManager.setSearchElement(searchElement as any);
-      focusManager.setNoteContentElement(noteContentElement as any);
-      focusManager.setNoteListElement(noteListElement as any);
+      focusManager.setSearchElement(searchElement);
+      focusManager.setNoteContentElement(noteContentElement);
+      focusManager.setNoteListElement(noteListElement);
 
       expect(focusManager.searchElement).toBe(searchElement);
       expect(focusManager.noteContentElement).toBe(noteContentElement);
@@ -79,8 +90,8 @@ describe('focusManager', () => {
 
   describe('focus actions', () => {
     beforeEach(() => {
-      focusManager.setSearchElement(searchElement as any);
-      focusManager.setNoteContentElement(noteContentElement as any);
+      focusManager.setSearchElement(searchElement);
+      focusManager.setNoteContentElement(noteContentElement);
     });
 
     it('should focus search input', () => {
@@ -96,8 +107,8 @@ describe('focusManager', () => {
 
   describe('scroll actions', () => {
     beforeEach(() => {
-      focusManager.setNoteContentElement(noteContentElement as any);
-      focusManager.setNoteListElement(noteListElement as any);
+      focusManager.setNoteContentElement(noteContentElement);
+      focusManager.setNoteListElement(noteListElement);
     });
 
     it('should scroll note content up', () => {
@@ -117,9 +128,9 @@ describe('focusManager', () => {
     });
 
     it('should scroll to selected item in list', () => {
-      const mockButton = new MockHTMLElement();
-      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) };
-      noteListElement.children = [mockLi];
+      const mockButton = createMockHTMLElement();
+      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) } as any;
+      (noteListElement.children as any) = [mockLi];
 
       focusManager.scrollToSelectedInList(0);
 
@@ -139,9 +150,9 @@ describe('focusManager', () => {
     });
 
     it('should scroll to selected item by index', () => {
-      const mockButton = new MockHTMLElement();
-      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) };
-      noteListElement.children = [mockLi];
+      const mockButton = createMockHTMLElement();
+      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) } as any;
+      (noteListElement.children as any) = [mockLi];
 
       focusManager.scrollToSelected(0);
 

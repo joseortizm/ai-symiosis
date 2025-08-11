@@ -12,7 +12,7 @@ interface FocusState {
   noteListElement: HTMLElement | null;
 }
 
-interface FocusManager {
+export interface FocusManager {
   readonly isSearchInputFocused: boolean;
   readonly isNoteContentFocused: boolean;
   readonly searchElement: HTMLInputElement | null;

@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockInvoke, resetAllMocks } from '../../test-utils';
+import type { ContentManager, ContentManagerDeps } from '../../../lib/core/contentManager.svelte';
 
 // Test for both factory-based and singleton-based contentManager
 describe('contentManager (factory-based - TDD)', () => {
-  let contentManager: any;
-  let mockDeps: any;
+  let contentManager: ContentManager | null;
+  let mockDeps: ContentManagerDeps;
 
   beforeEach(async () => {
     resetAllMocks();

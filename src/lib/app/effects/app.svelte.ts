@@ -113,7 +113,7 @@ export function setupAppEffects(deps: AppEffectsDeps): () => void {
     });
   });
 
-  return function cleanup() {
+  return function cleanup(): void {
     if (contentRequestController.current) {
       contentRequestController.current.abort();
       contentRequestController.set(null);

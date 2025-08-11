@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockInvoke, resetAllMocks } from '../../test-utils';
+import type { EditorManager } from '../../../lib/core/editorManager.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
@@ -9,7 +10,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 const { createEditorManager } = await import('../../../lib/core/editorManager.svelte');
 
 // Create a fresh instance for each test
-let editorManager: ReturnType<typeof createEditorManager>;
+let editorManager: EditorManager;
 
 describe('editorManager', () => {
   beforeEach(() => {
@@ -55,14 +56,14 @@ describe('editorManager', () => {
       mockInvoke.mockResolvedValue(mockRawContent);
 
       // Mock DOM element with getBoundingClientRect and querySelectorAll
-      const mockElement = {
+      const mockElement: Partial<HTMLElement> = {
         getBoundingClientRect: vi.fn().mockReturnValue({ top: 100, height: 600 }),
         querySelectorAll: vi.fn().mockReturnValue([
           { getBoundingClientRect: vi.fn().mockReturnValue({ top: 120 }), textContent: 'Header 2' }
-        ])
+        ] as any)
       };
 
-      await editorManager.enterEditMode('test-note.md', '', mockElement as any);
+      await editorManager.enterEditMode('test-note.md', '', mockElement as HTMLElement);
 
       expect(editorManager.nearestHeaderText).toBe('Header 2');
     });
