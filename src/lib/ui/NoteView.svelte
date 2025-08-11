@@ -204,7 +204,7 @@ Shows highlighted content or renders the CodeMirror editor.
   }
   .note-content {
     flex: 1;
-    padding: 0em 1em 2em 1em;
+    padding: 0;
     overflow-y: auto;
     outline: none;
     border: 2px solid transparent;
@@ -218,6 +218,8 @@ Shows highlighted content or renders the CodeMirror editor.
     max-width: 800px;
     margin: 0 auto;
     padding: 1em;
+    min-height: 100%;
+    width: 100%;
   }
 
   :global(.highlight) {
