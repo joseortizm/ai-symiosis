@@ -56,7 +56,7 @@ describe('editorManager', () => {
 
       // Mock DOM element with getBoundingClientRect and querySelectorAll
       const mockElement = {
-        getBoundingClientRect: vi.fn().mockReturnValue({ top: 100 }),
+        getBoundingClientRect: vi.fn().mockReturnValue({ top: 100, height: 600 }),
         querySelectorAll: vi.fn().mockReturnValue([
           { getBoundingClientRect: vi.fn().mockReturnValue({ top: 120 }), textContent: 'Header 2' }
         ])

@@ -27,6 +27,7 @@ interface NoteActionDeps {
   };
   focusManager: {
     focusSearch: () => void;
+    noteContentElement: HTMLElement | null;
   };
   editorManager: {
     enterEditMode: (noteName: string, fallbackHtmlContent?: string, noteContentElement?: HTMLElement) => Promise<void>;
@@ -107,7 +108,7 @@ export function createNoteActions(deps: NoteActionDeps) {
     await editorManager.enterEditMode(
       noteName,
       contentManager.noteContent,
-      undefined
+      focusManager.noteContentElement ?? undefined
     );
   }
 

@@ -37,7 +37,6 @@ Focused component handling CodeMirror initialization and content editing.
     nearestHeaderText = '',
     onSave,
     onContentChange,
-    onDirtyChange,
     onExit = null,
     onRequestExit = null,
     isDirty = $bindable(false)

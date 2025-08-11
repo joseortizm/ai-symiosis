@@ -36,13 +36,27 @@ export function createEditorManager() {
       try {
         const rect = noteContentElement.getBoundingClientRect();
         const headers = noteContentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        let bestHeader: Element | null = null;
 
         for (const header of headers) {
           const headerRect = header.getBoundingClientRect();
-          if (headerRect.top >= rect.top) {
-            state.nearestHeaderText = header.textContent?.trim() || '';
-            break;
+
+          // Check if header is in the viewport
+          const isInViewport = headerRect.top >= rect.top && headerRect.top <= rect.top + (rect.height || 600);
+
+          if (isInViewport) {
+            // If header is visible, use it (prefer the first visible header)
+            if (!bestHeader) {
+              bestHeader = header;
+            }
+          } else if (headerRect.top < rect.top) {
+            // If header is above viewport, keep track of it as the "last passed" header
+            bestHeader = header;
           }
+        }
+
+        if (bestHeader) {
+          state.nearestHeaderText = bestHeader.textContent?.trim() || '';
         }
       } catch (e) {
         console.warn('Failed to detect nearest header:', e);
