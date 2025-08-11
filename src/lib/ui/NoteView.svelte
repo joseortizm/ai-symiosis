@@ -5,7 +5,7 @@ Shows highlighted content or renders the CodeMirror editor.
 -->
 
 <script lang="ts">
-  import Editor from './Editor.svelte';
+  import CodeMirrorEditor from './CodeMirrorEditor.svelte';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
   import { getContext } from 'svelte';
@@ -48,9 +48,9 @@ Shows highlighted content or renders the CodeMirror editor.
             <button onclick={appCoordinator.context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
           </div>
         </div>
-        <Editor
-          value={appCoordinator.context.editorManager.editContent}
-          isDirty={appCoordinator.context.editorManager.isDirty}
+        <CodeMirrorEditor
+          bind:value={appCoordinator.context.editorManager.editContent}
+          bind:isDirty={appCoordinator.context.editorManager.isDirty}
           filename={appCoordinator.context.state.selectedNote}
           nearestHeaderText={appCoordinator.context.editorManager.nearestHeaderText}
           onContentChange={appCoordinator.context.editorManager.updateContent}

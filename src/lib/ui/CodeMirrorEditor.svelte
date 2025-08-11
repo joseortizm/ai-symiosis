@@ -5,6 +5,7 @@ Focused component handling CodeMirror initialization and content editing.
 
 <script lang="ts">
   import { onMount, tick } from 'svelte';
+  import { invoke } from "@tauri-apps/api/core";
   import { EditorView, basicSetup } from 'codemirror';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
@@ -21,45 +22,60 @@ Focused component handling CodeMirror initialization and content editing.
   interface Props {
     value: string;
     filename: string;
-    keyBindingMode: string;
     nearestHeaderText?: string;
     onSave: () => void;
     onContentChange?: (newValue: string) => void;
     onDirtyChange?: (isDirty: boolean) => void;
     onExit?: (() => void) | null | undefined;
     onRequestExit?: (() => void) | null | undefined;
+    isDirty?: boolean;
   }
 
   let {
     value = $bindable(),
     filename,
-    keyBindingMode,
     nearestHeaderText = '',
     onSave,
     onContentChange,
     onDirtyChange,
     onExit = null,
-    onRequestExit = null
+    onRequestExit = null,
+    isDirty = $bindable(false)
   }: Props = $props();
 
   let editorContainer: HTMLElement;
   let editorView: EditorView | null = null;
   let initialValue = $state(value);
   let lastPropsValue = $state(value);
+  let keyBindingMode = $state('basic');
 
   const propsChanged = $derived(value !== lastPropsValue);
+
+  async function loadEditorMode(): Promise<void> {
+    try {
+      const mode = await invoke<string>("get_editor_mode");
+      keyBindingMode = mode;
+    } catch (e) {
+      console.error("Failed to load editor mode:", e);
+      keyBindingMode = 'basic';
+    }
+  }
+
+  function handleDirtyChange(dirty: boolean): void {
+    isDirty = dirty;
+  }
 
   // Use effect only for side effect (notification), not state updates
   $effect(() => {
     if (propsChanged) {
-      onDirtyChange?.(false);
+      handleDirtyChange(false);
     }
   });
 
   function resetDirtyFlag(): void {
     initialValue = value;
     lastPropsValue = value;
-    onDirtyChange?.(false);
+    handleDirtyChange(false);
   }
 
   function getKeyMappingsMode(mode: string): any {
@@ -148,7 +164,7 @@ Focused component handling CodeMirror initialization and content editing.
             lastPropsValue = newValue;
             onContentChange?.(newValue);
             const isDirty = newValue !== initialValue;
-            onDirtyChange?.(isDirty);
+            handleDirtyChange(isDirty);
           }
         })
       ].filter((ext): ext is any => Boolean(ext));
@@ -238,6 +254,7 @@ Focused component handling CodeMirror initialization and content editing.
   onMount(() => {
     const init = async () => {
       await tick();
+      await loadEditorMode();
       // Create editor immediately if mode is already loaded, or with basic mode
       if (keyBindingMode !== 'basic') {
         initialModeSet = true;

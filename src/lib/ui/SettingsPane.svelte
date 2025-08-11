@@ -5,10 +5,9 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
 -->
 
 <script lang="ts">
-  import Editor from './Editor.svelte';
+  import CodeMirrorEditor from './CodeMirrorEditor.svelte';
   import { configService } from '../services/configService.svelte';
   import { getContext } from 'svelte';
-  import type { createSearchManager } from '../core/searchManager.svelte';
 
   interface Props {
     show: boolean;
@@ -73,7 +72,7 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
     >
       <h3>Settings</h3>
       <div class="settings-editor-container">
-        <Editor
+        <CodeMirrorEditor
           bind:value={configService.content}
           filename="config.toml"
           onSave={() => {}}
