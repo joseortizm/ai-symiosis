@@ -9,12 +9,13 @@ Focused component handling CodeMirror initialization and content editing.
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
   import { markdown } from '@codemirror/lang-markdown';
-  import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
-  import { tags } from '@lezer/highlight';
   import { StreamLanguage } from '@codemirror/language';
   import { toml } from '@codemirror/legacy-modes/mode/toml';
   import { vim } from "@replit/codemirror-vim";
   import { emacs } from "@replit/codemirror-emacs";
+  import { gruvboxDark } from "@fsegurai/codemirror-theme-bundle";
+
+  // TODO: Add theme selection to config options using https://fsegurai.github.io/codemirror-themes/#demo-application
 
   interface Props {
     value: string;
@@ -85,85 +86,6 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
-  function createGruvboxTheme(): any {
-    return EditorView.theme({
-      "&": {
-        color: "#fbf1c7",
-        backgroundColor: "#282828",
-        height: "100%",
-        fontSize: "14px"
-      },
-      ".cm-content": {
-        padding: "16px",
-        minHeight: "100%",
-        caretColor: "#fbf1c7",
-        fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-        fontSize: "14px",
-        lineHeight: "1.5"
-      },
-      ".cm-focused": {
-        outline: "none"
-      },
-      ".cm-editor": {
-        height: "100%"
-      },
-      ".cm-scroller": {
-        fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-        height: "100%"
-      },
-      ".cm-cursor": {
-        borderColor: "#fbf1c7"
-      },
-      ".cm-selectionBackground": {
-        backgroundColor: "#504945 !important"
-      },
-      ".cm-focused .cm-selectionBackground": {
-        backgroundColor: "#504945 !important"
-      },
-      ".cm-activeLine": {
-        backgroundColor: "#32302f"
-      },
-      ".cm-activeLineGutter": {
-        backgroundColor: "#32302f"
-      },
-      ".cm-gutters": {
-        backgroundColor: "#32302f",
-        color: "#a89984",
-        border: "none"
-      },
-      ".cm-lineNumbers": {
-        color: "#a89984"
-      },
-      ".cm-fat-cursor": {
-        backgroundColor: "#fe8019 !important"
-      },
-      ".cm-animate-fat-cursor": {
-        backgroundColor: "#fe8019 !important"
-      }
-    });
-  }
-
-  function createGruvboxHighlighting(): any {
-    return syntaxHighlighting(HighlightStyle.define([
-      { tag: tags.comment, color: "#928374", fontStyle: "italic" },
-      { tag: tags.keyword, color: "#fb4934" },
-      { tag: tags.string, color: "#b8bb26" },
-      { tag: tags.number, color: "#d3869b" },
-      { tag: tags.function(tags.variableName), color: "#8ec07c" },
-      { tag: tags.variableName, color: "#fbf1c7" },
-      { tag: tags.propertyName, color: "#83a598" },
-      { tag: tags.typeName, color: "#fabd2f" },
-      { tag: tags.operator, color: "#fe8019" },
-      { tag: tags.punctuation, color: "#fbf1c7" },
-      { tag: tags.heading1, color: "#fb4934", fontWeight: "bold", fontSize: "1.6em" },
-      { tag: tags.heading2, color: "#fabd2f", fontWeight: "bold", fontSize: "1.4em" },
-      { tag: tags.heading3, color: "#b8bb26", fontWeight: "bold", fontSize: "1.2em" },
-      { tag: tags.strong, color: "#fe8019", fontWeight: "bold" },
-      { tag: tags.emphasis, color: "#d3869b", fontStyle: "italic" },
-      { tag: tags.link, color: "#83a598", textDecoration: "underline" },
-      { tag: tags.monospace, color: "#d3869b", backgroundColor: "#3c3836" }
-    ]));
-  }
 
   function createCodeMirrorEditor(): void {
     if (!editorContainer) return;
@@ -208,8 +130,7 @@ Focused component handling CodeMirror initialization and content editing.
         getKeyMappingsMode(keyBindingMode),
         basicSetup,
         getLanguageExtension(filename),
-        createGruvboxTheme(),
-        createGruvboxHighlighting(),
+        gruvboxDark,
         customKeymap,
         escapeKeymap,
         EditorView.lineWrapping,
@@ -299,7 +220,7 @@ Focused component handling CodeMirror initialization and content editing.
   let initialModeSet = $state(false);
 
   $effect(() => {
-    // Only recreate editor when keyBindingMode changes from initial 'basic' 
+    // Only recreate editor when keyBindingMode changes from initial 'basic'
     // This handles the async mode loading from EditorModeManager
     if (!initialModeSet && keyBindingMode !== 'basic') {
       initialModeSet = true;
