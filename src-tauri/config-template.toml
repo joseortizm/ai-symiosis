@@ -14,3 +14,7 @@ global_shortcut = "Ctrl+Shift+N"
 # Options: "vim", "emacs", "basic"
 # You should choose "vim" here really... but hey, it's your editor
 editor_mode = "basic"
+
+# Markdown rendering theme for note content
+# Options: "light", "dark", "auto", "dark_colorblind", "dark_dimmed", "dark_high_contrast", "light_colorblind"
+markdown_theme = "light"

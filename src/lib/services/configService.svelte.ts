@@ -80,6 +80,15 @@ class ConfigService {
     }
   }
 
+  async getMarkdownTheme(): Promise<string> {
+    try {
+      return await invoke<string>("get_markdown_theme");
+    } catch (e) {
+      console.error("Failed to get markdown theme:", e);
+      return "light";
+    }
+  }
+
   clearError(): void {
     this.state.error = null;
   }

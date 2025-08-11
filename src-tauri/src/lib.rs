@@ -28,6 +28,8 @@ struct AppConfig {
     global_shortcut: String,
     #[serde(default = "default_editor_mode")]
     editor_mode: String,
+    #[serde(default = "default_markdown_theme")]
+    markdown_theme: String,
 }
 
 fn default_max_results() -> usize {
@@ -42,6 +44,10 @@ fn default_editor_mode() -> String {
     "basic".to_string()
 }
 
+fn default_markdown_theme() -> String {
+    "light".to_string()
+}
+
 fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
     shortcut_str.parse().ok()
 }
@@ -53,6 +59,7 @@ impl Default for AppConfig {
             max_search_results: default_max_results(),
             global_shortcut: default_global_shortcut(),
             editor_mode: default_editor_mode(),
+            markdown_theme: default_markdown_theme(),
         }
     }
 }
@@ -485,6 +492,11 @@ fn get_editor_mode() -> String {
 }
 
 #[tauri::command]
+fn get_markdown_theme() -> String {
+    APP_CONFIG.markdown_theme.clone()
+}
+
+#[tauri::command]
 fn show_main_window(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
         Some(window) => {
@@ -712,7 +724,8 @@ pub fn run() {
             get_config_content,
             save_config_content,
             config_exists,
-            get_editor_mode
+            get_editor_mode,
+            get_markdown_theme
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

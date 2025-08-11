@@ -57,3 +57,7 @@ When viewing a note (not in edit mode):
 *   **`Ctrl + Shift + N`:** Toggle Symiosis window visibility (works system-wide).
 
 Have fun 🙂
+
+---
+
+<sub>Markdown themes from [render-gfm](https://github.com/shaunbharat/render-gfm)</sub>

@@ -9,16 +9,92 @@ Shows highlighted content or renders the CodeMirror editor.
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
   import { getContext } from 'svelte';
+  import { configService } from '../services/configService.svelte';
 
   const { appCoordinator } = getContext('managers') as any;
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
+  let currentTheme = $state<string>('');
+  let themeInitialized = $state<boolean>(false);
 
   function registerNoteContentElement(element: HTMLElement) {
     appCoordinator.context.focusManager.setNoteContentElement(element);
     return {
       destroy() {
         appCoordinator.context.focusManager.setNoteContentElement(null);
+      }
+    };
+  }
+
+  async function loadTheme(theme: string) {
+    console.log(`[Theme Debug] Loading theme: ${theme}`);
+
+    const existingLink = document.head.querySelector('link[data-markdown-theme]');
+    if (existingLink) {
+      console.log(`[Theme Debug] Removing existing theme link:`, existingLink);
+      existingLink.remove();
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `/css/${theme}.css`;
+    link.setAttribute('data-markdown-theme', theme);
+
+    console.log(`[Theme Debug] Created link element with href: ${link.href}`);
+    console.log(`[Theme Debug] Link element:`, link);
+
+    document.head.appendChild(link);
+    console.log(`[Theme Debug] Appended link to document head`);
+
+    return new Promise<void>((resolve) => {
+      link.onload = () => {
+        console.log(`[Theme Debug] Theme ${theme} loaded successfully`);
+        resolve();
+      };
+      link.onerror = (error) => {
+        console.error(`[Theme Debug] Failed to load theme ${theme}:`, error);
+        resolve();
+      };
+    });
+  }
+
+  async function initializeTheme() {
+    console.log('[Theme Debug] Initializing theme system...');
+    try {
+      console.log('[Theme Debug] Calling configService.getMarkdownTheme()...');
+      const theme = await configService.getMarkdownTheme();
+      console.log(`[Theme Debug] Got theme from config: ${theme}`);
+      console.log(`[Theme Debug] Current theme state: ${currentTheme}`);
+
+      if (theme !== currentTheme || !themeInitialized) {
+        console.log(`[Theme Debug] Theme changed from ${currentTheme} to ${theme} or first load, loading theme...`);
+        currentTheme = theme;
+        await loadTheme(theme);
+        themeInitialized = true;
+        console.log('[Theme Debug] Theme initialization complete');
+      } else {
+        console.log('[Theme Debug] Theme unchanged, skipping load');
+      }
+    } catch (e) {
+      console.error('[Theme Debug] Failed to load markdown theme:', e);
+      if (currentTheme !== 'light' || !themeInitialized) {
+        console.log('[Theme Debug] Falling back to light theme');
+        currentTheme = 'light';
+        await loadTheme('light');
+        themeInitialized = true;
+      } else {
+        console.log('[Theme Debug] Already using fallback light theme');
+      }
+    }
+  }
+
+  function themeInitializer(element: HTMLElement) {
+    console.log('[Theme Debug] themeInitializer action called on element:', element);
+    initializeTheme();
+    return {
+      destroy() {
+        console.log('[Theme Debug] themeInitializer destroy called');
+        // Cleanup if needed
       }
     };
   }
@@ -37,7 +113,7 @@ Shows highlighted content or renders the CodeMirror editor.
   });
 </script>
 
-<div class="note-preview">
+<div class="note-preview" use:themeInitializer>
   {#if appCoordinator.context.state.selectedNote}
     {#if appCoordinator.context.editorManager.isEditMode}
       <div class="edit-mode">
@@ -71,7 +147,7 @@ Shows highlighted content or renders the CodeMirror editor.
         onblur={() => appCoordinator.context.focusManager.setNoteContentFocused(false)}
         ondblclick={appCoordinator.context.enterEditMode}
       >
-        <div class="note-text">{@html appCoordinator.context.contentManager.highlightedContent}</div>
+        <div class="markdown-body">{@html appCoordinator.context.contentManager.highlightedContent}</div>
       </div>
     {/if}
   {:else}
@@ -89,7 +165,6 @@ Shows highlighted content or renders the CodeMirror editor.
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    background-color: #282c34;
   }
   .edit-mode {
     flex: 1;
@@ -143,86 +218,20 @@ Shows highlighted content or renders the CodeMirror editor.
   }
   .note-content {
     flex: 1;
-    padding: 0em 2em 2em 2em;
+    padding: 0em 1em 2em 1em;
     overflow-y: auto;
     outline: none;
     border: 2px solid transparent;
     transition: border-color 0.2s ease;
+    background-color: transparent;
   }
   .note-content:focus {
     border-color: #61afef;
   }
-  .note-text {
-    color: #abb2bf;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    font-size: 1em;
-    line-height: 1.7;
+  .markdown-body {
     max-width: 800px;
     margin: 0 auto;
-  }
-  .note-text :global(h1),
-  .note-text :global(h2),
-  .note-text :global(h3),
-  .note-text :global(h4),
-  .note-text :global(h5),
-  .note-text :global(h6) {
-    color: #f0f0f0;
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-weight: 600;
-  }
-  .note-text :global(h1) { font-size: 2em; }
-  .note-text :global(h2) { font-size: 1.5em; }
-  .note-text :global(h3) { font-size: 1.25em; }
-
-  .note-text :global(p) {
-    margin-bottom: 1em;
-  }
-
-  .note-text :global(a) {
-    color: #61afef;
-    text-decoration: none;
-    word-break: break-word;
-  }
-  .note-text :global(a:hover) {
-    text-decoration: underline;
-  }
-
-  .note-text :global(code) {
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-    font-size: 0.9em;
-  }
-
-  .note-text :global(pre) {
-    margin: 1.5em 0;
-    border-radius: 6px;
-    font-size: 0.9em;
-  }
-
-  .note-text :global(pre code) {
     padding: 1em;
-    display: block;
-    overflow-x: auto;
-  }
-
-  .note-text :global(ul),
-  .note-text :global(ol) {
-    margin-bottom: 1em;
-    padding-left: 2em;
-  }
-
-  .note-text :global(blockquote) {
-    margin: 1.5em 0;
-    padding-left: 1.5em;
-    border-left: 3px solid #5c6370;
-    color: #9ca3af;
-    font-style: italic;
-  }
-
-  .note-text :global(hr) {
-    border: none;
-    border-top: 1px solid #3a3f4b;
-    margin: 2em 0;
   }
 
   :global(.highlight) {
