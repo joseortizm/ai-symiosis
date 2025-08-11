@@ -4,8 +4,9 @@ Main editor component that orchestrates focused sub-components.
 -->
 
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { invoke } from "@tauri-apps/api/core";
   import CodeMirrorEditor from './CodeMirrorEditor.svelte';
-  import EditorModeManager from './EditorModeManager.svelte';
 
   interface Props {
     value: string;
@@ -31,9 +32,19 @@ Main editor component that orchestrates focused sub-components.
 
   let keyBindingMode = $state('basic');
 
-  function handleModeLoaded(mode: string): void {
-    keyBindingMode = mode;
+  async function loadEditorMode(): Promise<void> {
+    try {
+      const mode = await invoke<string>("get_editor_mode");
+      keyBindingMode = mode;
+    } catch (e) {
+      console.error("Failed to load editor mode:", e);
+      keyBindingMode = 'basic';
+    }
   }
+
+  onMount(() => {
+    loadEditorMode();
+  });
 
   function handleDirtyChange(dirty: boolean): void {
     isDirty = dirty;
@@ -41,7 +52,6 @@ Main editor component that orchestrates focused sub-components.
 
 </script>
 
-<EditorModeManager onModeLoaded={handleModeLoaded} />
 <div class="editor-container">
   <CodeMirrorEditor
     bind:value
