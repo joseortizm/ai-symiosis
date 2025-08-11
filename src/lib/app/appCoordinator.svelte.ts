@@ -295,7 +295,10 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
       return () => {
         searchManager.abort();
-        if (contentRequestController) contentRequestController.abort();
+        if (contentRequestController) {
+          contentRequestController.abort();
+          contentRequestController = null;
+        }
         cleanupEffects();
         unlisten();
       };

@@ -82,9 +82,9 @@ describe('focusManager', () => {
       focusManager.setNoteContentElement(noteContentElement);
       focusManager.setNoteListElement(noteListElement);
 
-      expect(focusManager.searchElement).toBe(searchElement);
-      expect(focusManager.noteContentElement).toBe(noteContentElement);
-      expect(focusManager.noteListElement).toBe(noteListElement);
+      expect(focusManager.searchElement).toStrictEqual(searchElement);
+      expect(focusManager.noteContentElement).toStrictEqual(noteContentElement);
+      expect(focusManager.noteListElement).toStrictEqual(noteListElement);
     });
   });
 
