@@ -79,6 +79,13 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
+  function destroyEditor(): void {
+    if (editorView) {
+      editorView.destroy();
+      editorView = null;
+    }
+  }
+
   function createGruvboxTheme(): any {
     return EditorView.theme({
       "&": {
@@ -162,10 +169,7 @@ Focused component handling CodeMirror initialization and content editing.
   function createCodeMirrorEditor(): void {
     if (!editorContainer) return;
 
-    if (editorView) {
-      editorView.destroy();
-      editorView = null;
-    }
+    destroyEditor();
     editorContainer.innerHTML = '';
 
     try {
@@ -222,12 +226,13 @@ Focused component handling CodeMirror initialization and content editing.
         })
       ].filter((ext): ext is any => Boolean(ext));
 
-      editorView = new EditorView({
+      const newEditorView = new EditorView({
         doc: value || '',
         extensions,
         parent: editorContainer
       });
 
+      editorView = newEditorView;
       scrollToHeader();
     } catch (error) {
       console.error('Failed to create CodeMirror editor:', error);
@@ -291,6 +296,13 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
+  $effect(() => {
+    keyBindingMode;
+    if (editorView) {
+      createCodeMirrorEditor();
+    }
+  });
+
   onMount(() => {
     const init = async () => {
       await tick();
@@ -315,11 +327,6 @@ Focused component handling CodeMirror initialization and content editing.
     };
   });
 
-  $effect(() => {
-    if (editorView && keyBindingMode) {
-      createCodeMirrorEditor();
-    }
-  });
 
 </script>
 

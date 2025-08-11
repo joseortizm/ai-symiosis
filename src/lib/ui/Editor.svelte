@@ -43,7 +43,7 @@ Main editor component that orchestrates focused sub-components.
 
 <EditorModeManager onModeLoaded={handleModeLoaded} />
 <div class="editor-container">
-  <CodeMirrorEditor 
+  <CodeMirrorEditor
     bind:value
     {filename}
     {keyBindingMode}
