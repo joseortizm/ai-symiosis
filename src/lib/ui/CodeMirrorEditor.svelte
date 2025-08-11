@@ -160,7 +160,6 @@ Focused component handling CodeMirror initialization and content editing.
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newValue = update.state.doc.toString();
-            value = newValue;
             lastPropsValue = newValue;
             onContentChange?.(newValue);
             const isDirty = newValue !== initialValue;
@@ -230,7 +229,6 @@ Focused component handling CodeMirror initialization and content editing.
       }
 
       fallbackInputHandler = () => {
-        value = textarea.value;
         onContentChange?.(textarea.value);
       };
 
