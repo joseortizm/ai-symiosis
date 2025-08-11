@@ -1,3 +1,9 @@
+<!--
+UI Layer - Settings Pane
+Configuration panel for editing application settings in TOML format.
+Uses CodeMirror editor for syntax highlighting of configuration files.
+-->
+
 <script lang="ts">
   import Editor from './Editor.svelte';
   import { configService } from '../services/configService.svelte';

@@ -1,3 +1,9 @@
+/**
+ * App Layer - Note Actions
+ * Note CRUD operations that coordinate between services and managers.
+ * Handles business logic flow including UI state updates and focus management.
+ */
+
 import { tick } from "svelte";
 
 interface NoteActionDeps {

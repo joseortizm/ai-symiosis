@@ -1,3 +1,9 @@
+/**
+ * Core Layer - Content Highlighting
+ * Search term highlighting functionality with caching for performance.
+ * Handles regex escaping, term extraction, and HTML content highlighting.
+ */
+
 const highlightCache = new Map<string, string>();
 
 function escapeRegex(text: string): string {

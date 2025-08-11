@@ -1,3 +1,9 @@
+<!--
+UI Layer - Delete Dialog
+Specialized confirmation dialog for note deletion with safety timeout mechanism.
+Requires multiple key presses to confirm destructive actions.
+-->
+
 <script lang="ts">
   interface Props {
     show: boolean;

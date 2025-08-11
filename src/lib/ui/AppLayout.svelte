@@ -1,3 +1,9 @@
+<!--
+UI Layer - App Layout
+Main container with slots for search, list, view, and modal components.
+Defines the overall application structure and CSS grid layout.
+-->
+
 <main class="container">
   <slot name="search" />
   <slot name="list" />

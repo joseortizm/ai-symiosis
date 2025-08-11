@@ -1,3 +1,9 @@
+/**
+ * Core Layer - Content Manager
+ * Note content loading, caching, and display with search highlighting.
+ * Coordinates between content fetching, highlighting service, and UI updates.
+ */
+
 import { invoke } from '@tauri-apps/api/core';
 import { getHighlightedContent } from './contentHighlighting.svelte';
 

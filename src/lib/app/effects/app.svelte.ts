@@ -1,4 +1,8 @@
-// Effects are using $effect runes, imported inline where needed
+/**
+ * App Layer - Application Effects
+ * Reactive side effects using Svelte 5 $effect runes.
+ * Handles selection normalization, content loading, and highlight updates.
+ */
 
 interface AppEffectsDeps {
   getFilteredNotes: () => string[];

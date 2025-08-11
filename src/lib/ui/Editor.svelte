@@ -1,3 +1,9 @@
+<!--
+UI Layer - CodeMirror Editor
+Text editor component with Vim mode, syntax highlighting, and Gruvbox theme.
+Handles content editing with language detection and keyboard shortcuts.
+-->
+
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { invoke } from "@tauri-apps/api/core";

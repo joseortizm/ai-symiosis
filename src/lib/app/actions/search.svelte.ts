@@ -1,3 +1,9 @@
+/**
+ * App Layer - Search Actions
+ * Search-related operations including clearing search state
+ * and managing filtered note results.
+ */
+
 interface SearchActionDeps {
   searchManager: {
     clearSearch: () => void;

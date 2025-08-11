@@ -1,3 +1,9 @@
+<!--
+UI Layer - Confirmation Dialog
+Generic confirmation modal for yes/no decisions.
+Used for exit-edit-with-unsaved-changes confirmations.
+-->
+
 <script lang="ts">
   interface Props {
     show: boolean;

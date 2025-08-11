@@ -1,3 +1,9 @@
+/**
+ * App Layer - Application Coordinator
+ * Central coordinator for app-wide state, actions, and effects.
+ * Maintains separation of concerns across the application architecture.
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 import { tick } from "svelte";
 import { listen } from "@tauri-apps/api/event";

@@ -1,3 +1,9 @@
+/**
+ * Service Layer - Note Service
+ * Reactive CRUD operations for notes with loading state management.
+ * Handles API calls to Rust backend for note creation, deletion, and renaming.
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 
 class NoteService {

@@ -1,3 +1,9 @@
+/**
+ * Core Layer - Focus Manager
+ * Keyboard focus state and DOM element focus operations.
+ * Tracks focused elements and provides programmatic focus control.
+ */
+
 interface FocusState {
   isSearchInputFocused: boolean;
   isNoteContentFocused: boolean;

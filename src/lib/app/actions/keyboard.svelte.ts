@@ -1,3 +1,9 @@
+/**
+ * App Layer - Keyboard Actions
+ * Keyboard shortcut handling with categorized action registry.
+ * Maps key combinations to business logic functions across different UI contexts.
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 
 interface KeyboardActionDeps {

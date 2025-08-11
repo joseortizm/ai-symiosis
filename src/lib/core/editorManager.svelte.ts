@@ -1,3 +1,9 @@
+/**
+ * Core Layer - Editor Manager
+ * Note editing state including edit mode, content changes, and save operations.
+ * Handles raw content loading, dirty state tracking, and nearest header detection.
+ */
+
 import { invoke } from '@tauri-apps/api/core';
 
 interface EditorState {

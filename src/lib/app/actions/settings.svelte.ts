@@ -1,3 +1,9 @@
+/**
+ * App Layer - Settings Actions
+ * Configuration panel operations and settings management workflow.
+ * Coordinates between UI state and configuration service operations.
+ */
+
 interface SettingsActionDeps {
   configService: {
     openPane: () => Promise<void>;

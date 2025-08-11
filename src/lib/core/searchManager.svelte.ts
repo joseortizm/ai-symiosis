@@ -1,3 +1,9 @@
+/**
+ * Core Layer - Search Manager
+ * Search input, debouncing, and filtered note results.
+ * Handles hybrid search queries to Rust backend and search state management.
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 
 interface SearchState {

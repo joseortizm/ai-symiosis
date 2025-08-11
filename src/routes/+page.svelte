@@ -1,3 +1,9 @@
+<!--
+Route Layer - Main Page
+Root application component that initializes managers, context, and handles app lifecycle.
+Composes all UI components and provides keyboard event handling for the entire app.
+-->
+
 <script lang="ts">
 import { onMount, setContext } from "svelte";
 import AppLayout from "../lib/ui/AppLayout.svelte";

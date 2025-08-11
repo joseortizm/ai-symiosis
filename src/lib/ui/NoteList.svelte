@@ -1,3 +1,9 @@
+<!--
+UI Layer - Note List
+Displays filtered notes with virtualization and selection highlighting.
+Handles note selection state and integrates with keyboard navigation.
+-->
+
 <script lang="ts">
   import { getContext } from 'svelte';
 

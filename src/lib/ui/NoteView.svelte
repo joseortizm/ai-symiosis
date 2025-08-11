@@ -1,3 +1,9 @@
+<!--
+UI Layer - Note View
+Note display component that switches between read and edit modes.
+Shows highlighted content or renders the CodeMirror editor.
+-->
+
 <script lang="ts">
   import Editor from './Editor.svelte';
   import hljs from 'highlight.js';

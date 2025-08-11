@@ -1,3 +1,9 @@
+/**
+ * Core Layer - Dialog Manager
+ * Modal dialog states for create, delete, rename, and exit confirmation dialogs.
+ * Handles dialog input values, visibility state, and focus management after dialog actions.
+ */
+
 interface DialogManagerDeps {
   focusSearch: () => void;
 }

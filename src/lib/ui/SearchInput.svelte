@@ -1,3 +1,9 @@
+<!--
+UI Layer - Search Input
+Search input field with debounced queries and focus state tracking.
+Connects to search manager and handles keyboard navigation events.
+-->
+
 <script lang="ts">
   import { getContext } from 'svelte';
 

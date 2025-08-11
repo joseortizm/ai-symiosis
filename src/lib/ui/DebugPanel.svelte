@@ -1,3 +1,9 @@
+<!--
+UI Layer - Debug Panel
+Development tool for inspecting application state and manager values.
+Shows reactive state from managers and services for debugging.
+-->
+
 <script lang="ts">
 import { getContext } from 'svelte';
 import type { createSearchManager } from '../core/searchManager.svelte';

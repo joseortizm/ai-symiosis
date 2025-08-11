@@ -1,3 +1,9 @@
+/**
+ * Service Layer - Config Service
+ * Application configuration settings and the settings pane state.
+ * Handles configuration loading, saving, and reactive settings panel visibility.
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 
 class ConfigService {

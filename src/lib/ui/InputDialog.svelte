@@ -1,3 +1,9 @@
+<!--
+UI Layer - Input Dialog
+Generic modal dialog for user text input with validation and keyboard support.
+Used for note creation and renaming operations throughout the application.
+-->
+
 <script lang="ts">
   interface Props {
     show: boolean;
