@@ -161,7 +161,7 @@ Focused component handling CodeMirror initialization and content editing.
 
   function createCodeMirrorEditor(): void {
     if (!editorContainer) return;
-    
+
     if (editorView) {
       editorView.destroy();
       editorView = null;
@@ -268,16 +268,25 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
+  let fallbackInputHandler: ((event: Event) => void) | null = null;
+
   function createFallbackEditor(): void {
     if (!editorContainer) return;
     editorContainer.innerHTML = '<textarea style="width:100%; height:100%; background:#282828; color:#fbf1c7; font-family:\'JetBrains Mono\', monospace; padding:16px; border:none; resize:none;"></textarea>';
     const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
     if (textarea) {
       textarea.value = value || '';
-      textarea.addEventListener('input', () => {
+
+      if (fallbackInputHandler) {
+        textarea.removeEventListener('input', fallbackInputHandler);
+      }
+
+      fallbackInputHandler = () => {
         value = textarea.value;
         onContentChange?.(textarea.value);
-      });
+      };
+
+      textarea.addEventListener('input', fallbackInputHandler);
       setTimeout(() => textarea.focus(), 10);
     }
   }
@@ -293,6 +302,15 @@ Focused component handling CodeMirror initialization and content editing.
     return () => {
       if (editorView) {
         editorView.destroy();
+        editorView = null;
+      }
+
+      if (fallbackInputHandler && editorContainer) {
+        const textarea = editorContainer.querySelector('textarea');
+        if (textarea) {
+          textarea.removeEventListener('input', fallbackInputHandler);
+        }
+        fallbackInputHandler = null;
       }
     };
   });
