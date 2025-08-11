@@ -75,7 +75,8 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
         <CodeMirrorEditor
           bind:value={configService.content}
           filename="config.toml"
-          onSave={() => {}}
+          onSave={handleSave}
+          onContentChange={(newValue) => configService.content = newValue}
         />
       </div>
       <div class="keyboard-hint">
