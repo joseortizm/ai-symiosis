@@ -87,7 +87,13 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const contentManager = createContentManager({
     noteService,
-    searchManager,
+    getQuery: () => searchManager.query,
+    getAreHighlightsCleared: () => searchManager.areHighlightsCleared,
+    clearHighlights: () => searchManager.clearHighlights(),
+    setHighlightsClearCallback: (callback) => searchManager.setHighlightsClearCallback(callback),
+    setHighlightsClearedState: (cleared: boolean) => {
+      searchManager.areHighlightsCleared = cleared;
+    },
     getNoteContentElement: () => focusManager.noteContentElement,
     refreshSearch: (query: string) => searchManager.refreshSearch(query),
     invoke

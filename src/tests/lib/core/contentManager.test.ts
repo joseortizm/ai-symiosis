@@ -11,12 +11,11 @@ describe('contentManager (factory-based - TDD)', () => {
     resetAllMocks();
 
     mockDeps = {
-      searchManager: {
-        areHighlightsCleared: false,
-        clearHighlights: vi.fn(),
-        setHighlightsClearCallback: vi.fn(),
-        query: 'test query'
-      },
+      getQuery: vi.fn().mockReturnValue('test query'),
+      getAreHighlightsCleared: vi.fn().mockReturnValue(false),
+      clearHighlights: vi.fn(),
+      setHighlightsClearCallback: vi.fn(),
+      setHighlightsClearedState: vi.fn(),
       noteService: {
         getContent: vi.fn().mockResolvedValue('mock note content')
       },
@@ -73,7 +72,7 @@ describe('contentManager (factory-based - TDD)', () => {
   it('should call setHighlightsClearCallback during setup', () => {
     if (!contentManager) return; // Skip if factory not implemented yet
 
-    expect(mockDeps.searchManager.setHighlightsClearCallback).toHaveBeenCalledWith(
+    expect(mockDeps.setHighlightsClearCallback).toHaveBeenCalledWith(
       expect.any(Function)
     );
   });

@@ -11,12 +11,11 @@ export interface ContentManagerDeps {
   noteService: {
     getContent: (noteName: string) => Promise<string>;
   };
-  searchManager: {
-    areHighlightsCleared: boolean;
-    clearHighlights: () => void;
-    setHighlightsClearCallback: (callback: (cleared: boolean) => void) => void;
-    query: string;
-  };
+  getQuery: () => string;
+  getAreHighlightsCleared: () => boolean;
+  clearHighlights: () => void;
+  setHighlightsClearCallback: (callback: (cleared: boolean) => void) => void;
+  setHighlightsClearedState: (cleared: boolean) => void;
   getNoteContentElement: () => HTMLElement | null;
   refreshSearch: (query: string) => Promise<string[]>;
   invoke: typeof invoke;
@@ -52,8 +51,8 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
   const highlightedContent = $derived(
     getHighlightedContent(
       state.noteContent,
-      deps.searchManager.query,
-      deps.searchManager.areHighlightsCleared
+      deps.getQuery(),
+      deps.getAreHighlightsCleared()
     )
   );
 
@@ -62,12 +61,12 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
   }
 
   function clearHighlights(): void {
-    deps.searchManager.clearHighlights();
+    deps.clearHighlights();
   }
 
   function scrollToFirstMatch(): void {
     const noteContentElement = deps.getNoteContentElement();
-    if (noteContentElement && !deps.searchManager.areHighlightsCleared) {
+    if (noteContentElement && !deps.getAreHighlightsCleared()) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight');
         if (firstMatch) {
@@ -101,10 +100,10 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
   }
 
   function setHighlightsClearedState(cleared: boolean): void {
-    deps.searchManager.areHighlightsCleared = cleared;
+    deps.setHighlightsClearedState(cleared);
   }
 
-  deps.searchManager.setHighlightsClearCallback((cleared: boolean) => {
+  deps.setHighlightsClearCallback((cleared: boolean) => {
     setHighlightsClearedState(cleared);
   });
 
@@ -118,7 +117,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     },
 
     get areHighlightsCleared(): boolean {
-      return deps.searchManager.areHighlightsCleared;
+      return deps.getAreHighlightsCleared();
     },
 
     set areHighlightsCleared(value: boolean) {
