@@ -34,6 +34,8 @@ export interface AppState {
   areHighlightsCleared: boolean;
   isEditorDirty: boolean;
   query: string;
+  isSettingsOpen: boolean;
+  isAnyDialogOpen: boolean;
 }
 
 export interface ActionContext {
@@ -263,6 +265,13 @@ export function createKeyboardActions(deps: KeyboardActionDeps): KeyboardActions
       const state = getState();
       const context: ActionContext = { state, actions: deps };
       let handled = false;
+
+      if (state.isSettingsOpen || state.isAnyDialogOpen) {
+        if (event.key === 'Escape') {
+          return;
+        }
+        return;
+      }
 
       if (event.metaKey && event.key === ',') {
         event.preventDefault();

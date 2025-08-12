@@ -670,13 +670,6 @@ pub fn run() {
                     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
                 });
 
-                // Platform-specific preferences shortcut
-                let preferences_shortcut = if cfg!(target_os = "macos") {
-                    Shortcut::new(Some(Modifiers::META), Code::Comma)
-                } else {
-                    Shortcut::new(Some(Modifiers::CONTROL), Code::Comma)
-                };
-
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
                         .with_handler(move |app, shortcut, event| {
@@ -702,12 +695,6 @@ pub fn run() {
                                             let _ = show_main_window(app_handle);
                                         }
                                     }
-                                } else if shortcut == &preferences_shortcut {
-                                    let app_handle = app.clone();
-                                    let _ = show_main_window(app_handle.clone());
-                                    if let Some(window) = app_handle.get_webview_window("main") {
-                                        let _ = window.emit("open-preferences", ());
-                                    }
                                 }
                             }
                         })
@@ -715,7 +702,6 @@ pub fn run() {
                 )?;
 
                 app.global_shortcut().register(main_shortcut)?;
-                app.global_shortcut().register(preferences_shortcut)?;
             }
 
             Ok(())

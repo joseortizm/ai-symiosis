@@ -227,6 +227,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         areHighlightsCleared: areHighlightsCleared,
         isEditorDirty: editorManager.isDirty,
         query: query,
+        isSettingsOpen: configService.isVisible,
+        isAnyDialogOpen: dialogManager.showCreateDialog || dialogManager.showRenameDialog || dialogManager.showDeleteDialog || dialogManager.showUnsavedChangesDialog,
       }));
     },
 
