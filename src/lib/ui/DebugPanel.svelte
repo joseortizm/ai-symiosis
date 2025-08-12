@@ -20,7 +20,8 @@ const { searchManager, appCoordinator, editorManager, focusManager } = getContex
   focusManager: ReturnType<typeof createFocusManager>;
 }>('managers');
 
-const context = appCoordinator.context;
+const { dialogManager, contentManager } = appCoordinator.managers;
+const appState = appCoordinator.state;
 
 // Debug panel visibility and configuration
 let isVisible = $state(false);
@@ -247,31 +248,31 @@ function handleKeydown(event: KeyboardEvent) {
         <h4>💬 Dialogs</h4>
         <div class="debug-item">
           <strong>showCreateDialog:</strong>
-          <code>{formatValue(context.dialogManager.showCreateDialog)}</code>
+          <code>{formatValue(dialogManager.showCreateDialog)}</code>
         </div>
         <div class="debug-item">
           <strong>showRenameDialog:</strong>
-          <code>{formatValue(context.dialogManager.showRenameDialog)}</code>
+          <code>{formatValue(dialogManager.showRenameDialog)}</code>
         </div>
         <div class="debug-item">
           <strong>showDeleteDialog:</strong>
-          <code>{formatValue(context.dialogManager.showDeleteDialog)}</code>
+          <code>{formatValue(dialogManager.showDeleteDialog)}</code>
         </div>
         <div class="debug-item">
           <strong>showUnsavedChangesDialog:</strong>
-          <code>{formatValue(context.dialogManager.showUnsavedChangesDialog)}</code>
+          <code>{formatValue(dialogManager.showUnsavedChangesDialog)}</code>
         </div>
         <div class="debug-item">
           <strong>newNoteName:</strong>
-          <code>{formatValue(context.dialogManager.newNoteName)}</code>
+          <code>{formatValue(dialogManager.newNoteName)}</code>
         </div>
         <div class="debug-item">
           <strong>newNoteNameForRename:</strong>
-          <code>{formatValue(context.dialogManager.newNoteNameForRename)}</code>
+          <code>{formatValue(dialogManager.newNoteNameForRename)}</code>
         </div>
         <div class="debug-item">
           <strong>deleteKeyPressCount:</strong>
-          <code>{formatValue(context.dialogManager.deleteKeyPressCount)}</code>
+          <code>{formatValue(dialogManager.deleteKeyPressCount)}</code>
         </div>
       </div>
       {/if}
@@ -281,15 +282,15 @@ function handleKeydown(event: KeyboardEvent) {
         <h4>📄 Content</h4>
         <div class="debug-item">
           <strong>noteContent length:</strong>
-          <code>{formatValue(context.contentManager.noteContent?.length || 0)} chars</code>
+          <code>{formatValue(contentManager.noteContent?.length || 0)} chars</code>
         </div>
         <div class="debug-item">
           <strong>highlightedContent length:</strong>
-          <code>{formatValue(context.contentManager.highlightedContent?.length || 0)} chars</code>
+          <code>{formatValue(contentManager.highlightedContent?.length || 0)} chars</code>
         </div>
         <div class="debug-item">
           <strong>areHighlightsCleared:</strong>
-          <code>{formatValue(context.contentManager.areHighlightsCleared)}</code>
+          <code>{formatValue(contentManager.areHighlightsCleared)}</code>
         </div>
       </div>
       {/if}

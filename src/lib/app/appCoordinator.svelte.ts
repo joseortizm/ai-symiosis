@@ -44,7 +44,9 @@ export interface AppCoordinator {
     query: string;
   };
   readonly keyboardActions: (event: KeyboardEvent) => Promise<void>;
-  readonly context: any; // Complex nested object - keeping as any for now
+  readonly managers: any;
+  readonly state: any;
+  readonly actions: any;
   setupReactiveEffects(): () => void;
   updateFilteredNotes(notes: string[]): void;
   resetState(): void;
@@ -236,20 +238,29 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
       }));
     },
 
-    get context() {
+    get managers() {
       return {
-        state: {
-          get query() { return query; },
-          get isLoading() { return isLoading; },
-          get areHighlightsCleared() { return areHighlightsCleared; },
-          get filteredNotes() { return filteredNotes; },
-          get selectedNote() { return selectedNote; },
-          get selectedIndex() { return selectedIndex; },
-        },
-        dialogManager,
+        searchManager,
         editorManager,
         focusManager,
         contentManager,
+        dialogManager,
+      };
+    },
+
+    get state() {
+      return {
+        get query() { return query; },
+        get isLoading() { return isLoading; },
+        get areHighlightsCleared() { return areHighlightsCleared; },
+        get filteredNotes() { return filteredNotes; },
+        get selectedNote() { return selectedNote; },
+        get selectedIndex() { return selectedIndex; },
+      };
+    },
+
+    get actions() {
+      return {
         selectNote,
         deleteNote: () => noteActions.deleteNote(selectedNote),
         createNote: noteActions.createNote,
@@ -258,23 +269,9 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         saveAndExitNote,
         enterEditMode: () => noteActions.enterEditMode(selectedNote!),
         exitEditMode,
-        showExitEditDialog: dialogManager.showExitEditDialog,
-        handleSaveAndExit: () => dialogManager.handleSaveAndExit(saveAndExitNote),
-        handleDiscardAndExit: () => dialogManager.handleDiscardAndExit(exitEditMode),
-        openCreateDialog: () => dialogManager.openCreateDialog(query, contentManager.highlightedContent),
-        closeCreateDialog: dialogManager.closeCreateDialog,
-        openRenameDialog: () => dialogManager.openRenameDialog(selectedNote ?? undefined),
-        closeRenameDialog: dialogManager.closeRenameDialog,
-        openDeleteDialog: dialogManager.openDeleteDialog,
-        closeDeleteDialog: dialogManager.closeDeleteDialog,
-        openSettingsPane: settingsActions.openSettingsPane,
-        closeSettingsPane: settingsActions.closeSettingsPane,
-        handleDeleteKeyPress: () => dialogManager.handleDeleteKeyPress(() => noteActions.deleteNote(selectedNote)),
-        clearHighlights: contentManager.clearHighlights,
-        clearSearch: searchManager.clearSearch,
-        invoke,
       };
     },
+
 
     async initialize(): Promise<() => void> {
       await tick();

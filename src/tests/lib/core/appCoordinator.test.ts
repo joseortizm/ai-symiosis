@@ -130,42 +130,41 @@ describe('appCoordinator', () => {
     });
   });
 
-  describe('context provider', () => {
-    it('should provide comprehensive context object', () => {
-      const context = appCoordinator.context;
+  describe('new architecture pattern', () => {
+    it('should provide managers object with all required managers', () => {
+      const managers = appCoordinator.managers;
 
-      expect(context).toHaveProperty('state');
-      expect(context).toHaveProperty('editorManager');
-      expect(context).toHaveProperty('focusManager');
-      expect(context).toHaveProperty('contentManager');
-
-      // Business logic functions
-      expect(context).toHaveProperty('selectNote');
-      expect(context).toHaveProperty('deleteNote');
-      expect(context).toHaveProperty('createNote');
-      expect(context).toHaveProperty('renameNote');
-      expect(context).toHaveProperty('saveNote');
-      expect(context).toHaveProperty('enterEditMode');
-      expect(context).toHaveProperty('exitEditMode');
-
-      // Dialog functions
-      expect(context).toHaveProperty('openCreateDialog');
-      expect(context).toHaveProperty('closeCreateDialog');
-      expect(context).toHaveProperty('openRenameDialog');
-      expect(context).toHaveProperty('closeRenameDialog');
-
-      // Utility functions
-      expect(context).toHaveProperty('clearHighlights');
-      expect(context).toHaveProperty('clearSearch');
-      expect(context).toHaveProperty('invoke');
+      expect(managers).toHaveProperty('searchManager');
+      expect(managers).toHaveProperty('editorManager');
+      expect(managers).toHaveProperty('focusManager');
+      expect(managers).toHaveProperty('contentManager');
+      expect(managers).toHaveProperty('dialogManager');
     });
 
-    it('should provide current state in context', () => {
+    it('should provide state object with reactive state', () => {
       appCoordinator.setSelectedIndex(1);
 
-      const context = appCoordinator.context;
+      const state = appCoordinator.state;
 
-      expect(context.state.selectedIndex).toBe(1);
+      expect(state.selectedIndex).toBe(1);
+      expect(state).toHaveProperty('query');
+      expect(state).toHaveProperty('isLoading');
+      expect(state).toHaveProperty('filteredNotes');
+      expect(state).toHaveProperty('selectedNote');
+      expect(state).toHaveProperty('areHighlightsCleared');
+    });
+
+    it('should provide actions object with all required actions', () => {
+      const actions = appCoordinator.actions;
+
+      expect(actions).toHaveProperty('selectNote');
+      expect(actions).toHaveProperty('deleteNote');
+      expect(actions).toHaveProperty('createNote');
+      expect(actions).toHaveProperty('renameNote');
+      expect(actions).toHaveProperty('saveNote');
+      expect(actions).toHaveProperty('enterEditMode');
+      expect(actions).toHaveProperty('exitEditMode');
+      expect(actions).toHaveProperty('saveAndExitNote');
     });
   });
 
@@ -238,17 +237,17 @@ describe('appCoordinator', () => {
     });
 
 
-    it('should provide reactive context that updates when state changes', async () => {
-      // Get initial context
-      let context = appCoordinator.context;
-      expect(context.state.filteredNotes).toEqual([]);
+    it('should provide reactive state that updates when state changes', async () => {
+      // Get initial state
+      let state = appCoordinator.state;
+      expect(state.filteredNotes).toEqual([]);
 
       // Simulate state change (like what happens during initialization)
       appCoordinator.updateFilteredNotes(['test1.md', 'test2.md']);
 
-      // Get context again - this should reflect the updated state
-      context = appCoordinator.context;
-      expect(context.state.filteredNotes).toEqual(['test1.md', 'test2.md']);
+      // Get state again - this should reflect the updated state
+      state = appCoordinator.state;
+      expect(state.filteredNotes).toEqual(['test1.md', 'test2.md']);
     });
 
     it('should not populate filteredNotes when config does not exist', async () => {

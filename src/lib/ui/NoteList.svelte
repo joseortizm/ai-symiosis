@@ -7,31 +7,33 @@ Handles note selection state and integrates with keyboard navigation.
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const { appCoordinator } = getContext('managers') as any;
+  const { focusManager } = getContext('managers') as any;
+  const appState = getContext('state') as any;
+  const actions = getContext('actions') as any;
 
   let noteListElement = $state<HTMLElement | undefined>(undefined);
 
   $effect(() => {
     if (noteListElement) {
-      appCoordinator.context.focusManager.setNoteListElement(noteListElement);
+      focusManager.setNoteListElement(noteListElement);
     }
   });
 </script>
 
 <div class="notes-list-container">
   <div class="notes-list">
-    {#if appCoordinator.context.state.isLoading && appCoordinator.context.state.filteredNotes.length === 0}
+    {#if appState.isLoading && appState.filteredNotes.length === 0}
       <div class="loading">Loading...</div>
-    {:else if appCoordinator.context.state.filteredNotes.length === 0}
+    {:else if appState.filteredNotes.length === 0}
       <div class="no-notes">No notes found</div>
     {:else}
       <ul bind:this={noteListElement} tabindex="-1">
-        {#each appCoordinator.context.state.filteredNotes as note, index (note)}
+        {#each appState.filteredNotes as note, index (note)}
           <li>
             <button
-              class:selected={index === appCoordinator.context.state.selectedIndex}
+              class:selected={index === appState.selectedIndex}
               tabindex="-1"
-              onclick={() => appCoordinator.context.selectNote(note, index)}
+              onclick={() => actions.selectNote(note, index)}
             >
               {note}
             </button>

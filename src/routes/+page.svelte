@@ -15,7 +15,6 @@ import InputDialog from "../lib/ui/InputDialog.svelte";
 import DeleteDialog from "../lib/ui/DeleteDialog.svelte";
 import SettingsPane from "../lib/ui/SettingsPane.svelte";
 import DebugPanel from "../lib/ui/DebugPanel.svelte";
-// Keyboard handler now integrated in appCoordinator
 import { createAppCoordinator } from '../lib/app/appCoordinator.svelte';
 import { createSearchManager } from '../lib/core/searchManager.svelte';
 import { createEditorManager } from '../lib/core/editorManager.svelte';
@@ -34,20 +33,19 @@ const appCoordinator = createAppCoordinator({
   focusManager
 });
 
-const context = appCoordinator.context;
-
 // Set context for child components
-setContext<{
-  searchManager: typeof searchManager;
-  editorManager: typeof editorManager;
-  focusManager: typeof focusManager;
-  appCoordinator: typeof appCoordinator;
-}>('managers', {
-  searchManager,
-  editorManager,
-  focusManager,
+setContext('managers', {
+  ...appCoordinator.managers,
   appCoordinator
 });
+
+setContext('state', appCoordinator.state);
+setContext('actions', appCoordinator.actions);
+
+// Access properties directly since this is the root component
+const { dialogManager } = appCoordinator.managers;
+const appState = appCoordinator.state;
+const actions = appCoordinator.actions;
 
 const handleKeydown = appCoordinator.keyboardActions;
 
@@ -81,48 +79,48 @@ onMount(() => {
     />
 
     <DeleteDialog
-      show={context.dialogManager.showDeleteDialog}
-      noteName={appCoordinator.selectedNote || ''}
-      deleteKeyPressCount={context.dialogManager.deleteKeyPressCount}
-      onConfirm={appCoordinator.deleteNote}
-      onCancel={context.dialogManager.closeDeleteDialog}
-      onKeyPress={() => context.dialogManager.handleDeleteKeyPress(() => appCoordinator.deleteNote())}
+      show={dialogManager.showDeleteDialog}
+      noteName={appState.selectedNote || ''}
+      deleteKeyPressCount={dialogManager.deleteKeyPressCount}
+      onConfirm={actions.deleteNote}
+      onCancel={dialogManager.closeDeleteDialog}
+      onKeyPress={() => dialogManager.handleDeleteKeyPress(() => actions.deleteNote())}
     />
 
     <InputDialog
-      show={context.dialogManager.showCreateDialog}
+      show={dialogManager.showCreateDialog}
       title="Create New Note"
-      value={context.dialogManager.newNoteName}
+      value={dialogManager.newNoteName}
       placeholder="Enter note name (extension will be .md)"
       confirmText="Create"
       cancelText="Cancel"
-      onConfirm={(value) => appCoordinator.createNote(value)}
-      onCancel={context.dialogManager.closeCreateDialog}
-      onInput={(value) => context.dialogManager.setNewNoteName(value)}
+      onConfirm={(value) => actions.createNote(value)}
+      onCancel={dialogManager.closeCreateDialog}
+      onInput={(value) => dialogManager.setNewNoteName(value)}
     />
 
     <InputDialog
-      show={context.dialogManager.showRenameDialog}
+      show={dialogManager.showRenameDialog}
       title="Rename Note"
-      value={context.dialogManager.newNoteNameForRename}
+      value={dialogManager.newNoteNameForRename}
       placeholder="Enter new note name"
       confirmText="Rename"
       cancelText="Cancel"
       autoSelect={true}
-      onConfirm={(value) => appCoordinator.renameNote(value)}
-      onCancel={context.dialogManager.closeRenameDialog}
-      onInput={(value) => context.dialogManager.setNewNoteNameForRename(value)}
+      onConfirm={(value) => actions.renameNote(value)}
+      onCancel={dialogManager.closeRenameDialog}
+      onInput={(value) => dialogManager.setNewNoteNameForRename(value)}
     />
 
     <ConfirmationDialog
-      show={context.dialogManager.showUnsavedChangesDialog}
+      show={dialogManager.showUnsavedChangesDialog}
       title="Unsaved Changes"
       message="You have unsaved changes. What would you like to do?"
       confirmText="Save and Exit"
       cancelText="Discard Changes"
       variant="default"
-      onConfirm={() => context.dialogManager.handleSaveAndExit(appCoordinator.saveAndExitNote)}
-      onCancel={() => context.dialogManager.handleDiscardAndExit(appCoordinator.exitEditMode)}
+      onConfirm={() => dialogManager.handleSaveAndExit(actions.saveAndExitNote)}
+      onCancel={() => dialogManager.handleDiscardAndExit(actions.exitEditMode)}
     />
   </div>
 </AppLayout>

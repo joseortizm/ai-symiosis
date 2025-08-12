@@ -11,17 +11,19 @@ Shows highlighted content or renders the CodeMirror editor.
   import { getContext } from 'svelte';
   import { configService } from '../services/configService.svelte';
 
-  const { appCoordinator } = getContext('managers') as any;
+  const { focusManager, contentManager, editorManager, dialogManager } = getContext('managers') as any;
+  const appState = getContext('state') as any;
+  const actions = getContext('actions') as any;
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
   let currentTheme = $state<string>('dark_dimmed');
   let themeInitialized = $state<boolean>(false);
 
   function registerNoteContentElement(element: HTMLElement) {
-    appCoordinator.context.focusManager.setNoteContentElement(element);
+    focusManager.setNoteContentElement(element);
     return {
       destroy() {
-        appCoordinator.context.focusManager.setNoteContentElement(null);
+        focusManager.setNoteContentElement(null);
       }
     };
   }
@@ -88,9 +90,9 @@ Shows highlighted content or renders the CodeMirror editor.
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
     // Run after highlightedContent changes and DOM updates
-    if (appCoordinator.context.contentManager.highlightedContent && appCoordinator.context.focusManager.noteContentElement) {
+    if (contentManager.highlightedContent && focusManager.noteContentElement) {
       setTimeout(() => {
-        const blocks = appCoordinator.context.focusManager.noteContentElement!.querySelectorAll('pre code');
+        const blocks = focusManager.noteContentElement!.querySelectorAll('pre code');
         blocks.forEach((block: Element) => {
           hljs.highlightElement(block as HTMLElement);
         });
@@ -100,25 +102,25 @@ Shows highlighted content or renders the CodeMirror editor.
 </script>
 
 <div class="note-preview" use:themeInitializer>
-  {#if appCoordinator.context.state.selectedNote}
-    {#if appCoordinator.context.editorManager.isEditMode}
+  {#if appState.selectedNote}
+    {#if editorManager.isEditMode}
       <div class="edit-mode">
         <div class="edit-header">
-          <h3>Editing: {appCoordinator.context.state.selectedNote}</h3>
+          <h3>Editing: {appState.selectedNote}</h3>
           <div class="edit-controls">
-            <button onclick={appCoordinator.context.saveNote} class="save-btn">Save (Ctrl+S)</button>
-            <button onclick={appCoordinator.context.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            <button onclick={actions.saveNote} class="save-btn">Save (Ctrl+S)</button>
+            <button onclick={actions.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
           </div>
         </div>
         <CodeMirrorEditor
-          bind:value={appCoordinator.context.editorManager.editContent}
-          bind:isDirty={appCoordinator.context.editorManager.isDirty}
-          filename={appCoordinator.context.state.selectedNote}
-          nearestHeaderText={appCoordinator.context.editorManager.nearestHeaderText}
-          onContentChange={appCoordinator.context.editorManager.updateContent}
-          onSave={appCoordinator.context.saveNote}
-          onExit={appCoordinator.context.exitEditMode}
-          onRequestExit={appCoordinator.context.showExitEditDialog}
+          bind:value={editorManager.editContent}
+          bind:isDirty={editorManager.isDirty}
+          filename={appState.selectedNote}
+          nearestHeaderText={editorManager.nearestHeaderText}
+          onContentChange={editorManager.updateContent}
+          onSave={actions.saveNote}
+          onExit={actions.exitEditMode}
+          onRequestExit={dialogManager.showExitEditDialog}
         />
       </div>
     {:else}
@@ -129,11 +131,11 @@ Shows highlighted content or renders the CodeMirror editor.
         bind:this={noteContentElement}
         use:registerNoteContentElement
         tabindex="-1"
-        onfocus={() => appCoordinator.context.focusManager.setNoteContentFocused(true)}
-        onblur={() => appCoordinator.context.focusManager.setNoteContentFocused(false)}
-        ondblclick={appCoordinator.context.enterEditMode}
+        onfocus={() => focusManager.setNoteContentFocused(true)}
+        onblur={() => focusManager.setNoteContentFocused(false)}
+        ondblclick={actions.enterEditMode}
       >
-        <div class="markdown-body">{@html appCoordinator.context.contentManager.highlightedContent}</div>
+        <div class="markdown-body">{@html contentManager.highlightedContent}</div>
       </div>
     {/if}
   {:else}

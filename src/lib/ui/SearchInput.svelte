@@ -7,15 +7,15 @@ Connects to search manager and handles keyboard navigation events.
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const { searchManager, appCoordinator } = getContext('managers') as any;
+  const { searchManager, focusManager } = getContext('managers') as any;
 
   let searchElement: HTMLInputElement;
 
   function registerElement(element: HTMLInputElement) {
-    appCoordinator.context.focusManager.setSearchElement(element);
+    focusManager.setSearchElement(element);
     return {
       destroy() {
-        appCoordinator.context.focusManager.setSearchElement(null);
+        focusManager.setSearchElement(null);
       }
     };
   }
@@ -28,8 +28,8 @@ Connects to search manager and handles keyboard navigation events.
   class="search-input"
   bind:this={searchElement}
   use:registerElement
-  onfocus={() => appCoordinator.context.focusManager.setSearchInputFocused(true)}
-  onblur={() => appCoordinator.context.focusManager.setSearchInputFocused(false)}
+  onfocus={() => focusManager.setSearchInputFocused(true)}
+  onblur={() => focusManager.setSearchInputFocused(false)}
 />
 
 <style>

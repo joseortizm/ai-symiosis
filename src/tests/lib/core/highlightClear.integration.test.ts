@@ -26,7 +26,7 @@ describe('Highlight Clear Integration', () => {
       focusManager
     });
 
-    const contentManager = appCoordinator.context.contentManager;
+    const { contentManager } = appCoordinator.managers;
 
     searchManager.searchInput = 'test query';
     contentManager.setHighlightsClearedState(false);
