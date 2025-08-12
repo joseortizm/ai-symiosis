@@ -24,6 +24,34 @@ interface AppCoordinatorDeps {
   focusManager: ReturnType<typeof import('../core/focusManager.svelte').createFocusManager>;
 }
 
+export interface AppState {
+  readonly query: string;
+  readonly isLoading: boolean;
+  readonly areHighlightsCleared: boolean;
+  readonly filteredNotes: string[];
+  readonly selectedNote: string | null;
+  readonly selectedIndex: number;
+}
+
+export interface AppActions {
+  selectNote: (note: string, index: number) => void;
+  deleteNote: () => Promise<void>;
+  createNote: (noteName?: string) => Promise<void>;
+  renameNote: (newName?: string) => Promise<void>;
+  saveNote: () => Promise<void>;
+  saveAndExitNote: () => Promise<void>;
+  enterEditMode: () => Promise<void>;
+  exitEditMode: () => void;
+}
+
+export interface AppManagers {
+  searchManager: ReturnType<typeof import('../core/searchManager.svelte').createSearchManager>;
+  editorManager: ReturnType<typeof import('../core/editorManager.svelte').createEditorManager>;
+  focusManager: ReturnType<typeof import('../core/focusManager.svelte').createFocusManager>;
+  contentManager: ReturnType<typeof import('../core/contentManager.svelte').createContentManager>;
+  dialogManager: ReturnType<typeof import('../core/dialogManager.svelte').createDialogManager>;
+}
+
 export interface AppCoordinator {
   readonly query: string;
   readonly isLoading: boolean;
@@ -44,21 +72,12 @@ export interface AppCoordinator {
     query: string;
   };
   readonly keyboardActions: (event: KeyboardEvent) => Promise<void>;
-  readonly managers: any;
-  readonly state: any;
-  readonly actions: any;
+  readonly managers: AppManagers;
+  readonly state: AppState;
+  readonly actions: AppActions;
   setupReactiveEffects(): () => void;
   updateFilteredNotes(notes: string[]): void;
-  resetState(): void;
   setSelectedIndex(index: number): void;
-  deleteNote(): Promise<void>;
-  createNote(noteName?: string): Promise<void>;
-  renameNote(newName?: string): Promise<void>;
-  saveNote(): Promise<void>;
-  saveAndExitNote(): Promise<void>;
-  selectNote(note: string, index: number): void;
-  enterEditMode(): Promise<void>;
-  exitEditMode(): void;
   initialize(): Promise<() => void>;
 }
 
@@ -130,6 +149,13 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusManager.focusSearch();
   }
 
+  function selectNote(note: string, index: number): void {
+    if (selectedIndex !== index) {
+      selectedIndex = index;
+    }
+  }
+
+
   async function saveAndExitNote(): Promise<void> {
     await noteActions.saveNote(selectedNote);
     exitEditMode();
@@ -168,22 +194,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     });
   }
 
-  function resetState(): void {
-    searchManager.searchInput = '';
-    selectedIndex = -1;
-    searchManager.setFilteredNotes([]);
-    searchManager.areHighlightsCleared = false;
-    if (contentRequestController) {
-      contentRequestController.abort();
-      contentRequestController = null;
-    }
-  }
-
-  function selectNote(note: string, index: number): void {
-    if (selectedIndex !== index) {
-      selectedIndex = index;
-    }
-  }
 
   return {
     setupReactiveEffects,
@@ -196,17 +206,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     get selectedIndex(): number { return selectedIndex; },
 
     updateFilteredNotes: searchActions.updateFilteredNotes,
-    resetState,
     setSelectedIndex,
-
-    deleteNote: () => noteActions.deleteNote(selectedNote),
-    createNote: noteActions.createNote,
-    renameNote: (newName?: string) => noteActions.renameNote(selectedNote, newName),
-    saveNote: () => noteActions.saveNote(selectedNote),
-    saveAndExitNote,
-    selectNote,
-    enterEditMode: () => noteActions.enterEditMode(selectedNote!),
-    exitEditMode,
 
     get keyboardState() {
       return {

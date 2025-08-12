@@ -11,9 +11,11 @@ Shows highlighted content or renders the CodeMirror editor.
   import { getContext } from 'svelte';
   import { configService } from '../services/configService.svelte';
 
-  const { focusManager, contentManager, editorManager, dialogManager } = getContext('managers') as any;
-  const appState = getContext('state') as any;
-  const actions = getContext('actions') as any;
+  import type { AppManagers, AppState, AppActions } from '../app/appCoordinator.svelte';
+
+  const { focusManager, contentManager, editorManager, dialogManager } = getContext<AppManagers>('managers');
+  const appState = getContext<AppState>('state');
+  const actions = getContext<AppActions>('actions');
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
   let currentTheme = $state<string>('dark_dimmed');

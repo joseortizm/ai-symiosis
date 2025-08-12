@@ -8,6 +8,7 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
   import CodeMirrorEditor from './CodeMirrorEditor.svelte';
   import { configService } from '../services/configService.svelte';
   import { getContext } from 'svelte';
+  import type { AppManagers } from '../app/appCoordinator.svelte';
 
   interface Props {
     show: boolean;
@@ -16,7 +17,7 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
   }
 
   const { show, onClose, onRefresh }: Props = $props();
-  const { searchManager } = getContext('managers') as any;
+  const { searchManager } = getContext<AppManagers>('managers');
 
   let dialogElement = $state<HTMLElement | undefined>(undefined);
 

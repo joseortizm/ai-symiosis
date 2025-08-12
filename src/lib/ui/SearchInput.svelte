@@ -7,7 +7,9 @@ Connects to search manager and handles keyboard navigation events.
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const { searchManager, focusManager } = getContext('managers') as any;
+  import type { AppManagers } from '../app/appCoordinator.svelte';
+
+  const { searchManager, focusManager } = getContext<AppManagers>('managers');
 
   let searchElement: HTMLInputElement;
 

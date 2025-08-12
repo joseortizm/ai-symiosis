@@ -7,9 +7,11 @@ Handles note selection state and integrates with keyboard navigation.
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const { focusManager } = getContext('managers') as any;
-  const appState = getContext('state') as any;
-  const actions = getContext('actions') as any;
+  import type { AppManagers, AppState, AppActions } from '../app/appCoordinator.svelte';
+
+  const { focusManager } = getContext<AppManagers>('managers');
+  const appState = getContext<AppState>('state');
+  const actions = getContext<AppActions>('actions');
 
   let noteListElement = $state<HTMLElement | undefined>(undefined);
 

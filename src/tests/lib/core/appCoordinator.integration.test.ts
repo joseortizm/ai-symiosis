@@ -169,7 +169,7 @@ describe('appCoordinator Integration Tests', () => {
       mockDialogManager.newNoteName = noteName;
 
       // Execute the creation workflow
-      await appCoordinator.createNote();
+      await appCoordinator.actions.createNote();
 
       // Verify the complete workflow
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName);
@@ -192,7 +192,7 @@ describe('appCoordinator Integration Tests', () => {
 
       mockDialogManager.newNoteName = noteName;
 
-      await appCoordinator.createNote();
+      await appCoordinator.actions.createNote();
 
       // Verify service was called but UI coordination didn't happen
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName);
@@ -204,12 +204,12 @@ describe('appCoordinator Integration Tests', () => {
     it('should not create note with empty name', async () => {
       // Test empty string
       mockDialogManager.newNoteName = '';
-      await appCoordinator.createNote();
+      await appCoordinator.actions.createNote();
       expect(mockNoteService.create).not.toHaveBeenCalled();
 
       // Test whitespace only
       mockDialogManager.newNoteName = '   ';
-      await appCoordinator.createNote();
+      await appCoordinator.actions.createNote();
       expect(mockNoteService.create).not.toHaveBeenCalled();
     });
   });
@@ -233,7 +233,7 @@ describe('appCoordinator Integration Tests', () => {
       mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes);
 
       // Execute deletion workflow
-      await appCoordinator.deleteNote();
+      await appCoordinator.actions.deleteNote();
 
       // Verify the complete workflow
       expect(mockNoteService.delete).toHaveBeenCalledWith(noteToDelete);
@@ -251,7 +251,7 @@ describe('appCoordinator Integration Tests', () => {
         error: 'Deletion failed',
       });
 
-      await appCoordinator.deleteNote();
+      await appCoordinator.actions.deleteNote();
 
       // Verify service was called but UI coordination didn't happen
       expect(mockNoteService.delete).toHaveBeenCalledWith(noteToDelete);
@@ -269,7 +269,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // If no notes exist, selectedNote should be null and deleteNote should exit early
       if (currentSelectedNote === null) {
-        await appCoordinator.deleteNote();
+        await appCoordinator.actions.deleteNote();
         expect(mockNoteService.delete).not.toHaveBeenCalled();
       } else {
         // If derived still returns a note due to mocking issues, just skip this test scenario
@@ -305,7 +305,7 @@ describe('appCoordinator Integration Tests', () => {
       mockDialogManager.newNoteNameForRename = newName;
 
       // Execute rename workflow
-      await appCoordinator.renameNote();
+      await appCoordinator.actions.renameNote();
 
       // Verify the complete workflow
       expect(mockNoteService.rename).toHaveBeenCalledWith(oldName, newName);
@@ -328,7 +328,7 @@ describe('appCoordinator Integration Tests', () => {
 
       mockDialogManager.newNoteNameForRename = newName;
 
-      await appCoordinator.renameNote();
+      await appCoordinator.actions.renameNote();
 
       // Verify service was called but UI coordination didn't happen
       expect(mockNoteService.rename).toHaveBeenCalledWith(oldName, newName);
@@ -339,7 +339,7 @@ describe('appCoordinator Integration Tests', () => {
     it('should not rename with empty name or no selection', async () => {
       // Test empty name
       mockDialogManager.newNoteNameForRename = '';
-      await appCoordinator.renameNote();
+      await appCoordinator.actions.renameNote();
       expect(mockNoteService.rename).not.toHaveBeenCalled();
 
       // Test no selection (reset filtered notes to empty)
@@ -350,7 +350,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // If no notes exist, selectedNote should be null and renameNote should exit early
       if (currentSelectedNote === null) {
-        await appCoordinator.renameNote();
+        await appCoordinator.actions.renameNote();
         expect(mockNoteService.rename).not.toHaveBeenCalled();
       } else {
         // If derived still returns a note due to mocking issues, just skip this test scenario
@@ -416,7 +416,7 @@ describe('appCoordinator Integration Tests', () => {
       const keyboardActions = appCoordinator.keyboardActions;
 
       // This would be called by the keyboard handler after two delete key presses
-      await appCoordinator.deleteNote();
+      await appCoordinator.actions.deleteNote();
 
       expect(mockNoteService.delete).toHaveBeenCalledWith('existing-note.md');
       expect(mockDialogManager.closeDeleteDialog).toHaveBeenCalled();
@@ -434,7 +434,7 @@ describe('appCoordinator Integration Tests', () => {
       mockSearchManager.searchImmediate.mockResolvedValue([expectedFileName]);
 
       // This would be called by keyboard handler for Ctrl+Enter with the note name parameter
-      await appCoordinator.createNote(noteName);
+      await appCoordinator.actions.createNote(noteName);
 
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName);
       expect(mockDialogManager.closeCreateDialog).toHaveBeenCalled();
@@ -456,7 +456,7 @@ describe('appCoordinator Integration Tests', () => {
 
       mockDialogManager.newNoteName = noteName;
 
-      await appCoordinator.createNote();
+      await appCoordinator.actions.createNote();
 
       // Verify all managers were coordinated properly
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName); // Service handles data
@@ -477,7 +477,7 @@ describe('appCoordinator Integration Tests', () => {
 
       mockDialogManager.newNoteName = noteName;
 
-      await appCoordinator.createNote();
+      await appCoordinator.actions.createNote();
 
       // Verify that the service was called with pure data only
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName);

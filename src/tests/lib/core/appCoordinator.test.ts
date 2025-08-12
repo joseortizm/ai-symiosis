@@ -35,8 +35,11 @@ const appCoordinator = createAppCoordinator({
 describe('appCoordinator', () => {
   beforeEach(() => {
     resetAllMocks();
-    // Reset the appCoordinator state between tests
-    appCoordinator.resetState();
+    // Reset the appCoordinator state between tests using new pattern
+    appCoordinator.managers.searchManager.searchInput = '';
+    appCoordinator.setSelectedIndex(-1);
+    appCoordinator.managers.searchManager.setFilteredNotes([]);
+    appCoordinator.managers.searchManager.areHighlightsCleared = false;
   });
 
   describe('state management', () => {
@@ -55,19 +58,22 @@ describe('appCoordinator', () => {
     });
 
     it('should handle selectNote correctly', () => {
-      appCoordinator.selectNote('note1.md', 2);
+      appCoordinator.actions.selectNote('note1.md', 2);
       expect(appCoordinator.selectedIndex).toBe(2);
     });
 
     it('should not update selectedIndex if it is the same', () => {
       appCoordinator.setSelectedIndex(5);
-      appCoordinator.selectNote('note.md', 5);
+      appCoordinator.actions.selectNote('note.md', 5);
       expect(appCoordinator.selectedIndex).toBe(5);
     });
 
     it('should auto-select first note when notes are loaded', () => {
-      // Reset state to ensure clean start
-      appCoordinator.resetState();
+      // Reset state to ensure clean start using new pattern
+      appCoordinator.managers.searchManager.searchInput = '';
+      appCoordinator.setSelectedIndex(-1);
+      appCoordinator.managers.searchManager.setFilteredNotes([]);
+      appCoordinator.managers.searchManager.areHighlightsCleared = false;
       expect(appCoordinator.selectedNote).toBe(null);
       expect(appCoordinator.selectedIndex).toBe(-1);
 
@@ -83,7 +89,11 @@ describe('appCoordinator', () => {
     });
 
     it('should handle selectedNote properly when no notes available', () => {
-      appCoordinator.resetState();
+      // Reset state using new pattern
+      appCoordinator.managers.searchManager.searchInput = '';
+      appCoordinator.setSelectedIndex(-1);
+      appCoordinator.managers.searchManager.setFilteredNotes([]);
+      appCoordinator.managers.searchManager.areHighlightsCleared = false;
 
       // Ensure no notes
       searchManager.setFilteredNotes([]);
@@ -168,35 +178,35 @@ describe('appCoordinator', () => {
     });
   });
 
-  describe('placeholder business logic methods', () => {
-    it('should have deleteNote method that is callable', async () => {
-      expect(typeof appCoordinator.deleteNote).toBe('function');
-      await expect(appCoordinator.deleteNote()).resolves.toBeUndefined();
+  describe('actions should be callable through new pattern', () => {
+    it('should have deleteNote action that is callable', async () => {
+      expect(typeof appCoordinator.actions.deleteNote).toBe('function');
+      await expect(appCoordinator.actions.deleteNote()).resolves.toBeUndefined();
     });
 
-    it('should have createNote method that is callable', async () => {
-      expect(typeof appCoordinator.createNote).toBe('function');
-      await expect(appCoordinator.createNote()).resolves.toBeUndefined();
+    it('should have createNote action that is callable', async () => {
+      expect(typeof appCoordinator.actions.createNote).toBe('function');
+      await expect(appCoordinator.actions.createNote()).resolves.toBeUndefined();
     });
 
-    it('should have renameNote method that is callable', async () => {
-      expect(typeof appCoordinator.renameNote).toBe('function');
-      await expect(appCoordinator.renameNote()).resolves.toBeUndefined();
+    it('should have renameNote action that is callable', async () => {
+      expect(typeof appCoordinator.actions.renameNote).toBe('function');
+      await expect(appCoordinator.actions.renameNote()).resolves.toBeUndefined();
     });
 
-    it('should have saveNote method that is callable', async () => {
-      expect(typeof appCoordinator.saveNote).toBe('function');
-      await expect(appCoordinator.saveNote()).resolves.toBeUndefined();
+    it('should have saveNote action that is callable', async () => {
+      expect(typeof appCoordinator.actions.saveNote).toBe('function');
+      await expect(appCoordinator.actions.saveNote()).resolves.toBeUndefined();
     });
 
-    it('should have enterEditMode method that is callable', async () => {
-      expect(typeof appCoordinator.enterEditMode).toBe('function');
-      await expect(appCoordinator.enterEditMode()).resolves.toBeUndefined();
+    it('should have enterEditMode action that is callable', async () => {
+      expect(typeof appCoordinator.actions.enterEditMode).toBe('function');
+      await expect(appCoordinator.actions.enterEditMode()).resolves.toBeUndefined();
     });
 
-    it('should have exitEditMode method that is callable', () => {
-      expect(typeof appCoordinator.exitEditMode).toBe('function');
-      expect(() => appCoordinator.exitEditMode()).not.toThrow();
+    it('should have exitEditMode action that is callable', () => {
+      expect(typeof appCoordinator.actions.exitEditMode).toBe('function');
+      expect(() => appCoordinator.actions.exitEditMode()).not.toThrow();
     });
   });
 
