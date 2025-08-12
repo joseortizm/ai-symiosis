@@ -120,17 +120,11 @@ describe('appCoordinator', () => {
   });
 
   describe('keyboard handler integration', () => {
-    it('should provide keyboardState aggregation', () => {
-      const keyboardState = appCoordinator.keyboardState;
+    it('should provide keyboardActions handler', () => {
+      const keyboardActions = appCoordinator.keyboardActions;
 
-      expect(keyboardState).toHaveProperty('isSearchInputFocused');
-      expect(keyboardState).toHaveProperty('isEditMode');
-      expect(keyboardState).toHaveProperty('isNoteContentFocused');
-      expect(keyboardState).toHaveProperty('filteredNotes');
-      expect(keyboardState).toHaveProperty('selectedNote');
-      expect(keyboardState).toHaveProperty('noteContentElement');
-      expect(keyboardState).toHaveProperty('areHighlightsCleared');
-      expect(keyboardState).toHaveProperty('isEditorDirty');
+      expect(typeof keyboardActions).toBe('function');
+      expect(keyboardActions.length).toBe(1); // Should accept KeyboardEvent parameter
     });
 
     it('should provide keyboardActions as keyboard handler function', () => {

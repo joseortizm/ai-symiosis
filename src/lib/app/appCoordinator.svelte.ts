@@ -57,17 +57,6 @@ export interface AppCoordinator {
   readonly areHighlightsCleared: boolean;
   readonly filteredNotes: string[];
   readonly selectedNote: string | null;
-  readonly keyboardState: {
-    isSearchInputFocused: boolean;
-    isEditMode: boolean;
-    isNoteContentFocused: boolean;
-    filteredNotes: string[];
-    selectedNote: string | null;
-    noteContentElement: HTMLElement | null;
-    areHighlightsCleared: boolean;
-    isEditorDirty: boolean;
-    query: string;
-  };
   readonly keyboardActions: (event: KeyboardEvent) => Promise<void>;
   readonly managers: AppManagers;
   readonly state: AppState;
@@ -224,19 +213,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
     updateFilteredNotes: searchActions.updateFilteredNotes,
 
-    get keyboardState() {
-      return {
-        isSearchInputFocused: focusManager.isSearchInputFocused,
-        isEditMode: editorManager.isEditMode,
-        isNoteContentFocused: focusManager.isNoteContentFocused,
-        filteredNotes: filteredNotes,
-        selectedNote: selectedNote,
-        noteContentElement: focusManager.noteContentElement,
-        areHighlightsCleared: areHighlightsCleared,
-        isEditorDirty: editorManager.isDirty,
-        query: query,
-      };
-    },
 
     get keyboardActions() {
       return keyboardActions.createKeyboardHandler(() => ({
