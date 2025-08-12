@@ -188,8 +188,12 @@ describe('noteService', () => {
       expect(noteService.isLoading).toBe(false);
     });
 
-    it('should clear errors', () => {
-      noteService.state.error = 'Some error';
+    it('should clear errors', async () => {
+      // Trigger an error through a failed operation
+      mockInvoke.mockRejectedValueOnce(new Error('Test error'));
+      await noteService.create('test-note.md');
+
+      expect(noteService.error).toBeTruthy();
 
       noteService.clearError();
 

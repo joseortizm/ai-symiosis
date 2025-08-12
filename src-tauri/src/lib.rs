@@ -124,12 +124,18 @@ fn load_config() -> AppConfig {
 
 static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
 
-fn reload_config() -> Result<(), String> {
+fn reload_config(app_handle: Option<AppHandle>) -> Result<(), String> {
     let new_config = load_config();
     let mut config = APP_CONFIG
         .write()
         .map_err(|e| format!("Failed to write config lock: {}", e))?;
-    *config = new_config;
+    *config = new_config.clone();
+
+    // Emit config changed event to frontend
+    if let Some(app) = app_handle {
+        let _ = app.emit("config-changed", &new_config);
+    }
+
     Ok(())
 }
 
@@ -399,9 +405,9 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn refresh_cache() -> Result<(), String> {
+fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Reload config first
-    reload_config().map_err(|e| format!("Failed to reload config: {}", e))?;
+    reload_config(Some(app)).map_err(|e| format!("Failed to reload config: {}", e))?;
 
     // Then refresh database
     let mut conn = get_db_connection()?;
@@ -580,7 +586,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                 let _ = show_main_window(app.app_handle().clone());
             }
             "refresh" => {
-                let _ = refresh_cache();
+                let _ = refresh_cache(app.app_handle().clone());
             }
             "settings" => {
                 let app_handle = app.app_handle().clone();

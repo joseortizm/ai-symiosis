@@ -6,67 +6,92 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-class ConfigService {
-  state = $state({
+interface ConfigServiceState {
+  content: string;
+  isVisible: boolean;
+  isLoading: boolean;
+  error: string | null;
+  lastSaved: number; // Timestamp to trigger reactive updates
+}
+
+export interface ConfigService {
+  content: string;
+  readonly isVisible: boolean;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly lastSaved: number;
+  open(): Promise<void>;
+  close(): void;
+  save(): Promise<{ success: boolean; error?: string }>;
+  updateContent(content: string): void;
+  exists(): Promise<boolean>;
+  refreshCache(): Promise<void>;
+  getMarkdownTheme(): Promise<string>;
+  clearError(): void;
+  openPane(): Promise<void>;
+  closePane(): void;
+}
+
+export function createConfigService(): ConfigService {
+  const state = $state<ConfigServiceState>({
     content: '',
     isVisible: false,
     isLoading: false,
-    error: null as string | null,
-    lastSaved: 0 // Timestamp to trigger reactive updates
+    error: null,
+    lastSaved: 0
   });
 
-  async open(): Promise<void> {
-    this.state.isLoading = true;
-    this.state.error = null;
+  async function open(): Promise<void> {
+    state.isLoading = true;
+    state.error = null;
 
     try {
       const content = await invoke<string>("get_config_content");
-      this.state.content = content;
-      this.state.isVisible = true;
+      state.content = content;
+      state.isVisible = true;
     } catch (e) {
-      this.state.error = `Failed to load config: ${e}`;
+      state.error = `Failed to load config: ${e}`;
       console.error("Failed to load config:", e);
     } finally {
-      this.state.isLoading = false;
+      state.isLoading = false;
     }
   }
 
-  close(): void {
-    this.state.isVisible = false;
-    this.state.content = '';
-    this.state.error = null;
+  function close(): void {
+    state.isVisible = false;
+    state.content = '';
+    state.error = null;
   }
 
-  async save(): Promise<{ success: boolean; error?: string }> {
-    this.state.isLoading = true;
-    this.state.error = null;
+  async function save(): Promise<{ success: boolean; error?: string }> {
+    state.isLoading = true;
+    state.error = null;
 
     try {
-      await invoke<void>("save_config_content", { content: this.state.content });
+      await invoke<void>("save_config_content", { content: state.content });
       await invoke<void>("refresh_cache");
 
       // Update timestamp to trigger reactive config reloads
-      this.state.lastSaved = Date.now();
+      state.lastSaved = Date.now();
 
-      this.close();
+      close();
 
       return { success: true };
     } catch (e) {
       const error = `Failed to save config: ${e}`;
-      this.state.error = error;
+      state.error = error;
       console.error("Failed to save config:", e);
       return { success: false, error };
     } finally {
-      this.state.isLoading = false;
+      state.isLoading = false;
     }
   }
 
-  // Update config content (for two-way binding)
-  updateContent(content: string): void {
-    this.state.content = content;
+  function updateContent(content: string): void {
+    state.content = content;
   }
 
-  async exists(): Promise<boolean> {
+  async function exists(): Promise<boolean> {
     try {
       return await invoke<boolean>("config_exists");
     } catch (e) {
@@ -75,7 +100,7 @@ class ConfigService {
     }
   }
 
-  async refreshCache(): Promise<void> {
+  async function refreshCache(): Promise<void> {
     try {
       await invoke<void>("refresh_cache");
     } catch (e) {
@@ -84,7 +109,7 @@ class ConfigService {
     }
   }
 
-  async getMarkdownTheme(): Promise<string> {
+  async function getMarkdownTheme(): Promise<string> {
     try {
       return await invoke<string>("get_markdown_theme");
     } catch (e) {
@@ -93,43 +118,56 @@ class ConfigService {
     }
   }
 
-  clearError(): void {
-    this.state.error = null;
+  function clearError(): void {
+    state.error = null;
   }
 
   // Pane management methods for direct use in +page.svelte
-  async openPane(): Promise<void> {
-    await this.open();
+  async function openPane(): Promise<void> {
+    await open();
   }
 
-  closePane(): void {
-    this.close();
+  function closePane(): void {
+    close();
   }
 
-  // Getters and setters for reactive state (to support bind:value)
-  get content(): string {
-    return this.state.content;
-  }
+  return {
+    open,
+    close,
+    save,
+    updateContent,
+    exists,
+    refreshCache,
+    getMarkdownTheme,
+    clearError,
+    openPane,
+    closePane,
 
-  set content(value: string) {
-    this.state.content = value;
-  }
+    // Reactive getters and setters (to support bind:value)
+    get content(): string {
+      return state.content;
+    },
 
-  get isVisible(): boolean {
-    return this.state.isVisible;
-  }
+    set content(value: string) {
+      state.content = value;
+    },
 
-  get isLoading(): boolean {
-    return this.state.isLoading;
-  }
+    get isVisible(): boolean {
+      return state.isVisible;
+    },
 
-  get error(): string | null {
-    return this.state.error;
-  }
+    get isLoading(): boolean {
+      return state.isLoading;
+    },
 
-  get lastSaved(): number {
-    return this.state.lastSaved;
-  }
+    get error(): string | null {
+      return state.error;
+    },
+
+    get lastSaved(): number {
+      return state.lastSaved;
+    }
+  };
 }
 
-export const configService = new ConfigService();
+export const configService = createConfigService();

@@ -28,6 +28,7 @@ interface NoteActionDeps {
   focusManager: {
     focusSearch: () => void;
     noteContentElement: HTMLElement | null;
+    setSelectedIndex: (index: number) => void;
   };
   editorManager: {
     enterEditMode: (noteName: string, fallbackHtmlContent?: string, noteContentElement?: HTMLElement) => Promise<void>;
@@ -36,9 +37,6 @@ interface NoteActionDeps {
   contentManager: {
     noteContent: string;
     refreshAfterSave: (noteName: string, query: string) => Promise<{ searchResults: string[] }>;
-  };
-  focusManager: {
-    setSelectedIndex: (index: number) => void;
   };
 }
 

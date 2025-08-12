@@ -9,17 +9,14 @@ Shows highlighted content or renders the CodeMirror editor.
   import hljs from 'highlight.js';
   import 'highlight.js/styles/atom-one-dark.css';
   import { getContext } from 'svelte';
-  import { configService } from '../services/configService.svelte';
 
   import type { AppManagers, AppState, AppActions } from '../app/appCoordinator.svelte';
 
-  const { focusManager, contentManager, editorManager, dialogManager } = getContext<AppManagers>('managers');
+  const { focusManager, contentManager, editorManager, dialogManager, themeManager } = getContext<AppManagers>('managers');
   const appState = getContext<AppState>('state');
   const actions = getContext<AppActions>('actions');
 
   let noteContentElement = $state<HTMLElement | undefined>(undefined);
-  let currentTheme = $state<string>('dark_dimmed');
-  let themeInitialized = $state<boolean>(false);
 
   function registerNoteContentElement(element: HTMLElement) {
     focusManager.setNoteContentElement(element);
@@ -30,64 +27,6 @@ Shows highlighted content or renders the CodeMirror editor.
     };
   }
 
-  async function loadTheme(theme: string) {
-    const existingLink = document.head.querySelector('link[data-markdown-theme]');
-    if (existingLink) {
-      existingLink.remove();
-    }
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = `/css/${theme}.css`;
-    link.setAttribute('data-markdown-theme', theme);
-
-    document.head.appendChild(link);
-
-    return new Promise<void>((resolve) => {
-      link.onload = () => {
-        resolve();
-      };
-      link.onerror = () => {
-        resolve();
-      };
-    });
-  }
-
-  async function initializeTheme() {
-    try {
-      const theme = await configService.getMarkdownTheme();
-
-      if (theme !== currentTheme || !themeInitialized) {
-        currentTheme = theme;
-        await loadTheme(theme);
-        themeInitialized = true;
-      }
-    } catch (e) {
-      console.error('Failed to load markdown theme:', e);
-      if (currentTheme !== 'dark_dimmed' || !themeInitialized) {
-        currentTheme = 'dark_dimmed';
-        await loadTheme('dark_dimmed');
-        themeInitialized = true;
-      }
-    }
-  }
-
-  function themeInitializer(element: HTMLElement) {
-    initializeTheme();
-    return {
-      destroy() {
-        // Cleanup if needed
-      }
-    };
-  }
-
-  // Watch for config changes and reload theme
-  $effect(() => {
-    const lastSaved = configService.lastSaved;
-    if (lastSaved > 0 && themeInitialized) {
-      initializeTheme();
-    }
-  });
 
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
@@ -103,7 +42,7 @@ Shows highlighted content or renders the CodeMirror editor.
   });
 </script>
 
-<div class="note-preview" use:themeInitializer>
+<div class="note-preview" use:themeManager.getThemeInitializer()>
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <div class="edit-mode">

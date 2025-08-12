@@ -12,8 +12,10 @@ describe('configService', () => {
   beforeEach(() => {
     resetAllMocks();
     configService.clearError();
-    configService.state.isVisible = false;
-    configService.state.content = '';
+    // Reset service state by closing if open
+    if (configService.isVisible) {
+      configService.close();
+    }
   });
 
   describe('open', () => {
@@ -58,10 +60,13 @@ describe('configService', () => {
   });
 
   describe('close', () => {
-    it('should close settings pane and clear content', () => {
-      configService.state.isVisible = true;
-      configService.state.content = 'some content';
-      configService.state.error = 'some error';
+    it('should close settings pane and clear content', async () => {
+      // Open service first to put it in visible state
+      mockInvoke.mockResolvedValueOnce('some content');
+      await configService.open();
+
+      expect(configService.isVisible).toBe(true);
+      expect(configService.content).toBe('some content');
 
       configService.close();
 
@@ -70,8 +75,10 @@ describe('configService', () => {
       expect(configService.error).toBeNull();
     });
 
-    it('should work without onFocus callback', () => {
-      configService.state.isVisible = true;
+    it('should work without onFocus callback', async () => {
+      // Open service first to make it visible
+      mockInvoke.mockResolvedValueOnce('test content');
+      await configService.open();
 
       expect(() => configService.close()).not.toThrow();
       expect(configService.isVisible).toBe(false);
@@ -81,8 +88,11 @@ describe('configService', () => {
   describe('save', () => {
     it('should save config and refresh cache successfully', async () => {
       const configContent = 'notes_directory = "/new/path"';
-      configService.state.content = configContent;
-      configService.state.isVisible = true;
+
+      // Open service and set content
+      mockInvoke.mockResolvedValueOnce(configContent);
+      await configService.open();
+      configService.content = configContent;
 
       mockInvoke
         .mockResolvedValueOnce(undefined) // save_config_content
@@ -101,7 +111,12 @@ describe('configService', () => {
 
     it('should handle save errors', async () => {
       const error = new Error('Permission denied');
-      configService.state.content = 'some content';
+
+      // Open service and set content
+      mockInvoke.mockResolvedValueOnce('some content');
+      await configService.open();
+      configService.content = 'some content';
+
       mockInvoke.mockRejectedValueOnce(error);
 
       const result = await configService.save();
@@ -114,7 +129,11 @@ describe('configService', () => {
 
     it('should track loading state during save', async () => {
       let loadingDuringOperation = false;
-      configService.state.content = 'test content';
+
+      // Open service and set content
+      mockInvoke.mockResolvedValueOnce('test content');
+      await configService.open();
+      configService.content = 'test content';
 
       mockInvoke.mockImplementation(() => {
         loadingDuringOperation = configService.isLoading;
@@ -143,7 +162,6 @@ describe('configService', () => {
       configService.content = content;
 
       expect(configService.content).toBe(content);
-      expect(configService.state.content).toBe(content);
     });
   });
 
@@ -182,8 +200,12 @@ describe('configService', () => {
   });
 
   describe('error handling', () => {
-    it('should clear errors', () => {
-      configService.state.error = 'Some error';
+    it('should clear errors', async () => {
+      // Create an error by triggering a failed operation
+      mockInvoke.mockRejectedValueOnce(new Error('Test error'));
+      await configService.open();
+
+      expect(configService.error).toBeTruthy();
 
       configService.clearError();
 
@@ -192,16 +214,21 @@ describe('configService', () => {
   });
 
   describe('reactive state getters', () => {
-    it('should return correct state values', () => {
-      configService.state.content = 'test content';
-      configService.state.isVisible = true;
-      configService.state.isLoading = true;
-      configService.state.error = 'test error';
+    it('should return correct state values', async () => {
+      // Test initial state
+      expect(configService.isVisible).toBe(false);
+      expect(configService.isLoading).toBe(false);
+      expect(configService.error).toBeNull();
+
+      // Open service to set it to visible state
+      mockInvoke.mockResolvedValueOnce('test content');
+      await configService.open();
+      configService.content = 'test content';
 
       expect(configService.content).toBe('test content');
       expect(configService.isVisible).toBe(true);
-      expect(configService.isLoading).toBe(true);
-      expect(configService.error).toBe('test error');
+      expect(configService.isLoading).toBe(false); // Loading is false after successful open
+      expect(configService.error).toBeNull(); // No error after successful operation
     });
   });
 
@@ -218,9 +245,12 @@ describe('configService', () => {
       expect(configService.isVisible).toBe(true);
     });
 
-    it('should close pane with focus management', () => {
-      configService.state.isVisible = true;
-      configService.state.content = 'some content';
+    it('should close pane with focus management', async () => {
+      // Open service first to make it visible
+      mockInvoke.mockResolvedValueOnce('some content');
+      await configService.openPane();
+
+      expect(configService.isVisible).toBe(true);
 
       configService.closePane();
 

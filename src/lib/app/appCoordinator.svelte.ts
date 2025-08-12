@@ -9,6 +9,8 @@ import { tick } from "svelte";
 import { listen } from "@tauri-apps/api/event";
 import { createDialogManager } from '../core/dialogManager.svelte';
 import { createContentManager } from '../core/contentManager.svelte';
+import { createConfigStateManager } from '../core/configStateManager.svelte';
+import { createThemeManager } from '../core/themeManager.svelte';
 import { noteService } from '../services/noteService.svelte';
 import { configService } from '../services/configService.svelte';
 import { createNoteActions } from './actions/note.svelte';
@@ -16,7 +18,6 @@ import { createSearchActions } from './actions/search.svelte';
 import { createSettingsActions } from './actions/settings.svelte';
 import { createKeyboardActions } from './actions/keyboard.svelte';
 import { setupAppEffects } from './effects/app.svelte';
-
 
 interface AppCoordinatorDeps {
   searchManager: ReturnType<typeof import('../core/searchManager.svelte').createSearchManager>;
@@ -49,6 +50,8 @@ export interface AppManagers {
   focusManager: ReturnType<typeof import('../core/focusManager.svelte').createFocusManager>;
   contentManager: ReturnType<typeof import('../core/contentManager.svelte').createContentManager>;
   dialogManager: ReturnType<typeof import('../core/dialogManager.svelte').createDialogManager>;
+  configStateManager: ReturnType<typeof import('../core/configStateManager.svelte').createConfigStateManager>;
+  themeManager: ReturnType<typeof import('../core/themeManager.svelte').createThemeManager>;
 }
 
 export interface AppCoordinator {
@@ -86,6 +89,9 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     refreshSearch: (query: string) => searchManager.refreshSearch(query),
     invoke
   });
+
+  const configStateManager = createConfigStateManager();
+  const themeManager = createThemeManager();
 
   const isLoading = $derived(searchManager.isLoading);
   const areHighlightsCleared = $derived(searchManager.areHighlightsCleared);
@@ -231,6 +237,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         focusManager,
         contentManager,
         dialogManager,
+        configStateManager,
+        themeManager,
       };
     },
 
@@ -261,6 +269,12 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     async initialize(): Promise<() => void> {
       await tick();
 
+      // Initialize config state manager first
+      await configStateManager.initialize();
+
+      // Initialize theme manager with config state dependency
+      await themeManager.initialize(configStateManager);
+
       const configExists = await invoke<boolean>("config_exists");
       if (!configExists) {
         await settingsActions.openSettingsPane();
@@ -283,6 +297,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         }
         cleanupEffects();
         unlisten();
+        configStateManager.cleanup();
+        themeManager.cleanup();
       };
     }
   };

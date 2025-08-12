@@ -7,7 +7,7 @@ const mockNoteService = {
 
 const mockSearchManager = {
   searchInput: '',
-  filteredNotes: [],
+  filteredNotes: [] as string[],
   isLoading: false,
   areHighlightsCleared: false,
   setFilteredNotes: vi.fn((notes) => { mockSearchManager.filteredNotes = notes; }),
@@ -122,8 +122,8 @@ describe('Content Loading Integration', () => {
     it('should abort previous requests when selecting new note', async () => {
       const controller1 = new AbortController();
       const controller2 = new AbortController();
-      let resolveFirst: (value: string) => void;
-      let resolveSecond: (value: string) => void;
+      let resolveFirst!: (value: string) => void;
+      let resolveSecond!: (value: string) => void;
 
       const firstPromise = new Promise<string>(resolve => { resolveFirst = resolve; });
       const secondPromise = new Promise<string>(resolve => { resolveSecond = resolve; });
