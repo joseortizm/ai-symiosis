@@ -33,7 +33,7 @@ export interface AppState {
 }
 
 export interface AppActions {
-  selectNote: (note: string, index: number) => void;
+  selectNote: (note: string, index: number) => Promise<void>;
   deleteNote: () => Promise<void>;
   createNote: (noteName?: string) => Promise<void>;
   renameNote: (newName?: string) => Promise<void>;
@@ -142,9 +142,37 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusManager.focusSearch();
   }
 
-  function selectNote(note: string, index: number): void {
+  async function selectNote(note: string, index: number): Promise<void> {
     if (focusManager.selectedIndex !== index) {
       focusManager.setSelectedIndex(index);
+    }
+
+    // Cancel previous content request
+    if (contentRequestController) {
+      contentRequestController.abort();
+    }
+
+    if (!note) {
+      contentManager.setNoteContent('');
+      return;
+    }
+
+    const controller = new AbortController();
+    contentRequestController = controller;
+
+    try {
+      const content = await noteService.getContent(note);
+      if (!controller.signal.aborted) {
+        contentManager.setNoteContent(content);
+        requestAnimationFrame(() => {
+          contentManager.scrollToFirstMatch();
+        });
+      }
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        console.error("Failed to load note content:", e);
+        contentManager.setNoteContent(`Error loading note: ${e}`);
+      }
     }
   }
 
@@ -156,6 +184,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const keyboardActions = createKeyboardActions({
     focusManager,
+    selectNote,
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
     saveAndExitNote,
@@ -171,15 +200,9 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   function setupReactiveEffects(): () => void {
     return setupAppEffects({
-      getSelectedNote: () => selectedNote,
       getAreHighlightsCleared: () => areHighlightsCleared,
       focusManager,
-      contentManager,
-      noteService,
-      contentRequestController: {
-        current: contentRequestController,
-        set: (controller) => { contentRequestController = controller; }
-      }
+      contentManager
     });
   }
 
