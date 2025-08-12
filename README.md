@@ -60,4 +60,4 @@ Have fun 🙂
 
 ---
 
-<sub>Markdown themes from [render-gfm](https://github.com/shaunbharat/render-gfm)</sub>
+<sub>Markdown themes based on GitHub's markdown CSS (modified and optimized)</sub>
