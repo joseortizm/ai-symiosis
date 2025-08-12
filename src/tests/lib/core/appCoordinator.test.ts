@@ -37,7 +37,7 @@ describe('appCoordinator', () => {
     resetAllMocks();
     // Reset the appCoordinator state between tests using new pattern
     appCoordinator.managers.searchManager.searchInput = '';
-    appCoordinator.setSelectedIndex(-1);
+    appCoordinator.managers.focusManager.setSelectedIndex(-1);
     appCoordinator.managers.searchManager.setFilteredNotes([]);
     appCoordinator.managers.searchManager.areHighlightsCleared = false;
   });
@@ -49,33 +49,33 @@ describe('appCoordinator', () => {
       expect(appCoordinator.areHighlightsCleared).toBe(false);
       expect(appCoordinator.filteredNotes).toEqual([]);
       expect(appCoordinator.selectedNote).toBe(null);
-      expect(appCoordinator.selectedIndex).toBe(-1);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(-1);
     });
 
     it('should update selectedIndex state', () => {
-      appCoordinator.setSelectedIndex(3);
-      expect(appCoordinator.selectedIndex).toBe(3);
+      appCoordinator.managers.focusManager.setSelectedIndex(3);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(3);
     });
 
     it('should handle selectNote correctly', () => {
       appCoordinator.actions.selectNote('note1.md', 2);
-      expect(appCoordinator.selectedIndex).toBe(2);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(2);
     });
 
     it('should not update selectedIndex if it is the same', () => {
-      appCoordinator.setSelectedIndex(5);
+      appCoordinator.managers.focusManager.setSelectedIndex(5);
       appCoordinator.actions.selectNote('note.md', 5);
-      expect(appCoordinator.selectedIndex).toBe(5);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(5);
     });
 
     it('should auto-select first note when notes are loaded', () => {
       // Reset state to ensure clean start using new pattern
       appCoordinator.managers.searchManager.searchInput = '';
-      appCoordinator.setSelectedIndex(-1);
+      appCoordinator.managers.focusManager.setSelectedIndex(-1);
       appCoordinator.managers.searchManager.setFilteredNotes([]);
       appCoordinator.managers.searchManager.areHighlightsCleared = false;
       expect(appCoordinator.selectedNote).toBe(null);
-      expect(appCoordinator.selectedIndex).toBe(-1);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(-1);
 
       // Simulate notes being loaded via searchManager
       searchManager.setFilteredNotes(['note1.md', 'note2.md', 'note3.md']);
@@ -91,7 +91,7 @@ describe('appCoordinator', () => {
     it('should handle selectedNote properly when no notes available', () => {
       // Reset state using new pattern
       appCoordinator.managers.searchManager.searchInput = '';
-      appCoordinator.setSelectedIndex(-1);
+      appCoordinator.managers.focusManager.setSelectedIndex(-1);
       appCoordinator.managers.searchManager.setFilteredNotes([]);
       appCoordinator.managers.searchManager.areHighlightsCleared = false;
 
@@ -101,13 +101,13 @@ describe('appCoordinator', () => {
       // selectedNote should be null (not a function)
       expect(appCoordinator.selectedNote).toBe(null);
       expect(typeof appCoordinator.selectedNote).not.toBe('function');
-      expect(appCoordinator.selectedIndex).toBe(-1);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(-1);
     });
 
     it('should reset selection when notes become empty', () => {
       // Start with notes
       searchManager.setFilteredNotes(['note1.md', 'note2.md']);
-      appCoordinator.setSelectedIndex(1);
+      appCoordinator.managers.focusManager.setSelectedIndex(1);
       expect(appCoordinator.selectedNote).toBe('note2.md');
 
       // Clear notes
@@ -126,7 +126,6 @@ describe('appCoordinator', () => {
       expect(keyboardState).toHaveProperty('isSearchInputFocused');
       expect(keyboardState).toHaveProperty('isEditMode');
       expect(keyboardState).toHaveProperty('isNoteContentFocused');
-      expect(keyboardState).toHaveProperty('selectedIndex');
       expect(keyboardState).toHaveProperty('filteredNotes');
       expect(keyboardState).toHaveProperty('selectedNote');
       expect(keyboardState).toHaveProperty('noteContentElement');
@@ -152,11 +151,10 @@ describe('appCoordinator', () => {
     });
 
     it('should provide state object with reactive state', () => {
-      appCoordinator.setSelectedIndex(1);
+      appCoordinator.managers.focusManager.setSelectedIndex(1);
 
       const state = appCoordinator.state;
 
-      expect(state.selectedIndex).toBe(1);
       expect(state).toHaveProperty('query');
       expect(state).toHaveProperty('isLoading');
       expect(state).toHaveProperty('filteredNotes');

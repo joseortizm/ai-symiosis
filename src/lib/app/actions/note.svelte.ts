@@ -37,7 +37,9 @@ interface NoteActionDeps {
     noteContent: string;
     refreshAfterSave: (noteName: string, query: string) => Promise<{ searchResults: string[] }>;
   };
-  setSelectedIndex: (index: number) => void;
+  focusManager: {
+    setSelectedIndex: (index: number) => void;
+  };
 }
 
 interface NoteActions {
@@ -55,8 +57,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     dialogManager,
     focusManager,
     editorManager,
-    contentManager,
-    setSelectedIndex
+    contentManager
   } = deps;
 
   async function createNote(noteNameParam?: string): Promise<void> {
@@ -70,7 +71,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
 
       const noteIndex = searchManager.filteredNotes.findIndex(note => note === result.noteName);
       if (noteIndex >= 0) {
-        setSelectedIndex(noteIndex);
+        focusManager.setSelectedIndex(noteIndex);
       }
 
       dialogManager.closeCreateDialog();
@@ -105,7 +106,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
 
       const noteIndex = searchManager.filteredNotes.findIndex(note => note === result.newName);
       if (noteIndex >= 0) {
-        setSelectedIndex(noteIndex);
+        focusManager.setSelectedIndex(noteIndex);
       }
 
       dialogManager.closeRenameDialog();

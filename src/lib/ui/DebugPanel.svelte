@@ -213,6 +213,10 @@ function handleKeydown(event: KeyboardEvent) {
             <strong>noteListElement:</strong>
             <code>{formatValue(focusManager.noteListElement ? 'HTMLElement' : 'null')}</code>
           </div>
+          <div class="debug-item">
+            <strong>selectedIndex:</strong>
+            <code>{formatValue(focusManager.selectedIndex)}</code>
+          </div>
         </div>
       </div>
       {/if}
@@ -230,7 +234,7 @@ function handleKeydown(event: KeyboardEvent) {
         </div>
         <div class="debug-item">
           <strong>selectedIndex:</strong>
-          <code>{formatValue(appCoordinator.selectedIndex)}</code>
+          <code>{formatValue(focusManager.selectedIndex)}</code>
         </div>
         <div class="debug-item">
           <strong>filteredNotes:</strong>

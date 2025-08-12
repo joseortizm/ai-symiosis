@@ -5,16 +5,11 @@
  */
 
 interface AppEffectsDeps {
-  getFilteredNotes: () => string[];
-  getSelectedIndex: () => number;
   getSelectedNote: () => string | null;
   getAreHighlightsCleared: () => boolean;
-  setSelectedIndex: (index: number) => void;
-  editorManager: {
-    exitEditMode: () => void;
-  };
   focusManager: {
-    scrollToSelected: (index: number) => void;
+    selectedIndex: number;
+    scrollToSelected: () => void;
   };
   contentManager: {
     setNoteContent: (content: string) => void;
@@ -32,40 +27,14 @@ interface AppEffectsDeps {
 
 export function setupAppEffects(deps: AppEffectsDeps): () => void {
   const {
-    getFilteredNotes,
-    getSelectedIndex,
     getSelectedNote,
     getAreHighlightsCleared,
-    setSelectedIndex,
-    editorManager,
     focusManager,
     contentManager,
     noteService,
     contentRequestController
   } = deps;
 
-  $effect(() => {
-    const notes = getFilteredNotes();
-    const currentIndex = getSelectedIndex();
-
-    if (notes.length > 0 && (currentIndex === -1 || currentIndex >= notes.length)) {
-      editorManager.exitEditMode();
-    }
-  });
-
-  $effect(() => {
-    const notes = getFilteredNotes();
-    let index = getSelectedIndex();
-
-    if (notes.length > 0) {
-      if (index === -1 || index >= notes.length) {
-        index = 0;
-      }
-      requestAnimationFrame(() => {
-        focusManager.scrollToSelected(index);
-      });
-    }
-  });
 
   // Async content loading function (pure)
   async function loadNoteContent(note: string, controller: AbortController): Promise<string> {
@@ -110,6 +79,12 @@ export function setupAppEffects(deps: AppEffectsDeps): () => void {
   $effect(() => {
     contentManager.updateHighlighterState({
       areHighlightsCleared: getAreHighlightsCleared()
+    });
+  });
+
+  $effect(() => {
+    requestAnimationFrame(() => {
+      focusManager.scrollToSelected();
     });
   });
 

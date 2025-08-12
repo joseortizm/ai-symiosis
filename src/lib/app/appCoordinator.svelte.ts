@@ -30,7 +30,6 @@ export interface AppState {
   readonly areHighlightsCleared: boolean;
   readonly filteredNotes: string[];
   readonly selectedNote: string | null;
-  readonly selectedIndex: number;
 }
 
 export interface AppActions {
@@ -58,12 +57,10 @@ export interface AppCoordinator {
   readonly areHighlightsCleared: boolean;
   readonly filteredNotes: string[];
   readonly selectedNote: string | null;
-  readonly selectedIndex: number;
   readonly keyboardState: {
     isSearchInputFocused: boolean;
     isEditMode: boolean;
     isNoteContentFocused: boolean;
-    selectedIndex: number;
     filteredNotes: string[];
     selectedNote: string | null;
     noteContentElement: HTMLElement | null;
@@ -77,14 +74,12 @@ export interface AppCoordinator {
   readonly actions: AppActions;
   setupReactiveEffects(): () => void;
   updateFilteredNotes(notes: string[]): void;
-  setSelectedIndex(index: number): void;
   initialize(): Promise<() => void>;
 }
 
 export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   const { searchManager, editorManager, focusManager } = deps;
 
-  let selectedIndex = $state(-1);
 
   const dialogManager = createDialogManager({
     focusSearch: () => focusManager.focusSearch()
@@ -105,7 +100,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const selectedNote = $derived.by(() => {
     const notes = filteredNotes;
-    let index = selectedIndex;
+    let index = focusManager.selectedIndex;
 
     if (notes.length === 0) {
       return null;
@@ -120,9 +115,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   let contentRequestController: AbortController | null = null;
 
-  function setSelectedIndex(value: number): void {
-    selectedIndex = value;
-  }
 
   const noteActions = createNoteActions({
     noteService,
@@ -130,13 +122,14 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     dialogManager,
     focusManager,
     editorManager,
-    contentManager,
-    setSelectedIndex
+    contentManager
   });
 
   const searchActions = createSearchActions({
     searchManager,
-    contentManager
+    contentManager,
+    focusManager,
+    editorManager
   });
 
   const settingsActions = createSettingsActions({
@@ -150,8 +143,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   }
 
   function selectNote(note: string, index: number): void {
-    if (selectedIndex !== index) {
-      selectedIndex = index;
+    if (focusManager.selectedIndex !== index) {
+      focusManager.setSelectedIndex(index);
     }
   }
 
@@ -162,7 +155,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   }
 
   const keyboardActions = createKeyboardActions({
-    setSelectedIndex,
+    focusManager,
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
     saveAndExitNote,
@@ -178,12 +171,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   function setupReactiveEffects(): () => void {
     return setupAppEffects({
-      getFilteredNotes: () => filteredNotes,
-      getSelectedIndex: () => selectedIndex,
       getSelectedNote: () => selectedNote,
       getAreHighlightsCleared: () => areHighlightsCleared,
-      setSelectedIndex,
-      editorManager,
       focusManager,
       contentManager,
       noteService,
@@ -203,17 +192,14 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     get areHighlightsCleared(): boolean { return areHighlightsCleared; },
     get filteredNotes(): string[] { return filteredNotes; },
     get selectedNote(): string | null { return selectedNote; },
-    get selectedIndex(): number { return selectedIndex; },
 
     updateFilteredNotes: searchActions.updateFilteredNotes,
-    setSelectedIndex,
 
     get keyboardState() {
       return {
         isSearchInputFocused: focusManager.isSearchInputFocused,
         isEditMode: editorManager.isEditMode,
         isNoteContentFocused: focusManager.isNoteContentFocused,
-        selectedIndex: selectedIndex,
         filteredNotes: filteredNotes,
         selectedNote: selectedNote,
         noteContentElement: focusManager.noteContentElement,
@@ -228,7 +214,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         isSearchInputFocused: focusManager.isSearchInputFocused,
         isEditMode: editorManager.isEditMode,
         isNoteContentFocused: focusManager.isNoteContentFocused,
-        selectedIndex: selectedIndex,
         filteredNotes: filteredNotes,
         selectedNote: selectedNote,
         noteContentElement: focusManager.noteContentElement,
@@ -255,7 +240,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         get areHighlightsCleared() { return areHighlightsCleared; },
         get filteredNotes() { return filteredNotes; },
         get selectedNote() { return selectedNote; },
-        get selectedIndex() { return selectedIndex; },
       };
     },
 

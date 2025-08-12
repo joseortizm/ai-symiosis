@@ -63,6 +63,8 @@ const mockConfigService = {
 const mockFocusManager = {
   focusSearch: vi.fn(),
   scrollToSelected: vi.fn(),
+  selectedIndex: -1,
+  setSelectedIndex: vi.fn((index) => { mockFocusManager.selectedIndex = index; }),
   searchElement: null,
   setSearchElement: vi.fn(),
 };
@@ -178,7 +180,7 @@ describe('appCoordinator Integration Tests', () => {
       expect(mockFocusManager.focusSearch).toHaveBeenCalled();
 
       // Verify note selection (should select the new note at index 1)
-      expect(appCoordinator.selectedIndex).toBe(1);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(1);
     });
 
     it('should handle creation failure gracefully', async () => {
@@ -217,7 +219,7 @@ describe('appCoordinator Integration Tests', () => {
   describe('Note Deletion End-to-End Flow', () => {
     beforeEach(() => {
       // Set up a selected note
-      appCoordinator.setSelectedIndex(0);
+      appCoordinator.managers.focusManager.setSelectedIndex(0);
       // Ensure filteredNotes has notes by default
       mockSearchManager.filteredNotes = ['existing-note.md'];
     });
@@ -282,7 +284,7 @@ describe('appCoordinator Integration Tests', () => {
   describe('Note Rename End-to-End Flow', () => {
     beforeEach(() => {
       // Set up a selected note and search input
-      appCoordinator.setSelectedIndex(0);
+      appCoordinator.managers.focusManager.setSelectedIndex(0);
       mockSearchManager.searchInput = 'existing';
       // Ensure filteredNotes has notes by default
       mockSearchManager.filteredNotes = ['existing-note.md'];
@@ -313,7 +315,7 @@ describe('appCoordinator Integration Tests', () => {
       expect(mockDialogManager.closeRenameDialog).toHaveBeenCalled();
 
       // Verify renamed note is selected
-      expect(appCoordinator.selectedIndex).toBe(0);
+      expect(appCoordinator.managers.focusManager.selectedIndex).toBe(0);
     });
 
     it('should handle rename failure gracefully', async () => {
@@ -406,7 +408,7 @@ describe('appCoordinator Integration Tests', () => {
   describe('Keyboard-Driven Workflows', () => {
     it('should handle delete key press sequence', async () => {
       // Set up selected note
-      appCoordinator.setSelectedIndex(0);
+      appCoordinator.managers.focusManager.setSelectedIndex(0);
 
       // Mock successful deletion
       mockNoteService.delete.mockResolvedValue({ success: true });

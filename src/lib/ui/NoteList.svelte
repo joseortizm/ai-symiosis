@@ -33,7 +33,7 @@ Handles note selection state and integrates with keyboard navigation.
         {#each appState.filteredNotes as note, index (note)}
           <li>
             <button
-              class:selected={index === appState.selectedIndex}
+              class:selected={index === focusManager.selectedIndex}
               tabindex="-1"
               onclick={() => actions.selectNote(note, index)}
             >

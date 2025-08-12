@@ -7,7 +7,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
 interface KeyboardActionDeps {
-  setSelectedIndex: (value: number) => void;
+  focusManager: {
+    selectedIndex: number;
+    setSelectedIndex: (value: number) => void;
+  };
   enterEditMode: () => Promise<void>;
   exitEditMode: () => void;
   saveAndExitNote: () => Promise<void>;
@@ -25,7 +28,6 @@ export interface AppState {
   isSearchInputFocused: boolean;
   isEditMode: boolean;
   isNoteContentFocused: boolean;
-  selectedIndex: number;
   filteredNotes: string[];
   selectedNote: string | null;
   noteContentElement: HTMLElement | null;
@@ -59,13 +61,13 @@ export function createKeyboardActions(deps: KeyboardActionDeps): KeyboardActions
   const actionRegistry: ActionRegistry = {
     navigation: {
       moveUp: ({ state, actions }: ActionContext) => {
-        const newIndex = Math.max(0, state.selectedIndex - 1);
-        actions.setSelectedIndex(newIndex);
+        const newIndex = Math.max(0, actions.focusManager.selectedIndex - 1);
+        actions.focusManager.setSelectedIndex(newIndex);
       },
       moveDown: ({ state, actions }: ActionContext) => {
         const maxIndex = state.filteredNotes.length - 1;
-        const newIndex = Math.min(maxIndex, state.selectedIndex + 1);
-        actions.setSelectedIndex(newIndex);
+        const newIndex = Math.min(maxIndex, actions.focusManager.selectedIndex + 1);
+        actions.focusManager.setSelectedIndex(newIndex);
       },
       focusSearch: ({ actions }: ActionContext) => {
         actions.focusSearch();

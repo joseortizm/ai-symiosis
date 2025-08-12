@@ -12,6 +12,13 @@ interface SearchActionDeps {
   contentManager: {
     clearHighlights: () => void;
   };
+  focusManager: {
+    selectedIndex: number;
+    setSelectedIndex: (index: number) => void;
+  };
+  editorManager: {
+    exitEditMode: () => void;
+  };
 }
 
 interface SearchActions {
@@ -22,10 +29,18 @@ interface SearchActions {
 }
 
 export function createSearchActions(deps: SearchActionDeps): SearchActions {
-  const { searchManager, contentManager } = deps;
+  const { searchManager, contentManager, focusManager, editorManager } = deps;
 
   function updateFilteredNotes(notes: string[]): void {
     searchManager.setFilteredNotes(notes);
+
+    // Handle selection normalization when filtered notes change
+    const currentIndex = focusManager.selectedIndex;
+
+    if (notes.length > 0 && (currentIndex === -1 || currentIndex >= notes.length)) {
+      editorManager.exitEditMode();
+      focusManager.setSelectedIndex(0);
+    }
   }
 
   function resetSearchState(): void {
