@@ -107,13 +107,6 @@ Shows highlighted content or renders the CodeMirror editor.
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <div class="edit-mode">
-        <div class="edit-footer">
-          <h3>Editing: {appState.selectedNote}</h3>
-          <div class="edit-controls">
-            <button onclick={actions.saveNote} class="save-btn">Save (Ctrl+S)</button>
-            <button onclick={actions.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
-          </div>
-        </div>
         <CodeMirrorEditor
           bind:value={editorManager.editContent}
           bind:isDirty={editorManager.isDirty}
@@ -124,6 +117,13 @@ Shows highlighted content or renders the CodeMirror editor.
           onExit={actions.exitEditMode}
           onRequestExit={dialogManager.showExitEditDialog}
         />
+        <div class="edit-footer">
+          <h3>Editing: {appState.selectedNote}</h3>
+          <div class="edit-controls">
+            <button onclick={actions.saveNote} class="save-btn">Save (Ctrl+S)</button>
+            <button onclick={actions.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+          </div>
+        </div>
       </div>
     {:else}
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -161,21 +161,17 @@ Shows highlighted content or renders the CodeMirror editor.
     display: flex;
     flex-direction: column;
     background-color: #21252b;
+    min-height: 0;
   }
   .edit-footer {
-  position: fixed;       /* Use fixed to position relative to the viewport */
-  bottom: 0;             /* Stick to the bottom */
-  left: 0;               /* Stretch from left */
-  right: 0;              /* Stretch to right */
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.8em 1em;
-  border-top: 1px solid #181a1f;  /* Border at top instead of bottom */
-  background-color: #21252b;
-  flex-shrink: 0;
-}
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8em 1em;
+    border-top: 1px solid #181a1f;
+    background-color: #21252b;
+    flex-shrink: 0;
+  }
   .edit-footer h3 {
     margin: 0;
     color: #61afef;

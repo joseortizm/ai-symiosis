@@ -69,7 +69,6 @@ export interface AppCoordinator {
 export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   const { searchManager, editorManager, focusManager } = deps;
 
-
   const dialogManager = createDialogManager({
     focusSearch: () => focusManager.focusSearch()
   });
@@ -109,7 +108,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   });
 
   let contentRequestController: AbortController | null = null;
-
 
   const noteActions = createNoteActions({
     noteService,
@@ -171,7 +169,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     }
   }
 
-
   async function saveAndExitNote(): Promise<void> {
     await noteActions.saveNote(selectedNote);
     exitEditMode();
@@ -200,7 +197,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
       contentManager
     });
   }
-
 
   return {
     setupReactiveEffects,

@@ -286,7 +286,7 @@ Focused component handling CodeMirror initialization and content editing.
 <style>
 .codemirror-editor {
   flex: 1;
-  height: 100%;
+  min-height: 0;
   background-color: #282828;
   overflow: hidden;
   display: flex;
