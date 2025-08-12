@@ -107,7 +107,7 @@ Shows highlighted content or renders the CodeMirror editor.
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <div class="edit-mode">
-        <div class="edit-header">
+        <div class="edit-footer">
           <h3>Editing: {appState.selectedNote}</h3>
           <div class="edit-controls">
             <button onclick={actions.saveNote} class="save-btn">Save (Ctrl+S)</button>
@@ -162,19 +162,21 @@ Shows highlighted content or renders the CodeMirror editor.
     flex-direction: column;
     background-color: #21252b;
   }
-  .edit-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.8em 1em;
-    border-bottom: 1px solid #181a1f;
-    background-color: #21252b;
-    flex-shrink: 0;
-  }
-  .edit-header h3 {
+  .edit-footer {
+  position: fixed;       /* Use fixed to position relative to the viewport */
+  bottom: 0;             /* Stick to the bottom */
+  left: 0;               /* Stretch from left */
+  right: 0;              /* Stretch to right */
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8em 1em;
+  border-top: 1px solid #181a1f;  /* Border at top instead of bottom */
+  background-color: #21252b;
+  flex-shrink: 0;
+}
+  .edit-footer h3 {
     margin: 0;
     color: #61afef;
     font-size: 1.1em;
@@ -225,7 +227,6 @@ Shows highlighted content or renders the CodeMirror editor.
     min-height: 100%;
     width: 100%;
   }
-
   :global(.highlight) {
     background-color: rgba(254, 145, 0, 0.75) !important;
     border-radius: 3px !important;
@@ -234,7 +235,6 @@ Shows highlighted content or renders the CodeMirror editor.
     color: #f0f0f0 !important;
     display: inline-block !important;
   }
-
   .no-selection {
     flex: 1;
     display: flex;
@@ -245,26 +245,21 @@ Shows highlighted content or renders the CodeMirror editor.
     font-style: italic;
     text-align: center;
   }
-
   .help-text {
     font-size: 0.9em;
     margin-top: 0.5em;
     color: #4b5263;
   }
-
   .note-content::-webkit-scrollbar {
     width: 10px;
   }
-
   .note-content::-webkit-scrollbar-track {
     background: #21252b;
   }
-
   .note-content::-webkit-scrollbar-thumb {
     background: #4b5263;
     border-radius: 5px;
   }
-
   .note-content::-webkit-scrollbar-thumb:hover {
     background: #5c6370;
   }
