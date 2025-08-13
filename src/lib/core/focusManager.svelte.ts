@@ -30,7 +30,7 @@ export interface FocusManager {
   scrollNoteContentUp(): void
   scrollNoteContentDown(): void
   scrollToSelectedInList(selectedIndex: number): void
-  scrollToSelected(selectedIndex?: number): void
+  scrollToIndex(selectedIndex: number): void
 }
 
 export function createFocusManager(): FocusManager {
@@ -53,10 +53,8 @@ export function createFocusManager(): FocusManager {
     }
   }
 
-  function scrollToSelected(selectedIndex?: number): void {
-    const indexToUse =
-      selectedIndex !== undefined ? selectedIndex : state.selectedIndex
-    scrollToSelectedInList(indexToUse)
+  function scrollToIndex(selectedIndex: number): void {
+    scrollToSelectedInList(selectedIndex)
   }
 
   return {
@@ -132,6 +130,6 @@ export function createFocusManager(): FocusManager {
     },
 
     scrollToSelectedInList,
-    scrollToSelected,
+    scrollToIndex,
   }
 }
