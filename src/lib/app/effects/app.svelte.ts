@@ -12,18 +12,11 @@ interface AppEffectsDeps {
   }
   contentManager: {
     scrollToFirstMatch: () => void
-    updateHighlighterState: (state: { areHighlightsCleared: boolean }) => void
   }
 }
 
 export function setupAppEffects(deps: AppEffectsDeps): () => void {
   const { getAreHighlightsCleared, focusManager, contentManager } = deps
-
-  $effect(() => {
-    contentManager.updateHighlighterState({
-      areHighlightsCleared: getAreHighlightsCleared(),
-    })
-  })
 
   $effect(() => {
     requestAnimationFrame(() => {

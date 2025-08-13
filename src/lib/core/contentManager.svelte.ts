@@ -42,10 +42,6 @@ export interface ContentManager {
     noteName: string,
     searchInput: string
   ): Promise<RefreshAfterSaveResult>
-  updateHighlighterState(newState: {
-    query?: string
-    areHighlightsCleared?: boolean
-  }): void
   setHighlightsClearedState(cleared: boolean): void
 }
 
@@ -102,11 +98,6 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     }
   }
 
-  function updateHighlighterState(_newState: {
-    query?: string
-    areHighlightsCleared?: boolean
-  }): void {}
-
   function setHighlightsClearedState(cleared: boolean): void {
     deps.setHighlightsClearedState(cleared)
   }
@@ -137,7 +128,6 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     scrollToFirstMatch,
     refreshContent,
     refreshAfterSave,
-    updateHighlighterState,
     setHighlightsClearedState,
   }
 }
