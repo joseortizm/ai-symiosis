@@ -90,27 +90,15 @@ export function createKeyboardActions(
     },
 
     scrolling: {
-      scrollUp: ({ state }: ActionContext) => {
+      scrollUpBy: ({ state }: ActionContext) => {
         state.noteContentElement?.scrollBy({
-          top: -50,
+          top: -250,
           behavior: 'smooth',
         })
       },
-      scrollDown: ({ state }: ActionContext) => {
+      scrollDownBy: ({ state }: ActionContext) => {
         state.noteContentElement?.scrollBy({
-          top: 50,
-          behavior: 'smooth',
-        })
-      },
-      scrollUp200: ({ state }: ActionContext) => {
-        state.noteContentElement?.scrollBy({
-          top: -200,
-          behavior: 'smooth',
-        })
-      },
-      scrollDown200: ({ state }: ActionContext) => {
-        state.noteContentElement?.scrollBy({
-          top: 200,
+          top: 250,
           behavior: 'smooth',
         })
       },
@@ -191,8 +179,8 @@ export function createKeyboardActions(
       'Ctrl+f': 'notes.openFolder',
       'Ctrl+r': 'notes.refreshCache',
       'Ctrl+x': 'notes.deleteNote',
-      'Ctrl+u': 'scrolling.scrollUp200',
-      'Ctrl+d': 'scrolling.scrollDown200',
+      'Ctrl+u': 'scrolling.scrollUpBy',
+      'Ctrl+d': 'scrolling.scrollDownBy',
       ArrowUp: 'navigation.moveUp',
       ArrowDown: 'navigation.moveDown',
       'Ctrl+k': 'navigation.moveUp',
@@ -208,14 +196,7 @@ export function createKeyboardActions(
     },
 
     noteContent: {
-      ArrowUp: 'scrolling.scrollUp',
-      ArrowDown: 'scrolling.scrollDown',
-      'Ctrl+p': 'scrolling.scrollUp',
-      'Ctrl+n': 'scrolling.scrollDown',
       Escape: 'navigation.focusSearch',
-      e: 'editing.enterEdit',
-      'Ctrl+x': 'notes.deleteNote',
-      'Meta+,': 'settings.openSettings',
     },
 
     default: {
