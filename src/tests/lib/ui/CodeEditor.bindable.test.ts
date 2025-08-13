@@ -5,14 +5,14 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }))
 
-describe('CodeMirrorEditor Bindable Property Issue Documentation', () => {
+describe('CodeEditor Bindable Property Issue Documentation', () => {
   beforeEach(() => {
     resetAllMocks()
   })
 
   describe('The problem that was fixed', () => {
     it('should document why direct bindable property assignment fails in Svelte 5', () => {
-      // This test documents the core issue that was happening in CodeMirrorEditor.svelte
+      // This test documents the core issue that was happening in CodeEditor.svelte
       // When the component had these problematic lines:
       //
       // Line 163: value = newValue;           (in EditorView.updateListener)

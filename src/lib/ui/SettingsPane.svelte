@@ -1,11 +1,11 @@
 <!--
 UI Layer - Settings Pane
 Configuration panel for editing application settings in TOML format.
-Uses CodeMirror editor for syntax highlighting of configuration files.
+Uses CodeEditor component for syntax highlighting of configuration files.
 -->
 
 <script lang="ts">
-  import CodeMirrorEditor from './CodeMirrorEditor.svelte'
+  import CodeEditor from './CodeEditor.svelte'
   import { configService } from '../services/configService.svelte'
   import { getContext } from 'svelte'
   import type { AppActions } from '../app/appCoordinator.svelte'
@@ -66,7 +66,7 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
     >
       <h3>Settings</h3>
       <div class="settings-editor-container">
-        <CodeMirrorEditor
+        <CodeEditor
           bind:value={configService.content}
           filename="config.toml"
           onSave={handleSave}

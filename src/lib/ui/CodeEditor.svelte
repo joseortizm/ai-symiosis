@@ -587,4 +587,16 @@ Focused component handling CodeMirror initialization and content editing.
   .cancel-btn:hover {
     background-color: #4b5263;
   }
+
+  .codemirror-editor :global(.cm-foldPlaceholder) {
+    background: linear-gradient(135deg, #3c3836 0%, #504945 100%) !important;
+    color: #d5c4a1 !important;
+    border: 1px solid #665c54 !important;
+    border-radius: 6px !important;
+    padding: 2px 8px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    margin: 0 4px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  }
 </style>

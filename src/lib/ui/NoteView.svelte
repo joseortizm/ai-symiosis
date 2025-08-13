@@ -5,7 +5,7 @@ Shows highlighted content or renders the CodeMirror editor.
 -->
 
 <script lang="ts">
-  import CodeMirrorEditor from './CodeMirrorEditor.svelte'
+  import CodeEditor from './CodeEditor.svelte'
   import hljs from 'highlight.js'
   import 'highlight.js/styles/atom-one-dark.css'
   import { getContext } from 'svelte'
@@ -56,7 +56,7 @@ Shows highlighted content or renders the CodeMirror editor.
 <div class="note-preview" use:themeInitializer>
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
-      <CodeMirrorEditor
+      <CodeEditor
         bind:value={editorManager.editContent}
         bind:isDirty={editorManager.isDirty}
         filename={appState.selectedNote}
