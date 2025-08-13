@@ -5,8 +5,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 
-// Import after mocking
-const { configService } = await import('../../../lib/services/configService.svelte');
+import { configService } from '../../../lib/services/configService.svelte';
 
 describe('configService', () => {
   beforeEach(() => {

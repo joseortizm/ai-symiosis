@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockInvoke, resetAllMocks } from '../../test-utils';
 import type { EditorManager } from '../../../lib/core/editorManager.svelte';
+import { createEditorManager } from '../../../lib/core/editorManager.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
-
-// Import after mocking
-const { createEditorManager } = await import('../../../lib/core/editorManager.svelte');
 
 // Create a fresh instance for each test
 let editorManager: EditorManager;

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { FocusManager } from '../../../lib/core/focusManager.svelte';
+import { createFocusManager } from '../../../lib/core/focusManager.svelte';
 
 // Mock DOM elements - using unknown then casting for maximum flexibility
 function createMockHTMLInputElement() {
@@ -14,12 +15,10 @@ function createMockHTMLElement() {
     focus: vi.fn(),
     scrollBy: vi.fn(),
     scrollIntoView: vi.fn(),
-    children: [] as any,
+    children: [] as HTMLElement[],
     querySelector: vi.fn(),
   } as unknown as HTMLElement;
 }
-
-const { createFocusManager } = await import('../../../lib/core/focusManager.svelte');
 
 // Create a fresh instance for each test
 let focusManager: FocusManager;
@@ -129,8 +128,15 @@ describe('focusManager', () => {
 
     it('should scroll to selected item in list', () => {
       const mockButton = createMockHTMLElement();
-      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) } as any;
-      (noteListElement.children as any) = [mockLi];
+      const mockLi = { 
+        querySelector: vi.fn().mockReturnValue(mockButton) 
+      } as unknown as HTMLElement;
+      
+      // Properly mock the children array
+      Object.defineProperty(noteListElement, 'children', {
+        value: [mockLi],
+        writable: true
+      });
 
       focusManager.scrollToSelectedInList(0);
 
@@ -151,8 +157,15 @@ describe('focusManager', () => {
 
     it('should scroll to selected item by index', () => {
       const mockButton = createMockHTMLElement();
-      const mockLi = { querySelector: vi.fn().mockReturnValue(mockButton) } as any;
-      (noteListElement.children as any) = [mockLi];
+      const mockLi = { 
+        querySelector: vi.fn().mockReturnValue(mockButton) 
+      } as unknown as HTMLElement;
+      
+      // Properly mock the children array
+      Object.defineProperty(noteListElement, 'children', {
+        value: [mockLi],
+        writable: true
+      });
 
       focusManager.scrollToSelected(0);
 

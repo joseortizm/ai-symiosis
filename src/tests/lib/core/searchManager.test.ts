@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockInvoke, resetAllMocks } from '../../test-utils';
+import { createSearchManager } from '../../../lib/core/searchManager.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
-
-const { createSearchManager } = await import('../../../lib/core/searchManager.svelte');
 
 // Create a fresh instance for each test
 let searchManager: ReturnType<typeof createSearchManager>;
@@ -13,6 +12,7 @@ let searchManager: ReturnType<typeof createSearchManager>;
 describe('searchManager', () => {
   beforeEach(() => {
     resetAllMocks();
+    vi.clearAllMocks();
     searchManager = createSearchManager();
   });
 
@@ -21,15 +21,24 @@ describe('searchManager', () => {
       const notes = ['note1.md', 'note2.md'];
       mockInvoke.mockResolvedValueOnce(notes);
 
+      // Use fake timers BEFORE setting searchInput
+      vi.useFakeTimers();
+      
       searchManager.searchInput = 'test query';
 
       expect(searchManager.isLoading).toBe(false);
-
-      await new Promise(resolve => setTimeout(resolve, 150)); // Wait for debounce
+      
+      // Fast-forward past debounce delay
+      vi.advanceTimersByTime(200);
+      
+      // Wait for promise resolution
+      await vi.runAllTimersAsync();
 
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test query' });
       expect(searchManager.query).toBe('test query');
       expect(searchManager.filteredNotes).toEqual(notes);
+      
+      vi.useRealTimers();
     });
 
     it('should handle immediate search', async () => {
@@ -83,17 +92,24 @@ describe('searchManager', () => {
       mockInvoke.mockResolvedValue(notes);
       const onHighlightsClear = vi.fn();
 
+      // Use fake timers BEFORE calling updateSearchInputWithEffects
+      vi.useFakeTimers();
+      
       // CRITICAL: This test verifies search execution actually happens (catches state pre-setting bugs)
       searchManager.updateSearchInputWithEffects('test search', onHighlightsClear);
-
-      // Wait for debounce to trigger and async operation to complete
-      await new Promise(resolve => setTimeout(resolve, 150));
-      await new Promise(resolve => process.nextTick(resolve));
+      
+      // Fast-forward past debounce delay
+      vi.advanceTimersByTime(200);
+      
+      // Wait for promise resolution
+      await vi.runAllTimersAsync();
 
       // The critical assertion: verify search was actually performed
       expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: 'test search' });
       expect(searchManager.filteredNotes).toEqual(notes);
       expect(searchManager.query).toBe('test search');
+      
+      vi.useRealTimers();
     });
 
     it('should provide refreshSearch method', async () => {
