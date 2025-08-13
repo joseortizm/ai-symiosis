@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+
+# SvelteKit build output
+.svelte-kit
+build
+dist
+
+# Tauri build artifacts
+src-tauri/target
+.tauri
+
+# Package manager lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Misc
+.github
+.claude
+.DS_Store
+
+# Config files that Prettier should skip
+.eslintrc
+.eslintrc.*
+eslint.config.*
+
+# Ignore all dotfiles (config files, git files, etc.)
+.*
+!.prettierrc
+!.prettierrc.*
