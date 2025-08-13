@@ -5,41 +5,51 @@ Shows highlighted content or renders the CodeMirror editor.
 -->
 
 <script lang="ts">
-  import CodeMirrorEditor from './CodeMirrorEditor.svelte';
-  import hljs from 'highlight.js';
-  import 'highlight.js/styles/atom-one-dark.css';
-  import { getContext } from 'svelte';
+  import CodeMirrorEditor from './CodeMirrorEditor.svelte'
+  import hljs from 'highlight.js'
+  import 'highlight.js/styles/atom-one-dark.css'
+  import { getContext } from 'svelte'
 
-  import type { AppManagers, AppState, AppActions } from '../app/appCoordinator.svelte';
+  import type {
+    AppManagers,
+    AppState,
+    AppActions,
+  } from '../app/appCoordinator.svelte'
 
-  const { focusManager, contentManager, editorManager, dialogManager, themeManager } = getContext<AppManagers>('managers');
-  const appState = getContext<AppState>('state');
-  const actions = getContext<AppActions>('actions');
+  const {
+    focusManager,
+    contentManager,
+    editorManager,
+    dialogManager,
+    themeManager,
+  } = getContext<AppManagers>('managers')
+  const appState = getContext<AppState>('state')
+  const actions = getContext<AppActions>('actions')
 
-  let noteContentElement = $state<HTMLElement | undefined>(undefined);
+  let noteContentElement = $state<HTMLElement | undefined>(undefined)
 
   function registerNoteContentElement(element: HTMLElement) {
-    focusManager.setNoteContentElement(element);
+    focusManager.setNoteContentElement(element)
     return {
       destroy() {
-        focusManager.setNoteContentElement(null);
-      }
-    };
+        focusManager.setNoteContentElement(null)
+      },
+    }
   }
-
 
   // Use $effect to highlight code blocks when content changes
   $effect(() => {
     // Run after highlightedContent changes and DOM updates
     if (contentManager.highlightedContent && focusManager.noteContentElement) {
       setTimeout(() => {
-        const blocks = focusManager.noteContentElement!.querySelectorAll('pre code');
+        const blocks =
+          focusManager.noteContentElement!.querySelectorAll('pre code')
         blocks.forEach((block: Element) => {
-          hljs.highlightElement(block as HTMLElement);
-        });
-      }, 0);
+          hljs.highlightElement(block as HTMLElement)
+        })
+      }, 0)
     }
-  });
+  })
 </script>
 
 <div class="note-preview" use:themeManager.getThemeInitializer()>
@@ -59,8 +69,12 @@ Shows highlighted content or renders the CodeMirror editor.
         <div class="edit-footer">
           <h3>Editing: {appState.selectedNote}</h3>
           <div class="edit-controls">
-            <button onclick={actions.saveNote} class="save-btn">Save (Ctrl+S)</button>
-            <button onclick={actions.exitEditMode} class="cancel-btn">Cancel (Esc)</button>
+            <button onclick={actions.saveNote} class="save-btn"
+              >Save (Ctrl+S)</button
+            >
+            <button onclick={actions.exitEditMode} class="cancel-btn"
+              >Cancel (Esc)</button
+            >
           </div>
         </div>
       </div>
@@ -76,13 +90,17 @@ Shows highlighted content or renders the CodeMirror editor.
         onblur={() => focusManager.setNoteContentFocused(false)}
         ondblclick={actions.enterEditMode}
       >
-        <div class="markdown-body">{@html contentManager.highlightedContent}</div>
+        <div class="markdown-body">
+          {@html contentManager.highlightedContent}
+        </div>
       </div>
     {/if}
   {:else}
     <div class="no-selection">
       <p>Select a note to preview its content</p>
-      <p class="help-text">Press Enter to edit, Ctrl+F to show in enclosing folder.</p>
+      <p class="help-text">
+        Press Enter to edit, Ctrl+F to show in enclosing folder.
+      </p>
     </div>
   {/if}
 </div>
@@ -121,7 +139,8 @@ Shows highlighted content or renders the CodeMirror editor.
     display: flex;
     gap: 0.5em;
   }
-  .save-btn, .cancel-btn {
+  .save-btn,
+  .cancel-btn {
     padding: 0.4em 0.8em;
     border: none;
     border-radius: 4px;

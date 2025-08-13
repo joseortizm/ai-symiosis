@@ -4,124 +4,133 @@
  * Handles API calls to Rust backend for note creation, deletion, and renaming.
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from '@tauri-apps/api/core'
 
 export function createNoteService() {
   const state = $state({
     isLoading: false,
     error: null as string | null,
-    lastOperation: null as 'create' | 'delete' | 'rename' | null
-  });
+    lastOperation: null as 'create' | 'delete' | 'rename' | null,
+  })
 
-  async function create(noteName: string): Promise<{ success: boolean; noteName?: string; error?: string }> {
-    if (!noteName.trim()) return { success: false, error: 'Note name cannot be empty' };
+  async function create(
+    noteName: string
+  ): Promise<{ success: boolean; noteName?: string; error?: string }> {
+    if (!noteName.trim())
+      return { success: false, error: 'Note name cannot be empty' }
 
-    state.isLoading = true;
-    state.error = null;
-    state.lastOperation = 'create';
+    state.isLoading = true
+    state.error = null
+    state.lastOperation = 'create'
 
     try {
-      const finalNoteName = noteName.includes('.') ? noteName : `${noteName}.md`;
-      await invoke<void>("create_new_note", { noteName: finalNoteName });
-      return { success: true, noteName: finalNoteName };
+      const finalNoteName = noteName.includes('.') ? noteName : `${noteName}.md`
+      await invoke<void>('create_new_note', { noteName: finalNoteName })
+      return { success: true, noteName: finalNoteName }
     } catch (e) {
-      const error = `Failed to create note: ${e}`;
-      state.error = error;
-      console.error("Failed to create note:", e);
-      return { success: false, error };
+      const error = `Failed to create note: ${e}`
+      state.error = error
+      console.error('Failed to create note:', e)
+      return { success: false, error }
     } finally {
-      state.isLoading = false;
+      state.isLoading = false
     }
   }
 
-  async function deleteNote(noteName: string): Promise<{ success: boolean; error?: string }> {
-    if (!noteName) return { success: false, error: 'Note name cannot be empty' };
+  async function deleteNote(
+    noteName: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!noteName) return { success: false, error: 'Note name cannot be empty' }
 
-    state.isLoading = true;
-    state.error = null;
-    state.lastOperation = 'delete';
+    state.isLoading = true
+    state.error = null
+    state.lastOperation = 'delete'
 
     try {
-      await invoke<void>("delete_note", { noteName });
-      return { success: true };
+      await invoke<void>('delete_note', { noteName })
+      return { success: true }
     } catch (e) {
-      const error = `Failed to delete note: ${e}`;
-      state.error = error;
-      console.error("Failed to delete note:", e);
-      return { success: false, error };
+      const error = `Failed to delete note: ${e}`
+      state.error = error
+      console.error('Failed to delete note:', e)
+      return { success: false, error }
     } finally {
-      state.isLoading = false;
+      state.isLoading = false
     }
   }
 
-  async function rename(oldName: string, newName: string): Promise<{ success: boolean; newName?: string; error?: string }> {
-    if (!newName.trim() || !oldName) return { success: false, error: 'Both old and new names are required' };
+  async function rename(
+    oldName: string,
+    newName: string
+  ): Promise<{ success: boolean; newName?: string; error?: string }> {
+    if (!newName.trim() || !oldName)
+      return { success: false, error: 'Both old and new names are required' }
 
-    state.isLoading = true;
-    state.error = null;
-    state.lastOperation = 'rename';
+    state.isLoading = true
+    state.error = null
+    state.lastOperation = 'rename'
 
     try {
-      const finalNewName = newName.includes('.') ? newName : `${newName}.md`;
-      await invoke<void>("rename_note", { oldName, newName: finalNewName });
-      return { success: true, newName: finalNewName };
+      const finalNewName = newName.includes('.') ? newName : `${newName}.md`
+      await invoke<void>('rename_note', { oldName, newName: finalNewName })
+      return { success: true, newName: finalNewName }
     } catch (e) {
-      const error = `Failed to rename note: ${e}`;
-      state.error = error;
-      console.error("Failed to rename note:", e);
-      return { success: false, error };
+      const error = `Failed to rename note: ${e}`
+      state.error = error
+      console.error('Failed to rename note:', e)
+      return { success: false, error }
     } finally {
-      state.isLoading = false;
+      state.isLoading = false
     }
   }
 
   async function getContent(noteName: string): Promise<string> {
     try {
-      return await invoke<string>("get_note_content", { noteName });
+      return await invoke<string>('get_note_content', { noteName })
     } catch (e) {
-      console.error("Failed to get note content:", e);
-      throw e;
+      console.error('Failed to get note content:', e)
+      throw e
     }
   }
 
   async function getRawContent(noteName: string): Promise<string> {
     try {
-      return await invoke<string>("get_note_raw_content", { noteName });
+      return await invoke<string>('get_note_raw_content', { noteName })
     } catch (e) {
-      console.error("Failed to get raw note content:", e);
-      throw e;
+      console.error('Failed to get raw note content:', e)
+      throw e
     }
   }
 
   async function save(noteName: string, content: string): Promise<void> {
     try {
-      await invoke<void>("save_note", { noteName, content });
+      await invoke<void>('save_note', { noteName, content })
     } catch (e) {
-      console.error("Failed to save note:", e);
-      throw e;
+      console.error('Failed to save note:', e)
+      throw e
     }
   }
 
   async function openInEditor(noteName: string): Promise<void> {
     try {
-      await invoke("open_note_in_editor", { noteName });
+      await invoke('open_note_in_editor', { noteName })
     } catch (e) {
-      console.error("Failed to open note in editor:", e);
-      throw e;
+      console.error('Failed to open note in editor:', e)
+      throw e
     }
   }
 
   async function openFolder(noteName: string): Promise<void> {
     try {
-      await invoke("open_note_folder", { noteName });
+      await invoke('open_note_folder', { noteName })
     } catch (e) {
-      console.error("Failed to open note folder:", e);
-      throw e;
+      console.error('Failed to open note folder:', e)
+      throw e
     }
   }
 
   function clearError(): void {
-    state.error = null;
+    state.error = null
   }
 
   return {
@@ -134,10 +143,16 @@ export function createNoteService() {
     openInEditor,
     openFolder,
     clearError,
-    get isLoading() { return state.isLoading; },
-    get error() { return state.error; },
-    get lastOperation() { return state.lastOperation; }
-  };
+    get isLoading() {
+      return state.isLoading
+    },
+    get error() {
+      return state.error
+    },
+    get lastOperation() {
+      return state.lastOperation
+    },
+  }
 }
 
-export const noteService = createNoteService();
+export const noteService = createNoteService()

@@ -5,58 +5,58 @@ Composes all UI components and provides keyboard event handling for the entire a
 -->
 
 <script lang="ts">
-import { onMount, setContext } from "svelte";
-import AppLayout from "../lib/ui/AppLayout.svelte";
-import SearchInput from "../lib/ui/SearchInput.svelte";
-import NoteList from "../lib/ui/NoteList.svelte";
-import NoteView from "../lib/ui/NoteView.svelte";
-import ConfirmationDialog from "../lib/ui/ConfirmationDialog.svelte";
-import InputDialog from "../lib/ui/InputDialog.svelte";
-import DeleteDialog from "../lib/ui/DeleteDialog.svelte";
-import SettingsPane from "../lib/ui/SettingsPane.svelte";
-import DebugPanel from "../lib/ui/DebugPanel.svelte";
-import { createAppCoordinator } from '../lib/app/appCoordinator.svelte';
-import { createSearchManager } from '../lib/core/searchManager.svelte';
-import { createEditorManager } from '../lib/core/editorManager.svelte';
-import { createFocusManager } from '../lib/core/focusManager.svelte';
-import { configService } from '../lib/services/configService.svelte';
+  import { onMount, setContext } from 'svelte'
+  import AppLayout from '../lib/ui/AppLayout.svelte'
+  import SearchInput from '../lib/ui/SearchInput.svelte'
+  import NoteList from '../lib/ui/NoteList.svelte'
+  import NoteView from '../lib/ui/NoteView.svelte'
+  import ConfirmationDialog from '../lib/ui/ConfirmationDialog.svelte'
+  import InputDialog from '../lib/ui/InputDialog.svelte'
+  import DeleteDialog from '../lib/ui/DeleteDialog.svelte'
+  import SettingsPane from '../lib/ui/SettingsPane.svelte'
+  import DebugPanel from '../lib/ui/DebugPanel.svelte'
+  import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
+  import { createSearchManager } from '../lib/core/searchManager.svelte'
+  import { createEditorManager } from '../lib/core/editorManager.svelte'
+  import { createFocusManager } from '../lib/core/focusManager.svelte'
+  import { configService } from '../lib/services/configService.svelte'
 
-// Create all managers using factories
-const searchManager = createSearchManager();
-const editorManager = createEditorManager();
-const focusManager = createFocusManager();
+  // Create all managers using factories
+  const searchManager = createSearchManager()
+  const editorManager = createEditorManager()
+  const focusManager = createFocusManager()
 
-// Create the coordinator with dependencies
-const appCoordinator = createAppCoordinator({
-  searchManager,
-  editorManager,
-  focusManager
-});
+  // Create the coordinator with dependencies
+  const appCoordinator = createAppCoordinator({
+    searchManager,
+    editorManager,
+    focusManager,
+  })
 
-// Set context for child components
-setContext('managers', {
-  ...appCoordinator.managers,
-  appCoordinator
-});
+  // Set context for child components
+  setContext('managers', {
+    ...appCoordinator.managers,
+    appCoordinator,
+  })
 
-setContext('state', appCoordinator.state);
-setContext('actions', appCoordinator.actions);
+  setContext('state', appCoordinator.state)
+  setContext('actions', appCoordinator.actions)
 
-// Access properties directly since this is the root component
-const { dialogManager } = appCoordinator.managers;
-const appState = appCoordinator.state;
-const actions = appCoordinator.actions;
+  // Access properties directly since this is the root component
+  const { dialogManager } = appCoordinator.managers
+  const appState = appCoordinator.state
+  const actions = appCoordinator.actions
 
-const handleKeydown = appCoordinator.keyboardActions;
+  const handleKeydown = appCoordinator.keyboardActions
 
-appCoordinator.setupReactiveEffects();
+  appCoordinator.setupReactiveEffects()
 
-onMount(() => {
-  (async () => {
-    const cleanup = await appCoordinator.initialize();
-    return cleanup;
-  })();
-});
+  onMount(() => {
+    ;(async () => {
+      const cleanup = await appCoordinator.initialize()
+      return cleanup
+    })()
+  })
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -70,11 +70,11 @@ onMount(() => {
     <SettingsPane
       show={configService.isVisible}
       onClose={() => {
-        configService.closePane();
-        focusManager.focusSearch();
+        configService.closePane()
+        focusManager.focusSearch()
       }}
       onRefresh={(notes) => {
-        appCoordinator.updateFilteredNotes(notes);
+        appCoordinator.updateFilteredNotes(notes)
       }}
     />
 
@@ -84,7 +84,8 @@ onMount(() => {
       deleteKeyPressCount={dialogManager.deleteKeyPressCount}
       onConfirm={actions.deleteNote}
       onCancel={dialogManager.closeDeleteDialog}
-      onKeyPress={() => dialogManager.handleDeleteKeyPress(() => actions.deleteNote())}
+      onKeyPress={() =>
+        dialogManager.handleDeleteKeyPress(() => actions.deleteNote())}
     />
 
     <InputDialog
@@ -126,4 +127,3 @@ onMount(() => {
 </AppLayout>
 
 <DebugPanel />
-

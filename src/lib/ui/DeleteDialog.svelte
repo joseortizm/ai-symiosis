@@ -6,51 +6,58 @@ Requires multiple key presses to confirm destructive actions.
 
 <script lang="ts">
   interface Props {
-    show: boolean;
-    noteName: string;
-    deleteKeyPressCount: number;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-    onKeyPress?: () => void;
+    show: boolean
+    noteName: string
+    deleteKeyPressCount: number
+    onConfirm?: () => void
+    onCancel?: () => void
+    onKeyPress?: () => void
   }
 
-  const { show, noteName, deleteKeyPressCount, onConfirm, onCancel, onKeyPress }: Props = $props();
+  const {
+    show,
+    noteName,
+    deleteKeyPressCount,
+    onConfirm,
+    onCancel,
+    onKeyPress,
+  }: Props = $props()
 
-  let dialogElement = $state<HTMLElement | undefined>(undefined);
+  let dialogElement = $state<HTMLElement | undefined>(undefined)
 
   function handleConfirm(): void {
-    onConfirm?.();
+    onConfirm?.()
   }
 
   function handleCancel(): void {
-    onCancel?.();
+    onCancel?.()
   }
 
   function handleKeyPress(): void {
-    onKeyPress?.();
+    onKeyPress?.()
   }
 
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      event.preventDefault();
-      handleCancel();
+      event.preventDefault()
+      handleCancel()
     } else if (event.key === 'D' || event.key === 'd') {
-      event.preventDefault();
-      handleKeyPress();
+      event.preventDefault()
+      handleKeyPress()
     }
   }
 
   function handleOverlayClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      handleCancel();
+      handleCancel()
     }
   }
 
   $effect(() => {
     if (show && dialogElement) {
-      setTimeout(() => dialogElement!.focus(), 10);
+      setTimeout(() => dialogElement!.focus(), 10)
     }
-  });
+  })
 </script>
 
 {#if show}
@@ -71,7 +78,9 @@ Requires multiple key presses to confirm destructive actions.
       <div class="keyboard-hint">
         <p>Press <kbd>DD</kbd> to confirm or <kbd>Esc</kbd> to cancel</p>
         {#if deleteKeyPressCount === 1}
-          <p class="delete-progress">Press <kbd>D</kbd> again to confirm deletion</p>
+          <p class="delete-progress">
+            Press <kbd>D</kbd> again to confirm deletion
+          </p>
         {/if}
       </div>
       <div class="dialog-buttons">

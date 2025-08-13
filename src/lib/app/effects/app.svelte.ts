@@ -5,35 +5,31 @@
  */
 
 interface AppEffectsDeps {
-  getAreHighlightsCleared: () => boolean;
+  getAreHighlightsCleared: () => boolean
   focusManager: {
-    selectedIndex: number;
-    scrollToSelected: () => void;
-  };
+    selectedIndex: number
+    scrollToSelected: () => void
+  }
   contentManager: {
-    scrollToFirstMatch: () => void;
-    updateHighlighterState: (state: { areHighlightsCleared: boolean }) => void;
-  };
+    scrollToFirstMatch: () => void
+    updateHighlighterState: (state: { areHighlightsCleared: boolean }) => void
+  }
 }
 
 export function setupAppEffects(deps: AppEffectsDeps): () => void {
-  const {
-    getAreHighlightsCleared,
-    focusManager,
-    contentManager
-  } = deps;
+  const { getAreHighlightsCleared, focusManager, contentManager } = deps
 
   $effect(() => {
     contentManager.updateHighlighterState({
-      areHighlightsCleared: getAreHighlightsCleared()
-    });
-  });
+      areHighlightsCleared: getAreHighlightsCleared(),
+    })
+  })
 
   $effect(() => {
     requestAnimationFrame(() => {
-      focusManager.scrollToSelected();
-    });
-  });
+      focusManager.scrollToSelected()
+    })
+  })
 
-  return function cleanup(): void {};
+  return function cleanup(): void {}
 }

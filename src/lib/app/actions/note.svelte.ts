@@ -4,48 +4,62 @@
  * Handles business logic flow including UI state updates and focus management.
  */
 
-import { tick } from "svelte";
+import { tick } from 'svelte'
 
 interface NoteActionDeps {
   noteService: {
-    create: (noteName: string) => Promise<{ success: boolean; noteName?: string; error?: string }>;
-    delete: (noteName: string) => Promise<{ success: boolean; error?: string }>;
-    rename: (oldName: string, newName: string) => Promise<{ success: boolean; newName?: string; error?: string }>;
-  };
+    create: (
+      noteName: string
+    ) => Promise<{ success: boolean; noteName?: string; error?: string }>
+    delete: (noteName: string) => Promise<{ success: boolean; error?: string }>
+    rename: (
+      oldName: string,
+      newName: string
+    ) => Promise<{ success: boolean; newName?: string; error?: string }>
+  }
   searchManager: {
-    searchInput: string;
-    searchImmediate: (query: string) => Promise<string[]>;
-    filteredNotes: string[];
-    setFilteredNotes: (notes: string[]) => void;
-  };
+    searchInput: string
+    searchImmediate: (query: string) => Promise<string[]>
+    filteredNotes: string[]
+    setFilteredNotes: (notes: string[]) => void
+  }
   dialogManager: {
-    newNoteName: string;
-    newNoteNameForRename: string;
-    closeCreateDialog: () => void;
-    closeDeleteDialog: () => void;
-    closeRenameDialog: () => void;
-  };
+    newNoteName: string
+    newNoteNameForRename: string
+    closeCreateDialog: () => void
+    closeDeleteDialog: () => void
+    closeRenameDialog: () => void
+  }
   focusManager: {
-    focusSearch: () => void;
-    noteContentElement: HTMLElement | null;
-    setSelectedIndex: (index: number) => void;
-  };
+    focusSearch: () => void
+    noteContentElement: HTMLElement | null
+    setSelectedIndex: (index: number) => void
+  }
   editorManager: {
-    enterEditMode: (noteName: string, fallbackHtmlContent?: string, noteContentElement?: HTMLElement) => Promise<void>;
-    saveNote: (noteName: string) => Promise<{ success: boolean; error?: string }>;
-  };
+    enterEditMode: (
+      noteName: string,
+      fallbackHtmlContent?: string,
+      noteContentElement?: HTMLElement
+    ) => Promise<void>
+    saveNote: (
+      noteName: string
+    ) => Promise<{ success: boolean; error?: string }>
+  }
   contentManager: {
-    noteContent: string;
-    refreshAfterSave: (noteName: string, query: string) => Promise<{ searchResults: string[] }>;
-  };
+    noteContent: string
+    refreshAfterSave: (
+      noteName: string,
+      query: string
+    ) => Promise<{ searchResults: string[] }>
+  }
 }
 
 interface NoteActions {
-  createNote(noteNameParam?: string): Promise<void>;
-  deleteNote(selectedNote: string | null): Promise<void>;
-  renameNote(selectedNote: string | null, newNameParam?: string): Promise<void>;
-  enterEditMode(noteName: string): Promise<void>;
-  saveNote(selectedNote: string | null): Promise<void>;
+  createNote(noteNameParam?: string): Promise<void>
+  deleteNote(selectedNote: string | null): Promise<void>
+  renameNote(selectedNote: string | null, newNameParam?: string): Promise<void>
+  enterEditMode(noteName: string): Promise<void>
+  saveNote(selectedNote: string | null): Promise<void>
 }
 
 export function createNoteActions(deps: NoteActionDeps): NoteActions {
@@ -55,59 +69,67 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     dialogManager,
     focusManager,
     editorManager,
-    contentManager
-  } = deps;
+    contentManager,
+  } = deps
 
   async function createNote(noteNameParam?: string): Promise<void> {
-    const inputNoteName = noteNameParam || dialogManager.newNoteName.trim();
-    if (!inputNoteName.trim()) return;
+    const inputNoteName = noteNameParam || dialogManager.newNoteName.trim()
+    if (!inputNoteName.trim()) return
 
-    const result = await noteService.create(inputNoteName);
+    const result = await noteService.create(inputNoteName)
 
     if (result.success) {
-      await searchManager.searchImmediate('');
+      await searchManager.searchImmediate('')
 
-      const noteIndex = searchManager.filteredNotes.findIndex(note => note === result.noteName);
+      const noteIndex = searchManager.filteredNotes.findIndex(
+        (note) => note === result.noteName
+      )
       if (noteIndex >= 0) {
-        focusManager.setSelectedIndex(noteIndex);
+        focusManager.setSelectedIndex(noteIndex)
       }
 
-      dialogManager.closeCreateDialog();
-      await tick();
-      focusManager.focusSearch();
+      dialogManager.closeCreateDialog()
+      await tick()
+      focusManager.focusSearch()
 
-      await enterEditMode(result.noteName!);
+      await enterEditMode(result.noteName!)
     }
   }
 
   async function deleteNote(selectedNote: string | null): Promise<void> {
-    if (!selectedNote) return;
+    if (!selectedNote) return
 
-    const result = await noteService.delete(selectedNote);
+    const result = await noteService.delete(selectedNote)
 
     if (result.success) {
-      await searchManager.searchImmediate(searchManager.searchInput);
-      dialogManager.closeDeleteDialog();
-      await tick();
-      focusManager.focusSearch();
+      await searchManager.searchImmediate(searchManager.searchInput)
+      dialogManager.closeDeleteDialog()
+      await tick()
+      focusManager.focusSearch()
     }
   }
 
-  async function renameNote(selectedNote: string | null, newNameParam?: string): Promise<void> {
-    const inputNewName = newNameParam || dialogManager.newNoteNameForRename.trim();
-    if (!inputNewName.trim() || !selectedNote) return;
+  async function renameNote(
+    selectedNote: string | null,
+    newNameParam?: string
+  ): Promise<void> {
+    const inputNewName =
+      newNameParam || dialogManager.newNoteNameForRename.trim()
+    if (!inputNewName.trim() || !selectedNote) return
 
-    const result = await noteService.rename(selectedNote, inputNewName);
+    const result = await noteService.rename(selectedNote, inputNewName)
 
     if (result.success) {
-      await searchManager.searchImmediate(searchManager.searchInput);
+      await searchManager.searchImmediate(searchManager.searchInput)
 
-      const noteIndex = searchManager.filteredNotes.findIndex(note => note === result.newName);
+      const noteIndex = searchManager.filteredNotes.findIndex(
+        (note) => note === result.newName
+      )
       if (noteIndex >= 0) {
-        focusManager.setSelectedIndex(noteIndex);
+        focusManager.setSelectedIndex(noteIndex)
       }
 
-      dialogManager.closeRenameDialog();
+      dialogManager.closeRenameDialog()
     }
   }
 
@@ -116,23 +138,26 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
       noteName,
       contentManager.noteContent,
       focusManager.noteContentElement ?? undefined
-    );
+    )
   }
 
   async function saveNote(selectedNote: string | null): Promise<void> {
-    if (!selectedNote) return;
+    if (!selectedNote) return
 
-    const result = await editorManager.saveNote(selectedNote);
+    const result = await editorManager.saveNote(selectedNote)
 
     if (result.success) {
       try {
-        const refreshResult = await contentManager.refreshAfterSave(selectedNote, searchManager.searchInput);
-        searchManager.setFilteredNotes(refreshResult.searchResults);
+        const refreshResult = await contentManager.refreshAfterSave(
+          selectedNote,
+          searchManager.searchInput
+        )
+        searchManager.setFilteredNotes(refreshResult.searchResults)
       } catch (e) {
-        console.error("Failed to refresh after save:", e);
+        console.error('Failed to refresh after save:', e)
       }
     } else {
-      console.error("Failed to save note:", result.error);
+      console.error('Failed to save note:', result.error)
     }
   }
 
@@ -141,6 +166,6 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     deleteNote,
     renameNote,
     enterEditMode,
-    saveNote
-  };
+    saveNote,
+  }
 }

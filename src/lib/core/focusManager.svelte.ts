@@ -5,32 +5,32 @@
  */
 
 interface FocusState {
-  isSearchInputFocused: boolean;
-  isNoteContentFocused: boolean;
-  selectedIndex: number;
-  searchElement: HTMLInputElement | null;
-  noteContentElement: HTMLElement | null;
-  noteListElement: HTMLElement | null;
+  isSearchInputFocused: boolean
+  isNoteContentFocused: boolean
+  selectedIndex: number
+  searchElement: HTMLInputElement | null
+  noteContentElement: HTMLElement | null
+  noteListElement: HTMLElement | null
 }
 
 export interface FocusManager {
-  readonly isSearchInputFocused: boolean;
-  readonly isNoteContentFocused: boolean;
-  readonly selectedIndex: number;
-  readonly searchElement: HTMLInputElement | null;
-  readonly noteContentElement: HTMLElement | null;
-  readonly noteListElement: HTMLElement | null;
-  setSearchInputFocused(value: boolean): void;
-  setNoteContentFocused(value: boolean): void;
-  setSelectedIndex(index: number): void;
-  setSearchElement(element: HTMLInputElement | null): void;
-  setNoteContentElement(element: HTMLElement | null): void;
-  setNoteListElement(element: HTMLElement | null): void;
-  focusSearch(): void;
-  scrollNoteContentUp(): void;
-  scrollNoteContentDown(): void;
-  scrollToSelectedInList(selectedIndex: number): void;
-  scrollToSelected(selectedIndex?: number): void;
+  readonly isSearchInputFocused: boolean
+  readonly isNoteContentFocused: boolean
+  readonly selectedIndex: number
+  readonly searchElement: HTMLInputElement | null
+  readonly noteContentElement: HTMLElement | null
+  readonly noteListElement: HTMLElement | null
+  setSearchInputFocused(value: boolean): void
+  setNoteContentFocused(value: boolean): void
+  setSelectedIndex(index: number): void
+  setSearchElement(element: HTMLInputElement | null): void
+  setNoteContentElement(element: HTMLElement | null): void
+  setNoteListElement(element: HTMLElement | null): void
+  focusSearch(): void
+  scrollNoteContentUp(): void
+  scrollNoteContentDown(): void
+  scrollToSelectedInList(selectedIndex: number): void
+  scrollToSelected(selectedIndex?: number): void
 }
 
 export function createFocusManager(): FocusManager {
@@ -40,96 +40,98 @@ export function createFocusManager(): FocusManager {
     selectedIndex: -1,
     searchElement: null,
     noteContentElement: null,
-    noteListElement: null
-  });
+    noteListElement: null,
+  })
 
   function scrollToSelectedInList(selectedIndex: number): void {
     if (state.noteListElement && selectedIndex >= 0) {
-      const selectedButton = state.noteListElement.children[selectedIndex]?.querySelector('button');
+      const selectedButton =
+        state.noteListElement.children[selectedIndex]?.querySelector('button')
       if (selectedButton) {
-        selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       }
     }
   }
 
   function scrollToSelected(selectedIndex?: number): void {
-    const indexToUse = selectedIndex !== undefined ? selectedIndex : state.selectedIndex;
-    scrollToSelectedInList(indexToUse);
+    const indexToUse =
+      selectedIndex !== undefined ? selectedIndex : state.selectedIndex
+    scrollToSelectedInList(indexToUse)
   }
 
   return {
     // Reactive getters
     get isSearchInputFocused(): boolean {
-      return state.isSearchInputFocused;
+      return state.isSearchInputFocused
     },
 
     get isNoteContentFocused(): boolean {
-      return state.isNoteContentFocused;
+      return state.isNoteContentFocused
     },
 
     get selectedIndex(): number {
-      return state.selectedIndex;
+      return state.selectedIndex
     },
 
     get searchElement(): HTMLInputElement | null {
-      return state.searchElement;
+      return state.searchElement
     },
 
     get noteContentElement(): HTMLElement | null {
-      return state.noteContentElement;
+      return state.noteContentElement
     },
 
     get noteListElement(): HTMLElement | null {
-      return state.noteListElement;
+      return state.noteListElement
     },
 
     // Focus state setters
     setSearchInputFocused(value: boolean): void {
-      state.isSearchInputFocused = value;
+      state.isSearchInputFocused = value
     },
 
     setNoteContentFocused(value: boolean): void {
-      state.isNoteContentFocused = value;
+      state.isNoteContentFocused = value
     },
 
     setSelectedIndex(index: number): void {
-      state.selectedIndex = index;
+      state.selectedIndex = index
     },
 
     // Element setters
     setSearchElement(element: HTMLInputElement | null): void {
-      state.searchElement = element;
+      state.searchElement = element
     },
 
     setNoteContentElement(element: HTMLElement | null): void {
-      state.noteContentElement = element;
+      state.noteContentElement = element
     },
 
     setNoteListElement(element: HTMLElement | null): void {
-      state.noteListElement = element;
+      state.noteListElement = element
     },
 
     // Focus actions
     focusSearch(): void {
-      state.searchElement?.focus();
+      state.searchElement?.focus()
     },
 
     // Scroll actions
     scrollNoteContentUp(): void {
       state.noteContentElement?.scrollBy({
         top: -50,
-        behavior: 'smooth'
-      });
+        behavior: 'smooth',
+      })
     },
 
     scrollNoteContentDown(): void {
       state.noteContentElement?.scrollBy({
         top: 50,
-        behavior: 'smooth'
-      });
+        behavior: 'smooth',
+      })
     },
 
     scrollToSelectedInList,
-    scrollToSelected
-  };
+    scrollToSelected,
+  }
 }

@@ -5,21 +5,21 @@ Connects to search manager and handles keyboard navigation events.
 -->
 
 <script lang="ts">
-  import { getContext } from 'svelte';
+  import { getContext } from 'svelte'
 
-  import type { AppManagers } from '../app/appCoordinator.svelte';
+  import type { AppManagers } from '../app/appCoordinator.svelte'
 
-  const { searchManager, focusManager } = getContext<AppManagers>('managers');
+  const { searchManager, focusManager } = getContext<AppManagers>('managers')
 
-  let searchElement: HTMLInputElement;
+  let searchElement: HTMLInputElement
 
   function registerElement(element: HTMLInputElement) {
-    focusManager.setSearchElement(element);
+    focusManager.setSearchElement(element)
     return {
       destroy() {
-        focusManager.setSearchElement(null);
-      }
-    };
+        focusManager.setSearchElement(null)
+      },
+    }
   }
 </script>
 
@@ -35,25 +35,27 @@ Connects to search manager and handles keyboard navigation events.
 />
 
 <style>
-.search-input {
-  background-color: #3c3836;
-  color: #ebdbb2;
-  border: 1px solid #504945;
-  border-radius: 8px;
-  font-size: 1.3em;
-  padding: 0.6em;
-  margin: 0.5em;
-  flex-shrink: 0;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.search-input::placeholder {
-  color: light-gray;
-  font-size: 0.8em;
-  opacity: 0.5;
-}
-.search-input:focus {
-  outline: none;
-  border-color: #83a598;
-  box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
-}
+  .search-input {
+    background-color: #3c3836;
+    color: #ebdbb2;
+    border: 1px solid #504945;
+    border-radius: 8px;
+    font-size: 1.3em;
+    padding: 0.6em;
+    margin: 0.5em;
+    flex-shrink: 0;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .search-input::placeholder {
+    color: light-gray;
+    font-size: 0.8em;
+    opacity: 0.5;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: #83a598;
+    box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
+  }
 </style>

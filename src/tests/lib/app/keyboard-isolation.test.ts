@@ -2,13 +2,13 @@
  * Tests for keyboard shortcut isolation when dialogs or settings are open
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createKeyboardActions } from '../../../lib/app/actions/keyboard.svelte';
-import type { AppState } from '../../../lib/app/actions/keyboard.svelte';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { createKeyboardActions } from '../../../lib/app/actions/keyboard.svelte'
+import type { AppState } from '../../../lib/app/actions/keyboard.svelte'
 
 describe('Keyboard Shortcut Isolation', () => {
-  let mockDeps: any;
-  let keyboardActions: any;
+  let mockDeps: any
+  let keyboardActions: any
 
   beforeEach(() => {
     mockDeps = {
@@ -25,10 +25,10 @@ describe('Keyboard Shortcut Isolation', () => {
       clearHighlights: vi.fn(),
       clearSearch: vi.fn(),
       focusSearch: vi.fn(),
-    };
+    }
 
-    keyboardActions = createKeyboardActions(mockDeps);
-  });
+    keyboardActions = createKeyboardActions(mockDeps)
+  })
 
   describe('when settings pane is open', () => {
     it('should not process main UI shortcuts', async () => {
@@ -44,19 +44,19 @@ describe('Keyboard Shortcut Isolation', () => {
         query: '',
         isSettingsOpen: true, // Settings is open
         isAnyDialogOpen: false,
-      };
+      }
 
-      const handler = keyboardActions.createKeyboardHandler(() => baseState);
+      const handler = keyboardActions.createKeyboardHandler(() => baseState)
 
-      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-      await handler(event);
+      await handler(event)
 
       // Should not process the arrow down shortcut
-      expect(mockDeps.selectNote).not.toHaveBeenCalled();
-      expect(preventDefaultSpy).not.toHaveBeenCalled();
-    });
+      expect(mockDeps.selectNote).not.toHaveBeenCalled()
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+    })
 
     it('should not process cmd+, when settings already open', async () => {
       const baseState: AppState = {
@@ -71,20 +71,20 @@ describe('Keyboard Shortcut Isolation', () => {
         query: '',
         isSettingsOpen: true,
         isAnyDialogOpen: false,
-      };
+      }
 
-      const handler = keyboardActions.createKeyboardHandler(() => baseState);
+      const handler = keyboardActions.createKeyboardHandler(() => baseState)
 
-      const event = new KeyboardEvent('keydown', { key: ',', metaKey: true });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      const event = new KeyboardEvent('keydown', { key: ',', metaKey: true })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-      await handler(event);
+      await handler(event)
 
       // Should not call openSettingsPane again
-      expect(mockDeps.openSettingsPane).not.toHaveBeenCalled();
-      expect(preventDefaultSpy).not.toHaveBeenCalled();
-    });
-  });
+      expect(mockDeps.openSettingsPane).not.toHaveBeenCalled()
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+    })
+  })
 
   describe('when any dialog is open', () => {
     it('should not process main UI shortcuts when create dialog is open', async () => {
@@ -100,19 +100,19 @@ describe('Keyboard Shortcut Isolation', () => {
         query: '',
         isSettingsOpen: false,
         isAnyDialogOpen: true, // Dialog is open
-      };
+      }
 
-      const handler = keyboardActions.createKeyboardHandler(() => baseState);
+      const handler = keyboardActions.createKeyboardHandler(() => baseState)
 
-      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-      await handler(event);
+      await handler(event)
 
       // Should not process the arrow down shortcut
-      expect(mockDeps.selectNote).not.toHaveBeenCalled();
-      expect(preventDefaultSpy).not.toHaveBeenCalled();
-    });
+      expect(mockDeps.selectNote).not.toHaveBeenCalled()
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+    })
 
     it('should not process cmd+, when dialog is open', async () => {
       const baseState: AppState = {
@@ -127,20 +127,20 @@ describe('Keyboard Shortcut Isolation', () => {
         query: '',
         isSettingsOpen: false,
         isAnyDialogOpen: true,
-      };
+      }
 
-      const handler = keyboardActions.createKeyboardHandler(() => baseState);
+      const handler = keyboardActions.createKeyboardHandler(() => baseState)
 
-      const event = new KeyboardEvent('keydown', { key: ',', metaKey: true });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      const event = new KeyboardEvent('keydown', { key: ',', metaKey: true })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-      await handler(event);
+      await handler(event)
 
       // Should not call openSettingsPane
-      expect(mockDeps.openSettingsPane).not.toHaveBeenCalled();
-      expect(preventDefaultSpy).not.toHaveBeenCalled();
-    });
-  });
+      expect(mockDeps.openSettingsPane).not.toHaveBeenCalled()
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+    })
+  })
 
   describe('when no dialogs or settings are open', () => {
     it('should process shortcuts normally', async () => {
@@ -156,19 +156,19 @@ describe('Keyboard Shortcut Isolation', () => {
         query: '',
         isSettingsOpen: false,
         isAnyDialogOpen: false,
-      };
+      }
 
-      const handler = keyboardActions.createKeyboardHandler(() => baseState);
+      const handler = keyboardActions.createKeyboardHandler(() => baseState)
 
-      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-      await handler(event);
+      await handler(event)
 
       // Should process the arrow down shortcut
-      expect(mockDeps.selectNote).toHaveBeenCalled();
-      expect(preventDefaultSpy).toHaveBeenCalled();
-    });
+      expect(mockDeps.selectNote).toHaveBeenCalled()
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
 
     it('should process cmd+, to open settings', async () => {
       const baseState: AppState = {
@@ -183,18 +183,18 @@ describe('Keyboard Shortcut Isolation', () => {
         query: '',
         isSettingsOpen: false,
         isAnyDialogOpen: false,
-      };
+      }
 
-      const handler = keyboardActions.createKeyboardHandler(() => baseState);
+      const handler = keyboardActions.createKeyboardHandler(() => baseState)
 
-      const event = new KeyboardEvent('keydown', { key: ',', metaKey: true });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      const event = new KeyboardEvent('keydown', { key: ',', metaKey: true })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-      await handler(event);
+      await handler(event)
 
       // Should call openSettingsPane
-      expect(mockDeps.openSettingsPane).toHaveBeenCalled();
-      expect(preventDefaultSpy).toHaveBeenCalled();
-    });
-  });
-});
+      expect(mockDeps.openSettingsPane).toHaveBeenCalled()
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+  })
+})

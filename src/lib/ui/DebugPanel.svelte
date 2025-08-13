@@ -5,71 +5,76 @@ Shows reactive state from managers and services for debugging.
 -->
 
 <script lang="ts">
-import { getContext } from 'svelte';
-import type { createSearchManager } from '../core/searchManager.svelte';
-import type { createAppCoordinator } from '../app/appCoordinator.svelte';
-import type { createEditorManager } from '../core/editorManager.svelte';
-import type { createFocusManager } from '../core/focusManager.svelte';
-import { noteService } from '../services/noteService.svelte';
-import { configService } from '../services/configService.svelte';
+  import { getContext } from 'svelte'
+  import type { createSearchManager } from '../core/searchManager.svelte'
+  import type { createAppCoordinator } from '../app/appCoordinator.svelte'
+  import type { createEditorManager } from '../core/editorManager.svelte'
+  import type { createFocusManager } from '../core/focusManager.svelte'
+  import { noteService } from '../services/noteService.svelte'
+  import { configService } from '../services/configService.svelte'
 
-const { searchManager, appCoordinator, editorManager, focusManager } = getContext<{
-  searchManager: ReturnType<typeof createSearchManager>;
-  appCoordinator: ReturnType<typeof createAppCoordinator>;
-  editorManager: ReturnType<typeof createEditorManager>;
-  focusManager: ReturnType<typeof createFocusManager>;
-}>('managers');
+  const { searchManager, appCoordinator, editorManager, focusManager } =
+    getContext<{
+      searchManager: ReturnType<typeof createSearchManager>
+      appCoordinator: ReturnType<typeof createAppCoordinator>
+      editorManager: ReturnType<typeof createEditorManager>
+      focusManager: ReturnType<typeof createFocusManager>
+    }>('managers')
 
-const { dialogManager, contentManager, configStateManager, themeManager } = appCoordinator.managers;
-const appState = appCoordinator.state;
+  const { dialogManager, contentManager, configStateManager, themeManager } =
+    appCoordinator.managers
+  const appState = appCoordinator.state
 
-// Debug panel visibility and configuration
-let isVisible = $state(false);
-let isEnabled = $state(true);
+  // Debug panel visibility and configuration
+  let isVisible = $state(false)
+  let isEnabled = $state(true)
 
-// Filter toggles for different sections
-let showServices = $state(true);
-let showManagers = $state(true);
-let showAppCoordinator = $state(true);
-let showDialogs = $state(true);
-let showContent = $state(true);
-let showConfig = $state(true);
-let showTheme = $state(true);
-let showActions = $state(false);
-let showKeyboard = $state(false);
+  // Filter toggles for different sections
+  let showServices = $state(true)
+  let showManagers = $state(true)
+  let showAppCoordinator = $state(true)
+  let showDialogs = $state(true)
+  let showContent = $state(true)
+  let showConfig = $state(true)
+  let showTheme = $state(true)
+  let showActions = $state(false)
+  let showKeyboard = $state(false)
 
-function togglePanel() {
-  isVisible = !isVisible;
-}
-
-function formatValue(value: unknown): string {
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  if (typeof value === 'string') return `"${value}"`;
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '[]';
-    if (value.length <= 3) return JSON.stringify(value);
-    return `[${value.slice(0, 2).map(v => JSON.stringify(v)).join(', ')}, ...] (${value.length} total)`;
+  function togglePanel() {
+    isVisible = !isVisible
   }
-  if (typeof value === 'object') {
-    const keys = Object.keys(value);
-    if (keys.length === 0) return '{}';
-    if (keys.length <= 3) return JSON.stringify(value);
-    return `{${keys.slice(0, 2).join(', ')}, ...} (${keys.length} keys)`;
-  }
-  return String(value);
-}
 
-// Keyboard shortcut support - handle at capture phase for highest precedence
-function handleKeydown(event: KeyboardEvent) {
-  if (isEnabled && event.metaKey &&  event.altKey && event.key === 'd') {
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    togglePanel();
+  function formatValue(value: unknown): string {
+    if (value === null) return 'null'
+    if (value === undefined) return 'undefined'
+    if (typeof value === 'boolean') return value ? 'true' : 'false'
+    if (typeof value === 'string') return `"${value}"`
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '[]'
+      if (value.length <= 3) return JSON.stringify(value)
+      return `[${value
+        .slice(0, 2)
+        .map((v) => JSON.stringify(v))
+        .join(', ')}, ...] (${value.length} total)`
+    }
+    if (typeof value === 'object') {
+      const keys = Object.keys(value)
+      if (keys.length === 0) return '{}'
+      if (keys.length <= 3) return JSON.stringify(value)
+      return `{${keys.slice(0, 2).join(', ')}, ...} (${keys.length} keys)`
+    }
+    return String(value)
   }
-}
+
+  // Keyboard shortcut support - handle at capture phase for highest precedence
+  function handleKeydown(event: KeyboardEvent) {
+    if (isEnabled && event.metaKey && event.altKey && event.key === 'd') {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      togglePanel()
+    }
+  }
 </script>
 
 <!-- Debug toggle button - small subtle red circle -->
@@ -135,318 +140,345 @@ function handleKeydown(event: KeyboardEvent) {
 
     <div class="debug-content">
       {#if showServices}
-      <div class="debug-section">
-        <h4>🛠️ Services</h4>
-        <div class="debug-subsection">
-          <h5>NoteService</h5>
-          <div class="debug-item">
-            <strong>isLoading:</strong>
-            <code>{formatValue(noteService.isLoading)}</code>
+        <div class="debug-section">
+          <h4>🛠️ Services</h4>
+          <div class="debug-subsection">
+            <h5>NoteService</h5>
+            <div class="debug-item">
+              <strong>isLoading:</strong>
+              <code>{formatValue(noteService.isLoading)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>error:</strong>
+              <code>{formatValue(noteService.error)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>lastOperation:</strong>
+              <code>{formatValue(noteService.lastOperation)}</code>
+            </div>
           </div>
-          <div class="debug-item">
-            <strong>error:</strong>
-            <code>{formatValue(noteService.error)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>lastOperation:</strong>
-            <code>{formatValue(noteService.lastOperation)}</code>
+          <div class="debug-subsection">
+            <h5>ConfigService</h5>
+            <div class="debug-item">
+              <strong>isVisible:</strong>
+              <code>{formatValue(configService.isVisible)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>isLoading:</strong>
+              <code>{formatValue(configService.isLoading)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>error:</strong>
+              <code>{formatValue(configService.error)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>content length:</strong>
+              <code
+                >{formatValue(configService.content?.length || 0)} chars</code
+              >
+            </div>
           </div>
         </div>
-        <div class="debug-subsection">
-          <h5>ConfigService</h5>
-          <div class="debug-item">
-            <strong>isVisible:</strong>
-            <code>{formatValue(configService.isVisible)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>isLoading:</strong>
-            <code>{formatValue(configService.isLoading)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>error:</strong>
-            <code>{formatValue(configService.error)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>content length:</strong>
-            <code>{formatValue(configService.content?.length || 0)} chars</code>
-          </div>
-        </div>
-      </div>
       {/if}
 
       {#if showManagers}
-      <div class="debug-section">
-        <h4>⚙️ Managers</h4>
-        <div class="debug-subsection">
-          <h5>SearchManager</h5>
-          <div class="debug-item">
-            <strong>searchInput:</strong>
-            <code>{formatValue(searchManager.searchInput)}</code>
+        <div class="debug-section">
+          <h4>⚙️ Managers</h4>
+          <div class="debug-subsection">
+            <h5>SearchManager</h5>
+            <div class="debug-item">
+              <strong>searchInput:</strong>
+              <code>{formatValue(searchManager.searchInput)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>query:</strong>
+              <code>{formatValue(searchManager.query)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>filteredNotes count:</strong>
+              <code>{formatValue(searchManager.filteredNotes.length)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>isLoading:</strong>
+              <code>{formatValue(searchManager.isLoading)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>areHighlightsCleared:</strong>
+              <code>{formatValue(searchManager.areHighlightsCleared)}</code>
+            </div>
           </div>
+          <div class="debug-subsection">
+            <h5>EditorManager</h5>
+            <div class="debug-item">
+              <strong>isEditMode:</strong>
+              <code>{formatValue(editorManager.isEditMode)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>isDirty:</strong>
+              <code>{formatValue(editorManager.isDirty)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>nearestHeaderText:</strong>
+              <code>{formatValue(editorManager.nearestHeaderText)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>editContent length:</strong>
+              <code
+                >{formatValue(editorManager.editContent?.length || 0)} chars</code
+              >
+            </div>
+          </div>
+          <div class="debug-subsection">
+            <h5>FocusManager</h5>
+            <div class="debug-item">
+              <strong>isSearchInputFocused:</strong>
+              <code>{formatValue(focusManager.isSearchInputFocused)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>isNoteContentFocused:</strong>
+              <code>{formatValue(focusManager.isNoteContentFocused)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>searchElement:</strong>
+              <code
+                >{formatValue(
+                  focusManager.searchElement ? 'HTMLInputElement' : 'null'
+                )}</code
+              >
+            </div>
+            <div class="debug-item">
+              <strong>noteContentElement:</strong>
+              <code
+                >{formatValue(
+                  focusManager.noteContentElement ? 'HTMLElement' : 'null'
+                )}</code
+              >
+            </div>
+            <div class="debug-item">
+              <strong>noteListElement:</strong>
+              <code
+                >{formatValue(
+                  focusManager.noteListElement ? 'HTMLElement' : 'null'
+                )}</code
+              >
+            </div>
+            <div class="debug-item">
+              <strong>selectedIndex:</strong>
+              <code>{formatValue(focusManager.selectedIndex)}</code>
+            </div>
+          </div>
+          <div class="debug-subsection">
+            <h5>ContentManager</h5>
+            <div class="debug-item">
+              <strong>noteContent length:</strong>
+              <code
+                >{formatValue(contentManager.noteContent?.length || 0)} chars</code
+              >
+            </div>
+            <div class="debug-item">
+              <strong>highlightedContent length:</strong>
+              <code
+                >{formatValue(contentManager.highlightedContent?.length || 0)} chars</code
+              >
+            </div>
+            <div class="debug-item">
+              <strong>areHighlightsCleared:</strong>
+              <code>{formatValue(contentManager.areHighlightsCleared)}</code>
+            </div>
+          </div>
+          <div class="debug-subsection">
+            <h5>DialogManager</h5>
+            <div class="debug-item">
+              <strong>showCreateDialog:</strong>
+              <code>{formatValue(dialogManager.showCreateDialog)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>showRenameDialog:</strong>
+              <code>{formatValue(dialogManager.showRenameDialog)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>showDeleteDialog:</strong>
+              <code>{formatValue(dialogManager.showDeleteDialog)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>showUnsavedChangesDialog:</strong>
+              <code>{formatValue(dialogManager.showUnsavedChangesDialog)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>newNoteName:</strong>
+              <code>{formatValue(dialogManager.newNoteName)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>newNoteNameForRename:</strong>
+              <code>{formatValue(dialogManager.newNoteNameForRename)}</code>
+            </div>
+            <div class="debug-item">
+              <strong>deleteKeyPressCount:</strong>
+              <code>{formatValue(dialogManager.deleteKeyPressCount)}</code>
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      {#if showAppCoordinator}
+        <div class="debug-section">
+          <h4>🎯 AppCoordinator State</h4>
           <div class="debug-item">
             <strong>query:</strong>
-            <code>{formatValue(searchManager.query)}</code>
+            <code>{formatValue(appCoordinator.query)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>selectedNote:</strong>
+            <code>{formatValue(appCoordinator.selectedNote)}</code>
           </div>
           <div class="debug-item">
             <strong>filteredNotes count:</strong>
-            <code>{formatValue(searchManager.filteredNotes.length)}</code>
+            <code>{formatValue(appCoordinator.filteredNotes.length)}</code>
           </div>
           <div class="debug-item">
             <strong>isLoading:</strong>
-            <code>{formatValue(searchManager.isLoading)}</code>
+            <code>{formatValue(appCoordinator.isLoading)}</code>
           </div>
           <div class="debug-item">
             <strong>areHighlightsCleared:</strong>
-            <code>{formatValue(searchManager.areHighlightsCleared)}</code>
+            <code>{formatValue(appCoordinator.areHighlightsCleared)}</code>
           </div>
         </div>
-        <div class="debug-subsection">
-          <h5>EditorManager</h5>
+      {/if}
+
+      {#if showConfig}
+        <div class="debug-section">
+          <h4>⚙️ Config State</h4>
           <div class="debug-item">
-            <strong>isEditMode:</strong>
-            <code>{formatValue(editorManager.isEditMode)}</code>
+            <strong>notesDirectory:</strong>
+            <code>{formatValue(configStateManager.notesDirectory)}</code>
           </div>
           <div class="debug-item">
-            <strong>isDirty:</strong>
-            <code>{formatValue(editorManager.isDirty)}</code>
+            <strong>maxSearchResults:</strong>
+            <code>{formatValue(configStateManager.maxSearchResults)}</code>
           </div>
           <div class="debug-item">
-            <strong>nearestHeaderText:</strong>
-            <code>{formatValue(editorManager.nearestHeaderText)}</code>
+            <strong>globalShortcut:</strong>
+            <code>{formatValue(configStateManager.globalShortcut)}</code>
           </div>
           <div class="debug-item">
-            <strong>editContent length:</strong>
-            <code>{formatValue(editorManager.editContent?.length || 0)} chars</code>
+            <strong>editorMode:</strong>
+            <code>{formatValue(configStateManager.editorMode)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>markdownTheme:</strong>
+            <code>{formatValue(configStateManager.markdownTheme)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isLoading:</strong>
+            <code>{formatValue(configStateManager.isLoading)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isInitialized:</strong>
+            <code>{formatValue(configStateManager.isInitialized)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>error:</strong>
+            <code>{formatValue(configStateManager.error)}</code>
           </div>
         </div>
-        <div class="debug-subsection">
-          <h5>FocusManager</h5>
+      {/if}
+
+      {#if showTheme}
+        <div class="debug-section">
+          <h4>🎨 Theme Manager</h4>
+          <div class="debug-item">
+            <strong>currentTheme:</strong>
+            <code>{formatValue(themeManager.currentTheme)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isInitialized:</strong>
+            <code>{formatValue(themeManager.isInitialized)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isLoading:</strong>
+            <code>{formatValue(themeManager.isLoading)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>error:</strong>
+            <code>{formatValue(themeManager.error)}</code>
+          </div>
+        </div>
+      {/if}
+
+      {#if showActions}
+        <div class="debug-section">
+          <h4>🎬 Available Actions</h4>
+          <div class="debug-item">
+            <strong>selectNote:</strong>
+            <code>function(note, index)</code>
+          </div>
+          <div class="debug-item">
+            <strong>deleteNote:</strong>
+            <code>function()</code>
+          </div>
+          <div class="debug-item">
+            <strong>createNote:</strong>
+            <code>function(noteName?)</code>
+          </div>
+          <div class="debug-item">
+            <strong>renameNote:</strong>
+            <code>function(newName?)</code>
+          </div>
+          <div class="debug-item">
+            <strong>saveNote:</strong>
+            <code>function()</code>
+          </div>
+          <div class="debug-item">
+            <strong>saveAndExitNote:</strong>
+            <code>function()</code>
+          </div>
+          <div class="debug-item">
+            <strong>enterEditMode:</strong>
+            <code>function()</code>
+          </div>
+          <div class="debug-item">
+            <strong>exitEditMode:</strong>
+            <code>function()</code>
+          </div>
+        </div>
+      {/if}
+
+      {#if showKeyboard}
+        <div class="debug-section">
+          <h4>⌨️ Keyboard State</h4>
           <div class="debug-item">
             <strong>isSearchInputFocused:</strong>
             <code>{formatValue(focusManager.isSearchInputFocused)}</code>
+          </div>
+          <div class="debug-item">
+            <strong>isEditMode:</strong>
+            <code>{formatValue(editorManager.isEditMode)}</code>
           </div>
           <div class="debug-item">
             <strong>isNoteContentFocused:</strong>
             <code>{formatValue(focusManager.isNoteContentFocused)}</code>
           </div>
           <div class="debug-item">
-            <strong>searchElement:</strong>
-            <code>{formatValue(focusManager.searchElement ? 'HTMLInputElement' : 'null')}</code>
+            <strong>isEditorDirty:</strong>
+            <code>{formatValue(editorManager.isDirty)}</code>
           </div>
           <div class="debug-item">
-            <strong>noteContentElement:</strong>
-            <code>{formatValue(focusManager.noteContentElement ? 'HTMLElement' : 'null')}</code>
+            <strong>isSettingsOpen:</strong>
+            <code>{formatValue(configService.isVisible)}</code>
           </div>
           <div class="debug-item">
-            <strong>noteListElement:</strong>
-            <code>{formatValue(focusManager.noteListElement ? 'HTMLElement' : 'null')}</code>
-          </div>
-          <div class="debug-item">
-            <strong>selectedIndex:</strong>
-            <code>{formatValue(focusManager.selectedIndex)}</code>
-          </div>
-        </div>
-        <div class="debug-subsection">
-          <h5>ContentManager</h5>
-          <div class="debug-item">
-            <strong>noteContent length:</strong>
-            <code>{formatValue(contentManager.noteContent?.length || 0)} chars</code>
-          </div>
-          <div class="debug-item">
-            <strong>highlightedContent length:</strong>
-            <code>{formatValue(contentManager.highlightedContent?.length || 0)} chars</code>
-          </div>
-          <div class="debug-item">
-            <strong>areHighlightsCleared:</strong>
-            <code>{formatValue(contentManager.areHighlightsCleared)}</code>
+            <strong>isAnyDialogOpen:</strong>
+            <code
+              >{formatValue(
+                dialogManager.showCreateDialog ||
+                  dialogManager.showRenameDialog ||
+                  dialogManager.showDeleteDialog ||
+                  dialogManager.showUnsavedChangesDialog
+              )}</code
+            >
           </div>
         </div>
-        <div class="debug-subsection">
-          <h5>DialogManager</h5>
-          <div class="debug-item">
-            <strong>showCreateDialog:</strong>
-            <code>{formatValue(dialogManager.showCreateDialog)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>showRenameDialog:</strong>
-            <code>{formatValue(dialogManager.showRenameDialog)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>showDeleteDialog:</strong>
-            <code>{formatValue(dialogManager.showDeleteDialog)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>showUnsavedChangesDialog:</strong>
-            <code>{formatValue(dialogManager.showUnsavedChangesDialog)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>newNoteName:</strong>
-            <code>{formatValue(dialogManager.newNoteName)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>newNoteNameForRename:</strong>
-            <code>{formatValue(dialogManager.newNoteNameForRename)}</code>
-          </div>
-          <div class="debug-item">
-            <strong>deleteKeyPressCount:</strong>
-            <code>{formatValue(dialogManager.deleteKeyPressCount)}</code>
-          </div>
-        </div>
-      </div>
-      {/if}
-
-      {#if showAppCoordinator}
-      <div class="debug-section">
-        <h4>🎯 AppCoordinator State</h4>
-        <div class="debug-item">
-          <strong>query:</strong>
-          <code>{formatValue(appCoordinator.query)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>selectedNote:</strong>
-          <code>{formatValue(appCoordinator.selectedNote)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>filteredNotes count:</strong>
-          <code>{formatValue(appCoordinator.filteredNotes.length)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isLoading:</strong>
-          <code>{formatValue(appCoordinator.isLoading)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>areHighlightsCleared:</strong>
-          <code>{formatValue(appCoordinator.areHighlightsCleared)}</code>
-        </div>
-      </div>
-      {/if}
-
-      {#if showConfig}
-      <div class="debug-section">
-        <h4>⚙️ Config State</h4>
-        <div class="debug-item">
-          <strong>notesDirectory:</strong>
-          <code>{formatValue(configStateManager.notesDirectory)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>maxSearchResults:</strong>
-          <code>{formatValue(configStateManager.maxSearchResults)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>globalShortcut:</strong>
-          <code>{formatValue(configStateManager.globalShortcut)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>editorMode:</strong>
-          <code>{formatValue(configStateManager.editorMode)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>markdownTheme:</strong>
-          <code>{formatValue(configStateManager.markdownTheme)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isLoading:</strong>
-          <code>{formatValue(configStateManager.isLoading)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isInitialized:</strong>
-          <code>{formatValue(configStateManager.isInitialized)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>error:</strong>
-          <code>{formatValue(configStateManager.error)}</code>
-        </div>
-      </div>
-      {/if}
-
-      {#if showTheme}
-      <div class="debug-section">
-        <h4>🎨 Theme Manager</h4>
-        <div class="debug-item">
-          <strong>currentTheme:</strong>
-          <code>{formatValue(themeManager.currentTheme)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isInitialized:</strong>
-          <code>{formatValue(themeManager.isInitialized)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isLoading:</strong>
-          <code>{formatValue(themeManager.isLoading)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>error:</strong>
-          <code>{formatValue(themeManager.error)}</code>
-        </div>
-      </div>
-      {/if}
-
-      {#if showActions}
-      <div class="debug-section">
-        <h4>🎬 Available Actions</h4>
-        <div class="debug-item">
-          <strong>selectNote:</strong>
-          <code>function(note, index)</code>
-        </div>
-        <div class="debug-item">
-          <strong>deleteNote:</strong>
-          <code>function()</code>
-        </div>
-        <div class="debug-item">
-          <strong>createNote:</strong>
-          <code>function(noteName?)</code>
-        </div>
-        <div class="debug-item">
-          <strong>renameNote:</strong>
-          <code>function(newName?)</code>
-        </div>
-        <div class="debug-item">
-          <strong>saveNote:</strong>
-          <code>function()</code>
-        </div>
-        <div class="debug-item">
-          <strong>saveAndExitNote:</strong>
-          <code>function()</code>
-        </div>
-        <div class="debug-item">
-          <strong>enterEditMode:</strong>
-          <code>function()</code>
-        </div>
-        <div class="debug-item">
-          <strong>exitEditMode:</strong>
-          <code>function()</code>
-        </div>
-      </div>
-      {/if}
-
-      {#if showKeyboard}
-      <div class="debug-section">
-        <h4>⌨️ Keyboard State</h4>
-        <div class="debug-item">
-          <strong>isSearchInputFocused:</strong>
-          <code>{formatValue(focusManager.isSearchInputFocused)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isEditMode:</strong>
-          <code>{formatValue(editorManager.isEditMode)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isNoteContentFocused:</strong>
-          <code>{formatValue(focusManager.isNoteContentFocused)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isEditorDirty:</strong>
-          <code>{formatValue(editorManager.isDirty)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isSettingsOpen:</strong>
-          <code>{formatValue(configService.isVisible)}</code>
-        </div>
-        <div class="debug-item">
-          <strong>isAnyDialogOpen:</strong>
-          <code>{formatValue(dialogManager.showCreateDialog || dialogManager.showRenameDialog || dialogManager.showDeleteDialog || dialogManager.showUnsavedChangesDialog)}</code>
-        </div>
-      </div>
       {/if}
     </div>
   </div>
@@ -480,7 +512,6 @@ function handleKeydown(event: KeyboardEvent) {
     box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
   }
 
-
   .debug-panel {
     position: fixed;
     top: 60px;
@@ -491,7 +522,7 @@ function handleKeydown(event: KeyboardEvent) {
     color: #ffffff;
     border: 1px solid #444;
     border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     z-index: 9999;
     overflow-y: auto;
     font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
@@ -510,7 +541,7 @@ function handleKeydown(event: KeyboardEvent) {
 
   .debug-header h3 {
     margin: 0;
-    color: #4CAF50;
+    color: #4caf50;
     font-size: 14px;
     font-weight: 600;
   }
@@ -553,8 +584,8 @@ function handleKeydown(event: KeyboardEvent) {
     user-select: none;
   }
 
-  .filter-checkbox input[type="checkbox"] {
-    accent-color: #4CAF50;
+  .filter-checkbox input[type='checkbox'] {
+    accent-color: #4caf50;
     cursor: pointer;
   }
 
@@ -579,7 +610,7 @@ function handleKeydown(event: KeyboardEvent) {
 
   .debug-section h4 {
     margin: 0 0 12px 0;
-    color: #4CAF50;
+    color: #4caf50;
     font-size: 13px;
     font-weight: bold;
   }
@@ -597,7 +628,7 @@ function handleKeydown(event: KeyboardEvent) {
 
   .debug-subsection h5 {
     margin: 0 0 8px 0;
-    color: #81C784;
+    color: #81c784;
     font-size: 12px;
     font-weight: bold;
   }
@@ -608,7 +639,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
 
   .debug-item strong {
-    color: #81C784;
+    color: #81c784;
     display: inline-block;
     min-width: 120px;
   }
@@ -617,8 +648,7 @@ function handleKeydown(event: KeyboardEvent) {
     background: #333;
     padding: 2px 6px;
     border-radius: 3px;
-    color: #FFF59D;
+    color: #fff59d;
     word-break: break-all;
   }
-
 </style>

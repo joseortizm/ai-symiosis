@@ -1,14 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockInvoke, resetAllMocks } from '../../test-utils';
-import type { ContentManager, ContentManagerDeps } from '../../../lib/core/contentManager.svelte';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mockInvoke, resetAllMocks } from '../../test-utils'
+import type {
+  ContentManager,
+  ContentManagerDeps,
+} from '../../../lib/core/contentManager.svelte'
 
 // Test for both factory-based and singleton-based contentManager
 describe('contentManager (factory-based - TDD)', () => {
-  let contentManager: ContentManager | null;
-  let mockDeps: ContentManagerDeps;
+  let contentManager: ContentManager | null
+  let mockDeps: ContentManagerDeps
 
   beforeEach(async () => {
-    resetAllMocks();
+    resetAllMocks()
 
     mockDeps = {
       getQuery: vi.fn().mockReturnValue('test query'),
@@ -17,64 +20,67 @@ describe('contentManager (factory-based - TDD)', () => {
       setHighlightsClearCallback: vi.fn(),
       setHighlightsClearedState: vi.fn(),
       noteService: {
-        getContent: vi.fn().mockResolvedValue('mock note content')
+        getContent: vi.fn().mockResolvedValue('mock note content'),
       },
       getNoteContentElement: vi.fn().mockReturnValue(null),
       refreshSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
-      invoke: mockInvoke
-    };
+      invoke: mockInvoke,
+    }
 
     try {
-      const { createContentManager } = await import('../../../lib/core/contentManager.svelte');
-      contentManager = createContentManager(mockDeps);
+      const { createContentManager } = await import(
+        '../../../lib/core/contentManager.svelte'
+      )
+      contentManager = createContentManager(mockDeps)
     } catch (e) {
-      contentManager = null;
+      contentManager = null
     }
-  });
+  })
 
   it('should create contentManager with injected dependencies', async () => {
-    const { createContentManager } = await import('../../../lib/core/contentManager.svelte');
-    const manager = createContentManager(mockDeps);
+    const { createContentManager } = await import(
+      '../../../lib/core/contentManager.svelte'
+    )
+    const manager = createContentManager(mockDeps)
 
-    expect(manager).toBeDefined();
-    expect(typeof manager.setNoteContent).toBe('function');
-    expect(typeof manager.refreshContent).toBe('function');
-  });
+    expect(manager).toBeDefined()
+    expect(typeof manager.setNoteContent).toBe('function')
+    expect(typeof manager.refreshContent).toBe('function')
+  })
 
   it('should set note content correctly', () => {
-    if (!contentManager) return; // Skip if factory not implemented yet
+    if (!contentManager) return // Skip if factory not implemented yet
 
-    const testContent = 'Test content';
-    contentManager.setNoteContent(testContent);
+    const testContent = 'Test content'
+    contentManager.setNoteContent(testContent)
 
-    expect(contentManager.noteContent).toBe(testContent);
-  });
+    expect(contentManager.noteContent).toBe(testContent)
+  })
 
   it('should use injected noteService for content refresh', async () => {
-    if (!contentManager) return; // Skip if factory not implemented yet
+    if (!contentManager) return // Skip if factory not implemented yet
 
-    const noteName = 'test.md';
-    await contentManager.refreshContent(noteName);
+    const noteName = 'test.md'
+    await contentManager.refreshContent(noteName)
 
-    expect(mockDeps.noteService.getContent).toHaveBeenCalledWith(noteName);
-  });
+    expect(mockDeps.noteService.getContent).toHaveBeenCalledWith(noteName)
+  })
 
   it('should use injected refreshSearch function', async () => {
-    if (!contentManager) return; // Skip if factory not implemented yet
+    if (!contentManager) return // Skip if factory not implemented yet
 
-    const noteName = 'test.md';
-    const searchInput = 'test';
-    await contentManager.refreshAfterSave(noteName, searchInput);
+    const noteName = 'test.md'
+    const searchInput = 'test'
+    await contentManager.refreshAfterSave(noteName, searchInput)
 
-    expect(mockDeps.refreshSearch).toHaveBeenCalledWith(searchInput);
-  });
+    expect(mockDeps.refreshSearch).toHaveBeenCalledWith(searchInput)
+  })
 
   it('should call setHighlightsClearCallback during setup', () => {
-    if (!contentManager) return; // Skip if factory not implemented yet
+    if (!contentManager) return // Skip if factory not implemented yet
 
     expect(mockDeps.setHighlightsClearCallback).toHaveBeenCalledWith(
       expect.any(Function)
-    );
-  });
-});
-
+    )
+  })
+})

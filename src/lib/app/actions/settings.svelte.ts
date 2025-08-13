@@ -6,34 +6,36 @@
 
 interface SettingsActionDeps {
   configService: {
-    openPane: () => Promise<void>;
-    closePane: () => void;
-  };
+    openPane: () => Promise<void>
+    closePane: () => void
+  }
   focusManager: {
-    focusSearch: () => void;
-  };
+    focusSearch: () => void
+  }
 }
 
 interface SettingsActions {
-  openSettingsPane(): Promise<void>;
-  closeSettingsPane(): void;
+  openSettingsPane(): Promise<void>
+  closeSettingsPane(): void
 }
 
-export function createSettingsActions(deps: SettingsActionDeps): SettingsActions {
-  const { configService, focusManager } = deps;
+export function createSettingsActions(
+  deps: SettingsActionDeps
+): SettingsActions {
+  const { configService, focusManager } = deps
 
   async function openSettingsPane(): Promise<void> {
-    await configService.openPane();
-    focusManager.focusSearch();
+    await configService.openPane()
+    focusManager.focusSearch()
   }
 
   function closeSettingsPane(): void {
-    configService.closePane();
-    focusManager.focusSearch();
+    configService.closePane()
+    focusManager.focusSearch()
   }
 
   return {
     openSettingsPane,
-    closeSettingsPane
-  };
+    closeSettingsPane,
+  }
 }

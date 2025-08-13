@@ -6,58 +6,58 @@ Used for exit-edit-with-unsaved-changes confirmations.
 
 <script lang="ts">
   interface Props {
-    show: boolean;
-    title?: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    variant?: 'default' | 'danger';
-    onConfirm?: () => void;
-    onCancel?: () => void;
+    show: boolean
+    title?: string
+    message: string
+    confirmText?: string
+    cancelText?: string
+    variant?: 'default' | 'danger'
+    onConfirm?: () => void
+    onCancel?: () => void
   }
 
   const {
     show,
-    title = "Confirm",
+    title = 'Confirm',
     message,
-    confirmText = "Confirm",
-    cancelText = "Cancel",
-    variant = "default",
+    confirmText = 'Confirm',
+    cancelText = 'Cancel',
+    variant = 'default',
     onConfirm,
-    onCancel
-  }: Props = $props();
+    onCancel,
+  }: Props = $props()
 
-  let dialogElement = $state<HTMLElement | undefined>(undefined);
+  let dialogElement = $state<HTMLElement | undefined>(undefined)
 
   function handleConfirm(): void {
-    onConfirm?.();
+    onConfirm?.()
   }
 
   function handleCancel(): void {
-    onCancel?.();
+    onCancel?.()
   }
 
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      event.preventDefault();
-      handleCancel();
+      event.preventDefault()
+      handleCancel()
     } else if (event.key === 'Enter') {
-      event.preventDefault();
-      handleConfirm();
+      event.preventDefault()
+      handleConfirm()
     }
   }
 
   function handleOverlayClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      handleCancel();
+      handleCancel()
     }
   }
 
   $effect(() => {
     if (show && dialogElement) {
-      setTimeout(() => dialogElement!.focus(), 10);
+      setTimeout(() => dialogElement!.focus(), 10)
     }
-  });
+  })
 </script>
 
 {#if show}
@@ -75,10 +75,7 @@ Used for exit-edit-with-unsaved-changes confirmations.
       <h3>{title}</h3>
       <p class="dialog-message">{message}</p>
       <div class="dialog-buttons">
-        <button
-          class="cancel-btn"
-          onclick={handleCancel}
-        >
+        <button class="cancel-btn" onclick={handleCancel}>
           {cancelText} (Esc)
         </button>
         <button
@@ -136,7 +133,8 @@ Used for exit-edit-with-unsaved-changes confirmations.
     justify-content: center;
   }
 
-  .cancel-btn, .confirm-btn {
+  .cancel-btn,
+  .confirm-btn {
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
@@ -188,5 +186,4 @@ Used for exit-edit-with-unsaved-changes confirmations.
     outline: 2px solid #83a598;
     outline-offset: 2px;
   }
-
 </style>

@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
-export const mockInvoke = vi.fn();
+export const mockInvoke = vi.fn()
 
 export const mockSearchManager = {
   searchImmediate: vi.fn().mockResolvedValue([]),
@@ -9,8 +9,8 @@ export const mockSearchManager = {
   areHighlightsCleared: false,
   clearHighlights: vi.fn(),
   setHighlightsClearCallback: vi.fn(),
-  query: ''
-};
+  query: '',
+}
 
 export const mockDialogManager = {
   closeCreateDialog: vi.fn(),
@@ -18,10 +18,10 @@ export const mockDialogManager = {
   closeRenameDialog: vi.fn(),
   newNoteName: 'test-note',
   newNoteNameForRename: 'renamed-note',
-};
+}
 
 export const resetAllMocks = () => {
-  vi.clearAllMocks();
-  mockInvoke.mockClear();
-  mockSearchManager.searchImmediate.mockResolvedValue([]);
-};
+  vi.clearAllMocks()
+  mockInvoke.mockClear()
+  mockSearchManager.searchImmediate.mockResolvedValue([])
+}

@@ -5,149 +5,153 @@
  */
 
 export interface DialogManagerDeps {
-  focusSearch: () => void;
+  focusSearch: () => void
 }
 
 interface DialogContext {
-  selectedNote: string | null;
-  query: string;
-  highlightedContent: string;
+  selectedNote: string | null
+  query: string
+  highlightedContent: string
 }
 
 export interface DialogManager {
-  readonly showCreateDialog: boolean;
-  readonly showRenameDialog: boolean;
-  readonly showDeleteDialog: boolean;
-  readonly showUnsavedChangesDialog: boolean;
-  readonly newNoteName: string;
-  readonly newNoteNameForRename: string;
-  readonly deleteKeyPressCount: number;
-  openCreateDialog(query?: string, highlightedContent?: string): void;
-  closeCreateDialog(): void;
-  openRenameDialog(selectedNote?: string): void;
-  closeRenameDialog(): void;
-  openDeleteDialog(): void;
-  closeDeleteDialog(): void;
-  openUnsavedChangesDialog(): void;
-  closeUnsavedChangesDialog(): void;
-  showExitEditDialog(): void;
-  handleSaveAndExit(saveAndExitNote: () => Promise<void>): Promise<void>;
-  handleDiscardAndExit(exitEditMode: () => void): void;
-  handleDeleteKeyPress(onConfirmDelete: () => Promise<void>): void;
-  setNewNoteName(value: string): void;
-  setNewNoteNameForRename(value: string): void;
+  readonly showCreateDialog: boolean
+  readonly showRenameDialog: boolean
+  readonly showDeleteDialog: boolean
+  readonly showUnsavedChangesDialog: boolean
+  readonly newNoteName: string
+  readonly newNoteNameForRename: string
+  readonly deleteKeyPressCount: number
+  openCreateDialog(query?: string, highlightedContent?: string): void
+  closeCreateDialog(): void
+  openRenameDialog(selectedNote?: string): void
+  closeRenameDialog(): void
+  openDeleteDialog(): void
+  closeDeleteDialog(): void
+  openUnsavedChangesDialog(): void
+  closeUnsavedChangesDialog(): void
+  showExitEditDialog(): void
+  handleSaveAndExit(saveAndExitNote: () => Promise<void>): Promise<void>
+  handleDiscardAndExit(exitEditMode: () => void): void
+  handleDeleteKeyPress(onConfirmDelete: () => Promise<void>): void
+  setNewNoteName(value: string): void
+  setNewNoteNameForRename(value: string): void
 }
 
 export function createDialogManager(deps: DialogManagerDeps): DialogManager {
   const context = $state<DialogContext>({
     selectedNote: null,
     query: '',
-    highlightedContent: ''
-  });
+    highlightedContent: '',
+  })
 
-  let showCreateDialog = $state(false);
-  let showRenameDialog = $state(false);
-  let showDeleteDialog = $state(false);
-  let showUnsavedChangesDialog = $state(false);
+  let showCreateDialog = $state(false)
+  let showRenameDialog = $state(false)
+  let showDeleteDialog = $state(false)
+  let showUnsavedChangesDialog = $state(false)
 
-  let newNoteName = $state('');
-  let newNoteNameForRename = $state('');
+  let newNoteName = $state('')
+  let newNoteNameForRename = $state('')
 
-  let deleteKeyPressCount = $state(0);
-  let deleteKeyResetTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+  let deleteKeyPressCount = $state(0)
+  let deleteKeyResetTimeout: ReturnType<typeof setTimeout> | undefined =
+    undefined
 
   function openCreateDialog(query?: string, highlightedContent?: string): void {
-    const currentQuery = query ?? context.query;
-    const currentHighlightedContent = highlightedContent ?? context.highlightedContent;
+    const currentQuery = query ?? context.query
+    const currentHighlightedContent =
+      highlightedContent ?? context.highlightedContent
 
     if (!currentHighlightedContent.trim() && currentQuery.trim()) {
-      newNoteName = currentQuery.trim();
+      newNoteName = currentQuery.trim()
     } else {
-      newNoteName = '';
+      newNoteName = ''
     }
-    showCreateDialog = true;
+    showCreateDialog = true
   }
 
   function closeCreateDialog(): void {
-    showCreateDialog = false;
-    newNoteName = '';
-    deps.focusSearch();
+    showCreateDialog = false
+    newNoteName = ''
+    deps.focusSearch()
   }
 
   function openRenameDialog(selectedNote?: string): void {
-    const currentSelectedNote = selectedNote ?? context.selectedNote;
+    const currentSelectedNote = selectedNote ?? context.selectedNote
     if (currentSelectedNote) {
       newNoteNameForRename = currentSelectedNote.endsWith('.md')
         ? currentSelectedNote.slice(0, -3)
-        : currentSelectedNote;
-      showRenameDialog = true;
+        : currentSelectedNote
+      showRenameDialog = true
     }
   }
 
   function closeRenameDialog(): void {
-    showRenameDialog = false;
-    newNoteNameForRename = '';
-    deps.focusSearch();
+    showRenameDialog = false
+    newNoteNameForRename = ''
+    deps.focusSearch()
   }
 
   function openDeleteDialog(): void {
-    showDeleteDialog = true;
-    deleteKeyPressCount = 0;
+    showDeleteDialog = true
+    deleteKeyPressCount = 0
   }
 
   function closeDeleteDialog(): void {
-    showDeleteDialog = false;
-    deleteKeyPressCount = 0;
+    showDeleteDialog = false
+    deleteKeyPressCount = 0
     if (deleteKeyResetTimeout) {
-      clearTimeout(deleteKeyResetTimeout);
-      deleteKeyResetTimeout = undefined;
+      clearTimeout(deleteKeyResetTimeout)
+      deleteKeyResetTimeout = undefined
     }
-    deps.focusSearch();
+    deps.focusSearch()
   }
 
   function handleDeleteKeyPress(onConfirmDelete: () => Promise<void>): void {
-    deleteKeyPressCount++;
+    deleteKeyPressCount++
 
     if (deleteKeyResetTimeout) {
-      clearTimeout(deleteKeyResetTimeout);
+      clearTimeout(deleteKeyResetTimeout)
     }
 
     deleteKeyResetTimeout = setTimeout(() => {
-      deleteKeyPressCount = 0;
-      deleteKeyResetTimeout = undefined;
-    }, 2000);
+      deleteKeyPressCount = 0
+      deleteKeyResetTimeout = undefined
+    }, 2000)
 
     if (deleteKeyPressCount >= 2) {
-      deleteKeyPressCount = 0;
+      deleteKeyPressCount = 0
       if (deleteKeyResetTimeout) {
-        clearTimeout(deleteKeyResetTimeout);
-        deleteKeyResetTimeout = undefined;
+        clearTimeout(deleteKeyResetTimeout)
+        deleteKeyResetTimeout = undefined
       }
-      onConfirmDelete();
+      onConfirmDelete()
     }
   }
 
   function openUnsavedChangesDialog(): void {
-    showUnsavedChangesDialog = true;
+    showUnsavedChangesDialog = true
   }
 
   function closeUnsavedChangesDialog(): void {
-    showUnsavedChangesDialog = false;
-    deps.focusSearch();
+    showUnsavedChangesDialog = false
+    deps.focusSearch()
   }
 
   function showExitEditDialog(): void {
-    openUnsavedChangesDialog();
+    openUnsavedChangesDialog()
   }
 
-  async function handleSaveAndExit(saveAndExitNote: () => Promise<void>): Promise<void> {
-    closeUnsavedChangesDialog();
-    await saveAndExitNote();
+  async function handleSaveAndExit(
+    saveAndExitNote: () => Promise<void>
+  ): Promise<void> {
+    closeUnsavedChangesDialog()
+    await saveAndExitNote()
   }
 
   function handleDiscardAndExit(exitEditMode: () => void): void {
-    closeUnsavedChangesDialog();
-    exitEditMode();
+    closeUnsavedChangesDialog()
+    exitEditMode()
   }
 
   return {
@@ -165,40 +169,39 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     handleDeleteKeyPress,
 
     setNewNoteName(value: string): void {
-      newNoteName = value;
+      newNoteName = value
     },
 
     setNewNoteNameForRename(value: string): void {
-      newNoteNameForRename = value;
+      newNoteNameForRename = value
     },
 
     get showCreateDialog(): boolean {
-      return showCreateDialog;
+      return showCreateDialog
     },
 
     get showRenameDialog(): boolean {
-      return showRenameDialog;
+      return showRenameDialog
     },
 
     get showDeleteDialog(): boolean {
-      return showDeleteDialog;
+      return showDeleteDialog
     },
 
     get showUnsavedChangesDialog(): boolean {
-      return showUnsavedChangesDialog;
+      return showUnsavedChangesDialog
     },
 
     get newNoteName(): string {
-      return newNoteName;
+      return newNoteName
     },
 
     get newNoteNameForRename(): string {
-      return newNoteNameForRename;
+      return newNoteNameForRename
     },
 
     get deleteKeyPressCount(): number {
-      return deleteKeyPressCount;
-    }
-  };
+      return deleteKeyPressCount
+    },
+  }
 }
-

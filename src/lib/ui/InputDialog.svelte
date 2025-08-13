@@ -6,81 +6,81 @@ Used for note creation and renaming operations throughout the application.
 
 <script lang="ts">
   interface Props {
-    show: boolean;
-    title?: string;
-    value: string;
-    placeholder?: string;
-    confirmText?: string;
-    cancelText?: string;
-    required?: boolean;
-    autoSelect?: boolean;
-    onConfirm?: (value: string) => void;
-    onCancel?: () => void;
-    onInput?: (value: string) => void;
+    show: boolean
+    title?: string
+    value: string
+    placeholder?: string
+    confirmText?: string
+    cancelText?: string
+    required?: boolean
+    autoSelect?: boolean
+    onConfirm?: (value: string) => void
+    onCancel?: () => void
+    onInput?: (value: string) => void
   }
 
   let {
     show,
-    title = "",
+    title = '',
     value = $bindable(),
-    placeholder = "",
-    confirmText = "Confirm",
-    cancelText = "Cancel",
+    placeholder = '',
+    confirmText = 'Confirm',
+    cancelText = 'Cancel',
     required = true,
     autoSelect = false,
     onConfirm,
     onCancel,
-    onInput
-  }: Props = $props();
+    onInput,
+  }: Props = $props()
 
-  let inputElement = $state<HTMLInputElement | undefined>(undefined);
-  let dialogElement = $state<HTMLElement | undefined>(undefined);
+  let inputElement = $state<HTMLInputElement | undefined>(undefined)
+  let dialogElement = $state<HTMLElement | undefined>(undefined)
 
   function handleConfirm(): void {
     if (!confirmDisabled) {
-      onConfirm?.(value);
+      onConfirm?.(value)
     }
   }
 
   function handleCancel(): void {
-    onCancel?.();
+    onCancel?.()
   }
 
   function handleInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    value = target.value;
-    onInput?.(value);
+    const target = event.target as HTMLInputElement
+    value = target.value
+    onInput?.(value)
   }
 
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      event.preventDefault();
-      handleCancel();
+      event.preventDefault()
+      handleCancel()
     } else if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      handleConfirm();
+      event.preventDefault()
+      event.stopPropagation()
+      handleConfirm()
     }
   }
 
   function handleOverlayClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      handleCancel();
+      handleCancel()
     }
   }
 
   $effect(() => {
     if (show && inputElement) {
       setTimeout(() => {
-        inputElement!.focus();
+        inputElement!.focus()
         if (autoSelect) {
-          inputElement!.select();
+          inputElement!.select()
         }
-      }, 10);
+      }, 10)
     }
-  });
+  })
 
-  const confirmDisabled = $derived(required && !value.trim());
+  const confirmDisabled = $derived(required && !value.trim())
 </script>
 
 {#if show}
@@ -105,10 +105,7 @@ Used for note creation and renaming operations throughout the application.
         onkeydown={handleKeydown}
       />
       <div class="dialog-buttons">
-        <button
-          class="cancel-btn"
-          onclick={handleCancel}
-        >
+        <button class="cancel-btn" onclick={handleCancel}>
           {cancelText} (Esc)
         </button>
         <button
@@ -167,7 +164,9 @@ Used for note creation and renaming operations throughout the application.
     margin: 16px 0 24px 0;
     box-sizing: border-box;
     outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .dialog-input:focus {
@@ -186,7 +185,8 @@ Used for note creation and renaming operations throughout the application.
     justify-content: center;
   }
 
-  .cancel-btn, .confirm-btn {
+  .cancel-btn,
+  .confirm-btn {
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
