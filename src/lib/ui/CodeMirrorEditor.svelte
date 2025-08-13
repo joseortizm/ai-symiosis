@@ -322,7 +322,16 @@ Focused component handling CodeMirror initialization and content editing.
   })
 </script>
 
-<div bind:this={editorContainer} class="codemirror-editor"></div>
+<div class="editor-container">
+  <div bind:this={editorContainer} class="codemirror-editor"></div>
+  <div class="edit-footer">
+    <h3>Editing: {filename}</h3>
+    <div class="edit-controls">
+      <button onclick={onSave} class="save-btn">Save (Ctrl+S)</button>
+      <button onclick={onExit} class="cancel-btn">Cancel (Esc)</button>
+    </div>
+  </div>
+</div>
 
 <style>
   .codemirror-editor {
@@ -367,5 +376,83 @@ Focused component handling CodeMirror initialization and content editing.
     padding-top: 1.2em !important;
     padding-left: 1em !important;
     padding-right: 1em !important;
+  }
+
+  /* Editor container styles */
+  .editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #21252b;
+    min-height: 0;
+  }
+
+  /* Edit footer styles with responsive width to match editor */
+  .edit-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8em 0;
+    border-top: 1px solid #181a1f;
+    background-color: #21252b;
+    flex-shrink: 0;
+    margin-left: max(1em, calc((100vw - 100ch) / 2));
+    margin-right: max(1em, calc((100vw - 100ch) / 2));
+    padding-left: 1em;
+    padding-right: 1em;
+  }
+
+  @media (min-width: 768px) {
+    .edit-footer {
+      margin-left: max(1.5em, calc((100vw - 110ch) / 2));
+      margin-right: max(1.5em, calc((100vw - 110ch) / 2));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .edit-footer {
+      margin-left: max(2em, calc((100vw - 120ch) / 2));
+      margin-right: max(2em, calc((100vw - 120ch) / 2));
+    }
+  }
+
+  .edit-footer h3 {
+    margin: 0;
+    color: #61afef;
+    font-size: 1.1em;
+    font-weight: 500;
+  }
+
+  .edit-controls {
+    display: flex;
+    gap: 0.5em;
+  }
+
+  .save-btn,
+  .cancel-btn {
+    padding: 0.4em 0.8em;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .save-btn {
+    background-color: #98c379;
+    color: #282c34;
+  }
+
+  .save-btn:hover {
+    background-color: #a7d78b;
+  }
+
+  .cancel-btn {
+    background-color: #3a3f4b;
+    color: #abb2bf;
+  }
+
+  .cancel-btn:hover {
+    background-color: #4b5263;
   }
 </style>
