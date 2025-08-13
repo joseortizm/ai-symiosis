@@ -73,9 +73,6 @@ Composes all UI components and provides keyboard event handling for the entire a
         configService.closePane()
         focusManager.focusSearch()
       }}
-      onRefresh={(notes) => {
-        appCoordinator.updateFilteredNotes(notes)
-      }}
     />
 
     <DeleteDialog

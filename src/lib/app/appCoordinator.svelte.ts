@@ -48,6 +48,7 @@ export interface AppActions {
   saveAndExitNote: () => Promise<void>
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
+  saveConfigAndRefresh: () => Promise<{ success: boolean; error?: string }>
 }
 
 export interface AppManagers {
@@ -201,6 +202,20 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     exitEditMode()
   }
 
+  async function saveConfigAndRefresh(): Promise<{
+    success: boolean
+    error?: string
+  }> {
+    const result = await configService.save()
+
+    if (result.success) {
+      const notes = await searchManager.searchImmediate('')
+      searchActions.updateFilteredNotes(notes)
+    }
+
+    return result
+  }
+
   const keyboardActions = createKeyboardActions({
     focusManager,
     selectNote,
@@ -311,6 +326,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         saveAndExitNote,
         enterEditMode: () => noteActions.enterEditMode(selectedNote!),
         exitEditMode,
+        saveConfigAndRefresh,
       }
     },
 

@@ -8,27 +8,20 @@ Uses CodeMirror editor for syntax highlighting of configuration files.
   import CodeMirrorEditor from './CodeMirrorEditor.svelte'
   import { configService } from '../services/configService.svelte'
   import { getContext } from 'svelte'
-  import type { AppManagers } from '../app/appCoordinator.svelte'
+  import type { AppActions } from '../app/appCoordinator.svelte'
 
   interface Props {
     show: boolean
     onClose: () => void
-    onRefresh: (notes: string[]) => void
   }
 
-  const { show, onClose, onRefresh }: Props = $props()
-  const { searchManager } = getContext<AppManagers>('managers')
+  const { show, onClose }: Props = $props()
+  const actions = getContext<AppActions>('actions')
 
   let dialogElement = $state<HTMLElement | undefined>(undefined)
 
   async function handleSave(): Promise<void> {
-    const result = await configService.save()
-
-    if (result.success) {
-      // Refresh the notes list after config change
-      const notes = await searchManager.searchImmediate('')
-      onRefresh(notes)
-    }
+    await actions.saveConfigAndRefresh()
   }
 
   function handleCancel(): void {
