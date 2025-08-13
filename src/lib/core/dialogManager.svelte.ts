@@ -8,12 +8,6 @@ export interface DialogManagerDeps {
   focusSearch: () => void
 }
 
-interface DialogContext {
-  selectedNote: string | null
-  query: string
-  highlightedContent: string
-}
-
 export interface DialogManager {
   readonly showCreateDialog: boolean
   readonly showRenameDialog: boolean
@@ -39,11 +33,6 @@ export interface DialogManager {
 }
 
 export function createDialogManager(deps: DialogManagerDeps): DialogManager {
-  const context = $state<DialogContext>({
-    selectedNote: null,
-    query: '',
-    highlightedContent: '',
-  })
 
   let showCreateDialog = $state(false)
   let showRenameDialog = $state(false)
@@ -58,9 +47,8 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     undefined
 
   function openCreateDialog(query?: string, highlightedContent?: string): void {
-    const currentQuery = query ?? context.query
-    const currentHighlightedContent =
-      highlightedContent ?? context.highlightedContent
+    const currentQuery = query ?? ''
+    const currentHighlightedContent = highlightedContent ?? ''
 
     if (!currentHighlightedContent.trim() && currentQuery.trim()) {
       newNoteName = currentQuery.trim()
@@ -77,7 +65,7 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
   }
 
   function openRenameDialog(selectedNote?: string): void {
-    const currentSelectedNote = selectedNote ?? context.selectedNote
+    const currentSelectedNote = selectedNote
     if (currentSelectedNote) {
       newNoteNameForRename = currentSelectedNote.endsWith('.md')
         ? currentSelectedNote.slice(0, -3)
