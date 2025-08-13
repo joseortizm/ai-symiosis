@@ -342,4 +342,30 @@ Focused component handling CodeMirror initialization and content editing.
     height: 100% !important;
     overflow-y: auto !important;
   }
+
+  .codemirror-editor :global(.cm-editor) {
+    margin-left: max(1em, calc((100vw - 100ch) / 2)) !important;
+    margin-right: max(1em, calc((100vw - 100ch) / 2)) !important;
+  }
+
+  @media (min-width: 768px) {
+    .codemirror-editor :global(.cm-editor) {
+      margin-left: max(1.5em, calc((100vw - 110ch) / 2)) !important;
+      margin-right: max(1.5em, calc((100vw - 110ch) / 2)) !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .codemirror-editor :global(.cm-editor) {
+      margin-left: max(2em, calc((100vw - 120ch) / 2)) !important;
+      margin-right: max(2em, calc((100vw - 120ch) / 2)) !important;
+    }
+  }
+
+  /* Add padding specifically to the text content, not the gutter */
+  .codemirror-editor :global(.cm-content) {
+    padding-top: 1.2em !important;
+    padding-left: 1em !important;
+    padding-right: 1em !important;
+  }
 </style>
