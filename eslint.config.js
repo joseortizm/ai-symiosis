@@ -94,6 +94,7 @@ export default [
       'build/',
       '.svelte-kit/',
       'dist/',
+      'docs/',
       'node_modules/',
       'src-tauri/target/',
       '.tauri/',

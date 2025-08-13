@@ -1,0 +1,32 @@
+{
+  "entryPoints": [
+    "src/lib/app/appCoordinator.svelte.ts",
+    "src/lib/app/actions/keyboard.svelte.ts",
+    "src/lib/app/actions/note.svelte.ts",
+    "src/lib/app/actions/search.svelte.ts",
+    "src/lib/app/actions/settings.svelte.ts",
+    "src/lib/app/effects/app.svelte.ts",
+    "src/lib/core/configStateManager.svelte.ts",
+    "src/lib/core/contentHighlighting.svelte.ts",
+    "src/lib/core/contentManager.svelte.ts",
+    "src/lib/core/dialogManager.svelte.ts",
+    "src/lib/core/editorManager.svelte.ts",
+    "src/lib/core/focusManager.svelte.ts",
+    "src/lib/core/searchManager.svelte.ts",
+    "src/lib/core/themeManager.svelte.ts",
+    "src/lib/services/configService.svelte.ts",
+    "src/lib/services/noteService.svelte.ts"
+  ],
+  "tsconfig": ".svelte-kit/tsconfig.json",
+  "out": "docs",
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "groupOrder": [
+    "Classes",
+    "Functions",
+    "Variables",
+    "Type Aliases"
+  ],
+  "categorizeByGroup": false,
+  "readme": "none"
+}
