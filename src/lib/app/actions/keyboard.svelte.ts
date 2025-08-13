@@ -120,7 +120,7 @@ export function createKeyboardActions(
           actions.exitEditMode()
         }
       },
-      save: async ({ actions }: ActionContext) => {
+      saveAndExit: async ({ actions }: ActionContext) => {
         await actions.saveAndExitNote()
       },
     },
@@ -191,7 +191,7 @@ export function createKeyboardActions(
 
     editMode: {
       Escape: 'editing.smartExitEdit',
-      'Ctrl+s': 'editing.save',
+      'Ctrl+s': 'editing.saveAndExit',
       'Meta+,': 'settings.openSettings',
     },
 
