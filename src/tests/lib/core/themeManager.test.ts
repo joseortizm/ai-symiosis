@@ -352,6 +352,7 @@ describe('themeManager', () => {
 
       properties.forEach((prop) => {
         expect(manager).toHaveProperty(prop)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(typeof (manager as any)[prop]).not.toBe('function')
       })
     })

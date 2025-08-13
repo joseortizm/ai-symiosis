@@ -67,6 +67,9 @@ describe('CodeMirrorEditor Bindable Property Issue Documentation', () => {
         return () => {
           // Instead of direct assignment, use callback
           onContentChange('new content') // ✅ Works correctly
+          // Verify the callback worked
+          expect(contentUpdated).toBe(true)
+          expect(updatedValue).toBe('new content')
         }
       }
 
@@ -168,9 +171,7 @@ describe('CodeMirrorEditor Bindable Property Issue Documentation', () => {
           'This will cause runtime errors when users type in the editor!'
         )
       } else {
-        console.log(
-          '✅ VERIFIED: CodeMirrorEditor.svelte does not contain problematic bindable assignments'
-        )
+        // Verified: CodeMirrorEditor.svelte does not contain problematic bindable assignments
       }
 
       // This assertion will FAIL if problematic code is present, PASS if it's fixed

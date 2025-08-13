@@ -44,6 +44,7 @@ describe('settings actions', () => {
 
       await settingsActions.openSettingsPane()
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(openPaneSpy).toHaveBeenCalledBefore(focusSearchSpy as any)
     })
   })

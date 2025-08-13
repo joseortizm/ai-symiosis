@@ -139,6 +139,7 @@ describe('search actions', () => {
   describe('edge cases', () => {
     it('should handle null/undefined notes gracefully', () => {
       expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         searchActions.updateFilteredNotes(null as any)
       }).toThrow() // Should throw due to length check
     })

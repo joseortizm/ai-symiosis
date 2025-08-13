@@ -271,8 +271,6 @@ export function createKeyboardActions(
     return async function handleKeydown(event: KeyboardEvent): Promise<void> {
       const state = getState()
       const context: ActionContext = { state, actions: deps }
-      let handled = false
-
       if (state.isSettingsOpen || state.isAnyDialogOpen) {
         if (event.key === 'Escape') {
           return
@@ -287,11 +285,11 @@ export function createKeyboardActions(
       }
 
       if (state.isSearchInputFocused) {
-        handled = await handleKeyAction(keyMappings.searchInput, event, context)
+        await handleKeyAction(keyMappings.searchInput, event, context)
       } else if (state.isEditMode) {
-        handled = await handleKeyAction(keyMappings.editMode, event, context)
+        await handleKeyAction(keyMappings.editMode, event, context)
       } else if (state.isNoteContentFocused && !state.isEditMode) {
-        handled = await handleKeyAction(keyMappings.noteContent, event, context)
+        await handleKeyAction(keyMappings.noteContent, event, context)
       } else if (state.filteredNotes.length > 0) {
         await handleKeyAction(keyMappings.default, event, context)
       }

@@ -424,7 +424,7 @@ describe('appCoordinator Integration Tests', () => {
       mockSearchManager.searchImmediate.mockResolvedValue([])
 
       // Simulate the keyboard handler calling deleteNote after double delete press
-      const _keyboardActions = appCoordinator.keyboardActions
+      // const _keyboardActions = appCoordinator.keyboardActions
 
       // This would be called by the keyboard handler after two delete key presses
       await appCoordinator.actions.deleteNote()

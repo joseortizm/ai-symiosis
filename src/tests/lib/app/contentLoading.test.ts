@@ -91,8 +91,11 @@ describe('Content Loading Integration', () => {
     mockEditorManager.isEditMode = false
 
     appCoordinator = createAppCoordinator({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       searchManager: mockSearchManager as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       editorManager: mockEditorManager as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       focusManager: mockFocusManager as any,
     })
   })
@@ -228,6 +231,7 @@ describe('Content Loading Integration', () => {
         },
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       keyboardActions.actionRegistry.navigation.moveUp(mockActionContext as any)
 
       // Wait for async content loading to complete
@@ -264,6 +268,7 @@ describe('Content Loading Integration', () => {
       }
 
       keyboardActions.actionRegistry.navigation.moveDown(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockActionContext as any
       )
 
@@ -292,6 +297,7 @@ describe('Content Loading Integration', () => {
         },
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       keyboardActions.actionRegistry.navigation.moveUp(mockActionContext as any)
 
       // Wait for async content loading to complete
@@ -344,6 +350,7 @@ describe('Content Loading Integration', () => {
       }
 
       keyboardActions.actionRegistry.navigation.moveDown(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockActionContext as any
       )
 

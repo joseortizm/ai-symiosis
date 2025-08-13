@@ -7,7 +7,9 @@ import { createKeyboardActions } from '../../../lib/app/actions/keyboard.svelte'
 import type { AppState } from '../../../lib/app/actions/keyboard.svelte'
 
 describe('Keyboard Shortcut Isolation', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDeps: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let keyboardActions: any
 
   beforeEach(() => {

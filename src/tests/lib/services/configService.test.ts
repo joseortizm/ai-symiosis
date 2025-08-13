@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mockInvoke, mockSearchManager, resetAllMocks } from '../../test-utils'
+import { mockInvoke, resetAllMocks } from '../../test-utils'
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
@@ -22,7 +22,7 @@ describe('configService', () => {
       const configContent = 'notes_directory = "/path/to/notes"'
       mockInvoke.mockResolvedValueOnce(configContent)
 
-      const onFocus = vi.fn()
+      // const onFocus = vi.fn()
 
       await configService.open()
 
@@ -243,7 +243,7 @@ describe('configService', () => {
     it('should open pane with focus management', async () => {
       const configContent = 'notes_directory = "/path/to/notes"'
       mockInvoke.mockResolvedValueOnce(configContent)
-      const mockFocusFunction = vi.fn()
+      // const mockFocusFunction = vi.fn()
 
       await configService.openPane()
 

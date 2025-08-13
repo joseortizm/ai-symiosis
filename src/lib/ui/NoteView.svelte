@@ -26,6 +26,7 @@ Shows highlighted content or renders the CodeMirror editor.
   const appState = getContext<AppState>('state')
   const actions = getContext<AppActions>('actions')
 
+  const themeInitializer = themeManager.getThemeInitializer()
   let noteContentElement = $state<HTMLElement | undefined>(undefined)
 
   function registerNoteContentElement(element: HTMLElement) {
@@ -52,7 +53,7 @@ Shows highlighted content or renders the CodeMirror editor.
   })
 </script>
 
-<div class="note-preview" use:themeManager.getThemeInitializer()>
+<div class="note-preview" use:themeInitializer>
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <div class="edit-mode">

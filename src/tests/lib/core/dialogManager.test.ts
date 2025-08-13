@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mockSearchManager, resetAllMocks } from '../../test-utils'
-import type {
-  DialogManager,
-  DialogManagerDeps,
-} from '../../../lib/core/dialogManager.svelte'
+import { resetAllMocks } from '../../test-utils'
+import type { DialogManager } from '../../../lib/core/dialogManager.svelte'
 import { createDialogManager } from '../../../lib/core/dialogManager.svelte'
 
 describe('dialogManager (factory-based - TDD)', () => {

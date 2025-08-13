@@ -68,6 +68,7 @@ describe('editorManager', () => {
             getBoundingClientRect: vi.fn().mockReturnValue({ top: 120 }),
             textContent: 'Header 2',
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ] as any),
       }
 

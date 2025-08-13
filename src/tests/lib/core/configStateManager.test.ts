@@ -107,6 +107,7 @@ describe('configStateManager', () => {
 
   describe('config change events', () => {
     it('should update state when config-changed event is received', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let configChangeHandler: ((event: any) => void) | null = null
 
       mockListen.mockImplementation((eventName, handler) => {
@@ -254,6 +255,7 @@ describe('configStateManager', () => {
 
       properties.forEach((prop) => {
         expect(manager).toHaveProperty(prop)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(typeof (manager as any)[prop]).not.toBe('function')
       })
     })
