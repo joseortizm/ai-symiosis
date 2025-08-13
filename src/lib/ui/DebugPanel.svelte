@@ -23,7 +23,6 @@ Shows reactive state from managers and services for debugging.
 
   const { dialogManager, contentManager, configStateManager, themeManager } =
     appCoordinator.managers
-  const appState = appCoordinator.state
 
   // Debug panel visibility and configuration
   let isVisible = $state(false)

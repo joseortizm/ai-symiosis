@@ -102,7 +102,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     }
   }
 
-  function updateHighlighterState(newState: {
+  function updateHighlighterState(_newState: {
     query?: string
     areHighlightsCleared?: boolean
   }): void {}

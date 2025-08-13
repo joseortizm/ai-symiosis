@@ -52,7 +52,7 @@ Shows highlighted content or renders the CodeMirror editor.
   })
 </script>
 
-<div class="note-preview" use:themeManager.getThemeInitializer()>
+<div class="note-preview" use:themeManager.getThemeInitializer>
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <div class="edit-mode">
@@ -79,7 +79,6 @@ Shows highlighted content or renders the CodeMirror editor.
         </div>
       </div>
     {:else}
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="note-content"

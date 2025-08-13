@@ -37,7 +37,10 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
       'svelte/no-unused-svelte-ignore': 'error',
-      'no-console': 'warn'
+      'svelte/no-dom-manipulating': 'error',
+      'svelte/no-at-html-tags': 'error',
+      'svelte/prefer-svelte-reactivity': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }]
     }
   },
   {
@@ -66,6 +69,24 @@ export default [
         afterAll: 'readonly',
         vi: 'readonly'
       }
+    }
+  },
+  {
+    files: ['**/CodeMirrorEditor.svelte'],
+    rules: {
+      'svelte/no-dom-manipulating': 'off'
+    }
+  },
+  {
+    files: ['**/NoteView.svelte'],
+    rules: {
+      'svelte/no-at-html-tags': 'off'
+    }
+  },
+  {
+    files: ['**/contentHighlighting.svelte.ts'],
+    rules: {
+      'svelte/prefer-svelte-reactivity': 'off'
     }
   },
   {

@@ -147,7 +147,7 @@ export function createThemeManager(): ThemeManager {
   function getThemeInitializer(): (element: HTMLElement) => {
     destroy(): void
   } {
-    return function themeInitializer(element: HTMLElement) {
+    return function themeInitializer(_element: HTMLElement) {
       // Initialize theme when element is mounted
       if (configStateManager) {
         initializeTheme()

@@ -293,7 +293,7 @@ export function createKeyboardActions(
       } else if (state.isNoteContentFocused && !state.isEditMode) {
         handled = await handleKeyAction(keyMappings.noteContent, event, context)
       } else if (state.filteredNotes.length > 0) {
-        handled = await handleKeyAction(keyMappings.default, event, context)
+        await handleKeyAction(keyMappings.default, event, context)
       }
     }
   }

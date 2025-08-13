@@ -32,7 +32,7 @@ describe('contentManager (factory-based - TDD)', () => {
         '../../../lib/core/contentManager.svelte'
       )
       contentManager = createContentManager(mockDeps)
-    } catch (e) {
+    } catch {
       contentManager = null
     }
   })

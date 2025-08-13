@@ -155,7 +155,7 @@ Focused component handling CodeMirror initialization and content editing.
                       } else if (onExit) {
                         onExit()
                       }
-                    } catch (e) {
+                    } catch {
                       if (onExit) onExit()
                     }
                   }, 100)

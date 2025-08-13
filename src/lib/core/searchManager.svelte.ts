@@ -10,7 +10,7 @@ interface SearchState {
   searchInput: string
   query: string
   isLoading: boolean
-  searchTimeout: NodeJS.Timeout | undefined
+  searchTimeout: ReturnType<typeof setTimeout> | undefined
   requestController: AbortController | null
   filteredNotes: string[]
   areHighlightsCleared: boolean

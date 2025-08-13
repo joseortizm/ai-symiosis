@@ -132,8 +132,6 @@ describe('Content Loading Integration', () => {
     })
 
     it('should abort previous requests when selecting new note', async () => {
-      const controller1 = new AbortController()
-      const controller2 = new AbortController()
       let resolveFirst!: (value: string) => void
       let resolveSecond!: (value: string) => void
 
