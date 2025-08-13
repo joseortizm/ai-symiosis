@@ -10,11 +10,22 @@ Focused component handling CodeMirror initialization and content editing.
   import type { Extension } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
   import { indentWithTab } from '@codemirror/commands'
+  import {
+    codeFolding,
+    foldState,
+    foldCode,
+    unfoldCode,
+    foldAll,
+    unfoldAll,
+    foldable,
+    foldEffect,
+    syntaxTree,
+  } from '@codemirror/language'
   import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
   import { languages } from '@codemirror/language-data'
   import { StreamLanguage } from '@codemirror/language'
   import { toml } from '@codemirror/legacy-modes/mode/toml'
-  import { vim } from '@replit/codemirror-vim'
+  import { vim, Vim } from '@replit/codemirror-vim'
   import { emacs } from '@replit/codemirror-emacs'
   import { gruvboxDark } from '@fsegurai/codemirror-theme-bundle'
 
@@ -81,7 +92,9 @@ Focused component handling CodeMirror initialization and content editing.
   function getKeyMappingsMode(mode: string): Extension | null {
     switch (mode) {
       case 'vim':
-        return vim()
+        return vim({
+          status: false,
+        })
       case 'emacs':
         return emacs()
       case 'basic':
@@ -89,6 +102,114 @@ Focused component handling CodeMirror initialization and content editing.
       default:
         return null
     }
+  }
+
+  function setupVimFoldingCommands(): void {
+    // Define vim folding actions
+    Vim.defineAction('foldClose', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      foldCode(view)
+    })
+
+    Vim.defineAction('foldOpen', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      unfoldCode(view)
+    })
+
+    Vim.defineAction('foldToggle', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      const state = view.state
+
+      // Try to unfold first, if nothing happens then fold
+      const beforeFolds = state.field(foldState, false)?.size || 0
+      unfoldCode(view)
+      const afterUnfold = view.state.field(foldState, false)?.size || 0
+
+      // If no change occurred, then nothing was unfolded, so fold instead
+      if (beforeFolds === afterUnfold) {
+        foldCode(view)
+      }
+    })
+
+    Vim.defineAction('foldCloseAll', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      // Sensible fold like vim's zM - only fold headers (h2+), code blocks, and lists
+      const state = view.state
+      const foldRanges: { from: number; to: number }[] = []
+
+      syntaxTree(state).iterate({
+        enter(node) {
+          // Only fold sensible markdown structures
+          const shouldFold =
+            // All headers (including H1)
+            node.name === 'ATXHeading1' ||
+            node.name === 'ATXHeading2' ||
+            node.name === 'ATXHeading3' ||
+            node.name === 'ATXHeading4' ||
+            node.name === 'ATXHeading5' ||
+            node.name === 'ATXHeading6' ||
+            node.name === 'SetextHeading1' ||
+            node.name === 'SetextHeading2' ||
+            // Code blocks
+            node.name === 'FencedCode' ||
+            node.name === 'CodeBlock' ||
+            // Block quotes
+            node.name === 'Blockquote' ||
+            // Lists (but not individual list items)
+            node.name === 'BulletList' ||
+            node.name === 'OrderedList'
+
+          if (shouldFold) {
+            const isFoldable = foldable(state, node.from, node.to)
+            if (isFoldable) {
+              foldRanges.push({ from: isFoldable.from, to: isFoldable.to })
+            }
+          }
+        },
+      })
+
+      if (foldRanges.length > 0) {
+        view.dispatch({
+          effects: foldRanges.map((range) =>
+            foldEffect.of({ from: range.from, to: range.to })
+          ),
+        })
+      }
+    })
+
+    Vim.defineAction('foldOpenAll', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      unfoldAll(view)
+    })
+
+    Vim.defineAction('foldMore', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      foldCode(view)
+    })
+
+    Vim.defineAction('foldLess', (cm: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = (cm as any).cm6 || cm
+      unfoldCode(view)
+    })
+
+    // Map vim folding keys to actions
+    Vim.mapCommand('zc', 'action', 'foldClose', undefined, {})
+    Vim.mapCommand('zo', 'action', 'foldOpen', undefined, {})
+    Vim.mapCommand('za', 'action', 'foldToggle', undefined, {})
+    Vim.mapCommand('zC', 'action', 'foldClose', undefined, {}) // Close recursively
+    Vim.mapCommand('zO', 'action', 'foldOpen', undefined, {}) // Open recursively
+    Vim.mapCommand('zA', 'action', 'foldToggle', undefined, {}) // Toggle recursively
+    Vim.mapCommand('zM', 'action', 'foldCloseAll', undefined, {})
+    Vim.mapCommand('zR', 'action', 'foldOpenAll', undefined, {})
+    Vim.mapCommand('zm', 'action', 'foldMore', undefined, {})
+    Vim.mapCommand('zr', 'action', 'foldLess', undefined, {})
   }
 
   function getLanguageExtension(filename: string): Extension {
@@ -124,6 +245,11 @@ Focused component handling CodeMirror initialization and content editing.
     prepareContainer()
 
     try {
+      // Setup vim folding commands if in vim mode
+      if (keyBindingMode === 'vim') {
+        setupVimFoldingCommands()
+      }
+
       const extensions = buildEditorConfiguration()
       const newEditorView = new EditorView({
         doc: value || '',
@@ -159,6 +285,7 @@ Focused component handling CodeMirror initialization and content editing.
       getKeyMappingsMode(keyBindingMode),
       basicSetup,
       getLanguageExtension(filename),
+      codeFolding(),
       gruvboxDark,
       ...keymaps,
       EditorView.lineWrapping,
@@ -179,6 +306,11 @@ Focused component handling CodeMirror initialization and content editing.
           return true
         },
       },
+      // Folding shortcuts for all modes
+      { key: 'Ctrl-Shift-[', run: foldCode },
+      { key: 'Ctrl-Shift-]', run: unfoldCode },
+      { key: 'Ctrl-Alt-[', run: foldAll },
+      { key: 'Ctrl-Alt-]', run: unfoldAll },
     ])
 
     const escapeKeymap =
