@@ -28,7 +28,7 @@ pub fn get_db_connection() -> Result<r2d2::PooledConnection<SqliteConnectionMana
     }
 }
 
-fn get_database_path() -> Result<PathBuf, String> {
+pub fn get_database_path() -> Result<PathBuf, String> {
     get_data_dir()
         .ok_or_else(|| "Failed to get data directory".to_string())
         .map(|path| path.join("symiosis").join("notes.sqlite"))

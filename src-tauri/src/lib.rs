@@ -3,7 +3,7 @@ mod search;
 #[cfg(test)]
 mod tests;
 use comrak::{markdown_to_html, ComrakOptions};
-use database::get_db_connection;
+use database::{get_db_connection, get_database_path as get_db_path};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use serde::{Deserialize, Serialize};
@@ -84,22 +84,6 @@ fn get_config_path() -> PathBuf {
     }
 }
 
-fn get_data_dir() -> Option<PathBuf> {
-    if let Some(home_dir) = home::home_dir() {
-        #[cfg(target_os = "macos")]
-        return Some(home_dir.join("Library").join("Application Support"));
-
-        #[cfg(target_os = "windows")]
-        return std::env::var("APPDATA").ok().map(PathBuf::from);
-
-        #[cfg(target_os = "linux")]
-        return Some(home_dir.join(".local").join("share"));
-
-        #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-        return Some(home_dir.join(".local").join("share"));
-    }
-    None
-}
 
 fn load_config() -> AppConfig {
     let config_path = get_config_path();
@@ -145,10 +129,7 @@ fn get_notes_dir() -> PathBuf {
 }
 
 fn get_database_path() -> PathBuf {
-    get_data_dir()
-        .unwrap_or_else(|| PathBuf::from("./"))
-        .join("symiosis")
-        .join("notes.sqlite")
+    get_db_path().unwrap_or_else(|_| PathBuf::from("./symiosis/notes.sqlite"))
 }
 
 fn init_db(conn: &Connection) -> rusqlite::Result<()> {
