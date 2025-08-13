@@ -121,69 +121,10 @@ Focused component handling CodeMirror initialization and content editing.
   function createCodeMirrorEditor(): void {
     if (!editorContainer) return
 
-    destroyEditor()
-    editorContainer.innerHTML = ''
+    prepareContainer()
 
     try {
-      const customKeymap = keymap.of([
-        indentWithTab,
-        {
-          key: 'Ctrl-s',
-          run: (): boolean => {
-            onSave()
-            resetDirtyFlag()
-            return true
-          },
-        },
-      ])
-
-      const escapeKeymap =
-        onExit || onRequestExit
-          ? keymap.of([
-              {
-                key: 'Escape',
-                run: (): boolean => {
-                  setTimeout(() => {
-                    try {
-                      if (keyBindingMode === 'vim') {
-                        return false
-                      }
-
-                      const isDirty = value !== initialValue
-                      if (isDirty && onRequestExit) {
-                        onRequestExit()
-                      } else if (onExit) {
-                        onExit()
-                      }
-                    } catch {
-                      if (onExit) onExit()
-                    }
-                  }, 100)
-                  return false
-                },
-              },
-            ])
-          : null
-
-      const extensions: Extension[] = [
-        getKeyMappingsMode(keyBindingMode),
-        basicSetup,
-        getLanguageExtension(filename),
-        gruvboxDark,
-        customKeymap,
-        escapeKeymap,
-        EditorView.lineWrapping,
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newValue = update.state.doc.toString()
-            lastPropsValue = newValue
-            onContentChange?.(newValue)
-            const isDirty = newValue !== initialValue
-            handleDirtyChange(isDirty)
-          }
-        }),
-      ].filter((ext): ext is Extension => Boolean(ext))
-
+      const extensions = buildEditorConfiguration()
       const newEditorView = new EditorView({
         doc: value || '',
         extensions,
@@ -193,9 +134,87 @@ Focused component handling CodeMirror initialization and content editing.
       editorView = newEditorView
       scrollToHeader()
     } catch (error) {
-      console.error('Failed to create CodeMirror editor:', error)
-      createFallbackEditor()
+      handleCreationFailure(error)
     }
+  }
+
+  function prepareContainer(): void {
+    destroyEditor()
+    editorContainer.innerHTML = ''
+  }
+
+  function buildEditorConfiguration(): Extension[] {
+    const keymaps = createKeymaps()
+    const updateListener = EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        const newValue = update.state.doc.toString()
+        lastPropsValue = newValue
+        onContentChange?.(newValue)
+        const isDirty = newValue !== initialValue
+        handleDirtyChange(isDirty)
+      }
+    })
+
+    const extensions: Extension[] = [
+      getKeyMappingsMode(keyBindingMode),
+      basicSetup,
+      getLanguageExtension(filename),
+      gruvboxDark,
+      ...keymaps,
+      EditorView.lineWrapping,
+      updateListener,
+    ].filter((ext): ext is Extension => Boolean(ext))
+
+    return extensions
+  }
+
+  function createKeymaps(): Extension[] {
+    const customKeymap = keymap.of([
+      indentWithTab,
+      {
+        key: 'Ctrl-s',
+        run: (): boolean => {
+          onSave()
+          resetDirtyFlag()
+          return true
+        },
+      },
+    ])
+
+    const escapeKeymap =
+      onExit || onRequestExit
+        ? keymap.of([
+            {
+              key: 'Escape',
+              run: (): boolean => {
+                setTimeout(() => {
+                  try {
+                    if (keyBindingMode === 'vim') {
+                      return false
+                    }
+
+                    const isDirty = value !== initialValue
+                    if (isDirty && onRequestExit) {
+                      onRequestExit()
+                    } else if (onExit) {
+                      onExit()
+                    }
+                  } catch {
+                    if (onExit) onExit()
+                  }
+                }, 100)
+                return false
+              },
+            },
+          ])
+        : null
+
+    return [customKeymap, escapeKeymap].filter(Boolean) as Extension[]
+  }
+
+  function handleCreationFailure(error: unknown): void {
+    console.error('Failed to create CodeMirror editor:', error)
+    createFallbackEditor()
   }
 
   function scrollToHeader(): void {
