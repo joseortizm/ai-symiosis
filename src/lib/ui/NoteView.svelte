@@ -166,6 +166,7 @@ Shows highlighted content or renders the CodeMirror editor.
     flex: 1;
     padding: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     outline: none;
     border: 2px solid transparent;
     transition: border-color 0.2s ease;
@@ -175,11 +176,24 @@ Shows highlighted content or renders the CodeMirror editor.
     border-color: #61afef;
   }
   .markdown-body {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 1em;
+    padding-top: 2em;
+    padding-left: max(1em, calc((100vw - 65ch) / 2));
+    padding-right: max(1em, calc((100vw - 65ch) / 2));
     min-height: 100%;
     width: 100%;
+    box-sizing: border-box;
+  }
+  @media (min-width: 768px) {
+    .markdown-body {
+      padding-left: max(1.5em, calc((100vw - 70ch) / 2));
+      padding-right: max(1.5em, calc((100vw - 70ch) / 2));
+    }
+  }
+  @media (min-width: 1024px) {
+    .markdown-body {
+      padding-left: max(2em, calc((100vw - 75ch) / 2));
+      padding-right: max(2em, calc((100vw - 75ch) / 2));
+    }
   }
   :global(.highlight) {
     background-color: rgba(254, 145, 0, 0.75) !important;
