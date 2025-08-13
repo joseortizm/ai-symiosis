@@ -133,7 +133,7 @@ describe('CodeEditor Bindable Property Issue Documentation', () => {
 
       const componentPath = join(
         process.cwd(),
-        'src/lib/ui/CodeMirrorEditor.svelte'
+        'src/lib/ui/CodeEditor.svelte'
       )
 
       const componentContent = readFileSync(componentPath, 'utf-8')
