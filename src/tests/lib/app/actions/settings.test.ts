@@ -28,7 +28,7 @@ describe('settings actions', () => {
     })
 
     it('should focus search even if opening pane fails', async () => {
-      mockDeps.configService.openPane.mockRejectedValue(
+      vi.mocked(mockDeps.configService.openPane).mockRejectedValue(
         new Error('Config failed')
       )
 

@@ -52,7 +52,7 @@ Shows highlighted content or renders the CodeMirror editor.
   })
 </script>
 
-<div class="note-preview" use:themeManager.getThemeInitializer>
+<div class="note-preview" use:themeManager.getThemeInitializer()>
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <div class="edit-mode">

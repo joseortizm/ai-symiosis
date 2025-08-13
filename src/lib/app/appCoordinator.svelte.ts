@@ -202,7 +202,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     exitEditMode()
     // An empty search shows notes in order
     // of most recent and we just saved it.
-    focusManager.setSelectedIndex(0);
+    focusManager.setSelectedIndex(0)
   }
 
   async function saveConfigAndRefresh(): Promise<{

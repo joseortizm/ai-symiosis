@@ -33,7 +33,6 @@ export interface DialogManager {
 }
 
 export function createDialogManager(deps: DialogManagerDeps): DialogManager {
-
   let showCreateDialog = $state(false)
   let showRenameDialog = $state(false)
   let showDeleteDialog = $state(false)

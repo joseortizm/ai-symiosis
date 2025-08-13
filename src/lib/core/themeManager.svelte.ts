@@ -21,7 +21,7 @@ export interface ThemeManager {
   initialize(configStateManager: ConfigStateManager): Promise<void>
   loadTheme(theme: string): Promise<void>
   cleanup(): void
-  getThemeInitializer(): (element: HTMLElement) => { destroy(): void }
+  getThemeInitializer(): (element?: HTMLElement) => { destroy(): void }
 }
 
 export function createThemeManager(): ThemeManager {
@@ -144,10 +144,8 @@ export function createThemeManager(): ThemeManager {
     configStateManager = null
   }
 
-  function getThemeInitializer(): (element: HTMLElement) => {
-    destroy(): void
-  } {
-    return function themeInitializer(_element: HTMLElement) {
+  function getThemeInitializer() {
+    return function themeInitializer(_element?: HTMLElement) {
       // Initialize theme when element is mounted
       if (configStateManager) {
         initializeTheme()
