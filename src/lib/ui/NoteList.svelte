@@ -93,9 +93,6 @@ Handles note selection state and integrates with keyboard navigation.
     transition: background-color 0.1s ease;
     contain: layout;
   }
-  button:hover {
-    background-color: #3c3836;
-  }
   .selected {
     background-color: #504945 !important;
     color: #fe8019;
@@ -109,8 +106,5 @@ Handles note selection state and integrates with keyboard navigation.
   .notes-list::-webkit-scrollbar-thumb {
     background: #504945;
     border-radius: 4px;
-  }
-  .notes-list::-webkit-scrollbar-thumb:hover {
-    background: #665c54;
   }
 </style>
