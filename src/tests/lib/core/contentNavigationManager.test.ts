@@ -11,6 +11,7 @@ describe('ContentNavigationManager', () => {
   let mockDeps: {
     getNoteContentElement: () => HTMLElement | null
     getQuery: () => string
+    getAreHighlightsCleared: () => boolean
   }
   let navigationManager: ReturnType<typeof createContentNavigationManager>
 
@@ -45,6 +46,7 @@ describe('ContentNavigationManager', () => {
     mockDeps = {
       getNoteContentElement: vi.fn(() => mockNoteContentElement),
       getQuery: vi.fn(() => ''),
+      getAreHighlightsCleared: vi.fn(() => false),
     }
 
     navigationManager = createContentNavigationManager(mockDeps)
@@ -143,6 +145,45 @@ describe('ContentNavigationManager', () => {
         'h1, h2, h3, h4, h5, h6'
       )
       expect(headers[0].scrollIntoView).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  describe('highlight cleared behavior', () => {
+    it('should switch to header navigation when highlights are cleared even with query present', () => {
+      // Set up: query present, highlights cleared
+      mockDeps.getQuery = vi.fn(() => 'search')
+      mockDeps.getAreHighlightsCleared = vi.fn(() => true)
+
+      navigationManager.navigateNext()
+
+      // Should navigate to first header, not highlights
+      const headers = mockNoteContentElement.querySelectorAll(
+        'h1, h2, h3, h4, h5, h6'
+      )
+      expect(headers[0].scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      })
+      expect(headers[0].classList.contains('header-current')).toBe(true)
+    })
+
+    it('should use highlight navigation when query present and highlights not cleared', () => {
+      // Set up: query present, highlights not cleared
+      mockDeps.getQuery = vi.fn(() => 'search')
+      mockDeps.getAreHighlightsCleared = vi.fn(() => false)
+
+      navigationManager.navigateNext()
+
+      // Should navigate to first highlight, not headers
+      const highlights =
+        mockNoteContentElement.querySelectorAll('mark.highlight')
+      expect(highlights[0].scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      })
+      expect(highlights[0].classList.contains('highlight-current')).toBe(true)
     })
   })
 

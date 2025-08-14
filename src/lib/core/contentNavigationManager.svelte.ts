@@ -13,6 +13,7 @@ interface NavigationState {
 interface NavigationDeps {
   getNoteContentElement: () => HTMLElement | null
   getQuery: () => string
+  getAreHighlightsCleared: () => boolean
 }
 
 export interface ContentNavigationManager {
@@ -36,15 +37,18 @@ export function createContentNavigationManager(
     if (!contentElement) return []
 
     const query = deps.getQuery()
+    const areHighlightsCleared = deps.getAreHighlightsCleared()
     const hasQuery = query.trim() !== ''
-    const newNavigationMode = hasQuery
 
-    if (state.isNavigatingHighlights !== newNavigationMode) {
+    // Use highlight navigation only if there's a query AND highlights haven't been cleared
+    const shouldNavigateHighlights = hasQuery && !areHighlightsCleared
+
+    if (state.isNavigatingHighlights !== shouldNavigateHighlights) {
       clearCurrentElementStyle()
       state.currentIndex = -1
     }
 
-    if (hasQuery) {
+    if (shouldNavigateHighlights) {
       state.isNavigatingHighlights = true
       return Array.from(contentElement.querySelectorAll('mark.highlight'))
     } else {

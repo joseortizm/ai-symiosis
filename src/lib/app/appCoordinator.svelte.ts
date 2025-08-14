@@ -122,6 +122,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   const contentNavigationManager = createContentNavigationManager({
     getNoteContentElement: () => focusManager.noteContentElement,
     getQuery: () => searchManager.query,
+    getAreHighlightsCleared: () => searchManager.areHighlightsCleared,
   })
 
   const isLoading = $derived(searchManager.isLoading)
