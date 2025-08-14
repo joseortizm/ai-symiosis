@@ -11,6 +11,12 @@ interface KeyboardActionDeps {
     selectedIndex: number
     setSelectedIndex: (index: number) => void
   }
+  contentNavigationManager: {
+    navigateNext: () => void
+    navigatePrevious: () => void
+    resetNavigation: () => void
+    clearCurrentStyles: () => void
+  }
   loadNoteContent: (note: string) => Promise<void>
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
@@ -89,6 +95,12 @@ export function createKeyboardActions(
       },
       focusSearch: ({ actions }: ActionContext) => {
         actions.focusSearch()
+      },
+      navigateNext: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.navigateNext()
+      },
+      navigatePrevious: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.navigatePrevious()
       },
     },
 
@@ -188,6 +200,8 @@ export function createKeyboardActions(
       ArrowDown: 'navigation.moveDown',
       'Ctrl+k': 'navigation.moveUp',
       'Ctrl+j': 'navigation.moveDown',
+      'Ctrl+h': 'navigation.navigatePrevious',
+      'Ctrl+l': 'navigation.navigateNext',
       Escape: 'search.clearHighlights',
       'Meta+,': 'settings.openSettings',
     },
@@ -200,6 +214,8 @@ export function createKeyboardActions(
 
     noteContent: {
       Escape: 'navigation.focusSearch',
+      'Ctrl+h': 'navigation.navigatePrevious',
+      'Ctrl+l': 'navigation.navigateNext',
     },
 
     default: {

@@ -18,6 +18,12 @@ describe('Keyboard Shortcut Isolation', () => {
         selectedIndex: 0,
         setSelectedIndex: vi.fn(),
       },
+      contentNavigationManager: {
+        navigateNext: vi.fn(),
+        navigatePrevious: vi.fn(),
+        resetNavigation: vi.fn(),
+        clearCurrentStyles: vi.fn(),
+      },
       loadNoteContent: vi.fn(),
       enterEditMode: vi.fn(),
       exitEditMode: vi.fn(),

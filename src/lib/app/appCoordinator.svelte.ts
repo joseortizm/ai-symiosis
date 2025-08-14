@@ -11,6 +11,7 @@ import { createDialogManager } from '../core/dialogManager.svelte'
 import { createContentManager } from '../core/contentManager.svelte'
 import { createConfigStateManager } from '../core/configStateManager.svelte'
 import { createThemeManager } from '../core/themeManager.svelte'
+import { createContentNavigationManager } from '../core/contentNavigationManager.svelte'
 import { noteService } from '../services/noteService.svelte'
 import { configService } from '../services/configService.svelte'
 import { createNoteActions } from './actions/note.svelte'
@@ -73,6 +74,9 @@ export interface AppManagers {
   themeManager: ReturnType<
     typeof import('../core/themeManager.svelte').createThemeManager
   >
+  contentNavigationManager: ReturnType<
+    typeof import('../core/contentNavigationManager.svelte').createContentNavigationManager
+  >
 }
 
 export interface AppCoordinator {
@@ -114,6 +118,11 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const configStateManager = createConfigStateManager()
   const themeManager = createThemeManager()
+
+  const contentNavigationManager = createContentNavigationManager({
+    getNoteContentElement: () => focusManager.noteContentElement,
+    getQuery: () => searchManager.query,
+  })
 
   const isLoading = $derived(searchManager.isLoading)
   const areHighlightsCleared = $derived(searchManager.areHighlightsCleared)
@@ -169,6 +178,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
       contentRequestController.abort()
     }
 
+    contentNavigationManager.resetNavigation()
+
     if (!note) {
       contentManager.setNoteContent('')
       return
@@ -218,6 +229,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const keyboardActions = createKeyboardActions({
     focusManager,
+    contentNavigationManager,
     loadNoteContent,
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
@@ -292,6 +304,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         dialogManager,
         configStateManager,
         themeManager,
+        contentNavigationManager,
       }
     },
 

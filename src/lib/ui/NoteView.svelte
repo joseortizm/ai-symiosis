@@ -141,6 +141,19 @@ Shows highlighted content or renders the CodeMirror editor.
     color: #f0f0f0 !important;
     display: inline-block !important;
   }
+  :global(.highlight-current) {
+    background-color: rgba(254, 145, 0, 1) !important;
+    border: 2px solid #fe9100 !important;
+    box-shadow: 0 0 8px rgba(254, 145, 0, 0.6) !important;
+    transform: scale(1.05) !important;
+  }
+  :global(.header-current) {
+    background-color: rgba(97, 175, 239, 0.2) !important;
+    border-left: 4px solid #61afef !important;
+    padding-left: 0.5em !important;
+    margin-left: -0.5em !important;
+    border-radius: 3px !important;
+  }
   .no-selection {
     flex: 1;
     display: flex;

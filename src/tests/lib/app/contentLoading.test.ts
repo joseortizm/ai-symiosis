@@ -196,6 +196,12 @@ describe('Content Loading Integration', () => {
 
       keyboardActions = createKeyboardActions({
         focusManager: mockFocusManager,
+        contentNavigationManager: {
+          navigateNext: vi.fn(),
+          navigatePrevious: vi.fn(),
+          resetNavigation: vi.fn(),
+          clearCurrentStyles: vi.fn(),
+        },
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
@@ -331,6 +337,12 @@ describe('Content Loading Integration', () => {
 
       const keyboardActions = createKeyboardActions({
         focusManager: mockFocusManager,
+        contentNavigationManager: {
+          navigateNext: vi.fn(),
+          navigatePrevious: vi.fn(),
+          resetNavigation: vi.fn(),
+          clearCurrentStyles: vi.fn(),
+        },
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
