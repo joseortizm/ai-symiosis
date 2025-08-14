@@ -214,6 +214,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     if (result.success) {
       const notes = await searchManager.searchImmediate('')
       searchActions.updateFilteredNotes(notes)
+      focusManager.focusSearch();
     }
 
     return result
