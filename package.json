@@ -1,7 +1,6 @@
 {
   "name": "symiosis",
-  "version": "0.1.5",
-  "description": "",
+  "description": "A note taking app inspired by Notational Velocity",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
