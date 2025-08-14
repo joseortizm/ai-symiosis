@@ -188,7 +188,6 @@ export function createKeyboardActions(
     searchInput: {
       Enter: 'editing.enterEdit',
       'Ctrl+Enter': 'notes.createNote',
-      'Ctrl+n': 'notes.createNote',
       'Ctrl+m': 'notes.renameNote',
       'Ctrl+o': 'notes.openExternal',
       'Ctrl+f': 'notes.openFolder',
@@ -200,8 +199,8 @@ export function createKeyboardActions(
       ArrowDown: 'navigation.moveDown',
       'Ctrl+k': 'navigation.moveUp',
       'Ctrl+j': 'navigation.moveDown',
-      'Ctrl+h': 'navigation.navigatePrevious',
-      'Ctrl+l': 'navigation.navigateNext',
+      'Ctrl+p': 'navigation.navigatePrevious',
+      'Ctrl+n': 'navigation.navigateNext',
       Escape: 'search.clearHighlights',
       'Meta+,': 'settings.openSettings',
     },
@@ -214,8 +213,8 @@ export function createKeyboardActions(
 
     noteContent: {
       Escape: 'navigation.focusSearch',
-      'Ctrl+h': 'navigation.navigatePrevious',
-      'Ctrl+l': 'navigation.navigateNext',
+      'Ctrl+p': 'navigation.navigatePrevious',
+      'Ctrl+n': 'navigation.navigateNext',
     },
 
     default: {
