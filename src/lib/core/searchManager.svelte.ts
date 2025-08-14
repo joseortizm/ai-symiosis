@@ -33,6 +33,7 @@ interface SearchManager {
   searchImmediate(query: string): Promise<string[]>
   refreshSearch(searchInput: string): Promise<string[]>
   setHighlightsClearCallback(callback: (cleared: boolean) => void): void
+  setSearchCompleteCallback(callback: (notes: string[]) => void): void
   abort(): void
 }
 
@@ -48,6 +49,7 @@ export function createSearchManager(): SearchManager {
   })
 
   let onHighlightsClearCallback: ((cleared: boolean) => void) | null = null
+  let onSearchCompleteCallback: ((notes: string[]) => void) | null = null
 
   async function performSearch(query: string): Promise<void> {
     if (state.requestController) {
@@ -66,10 +68,12 @@ export function createSearchManager(): SearchManager {
       }
 
       state.filteredNotes = notes
+      onSearchCompleteCallback?.(notes)
     } catch (e) {
       if (!currentController.signal.aborted) {
         console.error('❌ Failed to load notes:', e)
         state.filteredNotes = []
+        onSearchCompleteCallback?.([])
       }
     } finally {
       if (!currentController.signal.aborted) {
@@ -144,6 +148,10 @@ export function createSearchManager(): SearchManager {
 
     setHighlightsClearCallback(callback: (cleared: boolean) => void): void {
       onHighlightsClearCallback = callback
+    },
+
+    setSearchCompleteCallback(callback: (notes: string[]) => void): void {
+      onSearchCompleteCallback = callback
     },
 
     get query(): string {

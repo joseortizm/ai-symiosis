@@ -85,7 +85,6 @@ export function createContentNavigationManager(
     })
   }
 
-
   function navigateNext(): void {
     const elements = getNavigationElements()
     if (elements.length === 0) return

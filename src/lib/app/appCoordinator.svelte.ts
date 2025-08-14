@@ -352,6 +352,14 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
       // Initialize theme manager with config state dependency
       await themeManager.initialize(configStateManager)
 
+      // Set up search complete callback to load first note content
+      searchManager.setSearchCompleteCallback(async (notes: string[]) => {
+        if (notes.length > 0) {
+          focusManager.setSelectedIndex(0)
+          await loadNoteContent(notes[0])
+        }
+      })
+
       const configExists = await invoke<boolean>('config_exists')
       if (!configExists) {
         await settingsActions.openSettingsPane()
