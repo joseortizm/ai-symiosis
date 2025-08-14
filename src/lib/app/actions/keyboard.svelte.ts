@@ -9,8 +9,9 @@ import { invoke } from '@tauri-apps/api/core'
 interface KeyboardActionDeps {
   focusManager: {
     selectedIndex: number
+    setSelectedIndex: (index: number) => void
   }
-  selectNote: (note: string, index: number) => Promise<void>
+  loadNoteContent: (note: string) => Promise<void>
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
   saveAndExitNote: () => Promise<void>
@@ -70,7 +71,8 @@ export function createKeyboardActions(
         const newIndex = Math.max(0, actions.focusManager.selectedIndex - 1)
         const note = state.filteredNotes[newIndex]
         if (note) {
-          actions.selectNote(note, newIndex)
+          actions.focusManager.setSelectedIndex(newIndex)
+          actions.loadNoteContent(note)
         }
       },
       moveDown: ({ state, actions }: ActionContext) => {
@@ -81,7 +83,8 @@ export function createKeyboardActions(
         )
         const note = state.filteredNotes[newIndex]
         if (note) {
-          actions.selectNote(note, newIndex)
+          actions.focusManager.setSelectedIndex(newIndex)
+          actions.loadNoteContent(note)
         }
       },
       focusSearch: ({ actions }: ActionContext) => {

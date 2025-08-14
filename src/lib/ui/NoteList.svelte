@@ -39,7 +39,10 @@ Handles note selection state and integrates with keyboard navigation.
             <button
               class:selected={index === focusManager.selectedIndex}
               tabindex="-1"
-              onclick={() => actions.selectNote(note, index)}
+              onclick={() => {
+                focusManager.setSelectedIndex(index)
+                actions.loadNoteContent(note)
+              }}
             >
               {note}
             </button>

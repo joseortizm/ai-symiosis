@@ -40,7 +40,7 @@ export interface AppState {
 }
 
 export interface AppActions {
-  selectNote: (note: string, index: number) => Promise<void>
+  loadNoteContent: (note: string) => Promise<void>
   deleteNote: () => Promise<void>
   createNote: (noteName?: string) => Promise<void>
   renameNote: (newName?: string) => Promise<void>
@@ -163,11 +163,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusManager.focusSearch()
   }
 
-  async function selectNote(note: string, index: number): Promise<void> {
-    if (focusManager.selectedIndex !== index) {
-      focusManager.setSelectedIndex(index)
-    }
-
+  async function loadNoteContent(note: string): Promise<void> {
     // Cancel previous content request
     if (contentRequestController) {
       contentRequestController.abort()
@@ -214,7 +210,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     if (result.success) {
       const notes = await searchManager.searchImmediate('')
       searchActions.updateFilteredNotes(notes)
-      focusManager.focusSearch();
+      focusManager.focusSearch()
     }
 
     return result
@@ -222,7 +218,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const keyboardActions = createKeyboardActions({
     focusManager,
-    selectNote,
+    loadNoteContent,
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
     saveAndExitNote,
@@ -321,7 +317,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
     get actions() {
       return {
-        selectNote,
+        loadNoteContent,
         deleteNote: () => noteActions.deleteNote(selectedNote),
         createNote: noteActions.createNote,
         renameNote: (newName?: string) =>
@@ -348,7 +344,11 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         await settingsActions.openSettingsPane()
       } else {
         focusManager.focusSearch()
-        await searchManager.searchImmediate('')
+        const notes = await searchManager.searchImmediate('')
+        if (notes.length > 0) {
+          focusManager.setSelectedIndex(0)
+          await loadNoteContent(notes[0])
+        }
       }
 
       const unlisten = await listen('open-preferences', async () => {

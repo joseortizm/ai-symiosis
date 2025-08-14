@@ -105,7 +105,8 @@ describe('Content Loading Integration', () => {
       const testContent = 'Test note content'
       mockNoteService.getContent.mockResolvedValue(testContent)
 
-      await appCoordinator.actions.selectNote('test-note.md', 0)
+      appCoordinator.managers.focusManager.setSelectedIndex(0)
+      await appCoordinator.actions.loadNoteContent('test-note.md')
 
       expect(mockFocusManager.setSelectedIndex).toHaveBeenCalledWith(0)
       expect(mockNoteService.getContent).toHaveBeenCalledWith('test-note.md')
@@ -118,7 +119,8 @@ describe('Content Loading Integration', () => {
       const error = new Error('Failed to load content')
       mockNoteService.getContent.mockRejectedValue(error)
 
-      await appCoordinator.actions.selectNote('error-note.md', 1)
+      appCoordinator.managers.focusManager.setSelectedIndex(1)
+      await appCoordinator.actions.loadNoteContent('error-note.md')
 
       expect(mockFocusManager.setSelectedIndex).toHaveBeenCalledWith(1)
       expect(mockNoteService.getContent).toHaveBeenCalledWith('error-note.md')
@@ -128,7 +130,7 @@ describe('Content Loading Integration', () => {
     })
 
     it('should clear content when no note is provided', async () => {
-      await appCoordinator.actions.selectNote('', -1)
+      await appCoordinator.actions.loadNoteContent('')
 
       expect(mockNoteService.getContent).not.toHaveBeenCalled()
       expect(mockContentManager.setNoteContent).toHaveBeenCalledWith('')
@@ -149,8 +151,9 @@ describe('Content Loading Integration', () => {
         .mockReturnValueOnce(firstPromise)
         .mockReturnValueOnce(secondPromise)
 
-      const firstSelection = appCoordinator.actions.selectNote('first.md', 0)
-      const secondSelection = appCoordinator.actions.selectNote('second.md', 1)
+      const firstSelection = appCoordinator.actions.loadNoteContent('first.md')
+      const secondSelection =
+        appCoordinator.actions.loadNoteContent('second.md')
 
       resolveFirst('First content')
       resolveSecond('Second content')
@@ -163,20 +166,21 @@ describe('Content Loading Integration', () => {
       expect(mockContentManager.setNoteContent).toHaveBeenCalledTimes(1)
     })
 
-    it('should not update selectedIndex if it is already correct', async () => {
+    it('should load content without affecting focus management', async () => {
       mockFocusManager.selectedIndex = 2
       mockNoteService.getContent.mockResolvedValue('Content')
 
-      await appCoordinator.actions.selectNote('test.md', 2)
+      await appCoordinator.actions.loadNoteContent('test.md')
 
-      expect(mockFocusManager.setSelectedIndex).not.toHaveBeenCalled()
       expect(mockNoteService.getContent).toHaveBeenCalledWith('test.md')
+      expect(mockContentManager.setNoteContent).toHaveBeenCalledWith('Content')
     })
 
     it('should trigger scrollToFirstMatch after content loads', async () => {
       mockNoteService.getContent.mockResolvedValue('Content with search terms')
 
-      await appCoordinator.actions.selectNote('test.md', 0)
+      appCoordinator.managers.focusManager.setSelectedIndex(0)
+      await appCoordinator.actions.loadNoteContent('test.md')
 
       await new Promise((resolve) => requestAnimationFrame(resolve))
 
@@ -192,7 +196,7 @@ describe('Content Loading Integration', () => {
 
       keyboardActions = createKeyboardActions({
         focusManager: mockFocusManager,
-        selectNote: appCoordinator.actions.selectNote,
+        loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
         saveAndExitNote: vi.fn(),
@@ -227,7 +231,7 @@ describe('Content Loading Integration', () => {
         state: mockState,
         actions: {
           focusManager: mockFocusManager,
-          selectNote: appCoordinator.actions.selectNote,
+          loadNoteContent: appCoordinator.actions.loadNoteContent,
         },
       }
 
@@ -263,7 +267,7 @@ describe('Content Loading Integration', () => {
         state: mockState,
         actions: {
           focusManager: mockFocusManager,
-          selectNote: appCoordinator.actions.selectNote,
+          loadNoteContent: appCoordinator.actions.loadNoteContent,
         },
       }
 
@@ -293,7 +297,7 @@ describe('Content Loading Integration', () => {
         state: mockState,
         actions: {
           focusManager: mockFocusManager,
-          selectNote: appCoordinator.actions.selectNote,
+          loadNoteContent: appCoordinator.actions.loadNoteContent,
         },
       }
 
@@ -315,7 +319,8 @@ describe('Content Loading Integration', () => {
       const testContent = 'Consistent content'
       mockNoteService.getContent.mockResolvedValue(testContent)
 
-      await appCoordinator.actions.selectNote('note2.md', 1)
+      appCoordinator.managers.focusManager.setSelectedIndex(1)
+      await appCoordinator.actions.loadNoteContent('note2.md')
       expect(mockContentManager.setNoteContent).toHaveBeenCalledWith(
         testContent
       )
@@ -326,7 +331,7 @@ describe('Content Loading Integration', () => {
 
       const keyboardActions = createKeyboardActions({
         focusManager: mockFocusManager,
-        selectNote: appCoordinator.actions.selectNote,
+        loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
         saveAndExitNote: vi.fn(),
@@ -345,7 +350,7 @@ describe('Content Loading Integration', () => {
         state: { filteredNotes: ['note1.md', 'note2.md', 'note3.md'] },
         actions: {
           focusManager: mockFocusManager,
-          selectNote: appCoordinator.actions.selectNote,
+          loadNoteContent: appCoordinator.actions.loadNoteContent,
         },
       }
 

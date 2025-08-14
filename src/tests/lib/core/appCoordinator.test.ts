@@ -65,14 +65,15 @@ describe('appCoordinator', () => {
       expect(appCoordinator.managers.focusManager.selectedIndex).toBe(3)
     })
 
-    it('should handle selectNote correctly', () => {
-      appCoordinator.actions.selectNote('note1.md', 2)
+    it('should handle loadNoteContent correctly', async () => {
+      appCoordinator.managers.focusManager.setSelectedIndex(2)
+      await appCoordinator.actions.loadNoteContent('note1.md')
       expect(appCoordinator.managers.focusManager.selectedIndex).toBe(2)
     })
 
-    it('should not update selectedIndex if it is the same', () => {
+    it('should not update selectedIndex if it is the same', async () => {
       appCoordinator.managers.focusManager.setSelectedIndex(5)
-      appCoordinator.actions.selectNote('note.md', 5)
+      await appCoordinator.actions.loadNoteContent('note.md')
       expect(appCoordinator.managers.focusManager.selectedIndex).toBe(5)
     })
 
@@ -167,7 +168,7 @@ describe('appCoordinator', () => {
     it('should provide actions object with all required actions', () => {
       const actions = appCoordinator.actions
 
-      expect(actions).toHaveProperty('selectNote')
+      expect(actions).toHaveProperty('loadNoteContent')
       expect(actions).toHaveProperty('deleteNote')
       expect(actions).toHaveProperty('createNote')
       expect(actions).toHaveProperty('renameNote')

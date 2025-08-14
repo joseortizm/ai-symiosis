@@ -14,8 +14,11 @@ describe('Keyboard Shortcut Isolation', () => {
 
   beforeEach(() => {
     mockDeps = {
-      focusManager: { selectedIndex: 0 },
-      selectNote: vi.fn(),
+      focusManager: {
+        selectedIndex: 0,
+        setSelectedIndex: vi.fn(),
+      },
+      loadNoteContent: vi.fn(),
       enterEditMode: vi.fn(),
       exitEditMode: vi.fn(),
       saveAndExitNote: vi.fn(),
@@ -56,7 +59,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should not process the arrow down shortcut
-      expect(mockDeps.selectNote).not.toHaveBeenCalled()
+      expect(mockDeps.loadNoteContent).not.toHaveBeenCalled()
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     })
 
@@ -112,7 +115,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should not process the arrow down shortcut
-      expect(mockDeps.selectNote).not.toHaveBeenCalled()
+      expect(mockDeps.loadNoteContent).not.toHaveBeenCalled()
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     })
 
@@ -168,7 +171,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should process the arrow down shortcut
-      expect(mockDeps.selectNote).toHaveBeenCalled()
+      expect(mockDeps.loadNoteContent).toHaveBeenCalled()
       expect(preventDefaultSpy).toHaveBeenCalled()
     })
 

@@ -131,10 +131,7 @@ describe('CodeEditor Bindable Property Issue Documentation', () => {
       const { readFileSync } = await import('fs')
       const { join } = await import('path')
 
-      const componentPath = join(
-        process.cwd(),
-        'src/lib/ui/CodeEditor.svelte'
-      )
+      const componentPath = join(process.cwd(), 'src/lib/ui/CodeEditor.svelte')
 
       const componentContent = readFileSync(componentPath, 'utf-8')
 
