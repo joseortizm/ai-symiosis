@@ -33,6 +33,9 @@ toml = "0.8.23"
 home = "0.5.11"
 rusqlite = { version = "0.37", features = ["bundled", "functions", "serde_json", "chrono"] }
 
+[dev-dependencies]
+tempfile = "3.20.0"
+
 # Faster builds in debug mode
 # [profile.dev]
 # opt-level = 1

@@ -19,6 +19,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-opener",
  "tauri-plugin-window-state",
+ "tempfile",
  "toml 0.8.23",
  "walkdir",
 ]

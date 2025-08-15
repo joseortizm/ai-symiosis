@@ -1,6 +1,10 @@
 // Module declarations
 mod database;
+#[cfg(test)]
+mod database_consistency_tests;
 mod search;
+#[cfg(test)]
+mod test_utils;
 #[cfg(test)]
 mod tests;
 
