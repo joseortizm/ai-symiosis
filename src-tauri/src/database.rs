@@ -10,8 +10,7 @@ pub fn get_db_connection() -> Result<Connection, String> {
             .map_err(|e| format!("Failed to create database directory: {}", e))?;
     }
 
-    Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))
+    Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))
 }
 
 pub fn get_database_path() -> Result<PathBuf, String> {
@@ -21,7 +20,17 @@ pub fn get_database_path() -> Result<PathBuf, String> {
 }
 
 // Platform-specific utility functions
+#[cfg(test)]
+pub fn get_data_dir() -> Option<PathBuf> {
+    get_data_dir_impl()
+}
+
+#[cfg(not(test))]
 fn get_data_dir() -> Option<PathBuf> {
+    get_data_dir_impl()
+}
+
+fn get_data_dir_impl() -> Option<PathBuf> {
     if let Some(home_dir) = home::home_dir() {
         #[cfg(target_os = "macos")]
         return Some(home_dir.join("Library").join("Application Support"));

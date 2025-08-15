@@ -615,8 +615,18 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     )?;
 
     // Build the tray icon with icon specified
-    let _tray = TrayIconBuilder::with_id("main-tray")
-        .icon(app.default_window_icon().unwrap().clone()) // Use the default app icon
+    let mut tray_builder = TrayIconBuilder::with_id("main-tray");
+
+    // Try to use the default app icon, but continue without icon if it fails
+    if let Some(icon) = app.default_window_icon() {
+        tray_builder = tray_builder.icon(icon.clone());
+    } else {
+        eprintln!(
+            "Warning: Could not load default window icon for tray. Tray will appear without icon."
+        );
+    }
+
+    let _tray = tray_builder
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
@@ -677,16 +687,33 @@ pub fn initialize_notes() {
     if let Some(parent) = db_path.parent() {
         let _ = fs::create_dir_all(parent);
     }
-    let mut conn = get_db_connection().expect("Failed to open DB");
-    init_db(&conn).expect("Failed to init DB");
 
-    if !get_config_path().exists() {
-        conn.execute("DELETE FROM notes", [])
-            .expect("Failed to purge database");
+    let mut conn = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Failed to open database: {}. Application will continue with limited functionality.", e);
+            return;
+        }
+    };
+
+    if let Err(e) = init_db(&conn) {
+        eprintln!("Failed to initialize database: {}. Application will continue with limited functionality.", e);
         return;
     }
 
-    load_all_notes_into_sqlite(&mut conn).expect("Failed to load notes");
+    if !get_config_path().exists() {
+        if let Err(e) = conn.execute("DELETE FROM notes", []) {
+            eprintln!("Failed to purge database: {}. Continuing anyway.", e);
+        }
+        return;
+    }
+
+    if let Err(e) = load_all_notes_into_sqlite(&mut conn) {
+        eprintln!(
+            "Failed to load notes into database: {}. Some notes may not be searchable.",
+            e
+        );
+    }
 }
 
 // Main application entry point
@@ -750,7 +777,9 @@ pub fn run() {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
                     // Hide window instead of closing when user clicks X
-                    window.hide().unwrap();
+                    if let Err(e) = window.hide() {
+                        eprintln!("Failed to hide window: {}. Continuing anyway.", e);
+                    }
                     api.prevent_close();
                 }
                 _ => {}
@@ -777,7 +806,10 @@ pub fn run() {
             get_markdown_theme
         ])
         .build(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("Failed to build Tauri application: {}", e);
+            std::process::exit(1);
+        });
 
     // Hide from dock on macOS
     #[cfg(target_os = "macos")]

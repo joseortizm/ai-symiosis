@@ -1,4 +1,5 @@
 use super::*;
+use crate::database::get_data_dir;
 
 #[cfg(test)]
 mod validation_tests {
@@ -110,9 +111,9 @@ mod config_tests {
     #[test]
     fn test_config_serde_roundtrip() {
         let config = AppConfig::default();
-        let toml_str = toml::to_string(&config).expect("Failed to serialize config");
+        let toml_str = toml::to_string(&config).expect("Config serialization should work in tests");
         let deserialized: AppConfig =
-            toml::from_str(&toml_str).expect("Failed to deserialize config");
+            toml::from_str(&toml_str).expect("Config deserialization should work in tests");
 
         assert_eq!(config.max_search_results, deserialized.max_search_results);
         assert_eq!(config.notes_directory, deserialized.notes_directory);
@@ -125,7 +126,8 @@ mod config_tests {
             notes_directory = "/tmp/test"
         "#;
 
-        let config: AppConfig = toml::from_str(minimal_toml).expect("Failed to deserialize");
+        let config: AppConfig =
+            toml::from_str(minimal_toml).expect("Minimal TOML should deserialize successfully");
 
         assert_eq!(config.max_search_results, 100);
         assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
@@ -140,7 +142,8 @@ mod config_tests {
             global_shortcut = "Alt+Space"
         "#;
 
-        let config: AppConfig = toml::from_str(partial_toml).expect("Failed to deserialize");
+        let config: AppConfig =
+            toml::from_str(partial_toml).expect("Partial TOML should deserialize successfully");
 
         assert_eq!(config.notes_directory, "/tmp/test");
         assert_eq!(config.max_search_results, 50);
@@ -230,7 +233,7 @@ mod fts_injection_tests {
                 malicious_query
             );
 
-            match result.unwrap() {
+            match result.expect("Search function should return a result") {
                 Ok(_) => {}
                 Err(error_msg) => {
                     assert!(
@@ -311,7 +314,7 @@ mod database_integration_tests {
 
     #[test]
     fn test_notes_directory_validation() {
-        let notes_dir = get_notes_dir();
+        let notes_dir = get_config_notes_dir();
         assert!(notes_dir.is_absolute());
         assert!(!notes_dir.to_string_lossy().is_empty());
     }
@@ -398,7 +401,7 @@ mod directory_path_tests {
             "get_data_dir should return Some when home directory is available"
         );
 
-        let path = data_dir.unwrap();
+        let path = data_dir.expect("Data directory should be available in tests");
         assert!(path.is_absolute(), "Data directory path should be absolute");
         assert!(
             !path.to_string_lossy().is_empty(),
@@ -577,7 +580,9 @@ mod directory_path_tests {
         // Verify it uses the same data directory structure as get_data_dir
         if let Some(data_dir) = get_data_dir() {
             let expected_prefix = data_dir.join("symiosis");
-            let db_parent = db_path.parent().unwrap();
+            let db_parent = db_path
+                .parent()
+                .expect("Database path should have a parent directory");
             assert_eq!(
                 db_parent, expected_prefix,
                 "Database path should be in data directory"

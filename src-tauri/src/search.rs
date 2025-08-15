@@ -64,7 +64,14 @@ impl HybridSearcher {
                 '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' => None,
                 ':' | ';' | ',' | '!' | '@' | '#' | '$' | '%' | '^' | '&' => None,
                 '*' if query.len() == 1 => None,
-                c if c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.' => Some(c),
+                c if c.is_alphanumeric()
+                    || c.is_whitespace()
+                    || c == '-'
+                    || c == '_'
+                    || c == '.' =>
+                {
+                    Some(c)
+                }
                 '*' if query.len() > 1 => Some(c),
                 _ => None,
             })
@@ -262,10 +269,7 @@ impl HybridSearcher {
     }
 }
 
-pub fn search_notes_hybrid(
-    query: &str,
-    max_results: usize,
-) -> Result<Vec<String>, String> {
+pub fn search_notes_hybrid(query: &str, max_results: usize) -> Result<Vec<String>, String> {
     let mut searcher = HybridSearcher::new().map_err(|e| e.to_string())?;
     searcher.search(query, max_results)
 }
