@@ -1,7 +1,5 @@
 use nucleo_matcher::{Config, Matcher, Utf32Str};
-use r2d2::PooledConnection;
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::params;
+use rusqlite::{params, Connection};
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone)]
@@ -30,7 +28,7 @@ struct SearchCandidate {
 }
 
 pub struct HybridSearcher {
-    conn: PooledConnection<SqliteConnectionManager>,
+    conn: Connection,
     matcher: Matcher,
 }
 

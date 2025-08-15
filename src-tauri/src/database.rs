@@ -1,35 +1,17 @@
 // External crates
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
+use rusqlite::Connection;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 
-// Type definitions
-pub type DbPool = Pool<SqliteConnectionManager>;
-
-// Global database pool
-static DB_POOL: LazyLock<Result<DbPool, String>> = LazyLock::new(|| {
+// Public API functions
+pub fn get_db_connection() -> Result<Connection, String> {
     let db_path = get_database_path()?;
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create database directory: {}", e))?;
     }
 
-    let manager = SqliteConnectionManager::file(&db_path);
-    Pool::builder()
-        .max_size(10)
-        .build(manager)
-        .map_err(|e| format!("Failed to create database pool: {}", e))
-});
-
-// Public API functions
-pub fn get_db_connection() -> Result<r2d2::PooledConnection<SqliteConnectionManager>, String> {
-    match &*DB_POOL {
-        Ok(pool) => pool
-            .get()
-            .map_err(|e| format!("Database pool error: {}", e)),
-        Err(e) => Err(e.clone()),
-    }
+    Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open database: {}", e))
 }
 
 pub fn get_database_path() -> Result<PathBuf, String> {
