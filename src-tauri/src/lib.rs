@@ -92,7 +92,7 @@ fn get_config_path() -> PathBuf {
     }
 }
 
-fn get_notes_dir() -> PathBuf {
+fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
     PathBuf::from(&config.notes_directory)
 }
@@ -183,7 +183,7 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
 }
 
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
-    let notes_dir = get_notes_dir();
+    let notes_dir = get_config_notes_dir();
 
     if !notes_dir.exists() {
         if let Err(e) = fs::create_dir_all(&notes_dir) {
@@ -294,7 +294,7 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
 #[tauri::command]
 fn get_note_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
     }
@@ -305,7 +305,7 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
 #[tauri::command]
 fn get_note_raw_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
     }
@@ -318,7 +318,7 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
 fn create_new_note(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
 
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
 
     // Check if note already exists
     if note_path.exists() {
@@ -352,7 +352,7 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
 #[tauri::command]
 fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
 
     if let Some(parent) = note_path.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
@@ -391,7 +391,7 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     validate_note_name(&old_name)?;
     validate_note_name(&new_name)?;
 
-    let notes_dir = get_notes_dir();
+    let notes_dir = get_config_notes_dir();
     let old_path = notes_dir.join(&old_name);
     let new_path = notes_dir.join(&new_name);
 
@@ -420,7 +420,7 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
 #[tauri::command]
 fn delete_note(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
 
     // Check if note exists
     if !note_path.exists() {
@@ -454,7 +454,7 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn open_note_in_editor(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
     }
@@ -472,7 +472,7 @@ fn open_note_in_editor(note_name: &str) -> Result<(), String> {
 #[tauri::command]
 fn open_note_folder(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
-    let note_path = get_notes_dir().join(note_name);
+    let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
         return Err(format!("Note not found: {}", note_name));
     }
