@@ -52,10 +52,11 @@ Composes all UI components and provides keyboard event handling for the entire a
   appCoordinator.setupReactiveEffects()
 
   onMount(() => {
+    let cleanup: (() => void) | undefined
     ;(async () => {
-      const cleanup = await appCoordinator.initialize()
-      return cleanup
+      cleanup = await appCoordinator.initialize()
     })()
+    return () => cleanup?.()
   })
 </script>
 
