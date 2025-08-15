@@ -8,6 +8,9 @@
 > [!Warning]
 > This app is in a very early alpha state. Please back up your notes regularly. Use at your own risk.
 
+> [!Note]
+> Only tested on Mac for now. Feel free to try on Windows & Linux and report (or fix!) issues.
+
 Symiosis is a desktop note-taking application inspired by Notational Velocity.
 
 ## Features
