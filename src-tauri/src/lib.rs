@@ -182,6 +182,27 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, modified UNINDEXED);")
 }
 
+fn recreate_database() -> Result<(), String> {
+    eprintln!("Database corruption detected. Recreating database tables...");
+
+    let mut conn = get_db_connection()?;
+
+    // Drop the existing table and recreate it
+    conn.execute("DROP TABLE IF EXISTS notes", [])
+        .map_err(|e| format!("Failed to drop corrupted table: {}", e))?;
+
+    init_db(&conn).map_err(|e| format!("Failed to initialize fresh database: {}", e))?;
+
+    eprintln!("Fresh database table created. Performing full sync from filesystem...");
+
+    // Perform a complete sync from filesystem
+    load_all_notes_into_sqlite(&mut conn)
+        .map_err(|e| format!("Failed to populate fresh database: {}", e))?;
+
+    eprintln!("Database recovery completed successfully.");
+    Ok(())
+}
+
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     let notes_dir = get_config_notes_dir();
 
@@ -250,7 +271,7 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
 
         // Only update if file is new or has been modified
         if fs_modified != db_modified {
-            let content = fs::read_to_string(path).unwrap_or_default();
+            let content = fs::read_to_string(&path).unwrap_or_default();
 
             // Use INSERT OR REPLACE for upsert behavior
             tx.execute(
@@ -447,8 +468,24 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Then refresh database
     let mut conn = get_db_connection()?;
     init_db(&conn).map_err(|e| format!("Database initialization error: {}", e))?;
-    load_all_notes_into_sqlite(&mut conn).map_err(|e| format!("Failed to load notes: {}", e))?;
-    Ok(())
+
+    match load_all_notes_into_sqlite(&mut conn) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            eprintln!(
+                "Failed to refresh notes cache: {}. Attempting recovery...",
+                e
+            );
+
+            // Attempt database recovery
+            recreate_database().map_err(|recovery_error| {
+                format!(
+                    "Cache refresh failed and recovery failed: {}. Original error: {}",
+                    recovery_error, e
+                )
+            })
+        }
+    }
 }
 
 #[tauri::command]
@@ -710,9 +747,17 @@ pub fn initialize_notes() {
 
     if let Err(e) = load_all_notes_into_sqlite(&mut conn) {
         eprintln!(
-            "Failed to load notes into database: {}. Some notes may not be searchable.",
+            "Failed to load notes into database: {}. Attempting recovery...",
             e
         );
+
+        // Attempt database recovery
+        if let Err(recovery_error) = recreate_database() {
+            eprintln!(
+                "Database recovery failed: {}. Some notes may not be searchable.",
+                recovery_error
+            );
+        }
     }
 }
 
