@@ -6,7 +6,7 @@ mod tests;
 
 // External crates
 use comrak::{markdown_to_html, ComrakOptions};
-use database::{get_db_connection, get_database_path as get_db_path};
+use database::{get_database_path as get_db_path, get_db_connection};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use serde::{Deserialize, Serialize};
@@ -192,9 +192,8 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
         }
     }
 
-    conn.execute("DELETE FROM notes", [])?;
-
-    let tx = conn.transaction()?;
+    // Get current files from filesystem
+    let mut filesystem_files = std::collections::HashMap::new();
 
     for entry in WalkDir::new(&notes_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
@@ -206,7 +205,6 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
                 continue;
             }
 
-            let content = fs::read_to_string(path).unwrap_or_default();
             let modified = entry
                 .path()
                 .metadata()
@@ -219,9 +217,45 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
                 })
                 .unwrap_or(0);
 
+            filesystem_files.insert(filename, (path.to_path_buf(), modified));
+        }
+    }
+
+    // Get current files from database
+    let mut database_files = std::collections::HashMap::new();
+    {
+        let mut stmt = conn.prepare("SELECT filename, modified FROM notes")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })?;
+
+        for row in rows {
+            let (filename, modified) = row?;
+            database_files.insert(filename, modified);
+        }
+    }
+
+    let tx = conn.transaction()?;
+
+    // Remove files that no longer exist on filesystem
+    for filename in database_files.keys() {
+        if !filesystem_files.contains_key(filename) {
+            tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
+        }
+    }
+
+    // Add or update files that are new or modified
+    for (filename, (path, fs_modified)) in filesystem_files {
+        let db_modified = database_files.get(&filename).copied().unwrap_or(0);
+
+        // Only update if file is new or has been modified
+        if fs_modified != db_modified {
+            let content = fs::read_to_string(path).unwrap_or_default();
+
+            // Use INSERT OR REPLACE for upsert behavior
             tx.execute(
-                "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-                params![filename, content, modified],
+                "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+                params![filename, content, fs_modified],
             )?;
         }
     }
@@ -332,12 +366,22 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
 
-    // Use INSERT OR REPLACE to handle both insert and update cases
-    conn.execute(
-        "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-        params![note_name, content, modified],
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+    // First try to update existing note
+    let updated_rows = conn
+        .execute(
+            "UPDATE notes SET content = ?2, modified = ?3 WHERE filename = ?1",
+            params![note_name, content, modified],
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    // If no rows were updated, insert new note
+    if updated_rows == 0 {
+        conn.execute(
+            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+            params![note_name, content, modified],
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+    }
 
     Ok(())
 }
