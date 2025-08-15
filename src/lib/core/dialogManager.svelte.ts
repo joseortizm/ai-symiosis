@@ -4,6 +4,7 @@
  * Handles dialog input values, visibility state, and focus management after dialog actions.
  */
 
+// Type definitions
 export interface DialogManagerDeps {
   focusSearch: () => void
 }
@@ -32,7 +33,9 @@ export interface DialogManager {
   setNewNoteNameForRename(value: string): void
 }
 
+// Manager factory function
 export function createDialogManager(deps: DialogManagerDeps): DialogManager {
+  // State management
   let showCreateDialog = $state(false)
   let showRenameDialog = $state(false)
   let showDeleteDialog = $state(false)
@@ -45,6 +48,7 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
   let deleteKeyResetTimeout: ReturnType<typeof setTimeout> | undefined =
     undefined
 
+  // Dialog operations - Create
   function openCreateDialog(query?: string, highlightedContent?: string): void {
     const currentQuery = query ?? ''
     const currentHighlightedContent = highlightedContent ?? ''
@@ -63,6 +67,7 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     deps.focusSearch()
   }
 
+  // Dialog operations - Rename
   function openRenameDialog(selectedNote?: string): void {
     const currentSelectedNote = selectedNote
     if (currentSelectedNote) {
@@ -79,6 +84,7 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     deps.focusSearch()
   }
 
+  // Dialog operations - Delete
   function openDeleteDialog(): void {
     showDeleteDialog = true
     deleteKeyPressCount = 0
@@ -116,6 +122,7 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     }
   }
 
+  // Dialog operations - Unsaved changes
   function openUnsavedChangesDialog(): void {
     showUnsavedChangesDialog = true
   }
@@ -141,7 +148,9 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     exitEditMode()
   }
 
+  // Public API
   return {
+    // Dialog operations
     openCreateDialog,
     closeCreateDialog,
     openRenameDialog,
@@ -155,38 +164,33 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     handleDiscardAndExit,
     handleDeleteKeyPress,
 
+    // Input setters
     setNewNoteName(value: string): void {
       newNoteName = value
     },
-
     setNewNoteNameForRename(value: string): void {
       newNoteNameForRename = value
     },
 
+    // State getters
     get showCreateDialog(): boolean {
       return showCreateDialog
     },
-
     get showRenameDialog(): boolean {
       return showRenameDialog
     },
-
     get showDeleteDialog(): boolean {
       return showDeleteDialog
     },
-
     get showUnsavedChangesDialog(): boolean {
       return showUnsavedChangesDialog
     },
-
     get newNoteName(): string {
       return newNoteName
     },
-
     get newNoteNameForRename(): string {
       return newNoteNameForRename
     },
-
     get deleteKeyPressCount(): number {
       return deleteKeyPressCount
     },

@@ -37,6 +37,7 @@ interface SearchManager {
   abort(): void
 }
 
+// Manager factory function
 export function createSearchManager(): SearchManager {
   const state = $state<SearchState>({
     searchInput: '',
@@ -48,9 +49,11 @@ export function createSearchManager(): SearchManager {
     areHighlightsCleared: false,
   })
 
+  // Callback storage
   let onHighlightsClearCallback: ((cleared: boolean) => void) | null = null
   let onSearchCompleteCallback: ((notes: string[]) => void) | null = null
 
+  // Private helper functions
   async function performSearch(query: string): Promise<void> {
     if (state.requestController) {
       state.requestController.abort()
@@ -82,6 +85,7 @@ export function createSearchManager(): SearchManager {
     }
   }
 
+  // Core search operations
   function setSearchInput(value: string): void {
     if (value !== state.searchInput) {
       clearTimeout(state.searchTimeout)
@@ -121,63 +125,60 @@ export function createSearchManager(): SearchManager {
     state.areHighlightsCleared = true
   }
 
+  // Public API
   return {
+    // Core operations
     setSearchInput,
     setFilteredNotes,
     clearSearch,
     updateSearchInputWithEffects,
+    clearHighlights,
 
+    // State getters/setters
     get isLoading(): boolean {
       return state.isLoading
     },
-
     get filteredNotes(): string[] {
       return state.filteredNotes
     },
-
     get searchInput(): string {
       return state.searchInput
     },
-
     set searchInput(value: string) {
       updateSearchInputWithEffects(
         value,
         onHighlightsClearCallback || (() => {})
       )
     },
-
-    setHighlightsClearCallback(callback: (cleared: boolean) => void): void {
-      onHighlightsClearCallback = callback
-    },
-
-    setSearchCompleteCallback(callback: (notes: string[]) => void): void {
-      onSearchCompleteCallback = callback
-    },
-
     get query(): string {
       return state.query
     },
-
     get areHighlightsCleared(): boolean {
       return state.areHighlightsCleared
     },
-
     set areHighlightsCleared(value: boolean) {
       state.areHighlightsCleared = value
     },
 
-    clearHighlights,
+    // Callback management
+    setHighlightsClearCallback(callback: (cleared: boolean) => void): void {
+      onHighlightsClearCallback = callback
+    },
+    setSearchCompleteCallback(callback: (notes: string[]) => void): void {
+      onSearchCompleteCallback = callback
+    },
 
+    // Advanced search operations
     async searchImmediate(query: string): Promise<string[]> {
       await performSearch(query)
       return state.filteredNotes
     },
-
     async refreshSearch(searchInput: string): Promise<string[]> {
       const results = await this.searchImmediate(searchInput)
       return results
     },
 
+    // Cleanup
     abort(): void {
       if (state.searchTimeout !== undefined) {
         clearTimeout(state.searchTimeout)

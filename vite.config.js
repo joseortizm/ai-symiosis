@@ -1,16 +1,22 @@
+// Vite configuration for Tauri development
+// https://vitejs.dev/config/
+
+// Imports
 import { defineConfig } from "vite";
 import { sveltekit } from "@sveltejs/kit/vite";
 
+// Environment variables
 const host = process.env.TAURI_DEV_HOST;
 
-// https://vitejs.dev/config/
+// Configuration
 export default defineConfig(async () => ({
+  // Plugins
   plugins: [sveltekit()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
   // 1. prevent vite from obscuring rust errors
   clearScreen: false,
+
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,
@@ -29,6 +35,7 @@ export default defineConfig(async () => ({
     },
   },
 
+  // Test configuration
   test: {
     environment: 'happy-dom',
     globals: true,

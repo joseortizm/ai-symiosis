@@ -6,6 +6,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
+// Type definitions
 interface KeyboardActionDeps {
   focusManager: {
     selectedIndex: number
@@ -68,10 +69,13 @@ interface KeyboardActions {
   ): (event: KeyboardEvent) => Promise<void>
 }
 
+// Actions factory function
 export function createKeyboardActions(
   deps: KeyboardActionDeps
 ): KeyboardActions {
+  // Action registry organized by category
   const actionRegistry: ActionRegistry = {
+    // Navigation actions
     navigation: {
       moveUp: ({ state, actions }: ActionContext) => {
         const newIndex = Math.max(0, actions.focusManager.selectedIndex - 1)

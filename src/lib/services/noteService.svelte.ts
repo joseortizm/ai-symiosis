@@ -6,6 +6,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
+// Service factory function
 export function createNoteService() {
   const state = $state({
     isLoading: false,
@@ -13,6 +14,12 @@ export function createNoteService() {
     lastOperation: null as 'create' | 'delete' | 'rename' | null,
   })
 
+  // Private helper functions
+  function clearError(): void {
+    state.error = null
+  }
+
+  // CRUD operations
   async function create(
     noteName: string
   ): Promise<{ success: boolean; noteName?: string; error?: string }> {
@@ -111,6 +118,7 @@ export function createNoteService() {
     }
   }
 
+  // System integration operations
   async function openInEditor(noteName: string): Promise<void> {
     try {
       await invoke('open_note_in_editor', { noteName })
@@ -129,20 +137,26 @@ export function createNoteService() {
     }
   }
 
-  function clearError(): void {
-    state.error = null
-  }
-
+  // Public API
   return {
+    // CRUD operations
     create,
     delete: deleteNote,
     rename,
+
+    // Content operations
     getContent,
     getRawContent,
     save,
+
+    // System integration
     openInEditor,
     openFolder,
+
+    // Utility functions
     clearError,
+
+    // State getters
     get isLoading() {
       return state.isLoading
     },
@@ -155,4 +169,5 @@ export function createNoteService() {
   }
 }
 
+// Service singleton
 export const noteService = createNoteService()

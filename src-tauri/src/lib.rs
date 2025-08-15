@@ -1,7 +1,10 @@
+// Module declarations
 mod database;
 mod search;
 #[cfg(test)]
 mod tests;
+
+// External crates
 use comrak::{markdown_to_html, ComrakOptions};
 use database::{get_db_connection, get_database_path as get_db_path};
 use rusqlite::{params, Connection};
@@ -19,6 +22,10 @@ use tauri::{
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use walkdir::WalkDir;
 
+// Global static configuration
+static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
+
+// Configuration structure and defaults
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct AppConfig {
     notes_directory: String,
@@ -48,10 +55,6 @@ fn default_markdown_theme() -> String {
     "dark_dimmed".to_string()
 }
 
-fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
-    shortcut_str.parse().ok()
-}
-
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -62,6 +65,11 @@ impl Default for AppConfig {
             markdown_theme: default_markdown_theme(),
         }
     }
+}
+
+// Utility functions
+fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
+    shortcut_str.parse().ok()
 }
 
 fn get_default_notes_dir() -> String {
@@ -84,7 +92,55 @@ fn get_config_path() -> PathBuf {
     }
 }
 
+fn get_notes_dir() -> PathBuf {
+    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    PathBuf::from(&config.notes_directory)
+}
 
+fn get_database_path() -> PathBuf {
+    get_db_path().unwrap_or_else(|_| PathBuf::from("./symiosis/notes.sqlite"))
+}
+
+fn validate_note_name(note_name: &str) -> Result<(), String> {
+    // Check for empty name
+    if note_name.trim().is_empty() {
+        return Err("Note name cannot be empty".to_string());
+    }
+    // Prevent path traversal attacks
+    if std::path::Path::new(note_name)
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err("Path traversal not allowed".to_string());
+    }
+
+    if note_name.contains('\\') {
+        return Err("Invalid note name".to_string());
+    }
+
+    if std::path::Path::new(note_name).is_absolute() {
+        return Err("Absolute paths not allowed".to_string());
+    }
+    // Prevent hidden files and system files
+    if note_name.starts_with('.') {
+        return Err("Note name cannot start with a dot".to_string());
+    }
+    // Prevent excessively long names
+    if note_name.len() > 255 {
+        return Err("Note name too long".to_string());
+    }
+    Ok(())
+}
+
+fn render_note(filename: &str, content: &str) -> String {
+    if filename.ends_with(".md") || filename.ends_with(".markdown") {
+        markdown_to_html(content, &ComrakOptions::default())
+    } else {
+        format!("<pre>{}</pre>", html_escape::encode_text(content))
+    }
+}
+
+// Configuration management
 fn load_config() -> AppConfig {
     let config_path = get_config_path();
 
@@ -106,8 +162,6 @@ fn load_config() -> AppConfig {
     }
 }
 
-static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
-
 fn reload_config(app_handle: Option<AppHandle>) -> Result<(), String> {
     let new_config = load_config();
     let mut config = APP_CONFIG
@@ -123,15 +177,7 @@ fn reload_config(app_handle: Option<AppHandle>) -> Result<(), String> {
     Ok(())
 }
 
-fn get_notes_dir() -> PathBuf {
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    PathBuf::from(&config.notes_directory)
-}
-
-fn get_database_path() -> PathBuf {
-    get_db_path().unwrap_or_else(|_| PathBuf::from("./symiosis/notes.sqlite"))
-}
-
+// Database operations
 fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, modified UNINDEXED);")
 }
@@ -183,37 +229,7 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     tx.commit()
 }
 
-fn validate_note_name(note_name: &str) -> Result<(), String> {
-    // Check for empty name
-    if note_name.trim().is_empty() {
-        return Err("Note name cannot be empty".to_string());
-    }
-    // Prevent path traversal attacks
-    if std::path::Path::new(note_name)
-        .components()
-        .any(|c| matches!(c, std::path::Component::ParentDir))
-    {
-        return Err("Path traversal not allowed".to_string());
-    }
-
-    if note_name.contains('\\') {
-        return Err("Invalid note name".to_string());
-    }
-
-    if std::path::Path::new(note_name).is_absolute() {
-        return Err("Absolute paths not allowed".to_string());
-    }
-    // Prevent hidden files and system files
-    if note_name.starts_with('.') {
-        return Err("Note name cannot start with a dot".to_string());
-    }
-    // Prevent excessively long names
-    if note_name.len() > 255 {
-        return Err("Note name too long".to_string());
-    }
-    Ok(())
-}
-
+// Tauri command handlers - Query operations
 #[tauri::command]
 fn list_all_notes() -> Result<Vec<String>, String> {
     let conn = get_db_connection()?;
@@ -260,17 +276,10 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
         return Err(format!("Note not found: {}", note_name));
     }
     let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
-    Ok(content) // Return raw content without rendering
+    Ok(content)
 }
 
-fn render_note(filename: &str, content: &str) -> String {
-    if filename.ends_with(".md") || filename.ends_with(".markdown") {
-        markdown_to_html(content, &ComrakOptions::default())
-    } else {
-        format!("<pre>{}</pre>", html_escape::encode_text(content))
-    }
-}
-
+// Tauri command handlers - Mutation operations
 #[tauri::command]
 fn create_new_note(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
@@ -307,22 +316,28 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn delete_note(note_name: &str) -> Result<(), String> {
+fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
 
-    // Check if note exists
-    if !note_path.exists() {
-        return Err(format!("Note '{}' not found", note_name));
+    if let Some(parent) = note_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
-
-    // Delete the file
-    fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
+    fs::write(&note_path, content).map_err(|e| format!("Failed to save note: {}", e))?;
 
     let conn = get_db_connection()?;
 
-    conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
-        .map_err(|e| format!("Database error: {}", e))?;
+    let modified = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    // Use INSERT OR REPLACE to handle both insert and update cases
+    conn.execute(
+        "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+        params![note_name, content, modified],
+    )
+    .map_err(|e| format!("Database error: {}", e))?;
 
     Ok(())
 }
@@ -359,32 +374,27 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn save_note(note_name: &str, content: &str) -> Result<(), String> {
+fn delete_note(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
     let note_path = get_notes_dir().join(note_name);
 
-    if let Some(parent) = note_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+    // Check if note exists
+    if !note_path.exists() {
+        return Err(format!("Note '{}' not found", note_name));
     }
-    fs::write(&note_path, content).map_err(|e| format!("Failed to save note: {}", e))?;
+
+    // Delete the file
+    fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
 
     let conn = get_db_connection()?;
 
-    let modified = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
-
-    // Use INSERT OR REPLACE to handle both insert and update cases
-    conn.execute(
-        "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-        params![note_name, content, modified],
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+    conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
+        .map_err(|e| format!("Database error: {}", e))?;
 
     Ok(())
 }
 
+// Tauri command handlers - System operations
 #[tauri::command]
 fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Reload config first
@@ -451,6 +461,7 @@ fn open_note_folder(note_name: &str) -> Result<(), String> {
     Ok(())
 }
 
+// Tauri command handlers - Configuration operations
 #[tauri::command]
 fn get_config_content() -> Result<String, String> {
     let config_path = get_config_path();
@@ -463,11 +474,6 @@ fn get_config_content() -> Result<String, String> {
             Ok(template)
         }
     }
-}
-
-#[tauri::command]
-fn config_exists() -> bool {
-    get_config_path().exists()
 }
 
 #[tauri::command]
@@ -489,6 +495,11 @@ fn save_config_content(content: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn config_exists() -> bool {
+    get_config_path().exists()
+}
+
+#[tauri::command]
 fn get_editor_mode() -> String {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
     config.editor_mode.clone()
@@ -500,6 +511,7 @@ fn get_markdown_theme() -> String {
     config.markdown_theme.clone()
 }
 
+// Tauri command handlers - Window operations
 #[tauri::command]
 fn show_main_window(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
@@ -535,6 +547,7 @@ fn hide_main_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// System tray setup
 fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     // Create menu items
     let open_item = MenuItem::with_id(app, "open", "Open Symiosis", true, None::<&str>)?;
@@ -614,6 +627,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+// Initialization functions
 pub fn initialize_notes() {
     let db_path = get_database_path();
     if let Some(parent) = db_path.parent() {
@@ -631,6 +645,7 @@ pub fn initialize_notes() {
     load_all_notes_into_sqlite(&mut conn).expect("Failed to load notes");
 }
 
+// Main application entry point
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     initialize_notes();

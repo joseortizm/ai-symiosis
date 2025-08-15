@@ -1,10 +1,13 @@
+// External crates
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
+// Type definitions
 pub type DbPool = Pool<SqliteConnectionManager>;
 
+// Global database pool
 static DB_POOL: LazyLock<Result<DbPool, String>> = LazyLock::new(|| {
     let db_path = get_database_path()?;
     if let Some(parent) = db_path.parent() {
@@ -19,6 +22,7 @@ static DB_POOL: LazyLock<Result<DbPool, String>> = LazyLock::new(|| {
         .map_err(|e| format!("Failed to create database pool: {}", e))
 });
 
+// Public API functions
 pub fn get_db_connection() -> Result<r2d2::PooledConnection<SqliteConnectionManager>, String> {
     match &*DB_POOL {
         Ok(pool) => pool
@@ -34,6 +38,7 @@ pub fn get_database_path() -> Result<PathBuf, String> {
         .map(|path| path.join("symiosis").join("notes.sqlite"))
 }
 
+// Platform-specific utility functions
 fn get_data_dir() -> Option<PathBuf> {
     if let Some(home_dir) = home::home_dir() {
         #[cfg(target_os = "macos")]

@@ -4,6 +4,7 @@
  * Tracks focused elements and provides programmatic focus control.
  */
 
+// Type definitions
 interface FocusState {
   isSearchInputFocused: boolean
   isNoteContentFocused: boolean
@@ -33,6 +34,7 @@ export interface FocusManager {
   scrollToIndex(selectedIndex: number): void
 }
 
+// Manager factory function
 export function createFocusManager(): FocusManager {
   const state = $state<FocusState>({
     isSearchInputFocused: false,
@@ -43,6 +45,7 @@ export function createFocusManager(): FocusManager {
     noteListElement: null,
   })
 
+  // Private helper functions
   function scrollToSelectedInList(selectedIndex: number): void {
     if (state.noteListElement && selectedIndex >= 0) {
       const selectedButton =
@@ -57,28 +60,24 @@ export function createFocusManager(): FocusManager {
     scrollToSelectedInList(selectedIndex)
   }
 
+  // Public API
   return {
-    // Reactive getters
+    // State getters
     get isSearchInputFocused(): boolean {
       return state.isSearchInputFocused
     },
-
     get isNoteContentFocused(): boolean {
       return state.isNoteContentFocused
     },
-
     get selectedIndex(): number {
       return state.selectedIndex
     },
-
     get searchElement(): HTMLInputElement | null {
       return state.searchElement
     },
-
     get noteContentElement(): HTMLElement | null {
       return state.noteContentElement
     },
-
     get noteListElement(): HTMLElement | null {
       return state.noteListElement
     },
@@ -87,11 +86,9 @@ export function createFocusManager(): FocusManager {
     setSearchInputFocused(value: boolean): void {
       state.isSearchInputFocused = value
     },
-
     setNoteContentFocused(value: boolean): void {
       state.isNoteContentFocused = value
     },
-
     setSelectedIndex(index: number): void {
       state.selectedIndex = index
     },
@@ -100,11 +97,9 @@ export function createFocusManager(): FocusManager {
     setSearchElement(element: HTMLInputElement | null): void {
       state.searchElement = element
     },
-
     setNoteContentElement(element: HTMLElement | null): void {
       state.noteContentElement = element
     },
-
     setNoteListElement(element: HTMLElement | null): void {
       state.noteListElement = element
     },
@@ -121,14 +116,12 @@ export function createFocusManager(): FocusManager {
         behavior: 'smooth',
       })
     },
-
     scrollNoteContentDown(): void {
       state.noteContentElement?.scrollBy({
         top: 50,
         behavior: 'smooth',
       })
     },
-
     scrollToSelectedInList,
     scrollToIndex,
   }
