@@ -310,24 +310,27 @@ pub fn validate_font_size(size: u16, context: &str) -> Result<(), String> {
 }
 
 pub fn validate_shortcut_config(shortcuts: &ShortcutConfig) -> Result<(), String> {
-    // Validate search input shortcuts
-    validate_shortcut_format(&shortcuts.search_input.create_note)?;
-    validate_shortcut_format(&shortcuts.search_input.rename_note)?;
-    validate_shortcut_format(&shortcuts.search_input.open_external)?;
-    validate_shortcut_format(&shortcuts.search_input.open_folder)?;
-    validate_shortcut_format(&shortcuts.search_input.refresh_cache)?;
-    validate_shortcut_format(&shortcuts.search_input.delete_note)?;
-    validate_shortcut_format(&shortcuts.search_input.scroll_up)?;
-    validate_shortcut_format(&shortcuts.search_input.scroll_down)?;
-    validate_shortcut_format(&shortcuts.search_input.vim_up)?;
-    validate_shortcut_format(&shortcuts.search_input.vim_down)?;
-    validate_shortcut_format(&shortcuts.search_input.navigate_previous)?;
-    validate_shortcut_format(&shortcuts.search_input.navigate_next)?;
-    validate_shortcut_format(&shortcuts.search_input.open_settings)?;
+    // Note: These shortcuts are used by frontend JavaScript, not Tauri global shortcuts
+    // So we only need basic validation, not Tauri shortcut parsing
 
-    // Validate edit mode shortcuts
-    validate_shortcut_format(&shortcuts.edit_mode.save_and_exit)?;
-    validate_shortcut_format(&shortcuts.edit_mode.open_settings)?;
+    // Basic validation for search input shortcuts (just check they're not empty)
+    validate_basic_shortcut_format(&shortcuts.search_input.create_note)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.rename_note)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.open_external)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.open_folder)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.refresh_cache)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.delete_note)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.scroll_up)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.scroll_down)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.vim_up)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.vim_down)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.navigate_previous)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.navigate_next)?;
+    validate_basic_shortcut_format(&shortcuts.search_input.open_settings)?;
+
+    // Basic validation for edit mode shortcuts
+    validate_basic_shortcut_format(&shortcuts.edit_mode.save_and_exit)?;
+    validate_basic_shortcut_format(&shortcuts.edit_mode.open_settings)?;
 
     Ok(())
 }
@@ -368,12 +371,12 @@ pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
         ));
     }
 
-    // Validate editor shortcuts
-    validate_shortcut_format(&editor.shortcuts.save)?;
-    validate_shortcut_format(&editor.shortcuts.fold)?;
-    validate_shortcut_format(&editor.shortcuts.unfold)?;
-    validate_shortcut_format(&editor.shortcuts.fold_all)?;
-    validate_shortcut_format(&editor.shortcuts.unfold_all)?;
+    // Validate editor shortcuts (these are also frontend-only, not global shortcuts)
+    validate_basic_shortcut_format(&editor.shortcuts.save)?;
+    validate_basic_shortcut_format(&editor.shortcuts.fold)?;
+    validate_basic_shortcut_format(&editor.shortcuts.unfold)?;
+    validate_basic_shortcut_format(&editor.shortcuts.fold_all)?;
+    validate_basic_shortcut_format(&editor.shortcuts.unfold_all)?;
 
     Ok(())
 }
@@ -399,6 +402,7 @@ pub fn validate_max_search_results(value: usize) -> Result<(), String> {
 }
 
 pub fn validate_shortcut_format(shortcut: &str) -> Result<(), String> {
+    // This is for global shortcuts that need to be parsed by Tauri
     if shortcut.trim().is_empty() {
         return Err("Shortcut cannot be empty".to_string());
     }
@@ -408,11 +412,26 @@ pub fn validate_shortcut_format(shortcut: &str) -> Result<(), String> {
         return Err("Invalid shortcut format".to_string());
     }
 
-    // Test that it can be parsed
+    // Test that it can be parsed by Tauri's global shortcut system
     match parse_shortcut(shortcut) {
         Some(_) => Ok(()),
-        None => Err(format!("Invalid shortcut format: '{}'", shortcut)),
+        None => Err(format!("Invalid global shortcut format: '{}'", shortcut)),
     }
+}
+
+pub fn validate_basic_shortcut_format(shortcut: &str) -> Result<(), String> {
+    // This is for frontend shortcuts that are only used by JavaScript
+    // We just need basic validation since they're not parsed by Tauri
+    if shortcut.trim().is_empty() {
+        return Err("Shortcut cannot be empty".to_string());
+    }
+
+    // Basic format checks
+    if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
+        return Err("Invalid shortcut format".to_string());
+    }
+
+    Ok(())
 }
 
 pub fn validate_notes_directory(dir: &str) -> Result<(), String> {
@@ -459,10 +478,7 @@ pub fn load_config() -> AppConfig {
     match fs::read_to_string(&config_path) {
         Ok(content) => match toml::from_str::<AppConfig>(&content) {
             Ok(config) => match validate_config(&config) {
-                Ok(()) => {
-                    println!("Loaded config from: {}", config_path.display());
-                    config
-                }
+                Ok(()) => config,
                 Err(e) => {
                     eprintln!("Invalid config file: {}. Using defaults.", e);
                     AppConfig::default()
