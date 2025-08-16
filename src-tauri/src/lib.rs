@@ -1,4 +1,5 @@
 // Module declarations
+mod config;
 mod database;
 mod search;
 #[cfg(test)]
@@ -6,10 +7,14 @@ mod tests;
 
 // External crates
 use comrak::{markdown_to_html, ComrakOptions};
+use config::{
+    get_config_path, get_default_notes_dir, get_editor_config, get_shortcut_config,
+    get_theme_config, get_window_config, load_config, parse_shortcut, reload_config,
+    save_config_content, AppConfig,
+};
 use database::{get_database_path as get_db_path, get_db_connection};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{LazyLock, RwLock};
@@ -24,168 +29,6 @@ use walkdir::WalkDir;
 
 // Global static configuration
 static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
-
-// Configuration structure and defaults
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct AppConfig {
-    notes_directory: String,
-    #[serde(default = "default_max_results")]
-    max_search_results: usize,
-    #[serde(default = "default_global_shortcut")]
-    global_shortcut: String,
-    #[serde(default = "default_editor_mode")]
-    editor_mode: String,
-    #[serde(default = "default_markdown_theme")]
-    markdown_theme: String,
-}
-
-fn default_max_results() -> usize {
-    100
-}
-
-fn default_global_shortcut() -> String {
-    "Ctrl+Shift+N".to_string()
-}
-
-fn default_editor_mode() -> String {
-    "basic".to_string()
-}
-
-fn default_markdown_theme() -> String {
-    "dark_dimmed".to_string()
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            notes_directory: get_default_notes_dir(),
-            max_search_results: default_max_results(),
-            global_shortcut: default_global_shortcut(),
-            editor_mode: default_editor_mode(),
-            markdown_theme: default_markdown_theme(),
-        }
-    }
-}
-
-// Utility functions
-fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
-    shortcut_str.parse().ok()
-}
-
-// Configuration validation functions
-fn validate_max_search_results(value: usize) -> Result<(), String> {
-    if value == 0 {
-        return Err("Max search results must be greater than 0".to_string());
-    }
-    if value > 10000 {
-        return Err("Max search results too large (max: 10000)".to_string());
-    }
-    Ok(())
-}
-
-fn validate_editor_mode(mode: &str) -> Result<(), String> {
-    let valid_modes = ["basic", "vim", "emacs"];
-    if !valid_modes.contains(&mode) {
-        return Err(format!(
-            "Invalid editor mode '{}'. Valid modes: {}",
-            mode,
-            valid_modes.join(", ")
-        ));
-    }
-    Ok(())
-}
-
-fn validate_markdown_theme(theme: &str) -> Result<(), String> {
-    let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
-    if !valid_themes.contains(&theme) {
-        return Err(format!(
-            "Invalid markdown theme '{}'. Valid themes: {}",
-            theme,
-            valid_themes.join(", ")
-        ));
-    }
-    Ok(())
-}
-
-fn validate_shortcut_format(shortcut: &str) -> Result<(), String> {
-    if shortcut.trim().is_empty() {
-        return Err("Shortcut cannot be empty".to_string());
-    }
-
-    // Pre-validate shortcut format before calling parse_shortcut
-    if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
-        return Err("Invalid shortcut format".to_string());
-    }
-
-    // Test that it can be parsed
-    match parse_shortcut(shortcut) {
-        Some(_) => Ok(()),
-        None => Err(format!("Invalid shortcut format: '{}'", shortcut)),
-    }
-}
-
-fn validate_notes_directory(dir: &str) -> Result<(), String> {
-    if dir.trim().is_empty() {
-        return Err("Notes directory cannot be empty".to_string());
-    }
-
-    let path = std::path::Path::new(dir);
-
-    // Reject system directories for security
-    let dangerous_paths = [
-        "/etc",
-        "/root",
-        "/sys",
-        "/proc",
-        "/dev",
-        "C:\\Windows",
-        "C:\\System32",
-        "/System",
-        "/Library/System",
-    ];
-
-    for dangerous in &dangerous_paths {
-        if dir.starts_with(dangerous) {
-            return Err(format!("Cannot use system directory: {}", dir));
-        }
-    }
-
-    // Warn about non-absolute paths but allow them
-    if !path.is_absolute() {
-        eprintln!("Warning: Using relative notes directory: {}", dir);
-    }
-
-    Ok(())
-}
-
-fn validate_config(config: &AppConfig) -> Result<(), String> {
-    validate_max_search_results(config.max_search_results)?;
-    validate_editor_mode(&config.editor_mode)?;
-    validate_markdown_theme(&config.markdown_theme)?;
-    validate_shortcut_format(&config.global_shortcut)?;
-    validate_notes_directory(&config.notes_directory)?;
-    Ok(())
-}
-
-fn get_default_notes_dir() -> String {
-    if let Some(home_dir) = home::home_dir() {
-        home_dir
-            .join("Documents")
-            .join("Notes")
-            .to_string_lossy()
-            .to_string()
-    } else {
-        "./notes".to_string()
-    }
-}
-
-fn get_config_path() -> PathBuf {
-    if let Some(home_dir) = home::home_dir() {
-        home_dir.join(".symiosis").join("config.toml")
-    } else {
-        PathBuf::from(".symiosis/config.toml")
-    }
-}
 
 fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
@@ -233,49 +76,6 @@ fn render_note(filename: &str, content: &str) -> String {
     } else {
         format!("<pre>{}</pre>", html_escape::encode_text(content))
     }
-}
-
-// Configuration management
-fn load_config() -> AppConfig {
-    let config_path = get_config_path();
-
-    match fs::read_to_string(&config_path) {
-        Ok(content) => match toml::from_str::<AppConfig>(&content) {
-            Ok(config) => match validate_config(&config) {
-                Ok(()) => {
-                    println!("Loaded config from: {}", config_path.display());
-                    config
-                }
-                Err(e) => {
-                    eprintln!("Config validation failed: {e}. Using defaults.");
-                    AppConfig::default()
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to parse config file: {e}. Using defaults.");
-                AppConfig::default()
-            }
-        },
-        Err(_) => {
-            println!("Config file not found, using defaults");
-            AppConfig::default()
-        }
-    }
-}
-
-fn reload_config(app_handle: Option<AppHandle>) -> Result<(), String> {
-    let new_config = load_config();
-    let mut config = APP_CONFIG
-        .write()
-        .map_err(|e| format!("Failed to write config lock: {}", e))?;
-    *config = new_config.clone();
-
-    // Emit config changed event to frontend
-    if let Some(app) = app_handle {
-        let _ = app.emit("config-changed", &new_config);
-    }
-
-    Ok(())
 }
 
 // Database operations
@@ -564,7 +364,7 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 #[tauri::command]
 fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Reload config first
-    reload_config(Some(app)).map_err(|e| format!("Failed to reload config: {}", e))?;
+    reload_config(&APP_CONFIG, Some(app)).map_err(|e| format!("Failed to reload config: {}", e))?;
 
     // Then refresh database
     let mut conn = get_db_connection()?;
@@ -659,27 +459,6 @@ fn get_config_content() -> Result<String, String> {
 }
 
 #[tauri::command]
-fn save_config_content(content: &str) -> Result<(), String> {
-    let config_path = get_config_path();
-
-    // Validate TOML format and content before saving
-    let config: AppConfig =
-        toml::from_str(content).map_err(|e| format!("Invalid TOML format: {}", e))?;
-
-    // Validate configuration values
-    validate_config(&config).map_err(|e| format!("Configuration validation failed: {}", e))?;
-
-    if let Some(parent) = config_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create config directory: {}", e))?;
-    }
-
-    fs::write(&config_path, content).map_err(|e| format!("Failed to save config: {}", e))?;
-
-    Ok(())
-}
-
-#[tauri::command]
 fn config_exists() -> bool {
     get_config_path().exists()
 }
@@ -687,13 +466,13 @@ fn config_exists() -> bool {
 #[tauri::command]
 fn get_editor_mode() -> String {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    config.editor_mode.clone()
+    config.editor.mode.clone()
 }
 
 #[tauri::command]
 fn get_markdown_theme() -> String {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    config.markdown_theme.clone()
+    config.editor.markdown_theme.clone()
 }
 
 // Tauri command handlers - Window operations
@@ -952,7 +731,11 @@ pub fn run() {
             save_config_content,
             config_exists,
             get_editor_mode,
-            get_markdown_theme
+            get_markdown_theme,
+            get_theme_config,
+            get_shortcut_config,
+            get_editor_config,
+            get_window_config
         ])
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {

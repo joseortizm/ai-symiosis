@@ -1,0 +1,581 @@
+// Configuration module for Symiosis
+// Contains essential configuration structures, validation, and management logic
+
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use tauri::{AppHandle, Emitter};
+use tauri_plugin_global_shortcut::Shortcut;
+
+// ============================================================================
+// MAIN CONFIGURATION STRUCTURE
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AppConfig {
+    // === CORE SETTINGS ===
+    pub notes_directory: String,
+    #[serde(default = "default_max_results")]
+    pub max_search_results: usize,
+    #[serde(default = "default_global_shortcut")]
+    pub global_shortcut: String,
+
+    // === THEME & FONTS ===
+    #[serde(default)]
+    pub theme: ThemeConfig,
+
+    // === KEYBOARD SHORTCUTS ===
+    #[serde(default)]
+    pub shortcuts: ShortcutConfig,
+
+    // === EDITOR SETTINGS ===
+    #[serde(default)]
+    pub editor: EditorConfig,
+
+    // === WINDOW SETTINGS ===
+    #[serde(default)]
+    pub window: WindowConfig,
+}
+
+// ============================================================================
+// THEME CONFIGURATION
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ThemeConfig {
+    pub name: String,        // "gruvbox-dark"|"gruvbox-light"|"one-dark"|"github-light"
+    pub font_family: String, // "Inter, sans-serif"
+    pub font_size: u16,      // 14
+    pub editor_font_family: String, // "JetBrains Mono, Consolas, monospace"
+    pub editor_font_size: u16, // 14
+}
+
+// ============================================================================
+// KEYBOARD SHORTCUTS
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ShortcutConfig {
+    pub search_input: SearchInputShortcuts,
+    pub edit_mode: EditModeShortcuts,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchInputShortcuts {
+    pub create_note: String,       // "Ctrl+Enter"
+    pub rename_note: String,       // "Ctrl+m"
+    pub open_external: String,     // "Ctrl+o"
+    pub open_folder: String,       // "Ctrl+f"
+    pub refresh_cache: String,     // "Ctrl+r"
+    pub delete_note: String,       // "Ctrl+x"
+    pub scroll_up: String,         // "Ctrl+u"
+    pub scroll_down: String,       // "Ctrl+d"
+    pub vim_up: String,            // "Ctrl+k" (additional to Arrow keys)
+    pub vim_down: String,          // "Ctrl+j" (additional to Arrow keys)
+    pub navigate_previous: String, // "Ctrl+p"
+    pub navigate_next: String,     // "Ctrl+n"
+    pub open_settings: String,     // "Meta+,"
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EditModeShortcuts {
+    pub save_and_exit: String, // "Ctrl+s"
+    pub open_settings: String, // "Meta+,"
+}
+
+// ============================================================================
+// EDITOR CONFIGURATION (Essentials Only)
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EditorConfig {
+    pub mode: String,            // "basic"|"vim"|"emacs"
+    pub theme: String,           // "gruvbox-dark"
+    pub word_wrap: bool,         // true
+    pub tab_size: u16,           // 2
+    pub line_height: f32,        // 1.5
+    pub show_line_numbers: bool, // true
+    pub markdown_theme: String,  // "dark_dimmed"
+
+    pub shortcuts: EditorShortcuts,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EditorShortcuts {
+    pub save: String,       // "Ctrl+s"
+    pub fold: String,       // "Ctrl+Shift+["
+    pub unfold: String,     // "Ctrl+Shift+]"
+    pub fold_all: String,   // "Ctrl+Alt+["
+    pub unfold_all: String, // "Ctrl+Alt+]"
+}
+
+// ============================================================================
+// WINDOW CONFIGURATION (Basics Only)
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WindowConfig {
+    pub default_width: u32,      // 1200
+    pub default_height: u32,     // 800
+    pub center_on_startup: bool, // true
+    pub remember_size: bool,     // true
+    pub remember_position: bool, // true
+    pub always_on_top: bool,     // false
+}
+
+// ============================================================================
+// DEFAULT VALUE FUNCTIONS
+// ============================================================================
+
+fn default_max_results() -> usize {
+    100
+}
+
+fn default_global_shortcut() -> String {
+    "Ctrl+Shift+N".to_string()
+}
+
+// ============================================================================
+// DEFAULT IMPLEMENTATIONS
+// ============================================================================
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            notes_directory: get_default_notes_dir(),
+            max_search_results: default_max_results(),
+            global_shortcut: default_global_shortcut(),
+            theme: ThemeConfig::default(),
+            shortcuts: ShortcutConfig::default(),
+            editor: EditorConfig::default(),
+            window: WindowConfig::default(),
+        }
+    }
+}
+
+impl Default for ThemeConfig {
+    fn default() -> Self {
+        Self {
+            name: "gruvbox-dark".to_string(),
+            font_family: "Inter, sans-serif".to_string(),
+            font_size: 14,
+            editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
+            editor_font_size: 14,
+        }
+    }
+}
+
+impl Default for ShortcutConfig {
+    fn default() -> Self {
+        Self {
+            search_input: SearchInputShortcuts::default(),
+            edit_mode: EditModeShortcuts::default(),
+        }
+    }
+}
+
+impl Default for SearchInputShortcuts {
+    fn default() -> Self {
+        Self {
+            create_note: "Ctrl+Enter".to_string(),
+            rename_note: "Ctrl+m".to_string(),
+            open_external: "Ctrl+o".to_string(),
+            open_folder: "Ctrl+f".to_string(),
+            refresh_cache: "Ctrl+r".to_string(),
+            delete_note: "Ctrl+x".to_string(),
+            scroll_up: "Ctrl+u".to_string(),
+            scroll_down: "Ctrl+d".to_string(),
+            vim_up: "Ctrl+k".to_string(),
+            vim_down: "Ctrl+j".to_string(),
+            navigate_previous: "Ctrl+p".to_string(),
+            navigate_next: "Ctrl+n".to_string(),
+            open_settings: "Meta+,".to_string(),
+        }
+    }
+}
+
+impl Default for EditModeShortcuts {
+    fn default() -> Self {
+        Self {
+            save_and_exit: "Ctrl+s".to_string(),
+            open_settings: "Meta+,".to_string(),
+        }
+    }
+}
+
+impl Default for EditorConfig {
+    fn default() -> Self {
+        Self {
+            mode: "basic".to_string(),
+            theme: "gruvbox-dark".to_string(),
+            word_wrap: true,
+            tab_size: 2,
+            line_height: 1.5,
+            show_line_numbers: true,
+            markdown_theme: "dark_dimmed".to_string(),
+            shortcuts: EditorShortcuts::default(),
+        }
+    }
+}
+
+impl Default for EditorShortcuts {
+    fn default() -> Self {
+        Self {
+            save: "Ctrl+s".to_string(),
+            fold: "Ctrl+Shift+[".to_string(),
+            unfold: "Ctrl+Shift+]".to_string(),
+            fold_all: "Ctrl+Alt+[".to_string(),
+            unfold_all: "Ctrl+Alt+]".to_string(),
+        }
+    }
+}
+
+impl Default for WindowConfig {
+    fn default() -> Self {
+        Self {
+            default_width: 1200,
+            default_height: 800,
+            center_on_startup: true,
+            remember_size: true,
+            remember_position: true,
+            always_on_top: false,
+        }
+    }
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+pub fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
+    shortcut_str.parse().ok()
+}
+
+pub fn get_default_notes_dir() -> String {
+    if let Some(home_dir) = home::home_dir() {
+        home_dir
+            .join("Documents")
+            .join("Notes")
+            .to_string_lossy()
+            .to_string()
+    } else {
+        "./notes".to_string()
+    }
+}
+
+pub fn get_config_path() -> PathBuf {
+    if let Some(home_dir) = home::home_dir() {
+        home_dir.join(".symiosis").join("config.toml")
+    } else {
+        PathBuf::from(".symiosis/config.toml")
+    }
+}
+
+// ============================================================================
+// VALIDATION FUNCTIONS
+// ============================================================================
+
+pub fn validate_config(config: &AppConfig) -> Result<(), String> {
+    validate_notes_directory(&config.notes_directory)?;
+    validate_max_search_results(config.max_search_results)?;
+    validate_shortcut_format(&config.global_shortcut)?;
+    validate_theme_config(&config.theme)?;
+    validate_shortcut_config(&config.shortcuts)?;
+    validate_editor_config(&config.editor)?;
+    validate_window_config(&config.window)?;
+    Ok(())
+}
+
+pub fn validate_theme_config(theme: &ThemeConfig) -> Result<(), String> {
+    let valid_themes = ["gruvbox-dark", "gruvbox-light", "one-dark", "github-light"];
+    if !valid_themes.contains(&theme.name.as_str()) {
+        return Err(format!(
+            "Invalid theme '{}'. Valid themes: {}",
+            theme.name,
+            valid_themes.join(", ")
+        ));
+    }
+
+    validate_font_size(theme.font_size, "UI font size")?;
+    validate_font_size(theme.editor_font_size, "Editor font size")?;
+
+    Ok(())
+}
+
+pub fn validate_font_size(size: u16, context: &str) -> Result<(), String> {
+    if size < 8 || size > 72 {
+        return Err(format!("{} must be between 8 and 72 pixels", context));
+    }
+    Ok(())
+}
+
+pub fn validate_shortcut_config(shortcuts: &ShortcutConfig) -> Result<(), String> {
+    // Validate search input shortcuts
+    validate_shortcut_format(&shortcuts.search_input.create_note)?;
+    validate_shortcut_format(&shortcuts.search_input.rename_note)?;
+    validate_shortcut_format(&shortcuts.search_input.open_external)?;
+    validate_shortcut_format(&shortcuts.search_input.open_folder)?;
+    validate_shortcut_format(&shortcuts.search_input.refresh_cache)?;
+    validate_shortcut_format(&shortcuts.search_input.delete_note)?;
+    validate_shortcut_format(&shortcuts.search_input.scroll_up)?;
+    validate_shortcut_format(&shortcuts.search_input.scroll_down)?;
+    validate_shortcut_format(&shortcuts.search_input.vim_up)?;
+    validate_shortcut_format(&shortcuts.search_input.vim_down)?;
+    validate_shortcut_format(&shortcuts.search_input.navigate_previous)?;
+    validate_shortcut_format(&shortcuts.search_input.navigate_next)?;
+    validate_shortcut_format(&shortcuts.search_input.open_settings)?;
+
+    // Validate edit mode shortcuts
+    validate_shortcut_format(&shortcuts.edit_mode.save_and_exit)?;
+    validate_shortcut_format(&shortcuts.edit_mode.open_settings)?;
+
+    Ok(())
+}
+
+pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
+    let valid_modes = ["basic", "vim", "emacs"];
+    if !valid_modes.contains(&editor.mode.as_str()) {
+        return Err(format!(
+            "Invalid editor mode '{}'. Valid modes: {}",
+            editor.mode,
+            valid_modes.join(", ")
+        ));
+    }
+
+    let valid_themes = ["gruvbox-dark", "gruvbox-light", "one-dark", "github-light"];
+    if !valid_themes.contains(&editor.theme.as_str()) {
+        return Err(format!(
+            "Invalid editor theme '{}'. Valid themes: {}",
+            editor.theme,
+            valid_themes.join(", ")
+        ));
+    }
+
+    if editor.tab_size == 0 || editor.tab_size > 16 {
+        return Err("Tab size must be between 1 and 16".to_string());
+    }
+
+    if editor.line_height < 0.8 || editor.line_height > 3.0 {
+        return Err("Line height must be between 0.8 and 3.0".to_string());
+    }
+
+    let valid_markdown_themes = ["light", "dark", "dark_dimmed", "auto"];
+    if !valid_markdown_themes.contains(&editor.markdown_theme.as_str()) {
+        return Err(format!(
+            "Invalid markdown theme '{}'. Valid themes: {}",
+            editor.markdown_theme,
+            valid_markdown_themes.join(", ")
+        ));
+    }
+
+    // Validate editor shortcuts
+    validate_shortcut_format(&editor.shortcuts.save)?;
+    validate_shortcut_format(&editor.shortcuts.fold)?;
+    validate_shortcut_format(&editor.shortcuts.unfold)?;
+    validate_shortcut_format(&editor.shortcuts.fold_all)?;
+    validate_shortcut_format(&editor.shortcuts.unfold_all)?;
+
+    Ok(())
+}
+
+pub fn validate_window_config(window: &WindowConfig) -> Result<(), String> {
+    if window.default_width < 400 || window.default_width > 10000 {
+        return Err("Window width must be between 400 and 10000 pixels".to_string());
+    }
+    if window.default_height < 300 || window.default_height > 8000 {
+        return Err("Window height must be between 300 and 8000 pixels".to_string());
+    }
+    Ok(())
+}
+
+pub fn validate_max_search_results(value: usize) -> Result<(), String> {
+    if value == 0 {
+        return Err("Max search results must be greater than 0".to_string());
+    }
+    if value > 10000 {
+        return Err("Max search results too large (max: 10000)".to_string());
+    }
+    Ok(())
+}
+
+pub fn validate_shortcut_format(shortcut: &str) -> Result<(), String> {
+    if shortcut.trim().is_empty() {
+        return Err("Shortcut cannot be empty".to_string());
+    }
+
+    // Pre-validate shortcut format before calling parse_shortcut
+    if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
+        return Err("Invalid shortcut format".to_string());
+    }
+
+    // Test that it can be parsed
+    match parse_shortcut(shortcut) {
+        Some(_) => Ok(()),
+        None => Err(format!("Invalid shortcut format: '{}'", shortcut)),
+    }
+}
+
+pub fn validate_notes_directory(dir: &str) -> Result<(), String> {
+    if dir.trim().is_empty() {
+        return Err("Notes directory cannot be empty".to_string());
+    }
+
+    let path = std::path::Path::new(dir);
+
+    // Reject system directories for security
+    let dangerous_paths = [
+        "/etc",
+        "/root",
+        "/sys",
+        "/proc",
+        "/dev",
+        "C:\\Windows",
+        "C:\\System32",
+        "/System",
+        "/Library/System",
+    ];
+
+    for dangerous in &dangerous_paths {
+        if dir.starts_with(dangerous) {
+            return Err(format!("Cannot use system directory: {}", dir));
+        }
+    }
+
+    // Warn about non-absolute paths but allow them
+    if !path.is_absolute() {
+        eprintln!("Warning: Using relative notes directory: {}", dir);
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// CONFIG LOADING AND SAVING
+// ============================================================================
+
+pub fn load_config() -> AppConfig {
+    let config_path = get_config_path();
+
+    match fs::read_to_string(&config_path) {
+        Ok(content) => match toml::from_str::<AppConfig>(&content) {
+            Ok(config) => match validate_config(&config) {
+                Ok(()) => {
+                    println!("Loaded config from: {}", config_path.display());
+                    config
+                }
+                Err(e) => {
+                    eprintln!("Invalid config file: {}. Using defaults.", e);
+                    AppConfig::default()
+                }
+            },
+            Err(e) => {
+                eprintln!("Failed to parse config file: {}. Using defaults.", e);
+                AppConfig::default()
+            }
+        },
+        Err(_) => {
+            println!("No config file found. Creating default config.");
+            let default_config = AppConfig::default();
+            if let Err(e) = save_config(&default_config) {
+                eprintln!("Failed to create default config file: {}", e);
+            }
+            default_config
+        }
+    }
+}
+
+pub fn save_config(config: &AppConfig) -> Result<(), String> {
+    let config_path = get_config_path();
+
+    if let Some(parent) = config_path.parent() {
+        if let Err(e) = fs::create_dir_all(parent) {
+            return Err(format!("Failed to create config directory: {}", e));
+        }
+    }
+
+    let toml_content =
+        toml::to_string_pretty(config).map_err(|e| format!("Failed to serialize config: {}", e))?;
+
+    fs::write(&config_path, toml_content)
+        .map_err(|e| format!("Failed to write config file: {}", e))?;
+
+    println!("Config saved to: {}", config_path.display());
+    Ok(())
+}
+
+pub fn reload_config(
+    app_config: &std::sync::RwLock<AppConfig>,
+    app_handle: Option<AppHandle>,
+) -> Result<(), String> {
+    let new_config = load_config();
+    let mut config = app_config
+        .write()
+        .map_err(|_| "Failed to acquire write lock on config".to_string())?;
+    *config = new_config.clone();
+    drop(config);
+
+    // Emit config update event to frontend
+    if let Some(app) = app_handle {
+        if let Err(e) = app.emit("config-updated", &new_config) {
+            eprintln!("Failed to emit config-updated event: {}", e);
+        }
+    }
+
+    println!("Configuration reloaded successfully");
+    Ok(())
+}
+
+#[tauri::command]
+pub fn save_config_content(content: &str) -> Result<(), String> {
+    let config_path = get_config_path();
+
+    // Parse and validate the content before saving
+    let config: AppConfig =
+        toml::from_str(content).map_err(|e| format!("Failed to parse TOML: {}", e))?;
+
+    validate_config(&config).map_err(|e| format!("Configuration validation failed: {}", e))?;
+
+    // Create directory if it doesn't exist
+    if let Some(parent) = config_path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            return Err(format!("Failed to create config directory: {}", e));
+        }
+    }
+
+    // Write the content to file
+    std::fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to write config file: {}", e))?;
+
+    println!("Config content saved to: {}", config_path.display());
+    Ok(())
+}
+
+// ============================================================================
+// TAURI COMMANDS FOR CONFIG ACCESS
+// ============================================================================
+
+#[tauri::command]
+pub fn get_theme_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> ThemeConfig {
+    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    config.theme.clone()
+}
+
+#[tauri::command]
+pub fn get_shortcut_config(
+    app_config: tauri::State<std::sync::RwLock<AppConfig>>,
+) -> ShortcutConfig {
+    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    config.shortcuts.clone()
+}
+
+#[tauri::command]
+pub fn get_editor_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> EditorConfig {
+    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    config.editor.clone()
+}
+
+#[tauri::command]
+pub fn get_window_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> WindowConfig {
+    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    config.window.clone()
+}
