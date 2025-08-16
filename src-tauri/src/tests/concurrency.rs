@@ -45,7 +45,7 @@ fn test_concurrent_validation() {
             config.max_search_results = 100;
             config.global_shortcut = "Ctrl+Shift+N".to_string();
             config.editor.mode = "basic".to_string();
-            config.editor.markdown_theme = "dark_dimmed".to_string();
+            config.theme.markdown_render_theme = "dark_dimmed".to_string();
             config
         },
         {
@@ -54,7 +54,7 @@ fn test_concurrent_validation() {
             config.max_search_results = 50;
             config.global_shortcut = "Alt+Space".to_string();
             config.editor.mode = "vim".to_string();
-            config.editor.markdown_theme = "light".to_string();
+            config.theme.markdown_render_theme = "light".to_string();
             config
         },
         {
@@ -63,7 +63,7 @@ fn test_concurrent_validation() {
             config.max_search_results = 0; // Invalid
             config.global_shortcut = "InvalidShortcut".to_string();
             config.editor.mode = "invalid_mode".to_string();
-            config.editor.markdown_theme = "invalid_theme".to_string();
+            config.theme.markdown_render_theme = "invalid_theme".to_string();
             config
         },
     ]);

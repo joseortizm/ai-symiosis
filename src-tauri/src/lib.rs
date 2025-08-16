@@ -472,7 +472,7 @@ fn get_editor_mode() -> String {
 #[tauri::command]
 fn get_markdown_theme() -> String {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    config.editor.markdown_theme.clone()
+    config.theme.markdown_render_theme.clone()
 }
 
 // Tauri command handlers - Window operations

@@ -8,6 +8,41 @@ use tauri::{AppHandle, Emitter};
 use tauri_plugin_global_shortcut::Shortcut;
 
 // ============================================================================
+// EVENT STRUCTURES
+// ============================================================================
+
+// Helper struct for flattened config event emission
+// This maintains compatibility with frontend expectations
+#[derive(Debug, Serialize, Clone)]
+struct ConfigChangedEvent {
+    notes_directory: String,
+    max_search_results: usize,
+    global_shortcut: String,
+    editor_mode: String,
+    markdown_theme: String, // This will be the markdown_render_theme for backwards compatibility
+    theme: ThemeConfig,
+    shortcuts: ShortcutConfig,
+    editor: EditorConfig,
+    window: WindowConfig,
+}
+
+impl From<&AppConfig> for ConfigChangedEvent {
+    fn from(config: &AppConfig) -> Self {
+        Self {
+            notes_directory: config.notes_directory.clone(),
+            max_search_results: config.max_search_results,
+            global_shortcut: config.global_shortcut.clone(),
+            editor_mode: config.editor.mode.clone(),
+            markdown_theme: config.theme.markdown_render_theme.clone(),
+            theme: config.theme.clone(),
+            shortcuts: config.shortcuts.clone(),
+            editor: config.editor.clone(),
+            window: config.window.clone(),
+        }
+    }
+}
+
+// ============================================================================
 // MAIN CONFIGURATION STRUCTURE
 // ============================================================================
 
@@ -48,6 +83,7 @@ pub struct ThemeConfig {
     pub font_size: u16,      // 14
     pub editor_font_family: String, // "JetBrains Mono, Consolas, monospace"
     pub editor_font_size: u16, // 14
+    pub markdown_render_theme: String, // "dark_dimmed"|"light"|"dark"|"auto"
 }
 
 // ============================================================================
@@ -93,10 +129,7 @@ pub struct EditorConfig {
     pub theme: String,           // "gruvbox-dark"
     pub word_wrap: bool,         // true
     pub tab_size: u16,           // 2
-    pub line_height: f32,        // 1.5
     pub show_line_numbers: bool, // true
-    pub markdown_theme: String,  // "dark_dimmed"
-
     pub shortcuts: EditorShortcuts,
 }
 
@@ -161,6 +194,7 @@ impl Default for ThemeConfig {
             font_size: 14,
             editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
             editor_font_size: 14,
+            markdown_render_theme: "dark_dimmed".to_string(),
         }
     }
 }
@@ -210,9 +244,7 @@ impl Default for EditorConfig {
             theme: "gruvbox-dark".to_string(),
             word_wrap: true,
             tab_size: 2,
-            line_height: 1.5,
             show_line_numbers: true,
-            markdown_theme: "dark_dimmed".to_string(),
             shortcuts: EditorShortcuts::default(),
         }
     }
@@ -299,6 +331,15 @@ pub fn validate_theme_config(theme: &ThemeConfig) -> Result<(), String> {
     validate_font_size(theme.font_size, "UI font size")?;
     validate_font_size(theme.editor_font_size, "Editor font size")?;
 
+    let valid_markdown_render_themes = ["light", "dark", "dark_dimmed", "auto"];
+    if !valid_markdown_render_themes.contains(&theme.markdown_render_theme.as_str()) {
+        return Err(format!(
+            "Invalid markdown render theme '{}'. Valid themes: {}",
+            theme.markdown_render_theme,
+            valid_markdown_render_themes.join(", ")
+        ));
+    }
+
     Ok(())
 }
 
@@ -356,19 +397,6 @@ pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
 
     if editor.tab_size == 0 || editor.tab_size > 16 {
         return Err("Tab size must be between 1 and 16".to_string());
-    }
-
-    if editor.line_height < 0.8 || editor.line_height > 3.0 {
-        return Err("Line height must be between 0.8 and 3.0".to_string());
-    }
-
-    let valid_markdown_themes = ["light", "dark", "dark_dimmed", "auto"];
-    if !valid_markdown_themes.contains(&editor.markdown_theme.as_str()) {
-        return Err(format!(
-            "Invalid markdown theme '{}'. Valid themes: {}",
-            editor.markdown_theme,
-            valid_markdown_themes.join(", ")
-        ));
     }
 
     // Validate editor shortcuts (these are also frontend-only, not global shortcuts)
@@ -530,9 +558,10 @@ pub fn reload_config(
     *config = new_config.clone();
     drop(config);
 
-    // Emit config update event to frontend
+    // Emit config update event to frontend with flattened structure
     if let Some(app) = app_handle {
-        if let Err(e) = app.emit("config-updated", &new_config) {
+        let event_payload = ConfigChangedEvent::from(&new_config);
+        if let Err(e) = app.emit("config-updated", &event_payload) {
             eprintln!("Failed to emit config-updated event: {}", e);
         }
     }

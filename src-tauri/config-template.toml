@@ -11,10 +11,91 @@ max_search_results = 100
 # Supported modifiers: Ctrl, Alt, Shift, Cmd (macOS), Super (Linux)
 global_shortcut = "Ctrl+Shift+N"
 
-# Options: "vim", "emacs", "basic"
-# You should choose "vim" here really... but hey, it's your editor
-editor_mode = "basic"
+# ============================================================================
+# THEME CONFIGURATION
+# ============================================================================
+
+[theme]
+# UI theme for the application interface
+# Options: "gruvbox-dark", "gruvbox-light", "one-dark", "github-light"
+name = "gruvbox-dark"
+
+# Font family for the UI
+font_family = "Inter, sans-serif"
+
+# Font size for the UI (in pixels)
+font_size = 14
+
+# Font family for the editor
+editor_font_family = "JetBrains Mono, Consolas, monospace"
+
+# Font size for the editor (in pixels)
+editor_font_size = 14
 
 # Markdown rendering theme for note content
-# Options: "light", "dark", "auto", "dark_colorblind", "dark_dimmed", "dark_high_contrast", "light_colorblind"
-markdown_theme = "dark_dimmed"
+# Options: "light", "dark", "dark_dimmed", "auto"
+markdown_render_theme = "dark_dimmed"
+
+# ============================================================================
+# KEYBOARD SHORTCUTS
+# ============================================================================
+
+[shortcuts.search_input]
+create_note = "Ctrl+Enter"
+rename_note = "Ctrl+m"
+open_external = "Ctrl+o"
+open_folder = "Ctrl+f"
+refresh_cache = "Ctrl+r"
+delete_note = "Ctrl+x"
+scroll_up = "Ctrl+u"
+scroll_down = "Ctrl+d"
+vim_up = "Ctrl+k"
+vim_down = "Ctrl+j"
+navigate_previous = "Ctrl+p"
+navigate_next = "Ctrl+n"
+open_settings = "Meta+,"
+
+[shortcuts.edit_mode]
+save_and_exit = "Ctrl+s"
+open_settings = "Meta+,"
+
+# ============================================================================
+# EDITOR CONFIGURATION
+# ============================================================================
+
+[editor]
+# Editor mode: "basic", "vim", "emacs"
+# You should choose "vim" here really... but hey, it's your editor
+mode = "basic"
+
+# Editor theme (separate from UI theme)
+# Options: "gruvbox-dark", "gruvbox-light", "one-dark", "github-light"
+theme = "gruvbox-dark"
+
+# Enable word wrapping
+word_wrap = true
+
+# Tab size in spaces
+tab_size = 2
+
+# Show line numbers
+show_line_numbers = true
+
+[editor.shortcuts]
+save = "Ctrl+s"
+fold = "Ctrl+Shift+["
+unfold = "Ctrl+Shift+]"
+fold_all = "Ctrl+Alt+["
+unfold_all = "Ctrl+Alt+]"
+
+# ============================================================================
+# WINDOW CONFIGURATION
+# ============================================================================
+
+[window]
+default_width = 1200
+default_height = 800
+center_on_startup = true
+remember_size = true
+remember_position = true
+always_on_top = false

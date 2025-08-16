@@ -16,7 +16,7 @@ fn test_default_config_values() {
     assert_eq!(config.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.editor.markdown_theme, "dark_dimmed");
+    assert_eq!(config.theme.markdown_render_theme, "dark_dimmed");
     // notes_directory should be ~/Documents/Notes or ./notes fallback
     assert!(config.notes_directory.contains("Notes") || config.notes_directory == "./notes");
 }
@@ -50,8 +50,8 @@ fn test_config_toml_serialization_roundtrip() {
     assert_eq!(config.global_shortcut, deserialized.global_shortcut);
     assert_eq!(config.editor.mode, deserialized.editor.mode);
     assert_eq!(
-        config.editor.markdown_theme,
-        deserialized.editor.markdown_theme
+        config.theme.markdown_render_theme,
+        deserialized.theme.markdown_render_theme
     );
 }
 
@@ -70,7 +70,7 @@ notes_directory = "/tmp/test"
     assert_eq!(config.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.editor.markdown_theme, "dark_dimmed");
+    assert_eq!(config.theme.markdown_render_theme, "dark_dimmed");
 }
 
 #[test]
@@ -90,7 +90,7 @@ global_shortcut = "Alt+Space"
     assert_eq!(config.global_shortcut, "Alt+Space");
     // Missing fields should use defaults
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.editor.markdown_theme, "dark_dimmed");
+    assert_eq!(config.theme.markdown_render_theme, "dark_dimmed");
 }
 
 #[test]
@@ -118,7 +118,7 @@ fn test_load_config_behavior() {
     assert!(config.max_search_results > 0);
     assert!(!config.global_shortcut.is_empty());
     assert!(!config.editor.mode.is_empty());
-    assert!(!config.editor.markdown_theme.is_empty());
+    assert!(!config.theme.markdown_render_theme.is_empty());
     assert!(!config.notes_directory.is_empty());
 }
 
@@ -216,7 +216,6 @@ markdown_theme = "dark_dimmed"
         global_shortcut: "Ctrl+Shift+N".to_string(),
         editor: EditorConfig {
             mode: "basic".to_string(),
-            markdown_theme: "dark_dimmed".to_string(),
             ..Default::default()
         },
         ..Default::default()
@@ -250,7 +249,6 @@ fn test_config_validation_should_reject_invalid_editor_modes() {
         global_shortcut: "Ctrl+Shift+N".to_string(),
         editor: EditorConfig {
             mode: "nonexistent_editor".to_string(),
-            markdown_theme: "dark_dimmed".to_string(),
             ..Default::default()
         },
         ..Default::default()
@@ -308,7 +306,6 @@ fn test_config_validation_should_reject_invalid_shortcuts() {
         global_shortcut: "InvalidShortcutFormat".to_string(),
         editor: EditorConfig {
             mode: "basic".to_string(),
-            markdown_theme: "dark_dimmed".to_string(),
             ..Default::default()
         },
         ..Default::default()
@@ -343,7 +340,6 @@ fn test_config_validation_should_reject_invalid_shortcuts() {
         global_shortcut: "Ctrl+Shift+N".to_string(),
         editor: EditorConfig {
             mode: "basic".to_string(),
-            markdown_theme: "dark_dimmed".to_string(),
             ..Default::default()
         },
         ..Default::default()
@@ -382,7 +378,6 @@ fn test_config_validation_should_reject_unsafe_directories() {
             global_shortcut: "Ctrl+Shift+N".to_string(),
             editor: EditorConfig {
                 mode: "basic".to_string(),
-                markdown_theme: "dark_dimmed".to_string(),
                 ..Default::default()
             },
             ..Default::default()
@@ -427,7 +422,6 @@ fn test_config_validation_should_reject_invalid_markdown_themes() {
         global_shortcut: "Ctrl+Shift+N".to_string(),
         editor: EditorConfig {
             mode: "basic".to_string(),
-            markdown_theme: "nonexistent_theme".to_string(),
             ..Default::default()
         },
         ..Default::default()
@@ -440,7 +434,6 @@ fn test_config_validation_should_reject_invalid_markdown_themes() {
     );
     // Test markdown theme validation through editor config
     let invalid_theme_editor = EditorConfig {
-        markdown_theme: "nonexistent_theme".to_string(),
         ..Default::default()
     };
     assert!(
@@ -452,7 +445,6 @@ fn test_config_validation_should_reject_invalid_markdown_themes() {
     let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
     for theme in valid_themes {
         let valid_theme_editor = EditorConfig {
-            markdown_theme: theme.to_string(),
             ..Default::default()
         };
         assert!(
