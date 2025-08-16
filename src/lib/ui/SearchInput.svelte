@@ -37,9 +37,9 @@ Connects to search manager and handles keyboard navigation events.
 
 <style>
   .search-input {
-    background-color: #3c3836;
-    color: #ebdbb2;
-    border: 1px solid #504945;
+    background-color: var(--theme-bg-secondary);
+    color: var(--theme-text-primary);
+    border: 1px solid var(--theme-border);
     border-radius: 8px;
     font-size: 1.3em;
     padding: 0.6em;
@@ -50,13 +50,13 @@ Connects to search manager and handles keyboard navigation events.
       box-shadow 0.2s ease;
   }
   .search-input::placeholder {
-    color: light-gray;
+    color: var(--theme-text-muted);
     font-size: 0.8em;
-    opacity: 0.5;
+    opacity: 0.7;
   }
   .search-input:focus {
     outline: none;
-    border-color: #83a598;
-    box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
+    border-color: var(--theme-border-focus);
+    box-shadow: 0 0 0 2px var(--theme-shadow-focus);
   }
 </style>

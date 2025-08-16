@@ -14,7 +14,7 @@ Defines the overall application structure and CSS grid layout.
 <style>
   :global(body) {
     margin: 0;
-    background-color: #282c34;
+    background-color: var(--theme-bg-secondary);
   }
 
   .container {
@@ -22,8 +22,9 @@ Defines the overall application structure and CSS grid layout.
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background-color: #282828;
-    color: #ebdbb2;
-    font-family: 'Inter', sans-serif;
+    background-color: var(--theme-bg-primary);
+    color: var(--theme-text-primary);
+    font-family: var(--theme-font-family);
+    font-size: var(--theme-font-size);
   }
 </style>

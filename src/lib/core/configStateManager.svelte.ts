@@ -7,6 +7,7 @@
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { configService } from '../services/configService.svelte'
+import type { ThemeConfig } from '../services/configService.svelte'
 
 interface ConfigState {
   notesDirectory: string
@@ -14,6 +15,7 @@ interface ConfigState {
   globalShortcut: string
   editorMode: string
   markdownTheme: string
+  theme: ThemeConfig
   isLoading: boolean
   error: string | null
   isInitialized: boolean
@@ -25,6 +27,7 @@ interface ConfigChanged {
   global_shortcut: string
   editor_mode: string
   markdown_theme: string
+  theme: ThemeConfig
 }
 
 export interface ConfigStateManager {
@@ -33,6 +36,7 @@ export interface ConfigStateManager {
   readonly globalShortcut: string
   readonly editorMode: string
   readonly markdownTheme: string
+  readonly theme: ThemeConfig
   readonly isLoading: boolean
   readonly error: string | null
   readonly isInitialized: boolean
@@ -48,6 +52,13 @@ export function createConfigStateManager(): ConfigStateManager {
     globalShortcut: 'Ctrl+Shift+N',
     editorMode: 'basic',
     markdownTheme: 'dark_dimmed',
+    theme: {
+      name: 'gruvbox-dark',
+      font_family: 'Inter, sans-serif',
+      font_size: 14,
+      editor_font_family: 'JetBrains Mono, Consolas, monospace',
+      editor_font_size: 14,
+    },
     isLoading: false,
     error: null,
     isInitialized: false,
@@ -61,6 +72,7 @@ export function createConfigStateManager(): ConfigStateManager {
     state.globalShortcut = config.global_shortcut
     state.editorMode = config.editor_mode
     state.markdownTheme = config.markdown_theme
+    state.theme = config.theme
   }
 
   async function initialize(): Promise<void> {
@@ -73,13 +85,15 @@ export function createConfigStateManager(): ConfigStateManager {
 
     try {
       // Get initial config values
-      const [editorMode, markdownTheme] = await Promise.all([
+      const [editorMode, markdownTheme, themeConfig] = await Promise.all([
         configService.getEditorMode(),
         configService.getMarkdownTheme(),
+        configService.getThemeConfig(),
       ])
 
       state.editorMode = editorMode
       state.markdownTheme = markdownTheme
+      state.theme = themeConfig
 
       // Listen for config changes
       unlistenConfigChanged = await listen<ConfigChanged>(
@@ -108,13 +122,15 @@ export function createConfigStateManager(): ConfigStateManager {
       await invoke<void>('refresh_cache')
 
       // Get fresh config values
-      const [editorMode, markdownTheme] = await Promise.all([
+      const [editorMode, markdownTheme, themeConfig] = await Promise.all([
         configService.getEditorMode(),
         configService.getMarkdownTheme(),
+        configService.getThemeConfig(),
       ])
 
       state.editorMode = editorMode
       state.markdownTheme = markdownTheme
+      state.theme = themeConfig
     } catch (e) {
       const error = `Failed to refresh config: ${e}`
       state.error = error
@@ -152,6 +168,10 @@ export function createConfigStateManager(): ConfigStateManager {
 
     get markdownTheme() {
       return state.markdownTheme
+    },
+
+    get theme() {
+      return state.theme
     },
 
     get isLoading() {
