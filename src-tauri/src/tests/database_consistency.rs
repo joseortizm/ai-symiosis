@@ -3,8 +3,10 @@
 //! This module tests the production database functions to ensure consistency
 //! when files are added, modified, or synced externally. Uses real database functions only.
 
-use super::*;
-use crate::test_utils::database_testing::{check_database_integrity, quick_health_check, verify_sync_consistency};
+use super::test_utils::database_testing::{
+    check_database_integrity, quick_health_check, verify_sync_consistency,
+};
+use crate::*;
 use rusqlite::{params, Connection};
 use std::collections::HashMap;
 use std::path::PathBuf;

@@ -1,10 +1,6 @@
 // Module declarations
 mod database;
-#[cfg(test)]
-mod database_consistency_tests;
 mod search;
-#[cfg(test)]
-mod test_utils;
 #[cfg(test)]
 mod tests;
 
@@ -74,6 +70,101 @@ impl Default for AppConfig {
 // Utility functions
 fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
     shortcut_str.parse().ok()
+}
+
+// Configuration validation functions
+fn validate_max_search_results(value: usize) -> Result<(), String> {
+    if value == 0 {
+        return Err("Max search results must be greater than 0".to_string());
+    }
+    if value > 10000 {
+        return Err("Max search results too large (max: 10000)".to_string());
+    }
+    Ok(())
+}
+
+fn validate_editor_mode(mode: &str) -> Result<(), String> {
+    let valid_modes = ["basic", "vim", "emacs"];
+    if !valid_modes.contains(&mode) {
+        return Err(format!(
+            "Invalid editor mode '{}'. Valid modes: {}",
+            mode,
+            valid_modes.join(", ")
+        ));
+    }
+    Ok(())
+}
+
+fn validate_markdown_theme(theme: &str) -> Result<(), String> {
+    let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
+    if !valid_themes.contains(&theme) {
+        return Err(format!(
+            "Invalid markdown theme '{}'. Valid themes: {}",
+            theme,
+            valid_themes.join(", ")
+        ));
+    }
+    Ok(())
+}
+
+fn validate_shortcut_format(shortcut: &str) -> Result<(), String> {
+    if shortcut.trim().is_empty() {
+        return Err("Shortcut cannot be empty".to_string());
+    }
+
+    // Pre-validate shortcut format before calling parse_shortcut
+    if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
+        return Err("Invalid shortcut format".to_string());
+    }
+
+    // Test that it can be parsed
+    match parse_shortcut(shortcut) {
+        Some(_) => Ok(()),
+        None => Err(format!("Invalid shortcut format: '{}'", shortcut)),
+    }
+}
+
+fn validate_notes_directory(dir: &str) -> Result<(), String> {
+    if dir.trim().is_empty() {
+        return Err("Notes directory cannot be empty".to_string());
+    }
+
+    let path = std::path::Path::new(dir);
+
+    // Reject system directories for security
+    let dangerous_paths = [
+        "/etc",
+        "/root",
+        "/sys",
+        "/proc",
+        "/dev",
+        "C:\\Windows",
+        "C:\\System32",
+        "/System",
+        "/Library/System",
+    ];
+
+    for dangerous in &dangerous_paths {
+        if dir.starts_with(dangerous) {
+            return Err(format!("Cannot use system directory: {}", dir));
+        }
+    }
+
+    // Warn about non-absolute paths but allow them
+    if !path.is_absolute() {
+        eprintln!("Warning: Using relative notes directory: {}", dir);
+    }
+
+    Ok(())
+}
+
+fn validate_config(config: &AppConfig) -> Result<(), String> {
+    validate_max_search_results(config.max_search_results)?;
+    validate_editor_mode(&config.editor_mode)?;
+    validate_markdown_theme(&config.markdown_theme)?;
+    validate_shortcut_format(&config.global_shortcut)?;
+    validate_notes_directory(&config.notes_directory)?;
+    Ok(())
 }
 
 fn get_default_notes_dir() -> String {
@@ -150,10 +241,16 @@ fn load_config() -> AppConfig {
 
     match fs::read_to_string(&config_path) {
         Ok(content) => match toml::from_str::<AppConfig>(&content) {
-            Ok(config) => {
-                println!("Loaded config from: {}", config_path.display());
-                config
-            }
+            Ok(config) => match validate_config(&config) {
+                Ok(()) => {
+                    println!("Loaded config from: {}", config_path.display());
+                    config
+                }
+                Err(e) => {
+                    eprintln!("Config validation failed: {e}. Using defaults.");
+                    AppConfig::default()
+                }
+            },
             Err(e) => {
                 eprintln!("Failed to parse config file: {e}. Using defaults.");
                 AppConfig::default()
@@ -565,9 +662,12 @@ fn get_config_content() -> Result<String, String> {
 fn save_config_content(content: &str) -> Result<(), String> {
     let config_path = get_config_path();
 
-    // Validate TOML format before saving
-    let _: AppConfig =
+    // Validate TOML format and content before saving
+    let config: AppConfig =
         toml::from_str(content).map_err(|e| format!("Invalid TOML format: {}", e))?;
+
+    // Validate configuration values
+    validate_config(&config).map_err(|e| format!("Configuration validation failed: {}", e))?;
 
     if let Some(parent) = config_path.parent() {
         fs::create_dir_all(parent)

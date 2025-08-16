@@ -214,7 +214,10 @@ fn detect_data_anomalies(conn: &Connection, stats: &DatabaseStats) -> Result<Vec
     let timestamp_issues: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM notes WHERE modified <= 0 OR modified > ?1",
-            params![SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64],
+            params![SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64],
             |row| row.get(0),
         )
         .map_err(|e| format!("Failed to check timestamps: {}", e))?;
@@ -347,20 +350,14 @@ pub fn verify_sync_consistency(
     // Check for files in database but not filesystem
     for filename in database_files.keys() {
         if !filesystem_files.contains_key(filename) {
-            inconsistencies.push(format!(
-                "File in database but not filesystem: {}",
-                filename
-            ));
+            inconsistencies.push(format!("File in database but not filesystem: {}", filename));
         }
     }
 
     // Check for files in filesystem but not database
     for filename in filesystem_files.keys() {
         if !database_files.contains_key(filename) {
-            inconsistencies.push(format!(
-                "File in filesystem but not database: {}",
-                filename
-            ));
+            inconsistencies.push(format!("File in filesystem but not database: {}", filename));
         }
     }
 
