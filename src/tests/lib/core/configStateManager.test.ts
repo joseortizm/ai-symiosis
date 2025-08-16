@@ -75,10 +75,13 @@ describe('configStateManager', () => {
 
       await manager.initialize()
 
-      expect(manager.error).toContain('Failed to initialize config state')
-      expect(manager.error).toContain(errorMessage)
-      expect(manager.isInitialized).toBe(false)
+      // With configService error handling, initialization should succeed with defaults
+      expect(manager.error).toBe(null)
+      expect(manager.isInitialized).toBe(true)
       expect(manager.isLoading).toBe(false)
+      // Should have default values from configService
+      expect(manager.editorMode).toBe('basic')
+      expect(manager.markdownTheme).toBe('dark_dimmed')
     })
 
     it('should not initialize twice', async () => {
@@ -269,8 +272,12 @@ describe('configStateManager', () => {
 
       await manager.initialize()
 
-      expect(manager.error).toContain('Failed to initialize config state')
-      expect(manager.isInitialized).toBe(false)
+      // With configService error handling, partial failures should still result in successful init
+      expect(manager.error).toBe(null)
+      expect(manager.isInitialized).toBe(true)
+      // Should have mix of actual and default values
+      expect(manager.editorMode).toBe('vim') // Successfully fetched
+      expect(manager.markdownTheme).toBe('dark_dimmed') // Default from configService error handling
     })
 
     it('should handle event listener setup failures', async () => {

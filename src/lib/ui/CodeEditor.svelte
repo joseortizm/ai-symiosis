@@ -6,6 +6,7 @@ Focused component handling CodeMirror initialization and content editing.
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import { invoke } from '@tauri-apps/api/core'
+  import { configService } from '../services/configService.svelte'
   import { EditorView, basicSetup } from 'codemirror'
   import type { Extension } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
@@ -64,7 +65,7 @@ Focused component handling CodeMirror initialization and content editing.
 
   async function loadEditorMode(): Promise<void> {
     try {
-      const mode = await invoke<string>('get_editor_mode')
+      const mode = await configService.getEditorMode()
       keyBindingMode = mode
     } catch (e) {
       console.error('Failed to load editor mode:', e)

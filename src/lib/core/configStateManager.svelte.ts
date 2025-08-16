@@ -6,6 +6,7 @@
 
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { configService } from '../services/configService.svelte'
 
 interface ConfigState {
   notesDirectory: string
@@ -73,8 +74,8 @@ export function createConfigStateManager(): ConfigStateManager {
     try {
       // Get initial config values
       const [editorMode, markdownTheme] = await Promise.all([
-        invoke<string>('get_editor_mode'),
-        invoke<string>('get_markdown_theme'),
+        configService.getEditorMode(),
+        configService.getMarkdownTheme(),
       ])
 
       state.editorMode = editorMode
@@ -108,8 +109,8 @@ export function createConfigStateManager(): ConfigStateManager {
 
       // Get fresh config values
       const [editorMode, markdownTheme] = await Promise.all([
-        invoke<string>('get_editor_mode'),
-        invoke<string>('get_markdown_theme'),
+        configService.getEditorMode(),
+        configService.getMarkdownTheme(),
       ])
 
       state.editorMode = editorMode
