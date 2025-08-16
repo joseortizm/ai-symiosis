@@ -3,10 +3,10 @@
 //! Tests config loading, parsing, and validation functionality.
 //! These tests access internal/private functions and test the actual production behavior.
 
-use crate::{
+use crate::config::{
     get_config_path, get_default_notes_dir, load_config, parse_shortcut, reload_config,
-    validate_config, validate_editor_mode, validate_markdown_theme, validate_max_search_results,
-    validate_notes_directory, validate_shortcut_format, AppConfig,
+    validate_config, validate_editor_config, validate_max_search_results, validate_notes_directory,
+    validate_shortcut_format, AppConfig, EditorConfig,
 };
 
 #[test]
@@ -15,8 +15,8 @@ fn test_default_config_values() {
 
     assert_eq!(config.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
-    assert_eq!(config.editor_mode, "basic");
-    assert_eq!(config.markdown_theme, "dark_dimmed");
+    assert_eq!(config.editor.mode, "basic");
+    assert_eq!(config.editor.markdown_theme, "dark_dimmed");
     // notes_directory should be ~/Documents/Notes or ./notes fallback
     assert!(config.notes_directory.contains("Notes") || config.notes_directory == "./notes");
 }
@@ -48,8 +48,11 @@ fn test_config_toml_serialization_roundtrip() {
     assert_eq!(config.max_search_results, deserialized.max_search_results);
     assert_eq!(config.notes_directory, deserialized.notes_directory);
     assert_eq!(config.global_shortcut, deserialized.global_shortcut);
-    assert_eq!(config.editor_mode, deserialized.editor_mode);
-    assert_eq!(config.markdown_theme, deserialized.markdown_theme);
+    assert_eq!(config.editor.mode, deserialized.editor.mode);
+    assert_eq!(
+        config.editor.markdown_theme,
+        deserialized.editor.markdown_theme
+    );
 }
 
 #[test]
@@ -66,8 +69,8 @@ notes_directory = "/tmp/test"
     // Missing fields should use defaults
     assert_eq!(config.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
-    assert_eq!(config.editor_mode, "basic");
-    assert_eq!(config.markdown_theme, "dark_dimmed");
+    assert_eq!(config.editor.mode, "basic");
+    assert_eq!(config.editor.markdown_theme, "dark_dimmed");
 }
 
 #[test]
@@ -86,8 +89,8 @@ global_shortcut = "Alt+Space"
     assert_eq!(config.max_search_results, 50);
     assert_eq!(config.global_shortcut, "Alt+Space");
     // Missing fields should use defaults
-    assert_eq!(config.editor_mode, "basic");
-    assert_eq!(config.markdown_theme, "dark_dimmed");
+    assert_eq!(config.editor.mode, "basic");
+    assert_eq!(config.editor.markdown_theme, "dark_dimmed");
 }
 
 #[test]
@@ -114,8 +117,8 @@ fn test_load_config_behavior() {
     // Should have reasonable values (either from file or defaults)
     assert!(config.max_search_results > 0);
     assert!(!config.global_shortcut.is_empty());
-    assert!(!config.editor_mode.is_empty());
-    assert!(!config.markdown_theme.is_empty());
+    assert!(!config.editor.mode.is_empty());
+    assert!(!config.editor.markdown_theme.is_empty());
     assert!(!config.notes_directory.is_empty());
 }
 
@@ -163,7 +166,9 @@ max_search_results = "not_a_number"
 #[test]
 fn test_reload_config_succeeds() {
     // reload_config should work without app handle
-    let result = reload_config(None);
+    use std::sync::RwLock;
+    let config = RwLock::new(AppConfig::default());
+    let result = reload_config(&config, None);
     assert!(
         result.is_ok(),
         "reload_config should succeed even without app handle"
@@ -173,7 +178,9 @@ fn test_reload_config_succeeds() {
 #[test]
 fn test_reload_config_without_app_handle() {
     // When called without app handle, should not emit events but should still work
-    let result = reload_config(None);
+    use std::sync::RwLock;
+    let config = RwLock::new(AppConfig::default());
+    let result = reload_config(&config, None);
     assert!(
         result.is_ok(),
         "reload_config should work without app handle"
@@ -207,8 +214,12 @@ markdown_theme = "dark_dimmed"
         notes_directory: "/tmp".to_string(),
         max_search_results: 0,
         global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor_mode: "basic".to_string(),
-        markdown_theme: "dark_dimmed".to_string(),
+        editor: EditorConfig {
+            mode: "basic".to_string(),
+            markdown_theme: "dark_dimmed".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
     };
 
     // Now implemented: validation should reject zero values
@@ -237,8 +248,12 @@ fn test_config_validation_should_reject_invalid_editor_modes() {
         notes_directory: "/tmp".to_string(),
         max_search_results: 100,
         global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor_mode: "nonexistent_editor".to_string(),
-        markdown_theme: "dark_dimmed".to_string(),
+        editor: EditorConfig {
+            mode: "nonexistent_editor".to_string(),
+            markdown_theme: "dark_dimmed".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
     };
 
     // Validation should now reject invalid editor modes
@@ -246,20 +261,40 @@ fn test_config_validation_should_reject_invalid_editor_modes() {
         validate_config(&config).is_err(),
         "Validation should reject invalid editor mode"
     );
+    // Test editor mode validation through editor config
+    let invalid_editor = EditorConfig {
+        mode: "nonexistent_editor".to_string(),
+        ..Default::default()
+    };
     assert!(
-        validate_editor_mode("nonexistent_editor").is_err(),
+        validate_editor_config(&invalid_editor).is_err(),
         "Should reject invalid editor mode"
     );
+
+    let basic_editor = EditorConfig {
+        mode: "basic".to_string(),
+        ..Default::default()
+    };
     assert!(
-        validate_editor_mode("basic").is_ok(),
+        validate_editor_config(&basic_editor).is_ok(),
         "Should accept valid editor mode: basic"
     );
+
+    let vim_editor = EditorConfig {
+        mode: "vim".to_string(),
+        ..Default::default()
+    };
     assert!(
-        validate_editor_mode("vim").is_ok(),
+        validate_editor_config(&vim_editor).is_ok(),
         "Should accept valid editor mode: vim"
     );
+
+    let emacs_editor = EditorConfig {
+        mode: "emacs".to_string(),
+        ..Default::default()
+    };
     assert!(
-        validate_editor_mode("emacs").is_ok(),
+        validate_editor_config(&emacs_editor).is_ok(),
         "Should accept valid editor mode: emacs"
     );
 }
@@ -271,8 +306,12 @@ fn test_config_validation_should_reject_invalid_shortcuts() {
         notes_directory: "/tmp".to_string(),
         max_search_results: 100,
         global_shortcut: "InvalidShortcutFormat".to_string(),
-        editor_mode: "basic".to_string(),
-        markdown_theme: "dark_dimmed".to_string(),
+        editor: EditorConfig {
+            mode: "basic".to_string(),
+            markdown_theme: "dark_dimmed".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
     };
 
     // Validation should now reject invalid shortcuts
@@ -302,8 +341,12 @@ fn test_config_validation_should_reject_invalid_shortcuts() {
         notes_directory: "/tmp".to_string(),
         max_search_results: 100,
         global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor_mode: "basic".to_string(),
-        markdown_theme: "dark_dimmed".to_string(),
+        editor: EditorConfig {
+            mode: "basic".to_string(),
+            markdown_theme: "dark_dimmed".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
     };
 
     // This should validate successfully
@@ -337,8 +380,12 @@ fn test_config_validation_should_reject_unsafe_directories() {
             notes_directory: unsafe_dir.to_string(),
             max_search_results: 100,
             global_shortcut: "Ctrl+Shift+N".to_string(),
-            editor_mode: "basic".to_string(),
-            markdown_theme: "dark_dimmed".to_string(),
+            editor: EditorConfig {
+                mode: "basic".to_string(),
+                markdown_theme: "dark_dimmed".to_string(),
+                ..Default::default()
+            },
+            ..Default::default()
         };
 
         // Validation should now reject unsafe directories
@@ -378,8 +425,12 @@ fn test_config_validation_should_reject_invalid_markdown_themes() {
         notes_directory: "/tmp".to_string(),
         max_search_results: 100,
         global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor_mode: "basic".to_string(),
-        markdown_theme: "nonexistent_theme".to_string(),
+        editor: EditorConfig {
+            mode: "basic".to_string(),
+            markdown_theme: "nonexistent_theme".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
     };
 
     // Validation should reject invalid themes
@@ -387,16 +438,25 @@ fn test_config_validation_should_reject_invalid_markdown_themes() {
         validate_config(&config).is_err(),
         "Should reject invalid markdown theme"
     );
+    // Test markdown theme validation through editor config
+    let invalid_theme_editor = EditorConfig {
+        markdown_theme: "nonexistent_theme".to_string(),
+        ..Default::default()
+    };
     assert!(
-        validate_markdown_theme("nonexistent_theme").is_err(),
+        validate_editor_config(&invalid_theme_editor).is_err(),
         "Should reject invalid markdown theme"
     );
 
     // Test valid themes
     let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
     for theme in valid_themes {
+        let valid_theme_editor = EditorConfig {
+            markdown_theme: theme.to_string(),
+            ..Default::default()
+        };
         assert!(
-            validate_markdown_theme(theme).is_ok(),
+            validate_editor_config(&valid_theme_editor).is_ok(),
             "Should accept valid theme: {}",
             theme
         );

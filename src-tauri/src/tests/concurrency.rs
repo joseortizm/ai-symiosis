@@ -2,7 +2,8 @@
 //!
 //! Tests for concurrent access patterns and multi-user scenarios.
 
-use crate::*;
+use crate::config::*;
+use crate::{get_database_path, render_note, validate_note_name};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -38,26 +39,32 @@ fn test_concurrent_config_access() {
 fn test_concurrent_validation() {
     // Test that validation functions are thread-safe
     let test_configs = Arc::new(vec![
-        AppConfig {
-            notes_directory: "/tmp/test1".to_string(),
-            max_search_results: 100,
-            global_shortcut: "Ctrl+Shift+N".to_string(),
-            editor_mode: "basic".to_string(),
-            markdown_theme: "dark_dimmed".to_string(),
+        {
+            let mut config = AppConfig::default();
+            config.notes_directory = "/tmp/test1".to_string();
+            config.max_search_results = 100;
+            config.global_shortcut = "Ctrl+Shift+N".to_string();
+            config.editor.mode = "basic".to_string();
+            config.editor.markdown_theme = "dark_dimmed".to_string();
+            config
         },
-        AppConfig {
-            notes_directory: "/tmp/test2".to_string(),
-            max_search_results: 50,
-            global_shortcut: "Alt+Space".to_string(),
-            editor_mode: "vim".to_string(),
-            markdown_theme: "light".to_string(),
+        {
+            let mut config = AppConfig::default();
+            config.notes_directory = "/tmp/test2".to_string();
+            config.max_search_results = 50;
+            config.global_shortcut = "Alt+Space".to_string();
+            config.editor.mode = "vim".to_string();
+            config.editor.markdown_theme = "light".to_string();
+            config
         },
-        AppConfig {
-            notes_directory: "/invalid".to_string(),
-            max_search_results: 0, // Invalid
-            global_shortcut: "InvalidShortcut".to_string(),
-            editor_mode: "invalid_mode".to_string(),
-            markdown_theme: "invalid_theme".to_string(),
+        {
+            let mut config = AppConfig::default();
+            config.notes_directory = "/invalid".to_string();
+            config.max_search_results = 0; // Invalid
+            config.global_shortcut = "InvalidShortcut".to_string();
+            config.editor.mode = "invalid_mode".to_string();
+            config.editor.markdown_theme = "invalid_theme".to_string();
+            config
         },
     ]);
 
