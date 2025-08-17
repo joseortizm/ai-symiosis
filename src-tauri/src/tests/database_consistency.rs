@@ -438,4 +438,92 @@ mod real_database_function_tests {
             "Production quick health check should still pass (these are warnings, not fatal errors)"
         );
     }
+
+    #[test]
+    fn test_database_rebuild_on_corruption() {
+        let harness = DbTestHarness::new().expect("Failed to create test harness");
+        let conn = harness
+            .get_test_connection()
+            .expect("Failed to get connection");
+
+        // Initialize with production function
+        init_db(&conn).expect("Should initialize database");
+
+        // Insert test data
+        conn.execute(
+            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+            params!["test1.md", "Content 1", 1000i64],
+        )
+        .expect("Should insert test data");
+
+        // Verify data exists
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+            .expect("Should count notes");
+        assert_eq!(count, 1, "Should have one note");
+
+        // Simulate database corruption by dropping table
+        conn.execute("DROP TABLE notes", [])
+            .expect("Should drop table to simulate corruption");
+
+        // Verify table is gone (this would cause an error in normal operations)
+        let table_check =
+            conn.query_row("SELECT COUNT(*) FROM notes", [], |row| row.get::<_, i64>(0));
+        assert!(
+            table_check.is_err(),
+            "Table should be gone after corruption"
+        );
+
+        // Test recreate_database function behavior
+        // Note: This tests the database recreation logic, not the full file sync
+        let recreate_result = init_db(&conn);
+        assert!(
+            recreate_result.is_ok(),
+            "Should be able to recreate database schema"
+        );
+
+        // Verify empty table exists again
+        let count_after_recreate: i64 = conn
+            .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+            .expect("Should count notes in recreated table");
+        assert_eq!(count_after_recreate, 0, "Recreated table should be empty");
+    }
+
+    #[test]
+    fn test_database_error_handling_patterns() {
+        let harness = DbTestHarness::new().expect("Failed to create test harness");
+        let conn = harness
+            .get_test_connection()
+            .expect("Failed to get connection");
+
+        // Initialize with production function
+        init_db(&conn).expect("Should initialize database");
+
+        // Test that database operations handle expected error conditions
+
+        // 1. Test duplicate filename handling (should use INSERT OR REPLACE pattern)
+        conn.execute(
+            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+            params!["duplicate.md", "First content", 1000i64],
+        )
+        .expect("Should insert first version");
+
+        // This should not fail due to our upsert pattern
+        let result = conn.execute(
+            "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+            params!["duplicate.md", "Updated content", 2000i64],
+        );
+        assert!(result.is_ok(), "Upsert should handle duplicates gracefully");
+
+        // 2. Test that we have proper indexes for search
+        let search_result = conn.query_row(
+            "SELECT filename FROM notes WHERE notes MATCH ?1",
+            params!["content"],
+            |row| row.get::<_, String>(0),
+        );
+        assert!(
+            search_result.is_ok(),
+            "FTS search should work with proper schema"
+        );
+    }
 }

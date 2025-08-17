@@ -3,6 +3,7 @@
 //! This module contains unit tests for the symiosis library.
 //! These tests can access private functions and are part of the same crate.
 
+pub mod atomic_operations;
 pub mod concurrency;
 pub mod config;
 pub mod database;

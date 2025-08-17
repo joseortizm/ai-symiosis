@@ -19,10 +19,23 @@ pub fn get_database_path() -> Result<PathBuf, String> {
         .map(|path| path.join("symiosis").join("notes.sqlite"))
 }
 
-pub fn get_backup_dir() -> Result<PathBuf, String> {
+fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
+    notes_dir
+        .to_string_lossy()
+        .trim_start_matches('/') // Remove leading slash
+        .trim_start_matches('\\') // Remove leading backslash (Windows)
+        .replace('/', "_") // Replace slashes with underscores
+        .replace('\\', "_") // Handle Windows backslashes
+        .replace(':', "_") // Handle Windows drive letters (C:)
+        .replace(' ', "_") // Replace spaces with underscores
+        .replace(|c: char| !c.is_alphanumeric() && c != '_', "_") // Replace other special chars
+}
+
+pub fn get_backup_dir_for_notes_path(notes_dir: &std::path::Path) -> Result<PathBuf, String> {
+    let encoded_path = encode_path_for_backup(notes_dir);
     get_data_dir()
         .ok_or_else(|| "Failed to get data directory".to_string())
-        .map(|path| path.join("symiosis").join("backups"))
+        .map(|path| path.join("symiosis").join("backups").join(encoded_path))
 }
 
 pub fn get_temp_dir() -> Result<PathBuf, String> {

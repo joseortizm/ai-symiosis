@@ -12,7 +12,10 @@ use config::{
     get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
     parse_shortcut, reload_config, save_config_content, AppConfig,
 };
-use database::{get_backup_dir, get_database_path as get_db_path, get_db_connection, get_temp_dir};
+use database::{
+    get_backup_dir_for_notes_path, get_database_path as get_db_path, get_db_connection,
+    get_temp_dir,
+};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use std::fs;
@@ -78,15 +81,7 @@ fn render_note(filename: &str, content: &str) -> String {
 fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
     // 1. Create backup in app data directory (preserving relative path structure)
     if note_path.exists() {
-        let backup_dir = get_backup_dir()?;
-        let notes_dir = get_config_notes_dir();
-
-        // Get relative path from notes directory to preserve folder structure
-        let relative_path = note_path
-            .strip_prefix(&notes_dir)
-            .map_err(|_| "Note path is not within notes directory".to_string())?;
-
-        let backup_path = backup_dir.join(relative_path).with_extension("md.bak");
+        let backup_path = safe_backup_path(note_path)?.with_extension("md.bak");
 
         // Ensure backup directory structure exists
         if let Some(backup_parent) = backup_path.parent() {
@@ -135,6 +130,22 @@ fn cleanup_temp_files() -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
+    let notes_dir = get_config_notes_dir();
+    let backup_dir = get_backup_dir_for_notes_path(&notes_dir)?;
+
+    // Get relative path from notes directory to preserve folder structure
+    let relative_path = note_path.strip_prefix(&notes_dir).map_err(|_| {
+        format!(
+            "Note path '{}' is not within configured notes directory '{}'",
+            note_path.display(),
+            notes_dir.display()
+        )
+    })?;
+
+    Ok(backup_dir.join(relative_path))
 }
 
 // Database operations
@@ -457,11 +468,7 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     }
 
     // 1. Create backup before rename operation
-    let backup_dir = get_backup_dir()?;
-    let relative_old_path = old_path
-        .strip_prefix(&notes_dir)
-        .map_err(|_| "Note path is not within notes directory".to_string())?;
-    let backup_path = backup_dir.join(relative_old_path).with_extension("md.bak");
+    let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
 
     // Ensure backup directory structure exists
     if let Some(backup_parent) = backup_path.parent() {
@@ -547,14 +554,7 @@ fn delete_note(note_name: &str) -> Result<(), String> {
     }
 
     // 1. Create backup before deletion (for potential recovery)
-    let backup_dir = get_backup_dir()?;
-    let notes_dir = get_config_notes_dir();
-    let relative_path = note_path
-        .strip_prefix(&notes_dir)
-        .map_err(|_| "Note path is not within notes directory".to_string())?;
-    let backup_path = backup_dir
-        .join(relative_path)
-        .with_extension("md.bak.deleted");
+    let backup_path = safe_backup_path(&note_path)?.with_extension("md.bak.deleted");
 
     // Ensure backup directory structure exists
     if let Some(backup_parent) = backup_path.parent() {
