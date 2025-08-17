@@ -327,7 +327,31 @@ pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
         ));
     }
 
-    let valid_themes = ["gruvbox-dark", "one-dark"];
+    let valid_themes = [
+        "abcdef",
+        "abyss",
+        "android-studio",
+        "andromeda",
+        "basic-dark",
+        "basic-light",
+        "forest",
+        "github-dark",
+        "github-light",
+        "gruvbox-dark",
+        "gruvbox-light",
+        "material-dark",
+        "material-light",
+        "monokai",
+        "nord",
+        "palenight",
+        "solarized-dark",
+        "solarized-light",
+        "tokyo-night-day",
+        "tokyo-night-storm",
+        "volcano",
+        "vscode-dark",
+        "vscode-light",
+    ];
     if !valid_themes.contains(&editor.theme.as_str()) {
         return Err(format!(
             "Invalid editor theme '{}'. Valid themes: {}",

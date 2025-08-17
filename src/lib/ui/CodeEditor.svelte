@@ -4,8 +4,8 @@ Focused component handling CodeMirror initialization and content editing.
 -->
 
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
-  import { configService } from '../services/configService.svelte'
+  import { onMount, tick, getContext } from 'svelte'
+  import type { AppManagers } from '../app/appCoordinator.svelte'
   import { EditorView, basicSetup } from 'codemirror'
   import type { Extension } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
@@ -27,9 +27,7 @@ Focused component handling CodeMirror initialization and content editing.
   import { toml } from '@codemirror/legacy-modes/mode/toml'
   import { vim, Vim } from '@replit/codemirror-vim'
   import { emacs } from '@replit/codemirror-emacs'
-  import { gruvboxDark } from '@fsegurai/codemirror-theme-bundle'
-
-  // TODO: Add theme selection to config options using https://fsegurai.github.io/codemirror-themes/#demo-application
+  import { getTheme } from '../utils/editorThemes'
 
   interface Props {
     value: string
@@ -54,23 +52,21 @@ Focused component handling CodeMirror initialization and content editing.
     isDirty = $bindable(false),
   }: Props = $props()
 
+  // Get reactive config state
+  const { configStateManager } = getContext<AppManagers>('managers')
+
   let editorContainer: HTMLElement
   let editorView: EditorView | null = null
   let initialValue = $state(value)
   let lastPropsValue = $state(value)
-  let keyBindingMode = $state('basic')
+
+  // Reactive config values
+  const keyBindingMode = $derived(configStateManager.editor.mode || 'basic')
+  const currentTheme = $derived(
+    getTheme(configStateManager.editor.theme || 'gruvbox-dark')
+  )
 
   const propsChanged = $derived(value !== lastPropsValue)
-
-  async function loadEditorMode(): Promise<void> {
-    try {
-      const mode = await configService.getEditorMode()
-      keyBindingMode = mode
-    } catch (e) {
-      console.error('Failed to load editor mode:', e)
-      keyBindingMode = 'basic'
-    }
-  }
 
   function handleDirtyChange(dirty: boolean): void {
     isDirty = dirty
@@ -286,7 +282,7 @@ Focused component handling CodeMirror initialization and content editing.
       basicSetup,
       getLanguageExtension(filename),
       codeFolding(),
-      gruvboxDark,
+      currentTheme,
       ...keymaps,
       EditorView.lineWrapping,
       updateListener,
@@ -413,25 +409,10 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
-  let initialModeSet = $state(false)
-
-  $effect(() => {
-    // Only recreate editor when keyBindingMode changes from initial 'basic'
-    // This handles the async mode loading from EditorModeManager
-    if (!initialModeSet && keyBindingMode !== 'basic') {
-      initialModeSet = true
-      createCodeMirrorEditor()
-    }
-  })
-
   onMount(() => {
     const init = async () => {
       await tick()
-      await loadEditorMode()
-      // Create editor immediately if mode is already loaded, or with basic mode
-      if (keyBindingMode !== 'basic') {
-        initialModeSet = true
-      }
+      // Create editor with current reactive config values
       createCodeMirrorEditor()
     }
 
