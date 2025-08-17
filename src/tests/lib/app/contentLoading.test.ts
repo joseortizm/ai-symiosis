@@ -202,6 +202,26 @@ describe('Content Loading Integration', () => {
           resetNavigation: vi.fn(),
           clearCurrentStyles: vi.fn(),
         },
+        configStateManager: {
+          shortcuts: {
+            create_note: 'Ctrl+Enter',
+            rename_note: 'Ctrl+m',
+            delete_note: 'Ctrl+x',
+            save_and_exit: 'Ctrl+s',
+            open_external: 'Ctrl+o',
+            open_folder: 'Ctrl+f',
+            refresh_cache: 'Ctrl+r',
+            scroll_up: 'Ctrl+u',
+            scroll_down: 'Ctrl+d',
+            vim_up: 'Ctrl+k',
+            vim_down: 'Ctrl+j',
+            navigate_previous: 'Ctrl+p',
+            navigate_next: 'Ctrl+n',
+            open_settings: 'Meta+,',
+          },
+        } as Partial<
+          typeof import('../../../lib/core/configStateManager.svelte').ConfigStateManager
+        >,
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
@@ -343,6 +363,26 @@ describe('Content Loading Integration', () => {
           resetNavigation: vi.fn(),
           clearCurrentStyles: vi.fn(),
         },
+        configStateManager: {
+          shortcuts: {
+            create_note: 'Ctrl+Enter',
+            rename_note: 'Ctrl+m',
+            delete_note: 'Ctrl+x',
+            save_and_exit: 'Ctrl+s',
+            open_external: 'Ctrl+o',
+            open_folder: 'Ctrl+f',
+            refresh_cache: 'Ctrl+r',
+            scroll_up: 'Ctrl+u',
+            scroll_down: 'Ctrl+d',
+            vim_up: 'Ctrl+k',
+            vim_down: 'Ctrl+j',
+            navigate_previous: 'Ctrl+p',
+            navigate_next: 'Ctrl+n',
+            open_settings: 'Meta+,',
+          },
+        } as Partial<
+          typeof import('../../../lib/core/configStateManager.svelte').ConfigStateManager
+        >,
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),

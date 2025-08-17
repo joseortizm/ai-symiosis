@@ -237,7 +237,7 @@ describe('configStateManager', () => {
       mockInvoke
         .mockResolvedValueOnce({}) // getGeneralConfig
         .mockResolvedValueOnce({
-          ui_theme: 'gruvbox-light',
+          ui_theme: 'one-dark',
           markdown_render_theme: 'light',
           font_family: 'Inter, sans-serif',
           font_size: 14,
@@ -256,7 +256,7 @@ describe('configStateManager', () => {
 
       await manager.initialize()
 
-      expect(manager.currentUITheme).toBe('gruvbox-light')
+      expect(manager.currentUITheme).toBe('one-dark')
       expect(manager.currentMarkdownTheme).toBe('light')
     })
 

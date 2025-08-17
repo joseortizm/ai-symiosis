@@ -50,18 +50,18 @@ pub struct GeneralConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InterfaceConfig {
-    pub ui_theme: String, // "gruvbox-dark"|"gruvbox-light"|"one-dark"|"github-light"
-    pub font_family: String, // "Inter, sans-serif"
-    pub font_size: u16,   // 14
-    pub editor_font_family: String, // "JetBrains Mono, Consolas, monospace"
-    pub editor_font_size: u16, // 14
+    pub ui_theme: String,              // "gruvbox-dark"|"one-dark"|
+    pub font_family: String,           // "Inter, sans-serif"
+    pub font_size: u16,                // 14
+    pub editor_font_family: String,    // "JetBrains Mono, Consolas, monospace"
+    pub editor_font_size: u16,         // 14
     pub markdown_render_theme: String, // "dark_dimmed"|"light"|"dark"|"auto"
-    pub default_width: u32, // 1200
-    pub default_height: u32, // 800
-    pub center_on_startup: bool, // true
-    pub remember_size: bool, // true
-    pub remember_position: bool, // true
-    pub always_on_top: bool, // false
+    pub default_width: u32,            // 1200
+    pub default_height: u32,           // 800
+    pub center_on_startup: bool,       // true
+    pub remember_size: bool,           // true
+    pub remember_position: bool,       // true
+    pub always_on_top: bool,           // false
 }
 
 // ============================================================================
@@ -256,7 +256,7 @@ pub fn validate_general_config(_general: &GeneralConfig) -> Result<(), String> {
 }
 
 pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), String> {
-    let valid_themes = ["gruvbox-dark", "gruvbox-light", "one-dark", "github-light"];
+    let valid_themes = ["gruvbox-dark", "one-dark"];
     if !valid_themes.contains(&interface.ui_theme.as_str()) {
         return Err(format!(
             "Invalid UI theme '{}'. Valid themes: {}",
@@ -327,7 +327,7 @@ pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
         ));
     }
 
-    let valid_themes = ["gruvbox-dark", "gruvbox-light", "one-dark", "github-light"];
+    let valid_themes = ["gruvbox-dark", "one-dark"];
     if !valid_themes.contains(&editor.theme.as_str()) {
         return Err(format!(
             "Invalid editor theme '{}'. Valid themes: {}",

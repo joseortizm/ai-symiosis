@@ -41,7 +41,9 @@ describe('Keyboard Shortcut Isolation', () => {
           navigate_next: 'Ctrl+n',
           open_settings: 'Meta+,',
         },
-      },
+      } as Partial<
+        typeof import('../../../lib/core/configStateManager.svelte').ConfigStateManager
+      >,
       loadNoteContent: vi.fn(),
       enterEditMode: vi.fn(),
       exitEditMode: vi.fn(),

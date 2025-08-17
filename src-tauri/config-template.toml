@@ -1,9 +1,9 @@
 # Symiosis Configuration File
 # Uncomment and modify the options below to configure the application
 
-# ============================================================================
+# ============================
 # TOP-LEVEL ESSENTIAL SETTINGS
-# ============================================================================
+# ============================
 
 # Default: ~/Documents/Notes (or equivalent on your system)
 notes_directory = "{DEFAULT_NOTES_DIR}"
@@ -12,21 +12,21 @@ notes_directory = "{DEFAULT_NOTES_DIR}"
 # Supported modifiers: Ctrl, Alt, Shift, Cmd (macOS), Super (Linux)
 global_shortcut = "Ctrl+Shift+N"
 
-# ============================================================================
+# =====================
 # GENERAL CONFIGURATION
-# ============================================================================
+# =====================
 
 [general]
 # Future extensible core settings
 # This section is reserved for general application behavior settings
 
-# ============================================================================
+# =======================
 # INTERFACE CONFIGURATION
-# ============================================================================
+# =======================
 
 [interface]
 # UI theme for the application interface
-# Options: "gruvbox-dark", "gruvbox-light", "one-dark", "github-light"
+# Options: "gruvbox-dark", "one-dark",
 ui_theme = "gruvbox-dark"
 
 # Font family for the UI
@@ -53,17 +53,16 @@ remember_size = true
 remember_position = true
 always_on_top = false
 
-# ============================================================================
+# ====================
 # EDITOR CONFIGURATION
-# ============================================================================
+# ====================
 
 [editor]
 # Editor mode: "basic", "vim", "emacs"
-# You should choose "vim" here really... but hey, it's your editor
 mode = "basic"
 
 # Editor theme (separate from UI theme)
-# Options: "gruvbox-dark", "gruvbox-light", "one-dark", "github-light"
+# Options: "gruvbox-dark", "one-dark"
 theme = "gruvbox-dark"
 
 # Enable word wrapping
@@ -75,9 +74,9 @@ tab_size = 2
 # Show line numbers
 show_line_numbers = true
 
-# ============================================================================
+# ==================
 # KEYBOARD SHORTCUTS
-# ============================================================================
+# ==================
 
 [shortcuts]
 # All keyboard shortcuts in one unified section
@@ -96,9 +95,9 @@ navigate_previous = "Ctrl+p"
 navigate_next = "Ctrl+n"
 open_settings = "Meta+,"
 
-# ============================================================================
+# ===========
 # PREFERENCES
-# ============================================================================
+# ===========
 
 [preferences]
 # Maximum number of search results to display

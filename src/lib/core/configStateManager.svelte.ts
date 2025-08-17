@@ -114,97 +114,10 @@ export function createConfigStateManager(): ConfigStateManager {
 
   let unlistenConfigChanged: (() => void) | null = null
 
-  // Theme definitions for CSS custom properties
-  const THEME_DEFINITIONS = {
-    'gruvbox-dark': {
-      '--theme-bg-primary': '#282828',
-      '--theme-bg-secondary': '#3c3836',
-      '--theme-bg-tertiary': '#504945',
-      '--theme-text-primary': '#ebdbb2',
-      '--theme-text-secondary': '#d5c4a1',
-      '--theme-text-muted': '#928374',
-      '--theme-accent': '#83a598',
-      '--theme-accent-hover': '#8ec07c',
-      '--theme-highlight': '#fe8019',
-      '--theme-highlight-bg': 'rgba(254, 128, 25, 0.2)',
-      '--theme-warning': '#fb4934',
-      '--theme-success': '#b8bb26',
-      '--theme-border': '#504945',
-      '--theme-border-focus': '#83a598',
-      '--theme-shadow-focus': 'rgba(131, 165, 152, 0.2)',
-    },
-    'gruvbox-light': {
-      '--theme-bg-primary': '#fbf1c7',
-      '--theme-bg-secondary': '#f2e5bc',
-      '--theme-bg-tertiary': '#ebdbb2',
-      '--theme-text-primary': '#3c3836',
-      '--theme-text-secondary': '#504945',
-      '--theme-text-muted': '#928374',
-      '--theme-accent': '#076678',
-      '--theme-accent-hover': '#427b58',
-      '--theme-highlight': '#af3a03',
-      '--theme-highlight-bg': 'rgba(175, 58, 3, 0.2)',
-      '--theme-warning': '#cc241d',
-      '--theme-success': '#79740e',
-      '--theme-border': '#bdae93',
-      '--theme-border-focus': '#076678',
-      '--theme-shadow-focus': 'rgba(7, 102, 120, 0.2)',
-    },
-    'one-dark': {
-      '--theme-bg-primary': '#282c34',
-      '--theme-bg-secondary': '#21252b',
-      '--theme-bg-tertiary': '#181a1f',
-      '--theme-text-primary': '#abb2bf',
-      '--theme-text-secondary': '#9ca0a9',
-      '--theme-text-muted': '#5c6370',
-      '--theme-accent': '#61afef',
-      '--theme-accent-hover': '#56b6c2',
-      '--theme-highlight': '#e06c75',
-      '--theme-highlight-bg': 'rgba(224, 108, 117, 0.2)',
-      '--theme-warning': '#e06c75',
-      '--theme-success': '#98c379',
-      '--theme-border': '#4b5263',
-      '--theme-border-focus': '#61afef',
-      '--theme-shadow-focus': 'rgba(97, 175, 239, 0.2)',
-    },
-    'github-light': {
-      '--theme-bg-primary': '#ffffff',
-      '--theme-bg-secondary': '#f6f8fa',
-      '--theme-bg-tertiary': '#e1e4e8',
-      '--theme-text-primary': '#24292e',
-      '--theme-text-secondary': '#586069',
-      '--theme-text-muted': '#6a737d',
-      '--theme-accent': '#0366d6',
-      '--theme-accent-hover': '#0366d6',
-      '--theme-highlight': '#ffcc02',
-      '--theme-highlight-bg': 'rgba(255, 204, 2, 0.2)',
-      '--theme-warning': '#d73a49',
-      '--theme-success': '#28a745',
-      '--theme-border': '#e1e4e8',
-      '--theme-border-focus': '#0366d6',
-      '--theme-shadow-focus': 'rgba(3, 102, 214, 0.2)',
-    },
-  }
+  // Valid UI themes that have corresponding CSS files
+  const VALID_UI_THEMES = ['gruvbox-dark', 'one-dark']
 
   function applyInterfaceConfig(interfaceConfig: InterfaceConfig): void {
-    // Apply theme colors
-    if (
-      interfaceConfig.ui_theme &&
-      THEME_DEFINITIONS[
-        interfaceConfig.ui_theme as keyof typeof THEME_DEFINITIONS
-      ]
-    ) {
-      const themeColors =
-        THEME_DEFINITIONS[
-          interfaceConfig.ui_theme as keyof typeof THEME_DEFINITIONS
-        ]
-      const root = document.documentElement
-
-      Object.entries(themeColors).forEach(([property, value]) => {
-        root.style.setProperty(property, value)
-      })
-    }
-
     // Apply font configuration
     const root = document.documentElement
     root.style.setProperty('--theme-font-family', interfaceConfig.font_family)
@@ -223,16 +136,36 @@ export function createConfigStateManager(): ConfigStateManager {
   }
 
   async function loadTheme(theme: string): Promise<void> {
-    if (THEME_DEFINITIONS[theme as keyof typeof THEME_DEFINITIONS]) {
-      const themeColors =
-        THEME_DEFINITIONS[theme as keyof typeof THEME_DEFINITIONS]
-      const root = document.documentElement
+    try {
+      // Remove existing UI theme
+      const existingLink = document.head.querySelector('link[data-ui-theme]')
+      if (existingLink) {
+        existingLink.remove()
+      }
 
-      Object.entries(themeColors).forEach(([property, value]) => {
-        root.style.setProperty(property, value)
+      // Validate theme
+      if (!VALID_UI_THEMES.includes(theme)) {
+        console.warn(
+          `Unknown UI theme: ${theme}. Using gruvbox-dark as default.`
+        )
+        theme = 'gruvbox-dark'
+      }
+
+      // Create new UI theme link
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = `/css/ui-themes/ui-${theme}.css`
+      link.setAttribute('data-ui-theme', theme)
+
+      document.head.appendChild(link)
+
+      // Wait for theme to load
+      await new Promise<void>((resolve) => {
+        link.onload = () => resolve()
+        link.onerror = () => resolve() // Don't fail on theme load errors
       })
-    } else {
-      console.warn(`Unknown theme: ${theme}. Using default.`)
+    } catch (e) {
+      console.error('Failed to load UI theme:', e)
     }
   }
 
@@ -319,6 +252,7 @@ export function createConfigStateManager(): ConfigStateManager {
 
       // Initialize themes
       applyInterfaceConfig(interfaceConfig)
+      await loadTheme(interfaceConfig.ui_theme)
       await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
       state.isThemeInitialized = true
 
@@ -372,6 +306,7 @@ export function createConfigStateManager(): ConfigStateManager {
       // Reapply themes
       if (state.isThemeInitialized) {
         applyInterfaceConfig(interfaceConfig)
+        await loadTheme(interfaceConfig.ui_theme)
         await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
       }
     } catch (e) {
@@ -389,12 +324,17 @@ export function createConfigStateManager(): ConfigStateManager {
       unlistenConfigChanged = null
     }
 
-    // Remove theme link
-    const existingLink = document.head.querySelector(
+    // Remove theme links
+    const markdownThemeLink = document.head.querySelector(
       'link[data-markdown-theme]'
     )
-    if (existingLink) {
-      existingLink.remove()
+    if (markdownThemeLink) {
+      markdownThemeLink.remove()
+    }
+
+    const uiThemeLink = document.head.querySelector('link[data-ui-theme]')
+    if (uiThemeLink) {
+      uiThemeLink.remove()
     }
 
     state.isInitialized = false
