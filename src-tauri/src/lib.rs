@@ -723,18 +723,6 @@ fn config_exists() -> bool {
     get_config_path().exists()
 }
 
-#[tauri::command]
-fn get_editor_mode() -> String {
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    config.editor.mode.clone()
-}
-
-#[tauri::command]
-fn get_markdown_theme() -> String {
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    config.interface.markdown_render_theme.clone()
-}
-
 // Tauri command handlers - Window operations
 #[tauri::command]
 fn show_main_window(app: AppHandle) -> Result<(), String> {
@@ -995,8 +983,6 @@ pub fn run() {
             get_config_content,
             save_config_content,
             config_exists,
-            get_editor_mode,
-            get_markdown_theme,
             get_general_config,
             get_interface_config,
             get_editor_config,

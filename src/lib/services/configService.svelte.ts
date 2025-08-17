@@ -76,8 +76,6 @@ export interface ConfigService {
   updateContent(content: string): void
   exists(): Promise<boolean>
   refreshCache(): Promise<void>
-  getMarkdownTheme(): Promise<string>
-  getEditorMode(): Promise<string>
   clearError(): void
   openPane(): Promise<void>
   closePane(): void
@@ -162,24 +160,6 @@ export function createConfigService(): ConfigService {
     } catch (e) {
       console.error('Failed to refresh cache:', e)
       throw e
-    }
-  }
-
-  async function getMarkdownTheme(): Promise<string> {
-    try {
-      return await invoke<string>('get_markdown_theme')
-    } catch (e) {
-      console.error('Failed to get markdown theme:', e)
-      return 'dark_dimmed'
-    }
-  }
-
-  async function getEditorMode(): Promise<string> {
-    try {
-      return await invoke<string>('get_editor_mode')
-    } catch (e) {
-      console.error('Failed to get editor mode:', e)
-      return 'basic'
     }
   }
 
@@ -289,8 +269,6 @@ export function createConfigService(): ConfigService {
     updateContent,
     exists,
     refreshCache,
-    getMarkdownTheme,
-    getEditorMode,
     clearError,
     openPane,
     closePane,
