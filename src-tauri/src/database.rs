@@ -19,6 +19,18 @@ pub fn get_database_path() -> Result<PathBuf, String> {
         .map(|path| path.join("symiosis").join("notes.sqlite"))
 }
 
+pub fn get_backup_dir() -> Result<PathBuf, String> {
+    get_data_dir()
+        .ok_or_else(|| "Failed to get data directory".to_string())
+        .map(|path| path.join("symiosis").join("backups"))
+}
+
+pub fn get_temp_dir() -> Result<PathBuf, String> {
+    get_data_dir()
+        .ok_or_else(|| "Failed to get data directory".to_string())
+        .map(|path| path.join("symiosis").join("temp"))
+}
+
 // Platform-specific utility functions
 #[cfg(test)]
 pub fn get_data_dir() -> Option<PathBuf> {

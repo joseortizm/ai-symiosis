@@ -2,7 +2,7 @@
 //!
 //! Tests for directory path functions and platform-specific behavior.
 
-use crate::database::get_data_dir;
+use crate::database::{get_data_dir, get_database_path};
 use crate::*;
 
 #[test]
@@ -124,7 +124,7 @@ fn test_get_default_notes_dir_structure() {
 
 #[test]
 fn test_database_path_uses_data_dir() {
-    let db_path = get_database_path();
+    let db_path = get_database_path().expect("Should get database path");
 
     assert!(db_path.is_absolute(), "Database path should be absolute");
     assert!(
@@ -170,7 +170,7 @@ fn test_directory_path_consistency() {
     // All directory functions should work together consistently
     let config_path = get_config_path();
     let notes_dir = get_default_notes_dir();
-    let db_path = get_database_path();
+    let db_path = get_database_path().expect("Should get database path");
 
     // All should be non-empty
     assert!(!config_path.to_string_lossy().is_empty());

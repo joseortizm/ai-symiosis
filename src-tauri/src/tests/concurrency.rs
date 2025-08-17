@@ -3,7 +3,8 @@
 //! Tests for concurrent access patterns and multi-user scenarios.
 
 use crate::config::*;
-use crate::{get_database_path, render_note, validate_note_name};
+use crate::database::get_database_path;
+use crate::{render_note, validate_note_name};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -171,7 +172,7 @@ fn test_concurrent_path_operations() {
                 // These functions should be safe to call concurrently
                 let config_path = get_config_path();
                 let notes_dir = get_default_notes_dir();
-                let db_path = get_database_path();
+                let db_path = get_database_path().expect("Should get database path");
 
                 // All should return consistent, valid paths
                 assert!(config_path.to_string_lossy().contains(".symiosis"));

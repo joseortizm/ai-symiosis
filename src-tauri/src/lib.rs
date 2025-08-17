@@ -12,7 +12,7 @@ use config::{
     get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
     parse_shortcut, reload_config, save_config_content, AppConfig,
 };
-use database::{get_database_path as get_db_path, get_db_connection};
+use database::{get_backup_dir, get_database_path as get_db_path, get_db_connection, get_temp_dir};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use std::fs;
@@ -33,10 +33,6 @@ static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(lo
 fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
     PathBuf::from(&config.notes_directory)
-}
-
-fn get_database_path() -> PathBuf {
-    get_db_path().unwrap_or_else(|_| PathBuf::from("./symiosis/notes.sqlite"))
 }
 
 fn validate_note_name(note_name: &str) -> Result<(), String> {
@@ -76,6 +72,69 @@ fn render_note(filename: &str, content: &str) -> String {
     } else {
         format!("<pre>{}</pre>", html_escape::encode_text(content))
     }
+}
+
+// Atomic file operations with backup support
+fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
+    // 1. Create backup in app data directory (preserving relative path structure)
+    if note_path.exists() {
+        let backup_dir = get_backup_dir()?;
+        let notes_dir = get_config_notes_dir();
+
+        // Get relative path from notes directory to preserve folder structure
+        let relative_path = note_path
+            .strip_prefix(&notes_dir)
+            .map_err(|_| "Note path is not within notes directory".to_string())?;
+
+        let backup_path = backup_dir.join(relative_path).with_extension("md.bak");
+
+        // Ensure backup directory structure exists
+        if let Some(backup_parent) = backup_path.parent() {
+            fs::create_dir_all(backup_parent)
+                .map_err(|e| format!("Failed to create backup directory: {}", e))?;
+        }
+
+        // Copy existing file to backup
+        fs::copy(note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
+    }
+
+    // 2. Create temp file in app data directory
+    let temp_dir = get_temp_dir()?;
+    fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp directory: {}", e))?;
+
+    // Generate unique temp filename using timestamp
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_path = temp_dir.join(format!("write_temp_{}.md", timestamp));
+
+    // 3. Write content to temp file
+    fs::write(&temp_path, content).map_err(|e| format!("Failed to write temp file: {}", e))?;
+
+    // 4. Atomic rename to final location
+    fs::rename(&temp_path, note_path)
+        .map_err(|e| format!("Failed to move temp file to final location: {}", e))?;
+
+    Ok(())
+}
+
+fn cleanup_temp_files() -> Result<(), String> {
+    let temp_dir = get_temp_dir()?;
+    if temp_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&temp_dir) {
+            for entry in entries.flatten() {
+                if entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("write_temp_")
+                {
+                    let _ = fs::remove_file(entry.path());
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 // Database operations
@@ -252,23 +311,66 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    // Create empty note file
-    fs::write(&note_path, "").map_err(|e| format!("Failed to create note: {}", e))?;
+    // 1. Create empty note file atomically (no backup needed for new files)
+    safe_write_note(&note_path, "")?;
 
-    let conn = get_db_connection()?;
-
+    // 2. Update database (if this fails, we rebuild from files)
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
 
-    conn.execute(
-        "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-        params![note_name, "", modified],
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+    match get_db_connection() {
+        Ok(conn) => {
+            match conn.execute(
+                "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+                params![note_name, "", modified],
+            ) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    eprintln!(
+                        "Database insert failed for '{}': {}. Rebuilding database...",
+                        note_name, e
+                    );
 
-    Ok(())
+                    // Database operation failed - rebuild from markdown files
+                    match recreate_database() {
+                        Ok(()) => {
+                            eprintln!("Database successfully rebuilt from files.");
+                            Ok(())
+                        }
+                        Err(rebuild_error) => {
+                            eprintln!("Database rebuild failed: {}. Note was created but may not be searchable.", rebuild_error);
+                            // Don't fail the user operation - file was created successfully
+                            Ok(())
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Database connection failed for '{}': {}. Rebuilding database...",
+                note_name, e
+            );
+
+            // Database connection failed - rebuild from markdown files
+            match recreate_database() {
+                Ok(()) => {
+                    eprintln!("Database successfully rebuilt from files.");
+                    Ok(())
+                }
+                Err(rebuild_error) => {
+                    eprintln!(
+                        "Database rebuild failed: {}. Note was created but may not be searchable.",
+                        rebuild_error
+                    );
+                    // Don't fail the user operation - file was created successfully
+                    Ok(())
+                }
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -276,17 +378,46 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
     let note_path = get_config_notes_dir().join(note_name);
 
+    // Ensure parent directory exists
     if let Some(parent) = note_path.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
-    fs::write(&note_path, content).map_err(|e| format!("Failed to save note: {}", e))?;
 
-    let conn = get_db_connection()?;
+    // 1. Write file atomically with backup (file operation is primary, never fails the user)
+    safe_write_note(&note_path, content)?;
 
+    // 2. Update database (if this fails, we rebuild from files)
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
+
+    match update_note_in_database(note_name, content, modified) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            eprintln!(
+                "Database update failed for '{}': {}. Rebuilding database...",
+                note_name, e
+            );
+
+            // Database operation failed - rebuild from markdown files
+            match recreate_database() {
+                Ok(()) => {
+                    eprintln!("Database successfully rebuilt from files.");
+                    Ok(())
+                }
+                Err(rebuild_error) => {
+                    eprintln!("Database rebuild failed: {}. Note was saved to file but may not be searchable.", rebuild_error);
+                    // Don't fail the user operation - file was saved successfully
+                    Ok(())
+                }
+            }
+        }
+    }
+}
+
+fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> Result<(), String> {
+    let conn = get_db_connection()?;
 
     // First try to update existing note
     let updated_rows = conn
@@ -325,18 +456,84 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         return Err(format!("Note '{}' already exists", new_name));
     }
 
-    // Rename the file
+    // 1. Create backup before rename operation
+    let backup_dir = get_backup_dir()?;
+    let relative_old_path = old_path
+        .strip_prefix(&notes_dir)
+        .map_err(|_| "Note path is not within notes directory".to_string())?;
+    let backup_path = backup_dir.join(relative_old_path).with_extension("md.bak");
+
+    // Ensure backup directory structure exists
+    if let Some(backup_parent) = backup_path.parent() {
+        fs::create_dir_all(backup_parent)
+            .map_err(|e| format!("Failed to create backup directory: {}", e))?;
+    }
+
+    // Copy to backup
+    fs::copy(&old_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
+
+    // 2. Rename the file atomically
     fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))?;
 
-    let conn = get_db_connection()?;
+    // 3. Update database (if this fails, we can restore from backup)
+    match get_db_connection() {
+        Ok(conn) => {
+            match conn.execute(
+                "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                params![new_name, old_name],
+            ) {
+                Ok(_) => {
+                    // Success - cleanup backup
+                    let _ = fs::remove_file(&backup_path);
+                    Ok(())
+                }
+                Err(e) => {
+                    eprintln!("Database update failed for rename '{}' -> '{}': {}. Rebuilding database...", old_name, new_name, e);
 
-    conn.execute(
-        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-        params![new_name, old_name],
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+                    // Database operation failed - rebuild from markdown files
+                    match recreate_database() {
+                        Ok(()) => {
+                            eprintln!("Database successfully rebuilt from files.");
+                            // Success - cleanup backup
+                            let _ = fs::remove_file(&backup_path);
+                            Ok(())
+                        }
+                        Err(rebuild_error) => {
+                            eprintln!("Database rebuild failed: {}. Note was renamed but may not be searchable.", rebuild_error);
+                            // Don't fail the user operation - file was renamed successfully
+                            // Keep backup for potential manual recovery
+                            Ok(())
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Database connection failed for rename '{}' -> '{}': {}. Rebuilding database...",
+                old_name, new_name, e
+            );
 
-    Ok(())
+            // Database connection failed - rebuild from markdown files
+            match recreate_database() {
+                Ok(()) => {
+                    eprintln!("Database successfully rebuilt from files.");
+                    // Success - cleanup backup
+                    let _ = fs::remove_file(&backup_path);
+                    Ok(())
+                }
+                Err(rebuild_error) => {
+                    eprintln!(
+                        "Database rebuild failed: {}. Note was renamed but may not be searchable.",
+                        rebuild_error
+                    );
+                    // Don't fail the user operation - file was renamed successfully
+                    // Keep backup for potential manual recovery
+                    Ok(())
+                }
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -349,15 +546,78 @@ fn delete_note(note_name: &str) -> Result<(), String> {
         return Err(format!("Note '{}' not found", note_name));
     }
 
-    // Delete the file
+    // 1. Create backup before deletion (for potential recovery)
+    let backup_dir = get_backup_dir()?;
+    let notes_dir = get_config_notes_dir();
+    let relative_path = note_path
+        .strip_prefix(&notes_dir)
+        .map_err(|_| "Note path is not within notes directory".to_string())?;
+    let backup_path = backup_dir
+        .join(relative_path)
+        .with_extension("md.bak.deleted");
+
+    // Ensure backup directory structure exists
+    if let Some(backup_parent) = backup_path.parent() {
+        fs::create_dir_all(backup_parent)
+            .map_err(|e| format!("Failed to create backup directory: {}", e))?;
+    }
+
+    // Copy to backup before deletion
+    fs::copy(&note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
+
+    // 2. Delete the file
     fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
 
-    let conn = get_db_connection()?;
+    // 3. Update database (if this fails, we rebuild from remaining files)
+    match get_db_connection() {
+        Ok(conn) => {
+            match conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]) {
+                Ok(_) => {
+                    // Success - keep backup for a while in case user wants to restore
+                    // Note: We intentionally keep the backup file for potential recovery
+                    Ok(())
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Database delete failed for '{}': {}. Rebuilding database...",
+                        note_name, e
+                    );
 
-    conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
-        .map_err(|e| format!("Database error: {}", e))?;
+                    // Database operation failed - rebuild from remaining markdown files
+                    match recreate_database() {
+                        Ok(()) => {
+                            eprintln!("Database successfully rebuilt from files.");
+                            Ok(())
+                        }
+                        Err(rebuild_error) => {
+                            eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
+                            // Don't fail the user operation - file was deleted successfully
+                            Ok(())
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Database connection failed for delete '{}': {}. Rebuilding database...",
+                note_name, e
+            );
 
-    Ok(())
+            // Database connection failed - rebuild from remaining markdown files
+            match recreate_database() {
+                Ok(()) => {
+                    eprintln!("Database successfully rebuilt from files.");
+                    Ok(())
+                }
+                Err(rebuild_error) => {
+                    eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
+                    // Don't fail the user operation - file was deleted successfully
+                    Ok(())
+                }
+            }
+        }
+    }
 }
 
 // Tauri command handlers - System operations
@@ -603,10 +863,14 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 
 // Initialization functions
 pub fn initialize_notes() {
-    let db_path = get_database_path();
-    if let Some(parent) = db_path.parent() {
-        let _ = fs::create_dir_all(parent);
+    if let Ok(db_path) = get_db_path() {
+        if let Some(parent) = db_path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
     }
+
+    // Clean up any leftover temp files from previous runs
+    let _ = cleanup_temp_files();
 
     let mut conn = match get_db_connection() {
         Ok(conn) => conn,

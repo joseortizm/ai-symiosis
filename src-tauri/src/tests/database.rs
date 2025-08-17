@@ -2,11 +2,12 @@
 //!
 //! Tests for database integration functionality.
 
+use crate::database::get_database_path;
 use crate::*;
 
 #[test]
 fn test_database_path_creation() {
-    let db_path = get_database_path();
+    let db_path = get_database_path().expect("Should get database path");
     assert!(db_path.is_absolute());
     assert!(db_path.to_string_lossy().contains("symiosis"));
     assert!(db_path.to_string_lossy().contains("notes.sqlite"));
