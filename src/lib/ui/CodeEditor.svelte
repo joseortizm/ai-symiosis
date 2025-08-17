@@ -5,7 +5,6 @@ Focused component handling CodeMirror initialization and content editing.
 
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import { invoke } from '@tauri-apps/api/core'
   import { configService } from '../services/configService.svelte'
   import { EditorView, basicSetup } from 'codemirror'
   import type { Extension } from '@codemirror/state'

@@ -1,24 +1,33 @@
 # Symiosis Configuration File
 # Uncomment and modify the options below to configure the application
 
+# ============================================================================
+# TOP-LEVEL ESSENTIAL SETTINGS
+# ============================================================================
+
 # Default: ~/Documents/Notes (or equivalent on your system)
 notes_directory = "{DEFAULT_NOTES_DIR}"
-
-# Maximum number of search results to display
-max_search_results = 100
 
 # Format: modifier keys + key (e.g., "Ctrl+Shift+N", "Cmd+Space", "Alt+F1")
 # Supported modifiers: Ctrl, Alt, Shift, Cmd (macOS), Super (Linux)
 global_shortcut = "Ctrl+Shift+N"
 
 # ============================================================================
-# THEME CONFIGURATION
+# GENERAL CONFIGURATION
 # ============================================================================
 
-[theme]
+[general]
+# Future extensible core settings
+# This section is reserved for general application behavior settings
+
+# ============================================================================
+# INTERFACE CONFIGURATION
+# ============================================================================
+
+[interface]
 # UI theme for the application interface
 # Options: "gruvbox-dark", "gruvbox-light", "one-dark", "github-light"
-name = "gruvbox-dark"
+ui_theme = "gruvbox-dark"
 
 # Font family for the UI
 font_family = "Inter, sans-serif"
@@ -36,28 +45,13 @@ editor_font_size = 14
 # Options: "light", "dark", "dark_dimmed", "auto"
 markdown_render_theme = "dark_dimmed"
 
-# ============================================================================
-# KEYBOARD SHORTCUTS
-# ============================================================================
-
-[shortcuts.search_input]
-create_note = "Ctrl+Enter"
-rename_note = "Ctrl+m"
-open_external = "Ctrl+o"
-open_folder = "Ctrl+f"
-refresh_cache = "Ctrl+r"
-delete_note = "Ctrl+x"
-scroll_up = "Ctrl+u"
-scroll_down = "Ctrl+d"
-vim_up = "Ctrl+k"
-vim_down = "Ctrl+j"
-navigate_previous = "Ctrl+p"
-navigate_next = "Ctrl+n"
-open_settings = "Meta+,"
-
-[shortcuts.edit_mode]
-save_and_exit = "Ctrl+s"
-open_settings = "Meta+,"
+# Window appearance and behavior
+default_width = 1200
+default_height = 800
+center_on_startup = true
+remember_size = true
+remember_position = true
+always_on_top = false
 
 # ============================================================================
 # EDITOR CONFIGURATION
@@ -81,21 +75,31 @@ tab_size = 2
 # Show line numbers
 show_line_numbers = true
 
-[editor.shortcuts]
-save = "Ctrl+s"
-fold = "Ctrl+Shift+["
-unfold = "Ctrl+Shift+]"
-fold_all = "Ctrl+Alt+["
-unfold_all = "Ctrl+Alt+]"
-
 # ============================================================================
-# WINDOW CONFIGURATION
+# KEYBOARD SHORTCUTS
 # ============================================================================
 
-[window]
-default_width = 1200
-default_height = 800
-center_on_startup = true
-remember_size = true
-remember_position = true
-always_on_top = false
+[shortcuts]
+# All keyboard shortcuts in one unified section
+create_note = "Ctrl+Enter"
+rename_note = "Ctrl+m"
+delete_note = "Ctrl+x"
+save_and_exit = "Ctrl+s"
+open_external = "Ctrl+o"
+open_folder = "Ctrl+f"
+refresh_cache = "Ctrl+r"
+scroll_up = "Ctrl+u"
+scroll_down = "Ctrl+d"
+vim_up = "Ctrl+k"
+vim_down = "Ctrl+j"
+navigate_previous = "Ctrl+p"
+navigate_next = "Ctrl+n"
+open_settings = "Meta+,"
+
+# ============================================================================
+# PREFERENCES
+# ============================================================================
+
+[preferences]
+# Maximum number of search results to display
+max_search_results = 100

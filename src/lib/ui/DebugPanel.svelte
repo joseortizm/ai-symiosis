@@ -21,7 +21,7 @@ Shows reactive state from managers and services for debugging.
       focusManager: ReturnType<typeof createFocusManager>
     }>('managers')
 
-  const { dialogManager, contentManager, configStateManager, themeManager } =
+  const { dialogManager, contentManager, configStateManager } =
     appCoordinator.managers
 
   // Debug panel visibility and configuration
@@ -354,7 +354,11 @@ Shows reactive state from managers and services for debugging.
           </div>
           <div class="debug-item">
             <strong>maxSearchResults:</strong>
-            <code>{formatValue(configStateManager.maxSearchResults)}</code>
+            <code
+              >{formatValue(
+                configStateManager.preferences.max_search_results
+              )}</code
+            >
           </div>
           <div class="debug-item">
             <strong>globalShortcut:</strong>
@@ -362,11 +366,15 @@ Shows reactive state from managers and services for debugging.
           </div>
           <div class="debug-item">
             <strong>editorMode:</strong>
-            <code>{formatValue(configStateManager.editorMode)}</code>
+            <code>{formatValue(configStateManager.editor.mode)}</code>
           </div>
           <div class="debug-item">
             <strong>markdownTheme:</strong>
-            <code>{formatValue(configStateManager.markdownTheme)}</code>
+            <code
+              >{formatValue(
+                configStateManager.interface.markdown_render_theme
+              )}</code
+            >
           </div>
           <div class="debug-item">
             <strong>isLoading:</strong>
@@ -388,19 +396,19 @@ Shows reactive state from managers and services for debugging.
           <h4>🎨 Theme Manager</h4>
           <div class="debug-item">
             <strong>currentTheme:</strong>
-            <code>{formatValue(themeManager.currentTheme)}</code>
+            <code>{formatValue(configStateManager.currentUITheme)}</code>
           </div>
           <div class="debug-item">
             <strong>isInitialized:</strong>
-            <code>{formatValue(themeManager.isInitialized)}</code>
+            <code>{formatValue(configStateManager.isThemeInitialized)}</code>
           </div>
           <div class="debug-item">
             <strong>isLoading:</strong>
-            <code>{formatValue(themeManager.isLoading)}</code>
+            <code>{formatValue(configStateManager.isLoading)}</code>
           </div>
           <div class="debug-item">
             <strong>error:</strong>
-            <code>{formatValue(themeManager.error)}</code>
+            <code>{formatValue(configStateManager.error)}</code>
           </div>
         </div>
       {/if}

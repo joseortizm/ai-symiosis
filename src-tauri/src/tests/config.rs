@@ -5,7 +5,7 @@
 
 use crate::config::{
     get_config_path, get_default_notes_dir, load_config, parse_shortcut, reload_config,
-    validate_config, validate_editor_config, validate_max_search_results, validate_notes_directory,
+    validate_config, validate_editor_config, validate_notes_directory, validate_preferences_config,
     validate_shortcut_format, AppConfig, EditorConfig,
 };
 
@@ -13,10 +13,10 @@ use crate::config::{
 fn test_default_config_values() {
     let config = AppConfig::default();
 
-    assert_eq!(config.max_search_results, 100);
+    assert_eq!(config.preferences.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.theme.markdown_render_theme, "dark_dimmed");
+    assert_eq!(config.interface.markdown_render_theme, "dark_dimmed");
     // notes_directory should be ~/Documents/Notes or ./notes fallback
     assert!(config.notes_directory.contains("Notes") || config.notes_directory == "./notes");
 }
@@ -45,13 +45,16 @@ fn test_config_toml_serialization_roundtrip() {
     let deserialized: AppConfig =
         toml::from_str(&toml_str).expect("Config deserialization should work");
 
-    assert_eq!(config.max_search_results, deserialized.max_search_results);
+    assert_eq!(
+        config.preferences.max_search_results,
+        deserialized.preferences.max_search_results
+    );
     assert_eq!(config.notes_directory, deserialized.notes_directory);
     assert_eq!(config.global_shortcut, deserialized.global_shortcut);
     assert_eq!(config.editor.mode, deserialized.editor.mode);
     assert_eq!(
-        config.theme.markdown_render_theme,
-        deserialized.theme.markdown_render_theme
+        config.interface.markdown_render_theme,
+        deserialized.interface.markdown_render_theme
     );
 }
 
@@ -67,18 +70,20 @@ notes_directory = "/tmp/test"
     // Specified field
     assert_eq!(config.notes_directory, "/tmp/test");
     // Missing fields should use defaults
-    assert_eq!(config.max_search_results, 100);
+    assert_eq!(config.preferences.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.theme.markdown_render_theme, "dark_dimmed");
+    assert_eq!(config.interface.markdown_render_theme, "dark_dimmed");
 }
 
 #[test]
 fn test_config_toml_partial_config() {
     let partial_toml = r#"
 notes_directory = "/custom/notes"
-max_search_results = 50
 global_shortcut = "Alt+Space"
+
+[preferences]
+max_search_results = 50
 "#;
 
     let config: AppConfig =
@@ -86,11 +91,11 @@ global_shortcut = "Alt+Space"
 
     // Specified fields
     assert_eq!(config.notes_directory, "/custom/notes");
-    assert_eq!(config.max_search_results, 50);
+    assert_eq!(config.preferences.max_search_results, 50);
     assert_eq!(config.global_shortcut, "Alt+Space");
     // Missing fields should use defaults
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.theme.markdown_render_theme, "dark_dimmed");
+    assert_eq!(config.interface.markdown_render_theme, "dark_dimmed");
 }
 
 #[test]
@@ -115,10 +120,10 @@ fn test_load_config_behavior() {
     let config = load_config();
 
     // Should have reasonable values (either from file or defaults)
-    assert!(config.max_search_results > 0);
+    assert!(config.preferences.max_search_results > 0);
     assert!(!config.global_shortcut.is_empty());
     assert!(!config.editor.mode.is_empty());
-    assert!(!config.theme.markdown_render_theme.is_empty());
+    assert!(!config.interface.markdown_render_theme.is_empty());
     assert!(!config.notes_directory.is_empty());
 }
 
@@ -145,15 +150,21 @@ fn test_save_config_content_validates_toml() {
     // Valid TOML should parse successfully
     let valid_toml = r#"
 notes_directory = "/valid/path"
+
+[preferences]
 max_search_results = 150
-editor_mode = "vim"
+
+[editor]
+mode = "vim"
 "#;
     let parse_result = toml::from_str::<AppConfig>(valid_toml);
     assert!(parse_result.is_ok(), "Valid TOML should parse successfully");
 
     // Invalid TOML should fail (this is what save_config_content checks)
     let invalid_toml = r#"
-notes_directory = "/path
+notes_directory = "/path"
+
+[preferences]
 max_search_results = "not_a_number"
 "#;
     let invalid_result = toml::from_str::<AppConfig>(invalid_toml);
@@ -197,10 +208,16 @@ fn test_config_validation_should_reject_negative_values() {
     // TOML parsing rejects negative values for usize fields automatically
     let config_with_negative = r#"
 notes_directory = "/tmp"
-max_search_results = -5
 global_shortcut = "Ctrl+Shift+N"
-editor_mode = "basic"
-markdown_theme = "dark_dimmed"
+
+[preferences]
+max_search_results = -5
+
+[editor]
+mode = "basic"
+
+[interface]
+markdown_render_theme = "dark_dimmed"
 "#;
 
     let result = toml::from_str::<AppConfig>(config_with_negative);
@@ -210,16 +227,11 @@ markdown_theme = "dark_dimmed"
     );
 
     // Test zero values should be rejected by validation
-    let config_with_zero = AppConfig {
-        notes_directory: "/tmp".to_string(),
-        max_search_results: 0,
-        global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor: EditorConfig {
-            mode: "basic".to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let mut config_with_zero = AppConfig::default();
+    config_with_zero.notes_directory = "/tmp".to_string();
+    config_with_zero.preferences.max_search_results = 0;
+    config_with_zero.global_shortcut = "Ctrl+Shift+N".to_string();
+    config_with_zero.editor.mode = "basic".to_string();
 
     // Now implemented: validation should reject zero values
     assert!(
@@ -227,15 +239,21 @@ markdown_theme = "dark_dimmed"
         "Validation should reject zero max_search_results"
     );
     assert!(
-        validate_max_search_results(0).is_err(),
+        validate_preferences_config(&config_with_zero.preferences).is_err(),
         "Should reject zero max_search_results"
     );
+
+    let mut invalid_prefs = config_with_zero.preferences.clone();
+    invalid_prefs.max_search_results = 10001;
     assert!(
-        validate_max_search_results(10001).is_err(),
+        validate_preferences_config(&invalid_prefs).is_err(),
         "Should reject excessively large max_search_results"
     );
+
+    let mut valid_prefs = config_with_zero.preferences.clone();
+    valid_prefs.max_search_results = 100;
     assert!(
-        validate_max_search_results(100).is_ok(),
+        validate_preferences_config(&valid_prefs).is_ok(),
         "Should accept reasonable max_search_results"
     );
 }
@@ -243,16 +261,11 @@ markdown_theme = "dark_dimmed"
 #[test]
 fn test_config_validation_should_reject_invalid_editor_modes() {
     // Now implemented: Should validate editor_mode against allowed values
-    let config = AppConfig {
-        notes_directory: "/tmp".to_string(),
-        max_search_results: 100,
-        global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor: EditorConfig {
-            mode: "nonexistent_editor".to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let mut config = AppConfig::default();
+    config.notes_directory = "/tmp".to_string();
+    config.preferences.max_search_results = 100;
+    config.global_shortcut = "Ctrl+Shift+N".to_string();
+    config.editor.mode = "nonexistent_editor".to_string();
 
     // Validation should now reject invalid editor modes
     assert!(
@@ -300,16 +313,11 @@ fn test_config_validation_should_reject_invalid_editor_modes() {
 #[test]
 fn test_config_validation_should_reject_invalid_shortcuts() {
     // Now implemented: Should validate shortcut format before calling parse_shortcut
-    let config = AppConfig {
-        notes_directory: "/tmp".to_string(),
-        max_search_results: 100,
-        global_shortcut: "InvalidShortcutFormat".to_string(),
-        editor: EditorConfig {
-            mode: "basic".to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let mut config = AppConfig::default();
+    config.notes_directory = "/tmp".to_string();
+    config.preferences.max_search_results = 100;
+    config.global_shortcut = "InvalidShortcutFormat".to_string();
+    config.editor.mode = "basic".to_string();
 
     // Validation should now reject invalid shortcuts
     assert!(
@@ -334,16 +342,11 @@ fn test_config_validation_should_reject_invalid_shortcuts() {
     );
 
     // Test that valid shortcuts work correctly
-    let valid_config = AppConfig {
-        notes_directory: "/tmp".to_string(),
-        max_search_results: 100,
-        global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor: EditorConfig {
-            mode: "basic".to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let mut valid_config = AppConfig::default();
+    valid_config.notes_directory = "/tmp".to_string();
+    valid_config.preferences.max_search_results = 100;
+    valid_config.global_shortcut = "Ctrl+Shift+N".to_string();
+    valid_config.editor.mode = "basic".to_string();
 
     // This should validate successfully
     assert!(
@@ -372,16 +375,11 @@ fn test_config_validation_should_reject_unsafe_directories() {
     ];
 
     for unsafe_dir in unsafe_directories {
-        let config = AppConfig {
-            notes_directory: unsafe_dir.to_string(),
-            max_search_results: 100,
-            global_shortcut: "Ctrl+Shift+N".to_string(),
-            editor: EditorConfig {
-                mode: "basic".to_string(),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let mut config = AppConfig::default();
+        config.notes_directory = unsafe_dir.to_string();
+        config.preferences.max_search_results = 100;
+        config.global_shortcut = "Ctrl+Shift+N".to_string();
+        config.editor.mode = "basic".to_string();
 
         // Validation should now reject unsafe directories
         assert!(
@@ -416,39 +414,25 @@ fn test_config_validation_should_reject_unsafe_directories() {
 #[test]
 fn test_config_validation_should_reject_invalid_markdown_themes() {
     // Test markdown theme validation
-    let config = AppConfig {
-        notes_directory: "/tmp".to_string(),
-        max_search_results: 100,
-        global_shortcut: "Ctrl+Shift+N".to_string(),
-        editor: EditorConfig {
-            mode: "basic".to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let mut config = AppConfig::default();
+    config.notes_directory = "/tmp".to_string();
+    config.preferences.max_search_results = 100;
+    config.global_shortcut = "Ctrl+Shift+N".to_string();
+    config.editor.mode = "basic".to_string();
+    config.interface.markdown_render_theme = "invalid_theme".to_string();
 
     // Validation should reject invalid themes
     assert!(
         validate_config(&config).is_err(),
         "Should reject invalid markdown theme"
     );
-    // Test markdown theme validation through editor config
-    let invalid_theme_editor = EditorConfig {
-        ..Default::default()
-    };
-    assert!(
-        validate_editor_config(&invalid_theme_editor).is_err(),
-        "Should reject invalid markdown theme"
-    );
 
     // Test valid themes
     let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
     for theme in valid_themes {
-        let valid_theme_editor = EditorConfig {
-            ..Default::default()
-        };
+        config.interface.markdown_render_theme = theme.to_string();
         assert!(
-            validate_editor_config(&valid_theme_editor).is_ok(),
+            validate_config(&config).is_ok(),
             "Should accept valid theme: {}",
             theme
         );

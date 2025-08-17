@@ -19,7 +19,7 @@ fn test_concurrent_config_access() {
 
                 // All threads should get consistent config values
                 assert!(!config.notes_directory.is_empty());
-                assert!(config.max_search_results > 0);
+                assert!(config.preferences.max_search_results > 0);
                 assert!(!config.global_shortcut.is_empty());
 
                 // Simulate some work
@@ -42,28 +42,28 @@ fn test_concurrent_validation() {
         {
             let mut config = AppConfig::default();
             config.notes_directory = "/tmp/test1".to_string();
-            config.max_search_results = 100;
+            config.preferences.max_search_results = 100;
             config.global_shortcut = "Ctrl+Shift+N".to_string();
             config.editor.mode = "basic".to_string();
-            config.theme.markdown_render_theme = "dark_dimmed".to_string();
+            config.interface.markdown_render_theme = "dark_dimmed".to_string();
             config
         },
         {
             let mut config = AppConfig::default();
             config.notes_directory = "/tmp/test2".to_string();
-            config.max_search_results = 50;
+            config.preferences.max_search_results = 50;
             config.global_shortcut = "Alt+Space".to_string();
             config.editor.mode = "vim".to_string();
-            config.theme.markdown_render_theme = "light".to_string();
+            config.interface.markdown_render_theme = "light".to_string();
             config
         },
         {
             let mut config = AppConfig::default();
             config.notes_directory = "/invalid".to_string();
-            config.max_search_results = 0; // Invalid
+            config.preferences.max_search_results = 0; // Invalid
             config.global_shortcut = "InvalidShortcut".to_string();
             config.editor.mode = "invalid_mode".to_string();
-            config.theme.markdown_render_theme = "invalid_theme".to_string();
+            config.interface.markdown_render_theme = "invalid_theme".to_string();
             config
         },
     ]);

@@ -16,17 +16,12 @@ Shows highlighted content or renders the CodeMirror editor.
     AppActions,
   } from '../app/appCoordinator.svelte'
 
-  const {
-    focusManager,
-    contentManager,
-    editorManager,
-    dialogManager,
-    themeManager,
-  } = getContext<AppManagers>('managers')
+  const { focusManager, contentManager, editorManager, dialogManager } =
+    getContext<AppManagers>('managers')
   const appState = getContext<AppState>('state')
   const actions = getContext<AppActions>('actions')
 
-  const themeInitializer = themeManager.getThemeInitializer()
+  // Theme initialization is now handled by configStateManager
   let noteContentElement = $state<HTMLElement | undefined>(undefined)
 
   function registerNoteContentElement(element: HTMLElement) {
@@ -53,7 +48,7 @@ Shows highlighted content or renders the CodeMirror editor.
   })
 </script>
 
-<div class="note-preview" use:themeInitializer>
+<div class="note-preview">
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
       <CodeEditor

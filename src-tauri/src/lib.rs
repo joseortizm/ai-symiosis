@@ -8,9 +8,9 @@ mod tests;
 // External crates
 use comrak::{markdown_to_html, ComrakOptions};
 use config::{
-    get_config_path, get_default_notes_dir, get_editor_config, get_shortcut_config,
-    get_theme_config, get_window_config, load_config, parse_shortcut, reload_config,
-    save_config_content, AppConfig,
+    get_config_path, get_default_notes_dir, get_editor_config, get_general_config,
+    get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
+    parse_shortcut, reload_config, save_config_content, AppConfig,
 };
 use database::{get_database_path as get_db_path, get_db_connection};
 use rusqlite::{params, Connection};
@@ -210,7 +210,7 @@ fn list_all_notes() -> Result<Vec<String>, String> {
 #[tauri::command]
 fn search_notes(query: &str) -> Result<Vec<String>, String> {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    search_notes_hybrid(query, config.max_search_results)
+    search_notes_hybrid(query, config.preferences.max_search_results)
 }
 
 #[tauri::command]
@@ -472,7 +472,7 @@ fn get_editor_mode() -> String {
 #[tauri::command]
 fn get_markdown_theme() -> String {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    config.theme.markdown_render_theme.clone()
+    config.interface.markdown_render_theme.clone()
 }
 
 // Tauri command handlers - Window operations
@@ -652,6 +652,7 @@ pub fn run() {
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .manage(std::sync::RwLock::new(load_config()))
         .setup(|app| {
             // Setup the system tray
             setup_tray(app.handle())?;
@@ -732,10 +733,11 @@ pub fn run() {
             config_exists,
             get_editor_mode,
             get_markdown_theme,
-            get_theme_config,
-            get_shortcut_config,
+            get_general_config,
+            get_interface_config,
             get_editor_config,
-            get_window_config
+            get_shortcuts_config,
+            get_preferences_config
         ])
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {

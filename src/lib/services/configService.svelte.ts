@@ -7,21 +7,42 @@
 import { invoke } from '@tauri-apps/api/core'
 
 // Configuration type definitions
-export interface ThemeConfig {
-  name: string
+export interface GeneralConfig {
+  // Future extensible core settings
+  [key: string]: unknown
+}
+
+export interface InterfaceConfig {
+  ui_theme: string
   font_family: string
   font_size: number
   editor_font_family: string
   editor_font_size: number
+  markdown_render_theme: string
+  default_width: number
+  default_height: number
+  center_on_startup: boolean
+  remember_size: boolean
+  remember_position: boolean
+  always_on_top: boolean
 }
 
-export interface SearchInputShortcuts {
+export interface EditorConfig {
+  mode: string
+  theme: string
+  word_wrap: boolean
+  tab_size: number
+  show_line_numbers: boolean
+}
+
+export interface ShortcutsConfig {
   create_note: string
   rename_note: string
+  delete_note: string
+  save_and_exit: string
   open_external: string
   open_folder: string
   refresh_cache: string
-  delete_note: string
   scroll_up: string
   scroll_down: string
   vim_up: string
@@ -31,40 +52,8 @@ export interface SearchInputShortcuts {
   open_settings: string
 }
 
-export interface EditModeShortcuts {
-  save_and_exit: string
-  open_settings: string
-}
-
-export interface ShortcutConfig {
-  search_input: SearchInputShortcuts
-  edit_mode: EditModeShortcuts
-}
-
-export interface EditorConfig {
-  mode: string
-  theme: string
-  word_wrap: boolean
-  tab_size: number
-  line_height: number
-  show_line_numbers: boolean
-  markdown_theme: string
-  shortcuts: {
-    save: string
-    fold: string
-    unfold: string
-    fold_all: string
-    unfold_all: string
-  }
-}
-
-export interface WindowConfig {
-  default_width: number
-  default_height: number
-  center_on_startup: boolean
-  remember_size: boolean
-  remember_position: boolean
-  always_on_top: boolean
+export interface PreferencesConfig {
+  max_search_results: number
 }
 
 interface ConfigServiceState {
@@ -92,10 +81,11 @@ export interface ConfigService {
   clearError(): void
   openPane(): Promise<void>
   closePane(): void
-  getThemeConfig(): Promise<ThemeConfig>
-  getShortcutConfig(): Promise<ShortcutConfig>
+  getGeneralConfig(): Promise<GeneralConfig>
+  getInterfaceConfig(): Promise<InterfaceConfig>
   getEditorConfig(): Promise<EditorConfig>
-  getWindowConfig(): Promise<WindowConfig>
+  getShortcutsConfig(): Promise<ShortcutsConfig>
+  getPreferencesConfig(): Promise<PreferencesConfig>
 }
 
 export function createConfigService(): ConfigService {
@@ -206,90 +196,88 @@ export function createConfigService(): ConfigService {
     close()
   }
 
-  async function getThemeConfig(): Promise<ThemeConfig> {
+  async function getGeneralConfig(): Promise<GeneralConfig> {
     try {
-      return await invoke<ThemeConfig>('get_theme_config')
+      const result = await invoke<GeneralConfig>('get_general_config')
+      return result
     } catch (e) {
-      console.error('Failed to get theme config:', e)
-      // Return default theme config
+      console.error('Failed to get general config:', e)
+      return {}
+    }
+  }
+
+  async function getInterfaceConfig(): Promise<InterfaceConfig> {
+    try {
+      const result = await invoke<InterfaceConfig>('get_interface_config')
+      return result
+    } catch (e) {
+      console.error('Failed to get interface config:', e)
       return {
-        name: 'gruvbox-dark',
+        ui_theme: 'gruvbox-dark',
         font_family: 'Inter, sans-serif',
         font_size: 14,
         editor_font_family: 'JetBrains Mono, Consolas, monospace',
         editor_font_size: 14,
-      }
-    }
-  }
-
-  async function getShortcutConfig(): Promise<ShortcutConfig> {
-    try {
-      return await invoke<ShortcutConfig>('get_shortcut_config')
-    } catch (e) {
-      console.error('Failed to get shortcut config:', e)
-      // Return default shortcut config
-      return {
-        search_input: {
-          create_note: 'Ctrl+Enter',
-          rename_note: 'Ctrl+m',
-          open_external: 'Ctrl+o',
-          open_folder: 'Ctrl+f',
-          refresh_cache: 'Ctrl+r',
-          delete_note: 'Ctrl+x',
-          scroll_up: 'Ctrl+u',
-          scroll_down: 'Ctrl+d',
-          vim_up: 'Ctrl+k',
-          vim_down: 'Ctrl+j',
-          navigate_previous: 'Ctrl+p',
-          navigate_next: 'Ctrl+n',
-          open_settings: 'Meta+,',
-        },
-        edit_mode: {
-          save_and_exit: 'Ctrl+s',
-          open_settings: 'Meta+,',
-        },
-      }
-    }
-  }
-
-  async function getEditorConfig(): Promise<EditorConfig> {
-    try {
-      return await invoke<EditorConfig>('get_editor_config')
-    } catch (e) {
-      console.error('Failed to get editor config:', e)
-      // Return default editor config
-      return {
-        mode: 'basic',
-        theme: 'gruvbox-dark',
-        word_wrap: true,
-        tab_size: 2,
-        line_height: 1.5,
-        show_line_numbers: true,
-        markdown_theme: 'dark_dimmed',
-        shortcuts: {
-          save: 'Ctrl+s',
-          fold: 'Ctrl+Shift+[',
-          unfold: 'Ctrl+Shift+]',
-          fold_all: 'Ctrl+Alt+[',
-          unfold_all: 'Ctrl+Alt+]',
-        },
-      }
-    }
-  }
-
-  async function getWindowConfig(): Promise<WindowConfig> {
-    try {
-      return await invoke<WindowConfig>('get_window_config')
-    } catch (e) {
-      console.error('Failed to get window config:', e)
-      // Return default window config
-      return {
+        markdown_render_theme: 'dark_dimmed',
         default_width: 1200,
         default_height: 800,
         center_on_startup: true,
         remember_size: true,
         remember_position: true,
         always_on_top: false,
+      }
+    }
+  }
+
+  async function getEditorConfig(): Promise<EditorConfig> {
+    try {
+      const result = await invoke<EditorConfig>('get_editor_config')
+      return result
+    } catch (e) {
+      console.error('Failed to get editor config:', e)
+      return {
+        mode: 'basic',
+        theme: 'gruvbox-dark',
+        word_wrap: true,
+        tab_size: 2,
+        show_line_numbers: true,
+      }
+    }
+  }
+
+  async function getShortcutsConfig(): Promise<ShortcutsConfig> {
+    try {
+      const result = await invoke<ShortcutsConfig>('get_shortcuts_config')
+      return result
+    } catch (e) {
+      console.error('Failed to get shortcuts config:', e)
+      return {
+        create_note: 'Ctrl+Enter',
+        rename_note: 'Ctrl+m',
+        delete_note: 'Ctrl+x',
+        save_and_exit: 'Ctrl+s',
+        open_external: 'Ctrl+o',
+        open_folder: 'Ctrl+f',
+        refresh_cache: 'Ctrl+r',
+        scroll_up: 'Ctrl+u',
+        scroll_down: 'Ctrl+d',
+        vim_up: 'Ctrl+k',
+        vim_down: 'Ctrl+j',
+        navigate_previous: 'Ctrl+p',
+        navigate_next: 'Ctrl+n',
+        open_settings: 'Meta+,',
+      }
+    }
+  }
+
+  async function getPreferencesConfig(): Promise<PreferencesConfig> {
+    try {
+      const result = await invoke<PreferencesConfig>('get_preferences_config')
+      return result
+    } catch (e) {
+      console.error('Failed to get preferences config:', e)
+      return {
+        max_search_results: 100,
       }
     }
   }
@@ -306,10 +294,11 @@ export function createConfigService(): ConfigService {
     clearError,
     openPane,
     closePane,
-    getThemeConfig,
-    getShortcutConfig,
+    getGeneralConfig,
+    getInterfaceConfig,
     getEditorConfig,
-    getWindowConfig,
+    getShortcutsConfig,
+    getPreferencesConfig,
 
     // Reactive getters and setters (to support bind:value)
     get content(): string {

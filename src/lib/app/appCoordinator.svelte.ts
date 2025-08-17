@@ -10,7 +10,6 @@ import { listen } from '@tauri-apps/api/event'
 import { createDialogManager } from '../core/dialogManager.svelte'
 import { createContentManager } from '../core/contentManager.svelte'
 import { createConfigStateManager } from '../core/configStateManager.svelte'
-import { createThemeManager } from '../core/themeManager.svelte'
 import { createContentNavigationManager } from '../core/contentNavigationManager.svelte'
 import { noteService } from '../services/noteService.svelte'
 import { configService } from '../services/configService.svelte'
@@ -71,9 +70,6 @@ export interface AppManagers {
   configStateManager: ReturnType<
     typeof import('../core/configStateManager.svelte').createConfigStateManager
   >
-  themeManager: ReturnType<
-    typeof import('../core/themeManager.svelte').createThemeManager
-  >
   contentNavigationManager: ReturnType<
     typeof import('../core/contentNavigationManager.svelte').createContentNavigationManager
   >
@@ -117,7 +113,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   })
 
   const configStateManager = createConfigStateManager()
-  const themeManager = createThemeManager()
 
   const contentNavigationManager = createContentNavigationManager({
     getNoteContentElement: () => focusManager.noteContentElement,
@@ -304,7 +299,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         contentManager,
         dialogManager,
         configStateManager,
-        themeManager,
         contentNavigationManager,
       }
     },
@@ -347,11 +341,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     async initialize(): Promise<() => void> {
       await tick()
 
-      // Initialize config state manager first
       await configStateManager.initialize()
-
-      // Initialize theme manager with config state dependency
-      await themeManager.initialize(configStateManager)
 
       // Set up search complete callback to load first note content
       searchManager.setSearchCompleteCallback(async (notes: string[]) => {
@@ -388,7 +378,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         cleanupEffects()
         unlisten()
         configStateManager.cleanup()
-        themeManager.cleanup()
       }
     },
   }

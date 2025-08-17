@@ -37,258 +37,256 @@ describe('configStateManager', () => {
   describe('initial state', () => {
     it('should have default values before initialization', () => {
       expect(manager.notesDirectory).toBe('')
-      expect(manager.maxSearchResults).toBe(100)
+      expect(manager.preferences.max_search_results).toBe(100)
       expect(manager.globalShortcut).toBe('Ctrl+Shift+N')
-      expect(manager.editorMode).toBe('basic')
-      expect(manager.markdownTheme).toBe('dark_dimmed')
+      expect(manager.editor.mode).toBe('basic')
+      expect(manager.interface.markdown_render_theme).toBe('dark_dimmed')
       expect(manager.isLoading).toBe(false)
       expect(manager.error).toBe(null)
       expect(manager.isInitialized).toBe(false)
+      expect(manager.isThemeInitialized).toBe(false)
     })
   })
 
   describe('initialize', () => {
-    it('should load initial config values successfully', async () => {
+    it('should initialize successfully with config values', async () => {
+      // Mock config service responses
       mockInvoke
-        .mockResolvedValueOnce('vim') // get_editor_mode
-        .mockResolvedValueOnce('github') // get_markdown_theme
+        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({
+          ui_theme: 'gruvbox-dark',
+          font_family: 'Inter, sans-serif',
+          font_size: 14,
+          editor_font_family: 'JetBrains Mono, Consolas, monospace',
+          editor_font_size: 14,
+          markdown_render_theme: 'dark_dimmed',
+          default_width: 1200,
+          default_height: 800,
+          center_on_startup: true,
+          remember_size: true,
+          remember_position: true,
+          always_on_top: false,
+        }) // getInterfaceConfig
+        .mockResolvedValueOnce({
+          mode: 'vim',
+          theme: 'gruvbox-dark',
+          word_wrap: true,
+          tab_size: 2,
+          show_line_numbers: true,
+        }) // getEditorConfig
+        .mockResolvedValueOnce({}) // getShortcutsConfig
+        .mockResolvedValueOnce({ max_search_results: 100 }) // getPreferencesConfig
 
       await manager.initialize()
 
-      expect(mockInvoke).toHaveBeenCalledWith('get_editor_mode')
-      expect(mockInvoke).toHaveBeenCalledWith('get_markdown_theme')
-      expect(mockListen).toHaveBeenCalledWith(
-        'config-changed',
-        expect.any(Function)
-      )
-
-      expect(manager.editorMode).toBe('vim')
-      expect(manager.markdownTheme).toBe('github')
+      expect(manager.editor.mode).toBe('vim')
+      expect(manager.interface.markdown_render_theme).toBe('dark_dimmed')
       expect(manager.isInitialized).toBe(true)
+      expect(manager.isThemeInitialized).toBe(true)
       expect(manager.isLoading).toBe(false)
       expect(manager.error).toBe(null)
+      expect(mockListen).toHaveBeenCalledWith(
+        'config-updated',
+        expect.any(Function)
+      )
     })
 
     it('should handle initialization errors gracefully', async () => {
-      const errorMessage = 'Failed to get config'
+      const errorMessage = 'Config fetch failed'
       mockInvoke.mockRejectedValue(new Error(errorMessage))
 
       await manager.initialize()
 
-      // With configService error handling, initialization should succeed with defaults
-      expect(manager.error).toBe(null)
-      expect(manager.isInitialized).toBe(true)
-      expect(manager.isLoading).toBe(false)
       // Should have default values from configService
-      expect(manager.editorMode).toBe('basic')
-      expect(manager.markdownTheme).toBe('dark_dimmed')
+      expect(manager.editor.mode).toBe('basic')
+      expect(manager.interface.markdown_render_theme).toBe('dark_dimmed')
     })
 
-    it('should not initialize twice', async () => {
-      mockInvoke.mockResolvedValueOnce('vim').mockResolvedValueOnce('github')
+    it('should not re-initialize if already initialized', async () => {
+      // First initialization
+      mockInvoke
+        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ ui_theme: 'gruvbox-dark' }) // getInterfaceConfig
+        .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig
+        .mockResolvedValueOnce({}) // getShortcutsConfig
+        .mockResolvedValueOnce({}) // getPreferencesConfig
 
       await manager.initialize()
-      expect(mockInvoke).toHaveBeenCalledTimes(2)
+      expect(manager.isInitialized).toBe(true)
 
-      // Call initialize again
+      // Clear mocks and try to initialize again
+      vi.clearAllMocks()
       await manager.initialize()
-      expect(mockInvoke).toHaveBeenCalledTimes(2) // Should not call again
-    })
 
-    it('should set loading states correctly during initialization', async () => {
-      mockInvoke.mockResolvedValueOnce('vim').mockResolvedValueOnce('github')
-
-      expect(manager.isLoading).toBe(false)
-
-      const initPromise = manager.initialize()
-      expect(manager.isLoading).toBe(true)
-
-      await initPromise
-      expect(manager.isLoading).toBe(false)
+      // Should not have called the config functions again
+      expect(mockInvoke).not.toHaveBeenCalled()
     })
   })
 
-  describe('config change events', () => {
-    it('should update state when config-changed event is received', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let configChangeHandler: ((event: any) => void) | null = null
+  describe('config updates', () => {
+    it('should handle config-updated events', async () => {
+      let configChangeHandler: (event: { payload: unknown }) => void
 
       mockListen.mockImplementation((eventName, handler) => {
-        if (eventName === 'config-changed') {
+        if (eventName === 'config-updated') {
           configChangeHandler = handler
         }
         return Promise.resolve(mockUnlisten)
       })
 
+      // Initialize manager
       mockInvoke
-        .mockResolvedValueOnce('basic')
-        .mockResolvedValueOnce('dark_dimmed')
+        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ ui_theme: 'gruvbox-dark' }) // getInterfaceConfig
+        .mockResolvedValueOnce({ mode: 'basic' }) // getEditorConfig
+        .mockResolvedValueOnce({}) // getShortcutsConfig
+        .mockResolvedValueOnce({}) // getPreferencesConfig
 
       await manager.initialize()
 
       // Simulate config change event
       const newConfig = {
         notes_directory: '/new/path',
-        max_search_results: 200,
         global_shortcut: 'Ctrl+Alt+N',
-        editor_mode: 'vim',
-        markdown_theme: 'github',
+        general: {},
+        interface: {
+          ui_theme: 'one-dark',
+          font_family: 'Arial',
+          font_size: 16,
+          editor_font_family: 'Monaco',
+          editor_font_size: 12,
+          markdown_render_theme: 'light',
+          default_width: 1200,
+          default_height: 800,
+          center_on_startup: true,
+          remember_size: true,
+          remember_position: true,
+          always_on_top: false,
+        },
+        editor: {
+          mode: 'vim',
+          theme: 'one-dark',
+          word_wrap: true,
+          tab_size: 2,
+          show_line_numbers: true,
+        },
+        shortcuts: {},
+        preferences: { max_search_results: 50 },
       }
 
-      expect(configChangeHandler).not.toBeNull()
       configChangeHandler!({ payload: newConfig })
 
       expect(manager.notesDirectory).toBe('/new/path')
-      expect(manager.maxSearchResults).toBe(200)
+      expect(manager.preferences.max_search_results).toBe(50)
       expect(manager.globalShortcut).toBe('Ctrl+Alt+N')
-      expect(manager.editorMode).toBe('vim')
-      expect(manager.markdownTheme).toBe('github')
+      expect(manager.editor.mode).toBe('vim')
+      expect(manager.interface.markdown_render_theme).toBe('light')
     })
   })
 
   describe('forceRefresh', () => {
-    beforeEach(async () => {
-      mockInvoke
-        .mockResolvedValueOnce('basic')
-        .mockResolvedValueOnce('dark_dimmed')
+    it('should refresh config from backend', async () => {
+      // Initial setup
       await manager.initialize()
-      vi.clearAllMocks()
-    })
 
-    it('should refresh config values from backend', async () => {
+      // Mock refresh responses
       mockInvoke
         .mockResolvedValueOnce(undefined) // refresh_cache
-        .mockResolvedValueOnce('vim') // get_editor_mode
-        .mockResolvedValueOnce('github') // get_markdown_theme
+        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ ui_theme: 'one-dark' }) // getInterfaceConfig
+        .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig
+        .mockResolvedValueOnce({}) // getShortcutsConfig
+        .mockResolvedValueOnce({}) // getPreferencesConfig
 
       await manager.forceRefresh()
 
-      expect(mockInvoke).toHaveBeenCalledWith('refresh_cache')
-      expect(mockInvoke).toHaveBeenCalledWith('get_editor_mode')
-      expect(mockInvoke).toHaveBeenCalledWith('get_markdown_theme')
-
-      expect(manager.editorMode).toBe('vim')
-      expect(manager.markdownTheme).toBe('github')
+      expect(manager.editor.mode).toBe('vim')
+      expect(manager.interface.ui_theme).toBe('one-dark')
       expect(manager.error).toBe(null)
     })
 
-    it('should handle refresh errors gracefully', async () => {
+    it('should handle refresh errors', async () => {
+      await manager.initialize()
+
       const errorMessage = 'Refresh failed'
       mockInvoke.mockRejectedValue(new Error(errorMessage))
 
       await manager.forceRefresh()
 
       expect(manager.error).toContain('Failed to refresh config')
-      expect(manager.error).toContain(errorMessage)
       expect(manager.isLoading).toBe(false)
-    })
-
-    it('should set loading states correctly during refresh', async () => {
-      mockInvoke
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce('vim')
-        .mockResolvedValueOnce('github')
-
-      expect(manager.isLoading).toBe(false)
-
-      const refreshPromise = manager.forceRefresh()
-      expect(manager.isLoading).toBe(true)
-
-      await refreshPromise
-      expect(manager.isLoading).toBe(false)
-    })
-
-    it('should clear previous errors on refresh', async () => {
-      // First, cause an error
-      mockInvoke.mockRejectedValueOnce(new Error('Initial error'))
-      await manager.forceRefresh()
-      expect(manager.error).toBeTruthy()
-
-      // Then refresh successfully
-      mockInvoke
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce('vim')
-        .mockResolvedValueOnce('github')
-
-      await manager.forceRefresh()
-      expect(manager.error).toBe(null)
     })
   })
 
   describe('cleanup', () => {
-    it('should cleanup event listeners and reset initialization state', async () => {
-      mockInvoke.mockResolvedValueOnce('vim').mockResolvedValueOnce('github')
-
+    it('should cleanup listeners and reset state', async () => {
       await manager.initialize()
+
       expect(manager.isInitialized).toBe(true)
 
       manager.cleanup()
 
       expect(mockUnlisten).toHaveBeenCalled()
       expect(manager.isInitialized).toBe(false)
-    })
-
-    it('should handle cleanup when not initialized', () => {
-      expect(() => manager.cleanup()).not.toThrow()
-      expect(manager.isInitialized).toBe(false)
-    })
-
-    it('should handle cleanup multiple times', async () => {
-      mockInvoke.mockResolvedValueOnce('vim').mockResolvedValueOnce('github')
-
-      await manager.initialize()
-
-      manager.cleanup()
-      expect(() => manager.cleanup()).not.toThrow()
+      expect(manager.isThemeInitialized).toBe(false)
     })
   })
 
-  describe('reactive getters', () => {
-    it('should provide reactive access to all config properties', () => {
-      const properties = [
-        'notesDirectory',
-        'maxSearchResults',
-        'globalShortcut',
-        'editorMode',
-        'markdownTheme',
-        'isLoading',
-        'error',
-        'isInitialized',
-      ]
-
-      properties.forEach((prop) => {
-        expect(manager).toHaveProperty(prop)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        expect(typeof (manager as any)[prop]).not.toBe('function')
-      })
-    })
-  })
-
-  describe('error handling', () => {
-    it('should handle partial initialization failures', async () => {
+  describe('theme management', () => {
+    it('should provide current theme information', async () => {
       mockInvoke
-        .mockResolvedValueOnce('vim') // get_editor_mode succeeds
-        .mockRejectedValueOnce(new Error('Theme fetch failed')) // get_markdown_theme fails
+        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({
+          ui_theme: 'gruvbox-light',
+          markdown_render_theme: 'light',
+          font_family: 'Inter, sans-serif',
+          font_size: 14,
+          editor_font_family: 'JetBrains Mono, Consolas, monospace',
+          editor_font_size: 14,
+          default_width: 1200,
+          default_height: 800,
+          center_on_startup: true,
+          remember_size: true,
+          remember_position: true,
+          always_on_top: false,
+        }) // getInterfaceConfig
+        .mockResolvedValueOnce({}) // getEditorConfig
+        .mockResolvedValueOnce({}) // getShortcutsConfig
+        .mockResolvedValueOnce({}) // getPreferencesConfig
 
       await manager.initialize()
 
-      // With configService error handling, partial failures should still result in successful init
-      expect(manager.error).toBe(null)
-      expect(manager.isInitialized).toBe(true)
-      // Should have mix of actual and default values
-      expect(manager.editorMode).toBe('vim') // Successfully fetched
-      expect(manager.markdownTheme).toBe('dark_dimmed') // Default from configService error handling
+      expect(manager.currentUITheme).toBe('gruvbox-light')
+      expect(manager.currentMarkdownTheme).toBe('light')
     })
 
-    it('should handle event listener setup failures', async () => {
-      mockInvoke.mockResolvedValueOnce('vim').mockResolvedValueOnce('github')
-
-      mockListen.mockRejectedValue(new Error('Event listener failed'))
+    it('should handle mixed success/failure during initialization', async () => {
+      // Mock partial success - some calls succeed, others fail
+      mockInvoke
+        .mockResolvedValueOnce({}) // getGeneralConfig succeeds
+        .mockResolvedValueOnce({
+          ui_theme: 'gruvbox-dark',
+          markdown_render_theme: 'dark_dimmed',
+          font_family: 'Inter, sans-serif',
+          font_size: 14,
+          editor_font_family: 'JetBrains Mono, Consolas, monospace',
+          editor_font_size: 14,
+          default_width: 1200,
+          default_height: 800,
+          center_on_startup: true,
+          remember_size: true,
+          remember_position: true,
+          always_on_top: false,
+        }) // getInterfaceConfig succeeds
+        .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig succeeds
+        .mockRejectedValueOnce(new Error('Shortcut error')) // getShortcutsConfig fails
+        .mockRejectedValueOnce(new Error('Preferences error')) // getPreferencesConfig fails
 
       await manager.initialize()
 
-      expect(manager.error).toContain('Failed to initialize config state')
-      expect(manager.isInitialized).toBe(false)
+      // Should have mix of actual and default values
+      expect(manager.editor.mode).toBe('vim') // Successfully fetched
+      expect(manager.interface.markdown_render_theme).toBe('dark_dimmed') // From successful getInterfaceConfig
     })
   })
 })

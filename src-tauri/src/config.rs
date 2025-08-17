@@ -8,119 +8,96 @@ use tauri::{AppHandle, Emitter};
 use tauri_plugin_global_shortcut::Shortcut;
 
 // ============================================================================
-// EVENT STRUCTURES
-// ============================================================================
-
-// Helper struct for flattened config event emission
-// This maintains compatibility with frontend expectations
-#[derive(Debug, Serialize, Clone)]
-struct ConfigChangedEvent {
-    notes_directory: String,
-    max_search_results: usize,
-    global_shortcut: String,
-    editor_mode: String,
-    markdown_theme: String, // This will be the markdown_render_theme for backwards compatibility
-    theme: ThemeConfig,
-    shortcuts: ShortcutConfig,
-    editor: EditorConfig,
-    window: WindowConfig,
-}
-
-impl From<&AppConfig> for ConfigChangedEvent {
-    fn from(config: &AppConfig) -> Self {
-        Self {
-            notes_directory: config.notes_directory.clone(),
-            max_search_results: config.max_search_results,
-            global_shortcut: config.global_shortcut.clone(),
-            editor_mode: config.editor.mode.clone(),
-            markdown_theme: config.theme.markdown_render_theme.clone(),
-            theme: config.theme.clone(),
-            shortcuts: config.shortcuts.clone(),
-            editor: config.editor.clone(),
-            window: config.window.clone(),
-        }
-    }
-}
-
-// ============================================================================
 // MAIN CONFIGURATION STRUCTURE
 // ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
-    // === CORE SETTINGS ===
+    // === TOP-LEVEL ESSENTIALS ===
     pub notes_directory: String,
-    #[serde(default = "default_max_results")]
-    pub max_search_results: usize,
     #[serde(default = "default_global_shortcut")]
     pub global_shortcut: String,
 
-    // === THEME & FONTS ===
+    // === CONFIGURATION SECTIONS ===
     #[serde(default)]
-    pub theme: ThemeConfig,
+    pub general: GeneralConfig,
 
-    // === KEYBOARD SHORTCUTS ===
     #[serde(default)]
-    pub shortcuts: ShortcutConfig,
+    pub interface: InterfaceConfig,
 
-    // === EDITOR SETTINGS ===
     #[serde(default)]
     pub editor: EditorConfig,
 
-    // === WINDOW SETTINGS ===
     #[serde(default)]
-    pub window: WindowConfig,
+    pub shortcuts: ShortcutsConfig,
+
+    #[serde(default)]
+    pub preferences: PreferencesConfig,
 }
 
 // ============================================================================
-// THEME CONFIGURATION
+// GENERAL CONFIGURATION
 // ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ThemeConfig {
-    pub name: String,        // "gruvbox-dark"|"gruvbox-light"|"one-dark"|"github-light"
+pub struct GeneralConfig {
+    // Future extensible core settings
+}
+
+// ============================================================================
+// INTERFACE CONFIGURATION
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InterfaceConfig {
+    pub ui_theme: String, // "gruvbox-dark"|"gruvbox-light"|"one-dark"|"github-light"
     pub font_family: String, // "Inter, sans-serif"
-    pub font_size: u16,      // 14
+    pub font_size: u16,   // 14
     pub editor_font_family: String, // "JetBrains Mono, Consolas, monospace"
     pub editor_font_size: u16, // 14
     pub markdown_render_theme: String, // "dark_dimmed"|"light"|"dark"|"auto"
+    pub default_width: u32, // 1200
+    pub default_height: u32, // 800
+    pub center_on_startup: bool, // true
+    pub remember_size: bool, // true
+    pub remember_position: bool, // true
+    pub always_on_top: bool, // false
 }
 
 // ============================================================================
-// KEYBOARD SHORTCUTS
+// UNIFIED SHORTCUTS CONFIGURATION
 // ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ShortcutConfig {
-    pub search_input: SearchInputShortcuts,
-    pub edit_mode: EditModeShortcuts,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SearchInputShortcuts {
+pub struct ShortcutsConfig {
     pub create_note: String,       // "Ctrl+Enter"
     pub rename_note: String,       // "Ctrl+m"
+    pub delete_note: String,       // "Ctrl+x"
+    pub save_and_exit: String,     // "Ctrl+s"
     pub open_external: String,     // "Ctrl+o"
     pub open_folder: String,       // "Ctrl+f"
     pub refresh_cache: String,     // "Ctrl+r"
-    pub delete_note: String,       // "Ctrl+x"
     pub scroll_up: String,         // "Ctrl+u"
     pub scroll_down: String,       // "Ctrl+d"
-    pub vim_up: String,            // "Ctrl+k" (additional to Arrow keys)
-    pub vim_down: String,          // "Ctrl+j" (additional to Arrow keys)
+    pub vim_up: String,            // "Ctrl+k"
+    pub vim_down: String,          // "Ctrl+j"
     pub navigate_previous: String, // "Ctrl+p"
     pub navigate_next: String,     // "Ctrl+n"
     pub open_settings: String,     // "Meta+,"
 }
 
+// ============================================================================
+// PREFERENCES CONFIGURATION
+// ============================================================================
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct EditModeShortcuts {
-    pub save_and_exit: String, // "Ctrl+s"
-    pub open_settings: String, // "Meta+,"
+pub struct PreferencesConfig {
+    #[serde(default = "default_max_results")]
+    pub max_search_results: usize, // 100
 }
 
 // ============================================================================
-// EDITOR CONFIGURATION (Essentials Only)
+// EDITOR CONFIGURATION (Text Editing Only)
 // ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -130,30 +107,6 @@ pub struct EditorConfig {
     pub word_wrap: bool,         // true
     pub tab_size: u16,           // 2
     pub show_line_numbers: bool, // true
-    pub shortcuts: EditorShortcuts,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct EditorShortcuts {
-    pub save: String,       // "Ctrl+s"
-    pub fold: String,       // "Ctrl+Shift+["
-    pub unfold: String,     // "Ctrl+Shift+]"
-    pub fold_all: String,   // "Ctrl+Alt+["
-    pub unfold_all: String, // "Ctrl+Alt+]"
-}
-
-// ============================================================================
-// WINDOW CONFIGURATION (Basics Only)
-// ============================================================================
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct WindowConfig {
-    pub default_width: u32,      // 1200
-    pub default_height: u32,     // 800
-    pub center_on_startup: bool, // true
-    pub remember_size: bool,     // true
-    pub remember_position: bool, // true
-    pub always_on_top: bool,     // false
 }
 
 // ============================================================================
@@ -176,47 +129,53 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             notes_directory: get_default_notes_dir(),
-            max_search_results: default_max_results(),
             global_shortcut: default_global_shortcut(),
-            theme: ThemeConfig::default(),
-            shortcuts: ShortcutConfig::default(),
+            general: GeneralConfig::default(),
+            interface: InterfaceConfig::default(),
             editor: EditorConfig::default(),
-            window: WindowConfig::default(),
+            shortcuts: ShortcutsConfig::default(),
+            preferences: PreferencesConfig::default(),
         }
     }
 }
 
-impl Default for ThemeConfig {
+impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
-            name: "gruvbox-dark".to_string(),
+            // Future extensible core settings
+        }
+    }
+}
+
+impl Default for InterfaceConfig {
+    fn default() -> Self {
+        Self {
+            ui_theme: "gruvbox-dark".to_string(),
             font_family: "Inter, sans-serif".to_string(),
             font_size: 14,
             editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
             editor_font_size: 14,
             markdown_render_theme: "dark_dimmed".to_string(),
+            default_width: 1200,
+            default_height: 800,
+            center_on_startup: true,
+            remember_size: true,
+            remember_position: true,
+            always_on_top: false,
         }
     }
 }
 
-impl Default for ShortcutConfig {
-    fn default() -> Self {
-        Self {
-            search_input: SearchInputShortcuts::default(),
-            edit_mode: EditModeShortcuts::default(),
-        }
-    }
-}
-
-impl Default for SearchInputShortcuts {
+impl Default for ShortcutsConfig {
     fn default() -> Self {
         Self {
             create_note: "Ctrl+Enter".to_string(),
             rename_note: "Ctrl+m".to_string(),
+            delete_note: "Ctrl+x".to_string(),
+            save_and_exit: "Ctrl+s".to_string(),
             open_external: "Ctrl+o".to_string(),
             open_folder: "Ctrl+f".to_string(),
             refresh_cache: "Ctrl+r".to_string(),
-            delete_note: "Ctrl+x".to_string(),
             scroll_up: "Ctrl+u".to_string(),
             scroll_down: "Ctrl+d".to_string(),
             vim_up: "Ctrl+k".to_string(),
@@ -228,11 +187,10 @@ impl Default for SearchInputShortcuts {
     }
 }
 
-impl Default for EditModeShortcuts {
+impl Default for PreferencesConfig {
     fn default() -> Self {
         Self {
-            save_and_exit: "Ctrl+s".to_string(),
-            open_settings: "Meta+,".to_string(),
+            max_search_results: default_max_results(),
         }
     }
 }
@@ -245,32 +203,6 @@ impl Default for EditorConfig {
             word_wrap: true,
             tab_size: 2,
             show_line_numbers: true,
-            shortcuts: EditorShortcuts::default(),
-        }
-    }
-}
-
-impl Default for EditorShortcuts {
-    fn default() -> Self {
-        Self {
-            save: "Ctrl+s".to_string(),
-            fold: "Ctrl+Shift+[".to_string(),
-            unfold: "Ctrl+Shift+]".to_string(),
-            fold_all: "Ctrl+Alt+[".to_string(),
-            unfold_all: "Ctrl+Alt+]".to_string(),
-        }
-    }
-}
-
-impl Default for WindowConfig {
-    fn default() -> Self {
-        Self {
-            default_width: 1200,
-            default_height: 800,
-            center_on_startup: true,
-            remember_size: true,
-            remember_position: true,
-            always_on_top: false,
         }
     }
 }
@@ -309,35 +241,48 @@ pub fn get_config_path() -> PathBuf {
 
 pub fn validate_config(config: &AppConfig) -> Result<(), String> {
     validate_notes_directory(&config.notes_directory)?;
-    validate_max_search_results(config.max_search_results)?;
     validate_shortcut_format(&config.global_shortcut)?;
-    validate_theme_config(&config.theme)?;
-    validate_shortcut_config(&config.shortcuts)?;
+    validate_general_config(&config.general)?;
+    validate_interface_config(&config.interface)?;
     validate_editor_config(&config.editor)?;
-    validate_window_config(&config.window)?;
+    validate_shortcuts_config(&config.shortcuts)?;
+    validate_preferences_config(&config.preferences)?;
     Ok(())
 }
 
-pub fn validate_theme_config(theme: &ThemeConfig) -> Result<(), String> {
+pub fn validate_general_config(_general: &GeneralConfig) -> Result<(), String> {
+    // Future validation for general settings
+    Ok(())
+}
+
+pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), String> {
     let valid_themes = ["gruvbox-dark", "gruvbox-light", "one-dark", "github-light"];
-    if !valid_themes.contains(&theme.name.as_str()) {
+    if !valid_themes.contains(&interface.ui_theme.as_str()) {
         return Err(format!(
-            "Invalid theme '{}'. Valid themes: {}",
-            theme.name,
+            "Invalid UI theme '{}'. Valid themes: {}",
+            interface.ui_theme,
             valid_themes.join(", ")
         ));
     }
 
-    validate_font_size(theme.font_size, "UI font size")?;
-    validate_font_size(theme.editor_font_size, "Editor font size")?;
+    validate_font_size(interface.font_size, "UI font size")?;
+    validate_font_size(interface.editor_font_size, "Editor font size")?;
 
     let valid_markdown_render_themes = ["light", "dark", "dark_dimmed", "auto"];
-    if !valid_markdown_render_themes.contains(&theme.markdown_render_theme.as_str()) {
+    if !valid_markdown_render_themes.contains(&interface.markdown_render_theme.as_str()) {
         return Err(format!(
             "Invalid markdown render theme '{}'. Valid themes: {}",
-            theme.markdown_render_theme,
+            interface.markdown_render_theme,
             valid_markdown_render_themes.join(", ")
         ));
+    }
+
+    // Validate window settings
+    if interface.default_width < 400 || interface.default_width > 10000 {
+        return Err("Window width must be between 400 and 10000 pixels".to_string());
+    }
+    if interface.default_height < 300 || interface.default_height > 8000 {
+        return Err("Window height must be between 300 and 8000 pixels".to_string());
     }
 
     Ok(())
@@ -350,28 +295,24 @@ pub fn validate_font_size(size: u16, context: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn validate_shortcut_config(shortcuts: &ShortcutConfig) -> Result<(), String> {
+pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> Result<(), String> {
     // Note: These shortcuts are used by frontend JavaScript, not Tauri global shortcuts
     // So we only need basic validation, not Tauri shortcut parsing
 
-    // Basic validation for search input shortcuts (just check they're not empty)
-    validate_basic_shortcut_format(&shortcuts.search_input.create_note)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.rename_note)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.open_external)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.open_folder)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.refresh_cache)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.delete_note)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.scroll_up)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.scroll_down)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.vim_up)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.vim_down)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.navigate_previous)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.navigate_next)?;
-    validate_basic_shortcut_format(&shortcuts.search_input.open_settings)?;
-
-    // Basic validation for edit mode shortcuts
-    validate_basic_shortcut_format(&shortcuts.edit_mode.save_and_exit)?;
-    validate_basic_shortcut_format(&shortcuts.edit_mode.open_settings)?;
+    validate_basic_shortcut_format(&shortcuts.create_note)?;
+    validate_basic_shortcut_format(&shortcuts.rename_note)?;
+    validate_basic_shortcut_format(&shortcuts.delete_note)?;
+    validate_basic_shortcut_format(&shortcuts.save_and_exit)?;
+    validate_basic_shortcut_format(&shortcuts.open_external)?;
+    validate_basic_shortcut_format(&shortcuts.open_folder)?;
+    validate_basic_shortcut_format(&shortcuts.refresh_cache)?;
+    validate_basic_shortcut_format(&shortcuts.scroll_up)?;
+    validate_basic_shortcut_format(&shortcuts.scroll_down)?;
+    validate_basic_shortcut_format(&shortcuts.vim_up)?;
+    validate_basic_shortcut_format(&shortcuts.vim_down)?;
+    validate_basic_shortcut_format(&shortcuts.navigate_previous)?;
+    validate_basic_shortcut_format(&shortcuts.navigate_next)?;
+    validate_basic_shortcut_format(&shortcuts.open_settings)?;
 
     Ok(())
 }
@@ -399,31 +340,14 @@ pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
         return Err("Tab size must be between 1 and 16".to_string());
     }
 
-    // Validate editor shortcuts (these are also frontend-only, not global shortcuts)
-    validate_basic_shortcut_format(&editor.shortcuts.save)?;
-    validate_basic_shortcut_format(&editor.shortcuts.fold)?;
-    validate_basic_shortcut_format(&editor.shortcuts.unfold)?;
-    validate_basic_shortcut_format(&editor.shortcuts.fold_all)?;
-    validate_basic_shortcut_format(&editor.shortcuts.unfold_all)?;
-
     Ok(())
 }
 
-pub fn validate_window_config(window: &WindowConfig) -> Result<(), String> {
-    if window.default_width < 400 || window.default_width > 10000 {
-        return Err("Window width must be between 400 and 10000 pixels".to_string());
-    }
-    if window.default_height < 300 || window.default_height > 8000 {
-        return Err("Window height must be between 300 and 8000 pixels".to_string());
-    }
-    Ok(())
-}
-
-pub fn validate_max_search_results(value: usize) -> Result<(), String> {
-    if value == 0 {
+pub fn validate_preferences_config(preferences: &PreferencesConfig) -> Result<(), String> {
+    if preferences.max_search_results == 0 {
         return Err("Max search results must be greater than 0".to_string());
     }
-    if value > 10000 {
+    if preferences.max_search_results > 10000 {
         return Err("Max search results too large (max: 10000)".to_string());
     }
     Ok(())
@@ -518,7 +442,6 @@ pub fn load_config() -> AppConfig {
             }
         },
         Err(_) => {
-            println!("No config file found. Creating default config.");
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
                 eprintln!("Failed to create default config file: {}", e);
@@ -552,21 +475,19 @@ pub fn reload_config(
     app_handle: Option<AppHandle>,
 ) -> Result<(), String> {
     let new_config = load_config();
+
     let mut config = app_config
         .write()
         .map_err(|_| "Failed to acquire write lock on config".to_string())?;
     *config = new_config.clone();
     drop(config);
 
-    // Emit config update event to frontend with flattened structure
+    // Emit config update event to frontend
     if let Some(app) = app_handle {
-        let event_payload = ConfigChangedEvent::from(&new_config);
-        if let Err(e) = app.emit("config-updated", &event_payload) {
+        if let Err(e) = app.emit("config-updated", &new_config) {
             eprintln!("Failed to emit config-updated event: {}", e);
         }
     }
-
-    println!("Configuration reloaded successfully");
     Ok(())
 }
 
@@ -600,17 +521,17 @@ pub fn save_config_content(content: &str) -> Result<(), String> {
 // ============================================================================
 
 #[tauri::command]
-pub fn get_theme_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> ThemeConfig {
+pub fn get_general_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> GeneralConfig {
     let config = app_config.read().unwrap_or_else(|e| e.into_inner());
-    config.theme.clone()
+    config.general.clone()
 }
 
 #[tauri::command]
-pub fn get_shortcut_config(
+pub fn get_interface_config(
     app_config: tauri::State<std::sync::RwLock<AppConfig>>,
-) -> ShortcutConfig {
+) -> InterfaceConfig {
     let config = app_config.read().unwrap_or_else(|e| e.into_inner());
-    config.shortcuts.clone()
+    config.interface.clone()
 }
 
 #[tauri::command]
@@ -620,7 +541,17 @@ pub fn get_editor_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>)
 }
 
 #[tauri::command]
-pub fn get_window_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> WindowConfig {
+pub fn get_shortcuts_config(
+    app_config: tauri::State<std::sync::RwLock<AppConfig>>,
+) -> ShortcutsConfig {
     let config = app_config.read().unwrap_or_else(|e| e.into_inner());
-    config.window.clone()
+    config.shortcuts.clone()
+}
+
+#[tauri::command]
+pub fn get_preferences_config(
+    app_config: tauri::State<std::sync::RwLock<AppConfig>>,
+) -> PreferencesConfig {
+    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    config.preferences.clone()
 }
