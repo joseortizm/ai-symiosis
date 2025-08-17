@@ -27,4 +27,13 @@ Defines the overall application structure and CSS grid layout.
     font-family: var(--theme-font-family);
     font-size: var(--theme-font-size);
   }
+
+  /* Force form elements to inherit font properties from container */
+  :global(.container input),
+  :global(.container textarea),
+  :global(.container button),
+  :global(.container select) {
+    font-family: inherit;
+    font-size: inherit;
+  }
 </style>

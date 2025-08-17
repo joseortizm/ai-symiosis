@@ -28,6 +28,7 @@ Focused component handling CodeMirror initialization and content editing.
   import { vim, Vim } from '@replit/codemirror-vim'
   import { emacs } from '@replit/codemirror-emacs'
   import { getTheme } from '../utils/editorThemes'
+  import { EditorView as EditorViewBase } from '@codemirror/view'
 
   interface Props {
     value: string
@@ -65,6 +66,13 @@ Focused component handling CodeMirror initialization and content editing.
   const currentTheme = $derived(
     getTheme(configStateManager.editor.theme || 'gruvbox-dark')
   )
+  const editorFontFamily = $derived(
+    configStateManager.interface.editor_font_family ||
+      'JetBrains Mono, Consolas, monospace'
+  )
+  const editorFontSize = $derived(
+    configStateManager.interface.editor_font_size || 14
+  )
 
   const propsChanged = $derived(value !== lastPropsValue)
 
@@ -83,6 +91,26 @@ Focused component handling CodeMirror initialization and content editing.
     initialValue = value
     lastPropsValue = value
     handleDirtyChange(false)
+  }
+
+  function createFontExtension(
+    fontFamily: string,
+    fontSize: number
+  ): Extension {
+    return EditorViewBase.theme({
+      '&': {
+        fontFamily: fontFamily,
+        fontSize: `${fontSize}px`,
+      },
+      '.cm-content': {
+        fontFamily: fontFamily,
+        fontSize: `${fontSize}px`,
+      },
+      '.cm-editor': {
+        fontFamily: fontFamily,
+        fontSize: `${fontSize}px`,
+      },
+    })
   }
 
   function getKeyMappingsMode(mode: string): Extension | null {
@@ -283,6 +311,7 @@ Focused component handling CodeMirror initialization and content editing.
       getLanguageExtension(filename),
       codeFolding(),
       currentTheme,
+      createFontExtension(editorFontFamily, editorFontSize),
       ...keymaps,
       EditorView.lineWrapping,
       updateListener,

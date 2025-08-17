@@ -209,8 +209,11 @@ export function createConfigStateManager(): ConfigStateManager {
     state.shortcuts = config.shortcuts
     state.preferences = config.preferences
 
-    // Apply theme changes automatically when config updates
+    // Apply interface config changes automatically when config updates
     if (state.isThemeInitialized) {
+      // Always apply interface config (fonts, etc.) when config changes
+      applyInterfaceConfig(config.interface)
+
       if (config.interface.ui_theme !== previousUITheme) {
         loadTheme(config.interface.ui_theme)
       }
