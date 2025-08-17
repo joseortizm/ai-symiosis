@@ -5,6 +5,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core'
+import type { ConfigStateManager } from '../../core/configStateManager.svelte'
 
 // Type definitions
 interface KeyboardActionDeps {
@@ -18,6 +19,7 @@ interface KeyboardActionDeps {
     resetNavigation: () => void
     clearCurrentStyles: () => void
   }
+  configStateManager: ConfigStateManager
   loadNoteContent: (note: string) => Promise<void>
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
@@ -63,7 +65,7 @@ export interface ActionRegistry {
 
 interface KeyboardActions {
   readonly actionRegistry: ActionRegistry
-  readonly keyMappings: Record<string, KeyMappings>
+  readonly keyMappings: () => Record<string, KeyMappings>
   createKeyboardHandler(
     getState: () => AppState
   ): (event: KeyboardEvent) => Promise<void>
@@ -188,48 +190,52 @@ export function createKeyboardActions(
     },
   }
 
-  const keyMappings: Record<string, KeyMappings> = {
-    searchInput: {
-      Enter: 'editing.enterEdit',
-      'Ctrl+Enter': 'notes.createNote',
-      'Ctrl+m': 'notes.renameNote',
-      'Ctrl+o': 'notes.openExternal',
-      'Ctrl+f': 'notes.openFolder',
-      'Ctrl+r': 'notes.refreshCache',
-      'Ctrl+x': 'notes.deleteNote',
-      'Ctrl+u': 'scrolling.scrollUpBy',
-      'Ctrl+d': 'scrolling.scrollDownBy',
-      ArrowUp: 'navigation.moveUp',
-      ArrowDown: 'navigation.moveDown',
-      'Ctrl+k': 'navigation.moveUp',
-      'Ctrl+j': 'navigation.moveDown',
-      'Ctrl+p': 'navigation.navigatePrevious',
-      'Ctrl+n': 'navigation.navigateNext',
-      Escape: 'search.clearHighlights',
-      'Meta+,': 'settings.openSettings',
-    },
+  function getKeyMappings(): Record<string, KeyMappings> {
+    const shortcuts = deps.configStateManager.shortcuts
 
-    editMode: {
-      Escape: 'editing.smartExitEdit',
-      'Ctrl+s': 'editing.saveAndExit',
-      'Meta+,': 'settings.openSettings',
-    },
+    return {
+      searchInput: {
+        Enter: 'editing.enterEdit',
+        [shortcuts.create_note]: 'notes.createNote',
+        [shortcuts.rename_note]: 'notes.renameNote',
+        [shortcuts.open_external]: 'notes.openExternal',
+        [shortcuts.open_folder]: 'notes.openFolder',
+        [shortcuts.refresh_cache]: 'notes.refreshCache',
+        [shortcuts.delete_note]: 'notes.deleteNote',
+        [shortcuts.scroll_up]: 'scrolling.scrollUpBy',
+        [shortcuts.scroll_down]: 'scrolling.scrollDownBy',
+        ArrowUp: 'navigation.moveUp',
+        ArrowDown: 'navigation.moveDown',
+        [shortcuts.vim_up]: 'navigation.moveUp',
+        [shortcuts.vim_down]: 'navigation.moveDown',
+        [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
+        [shortcuts.navigate_next]: 'navigation.navigateNext',
+        Escape: 'search.clearHighlights',
+        [shortcuts.open_settings]: 'settings.openSettings',
+      },
 
-    noteContent: {
-      Escape: 'navigation.focusSearch',
-      'Ctrl+p': 'navigation.navigatePrevious',
-      'Ctrl+n': 'navigation.navigateNext',
-    },
+      editMode: {
+        Escape: 'editing.smartExitEdit',
+        [shortcuts.save_and_exit]: 'editing.saveAndExit',
+        [shortcuts.open_settings]: 'settings.openSettings',
+      },
 
-    default: {
-      ArrowUp: 'navigation.moveUp',
-      ArrowDown: 'navigation.moveDown',
-      Enter: 'editing.enterEdit',
-      'Ctrl+Enter': 'notes.createNote',
-      'Ctrl+x': 'notes.deleteNote',
-      Escape: 'navigation.focusSearch',
-      'Meta+,': 'settings.openSettings',
-    },
+      noteContent: {
+        Escape: 'navigation.focusSearch',
+        [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
+        [shortcuts.navigate_next]: 'navigation.navigateNext',
+      },
+
+      default: {
+        ArrowUp: 'navigation.moveUp',
+        ArrowDown: 'navigation.moveDown',
+        Enter: 'editing.enterEdit',
+        [shortcuts.create_note]: 'notes.createNote',
+        [shortcuts.delete_note]: 'notes.deleteNote',
+        Escape: 'navigation.focusSearch',
+        [shortcuts.open_settings]: 'settings.openSettings',
+      },
+    }
   }
 
   function formatKeyCombo(event: KeyboardEvent): string {
@@ -287,6 +293,8 @@ export function createKeyboardActions(
         return
       }
 
+      const keyMappings = getKeyMappings()
+
       if (state.isSearchInputFocused) {
         await handleKeyAction(keyMappings.searchInput, event, context)
       } else if (state.isEditMode) {
@@ -301,7 +309,7 @@ export function createKeyboardActions(
 
   return {
     actionRegistry,
-    keyMappings,
+    keyMappings: getKeyMappings,
     createKeyboardHandler,
   }
 }

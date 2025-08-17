@@ -226,6 +226,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   const keyboardActions = createKeyboardActions({
     focusManager,
     contentNavigationManager,
+    configStateManager,
     loadNoteContent,
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
