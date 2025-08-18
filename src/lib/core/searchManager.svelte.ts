@@ -117,8 +117,7 @@ export function createSearchManager(): SearchManager {
   }
 
   function clearSearch(): void {
-    state.searchInput = ''
-    state.query = ''
+    setSearchInput('')
   }
 
   function clearHighlights(): void {

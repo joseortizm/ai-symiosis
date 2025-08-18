@@ -157,8 +157,8 @@ export function createKeyboardActions(
           await invoke('open_note_folder', { noteName: state.selectedNote })
         }
       },
-      refreshCache: async () => {
-        await invoke('refresh_cache')
+      refreshCache: async ({ actions }: ActionContext) => {
+        await actions.refreshNotesAndUI()
       },
       deleteNote: ({ state, actions }: ActionContext) => {
         if (state.selectedNote) {

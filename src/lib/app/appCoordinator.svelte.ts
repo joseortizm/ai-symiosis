@@ -48,6 +48,7 @@ export interface AppActions {
   saveAndExitNote: () => Promise<void>
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
+  refreshNotesAndUI: () => Promise<void>
   saveConfigAndRefresh: () => Promise<{ success: boolean; error?: string }>
 }
 
@@ -195,7 +196,16 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     } catch (e) {
       if (!controller.signal.aborted) {
         console.error('Failed to load note content:', e)
-        contentManager.setNoteContent(`Error loading note: ${e}`)
+        const errorMessage = String(e)
+        contentManager.setNoteContent(`Error loading note: ${errorMessage}`)
+
+        if (errorMessage.includes('Note not found')) {
+          try {
+            await refreshNotesAndUI()
+          } catch (refreshError) {
+            console.error('Auto-refresh failed:', refreshError)
+          }
+        }
       }
     }
   }
@@ -205,6 +215,14 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     exitEditMode()
     // An empty search shows notes in order
     // of most recent and we just saved it.
+    focusManager.setSelectedIndex(0)
+  }
+
+  async function refreshNotesAndUI(): Promise<void> {
+    await invoke('refresh_cache')
+    const updatedNotes = await searchManager.searchImmediate('')
+    searchManager.setFilteredNotes(updatedNotes)
+    contentManager.setNoteContent('')
     focusManager.setSelectedIndex(0)
   }
 
@@ -335,6 +353,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         saveAndExitNote,
         enterEditMode: () => noteActions.enterEditMode(selectedNote!),
         exitEditMode,
+        refreshNotesAndUI,
         saveConfigAndRefresh,
       }
     },

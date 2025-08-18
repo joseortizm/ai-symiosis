@@ -322,7 +322,7 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
         if let Ok(conn) = get_db_connection() {
             let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
         }
-        return Err(format!("Note not found: {}", note_name));
+        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
     }
     let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
     Ok(render_note(note_name, &content))
@@ -337,7 +337,7 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
         if let Ok(conn) = get_db_connection() {
             let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
         }
-        return Err(format!("Note not found: {}", note_name));
+        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
     }
     let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
     Ok(content)
@@ -722,7 +722,7 @@ fn open_note_in_editor(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
     let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
-        return Err(format!("Note not found: {}", note_name));
+        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
     }
 
     std::process::Command::new("open")
@@ -740,7 +740,7 @@ fn open_note_folder(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
     let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
-        return Err(format!("Note not found: {}", note_name));
+        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
     }
 
     #[cfg(target_os = "macos")]
