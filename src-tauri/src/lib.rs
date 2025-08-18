@@ -4,6 +4,7 @@ mod database;
 mod search;
 #[cfg(test)]
 mod tests;
+mod watcher;
 
 // External crates
 use comrak::{markdown_to_html, ComrakOptions};
@@ -29,6 +30,7 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use walkdir::WalkDir;
+use watcher::setup_notes_watcher;
 
 // Global static configuration
 static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
@@ -316,30 +318,32 @@ fn search_notes(query: &str) -> Result<Vec<String>, String> {
 #[tauri::command]
 fn get_note_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-    if !note_path.exists() {
-        // File was deleted externally - clean up database entry
-        if let Ok(conn) = get_db_connection() {
-            let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
-        }
-        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
-    }
-    let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
+
+    let conn = get_db_connection().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT content FROM notes WHERE filename = ?1")
+        .map_err(|e| e.to_string())?;
+
+    let content = stmt
+        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+        .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
+
     Ok(render_note(note_name, &content))
 }
 
 #[tauri::command]
 fn get_note_raw_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-    if !note_path.exists() {
-        // File was deleted externally - clean up database entry
-        if let Ok(conn) = get_db_connection() {
-            let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
-        }
-        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
-    }
-    let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
+
+    let conn = get_db_connection().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT content FROM notes WHERE filename = ?1")
+        .map_err(|e| e.to_string())?;
+
+    let content = stmt
+        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+        .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
+
     Ok(content)
 }
 
@@ -984,6 +988,9 @@ pub fn run() {
         .setup(|app| {
             // Setup the system tray
             setup_tray(app.handle())?;
+
+            // Setup file system watcher for notes directory
+            setup_notes_watcher(app.handle().clone())?;
 
             // Setup global shortcuts
             #[cfg(desktop)]

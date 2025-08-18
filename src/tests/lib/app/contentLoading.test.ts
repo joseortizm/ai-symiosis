@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { ConfigStateManager } from '../../../lib/core/configStateManager.svelte'
 
 // Mock all the services and managers
 const mockNoteService = {
@@ -219,7 +220,7 @@ describe('Content Loading Integration', () => {
             navigate_next: 'Ctrl+n',
             open_settings: 'Meta+,',
           },
-        } as any,
+        } as ConfigStateManager,
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
@@ -232,7 +233,7 @@ describe('Content Loading Integration', () => {
         clearHighlights: vi.fn(),
         clearSearch: vi.fn(),
         focusSearch: vi.fn(),
-        refreshNotesAndUI: vi.fn(),
+        refreshCacheAndUI: vi.fn(),
       })
     })
 
@@ -379,7 +380,7 @@ describe('Content Loading Integration', () => {
             navigate_next: 'Ctrl+n',
             open_settings: 'Meta+,',
           },
-        } as any,
+        } as ConfigStateManager,
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
@@ -392,7 +393,7 @@ describe('Content Loading Integration', () => {
         clearHighlights: vi.fn(),
         clearSearch: vi.fn(),
         focusSearch: vi.fn(),
-        refreshNotesAndUI: vi.fn(),
+        refreshCacheAndUI: vi.fn(),
       })
 
       mockFocusManager.selectedIndex = 0

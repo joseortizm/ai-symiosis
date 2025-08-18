@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createKeyboardActions } from '../../../lib/app/actions/keyboard.svelte'
 import type { AppState } from '../../../lib/app/actions/keyboard.svelte'
+import type { ConfigStateManager } from '../../../lib/core/configStateManager.svelte'
 
 describe('Keyboard Shortcut Isolation', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,7 +42,7 @@ describe('Keyboard Shortcut Isolation', () => {
           navigate_next: 'Ctrl+n',
           open_settings: 'Meta+,',
         },
-      } as any,
+      } as ConfigStateManager,
       loadNoteContent: vi.fn(),
       enterEditMode: vi.fn(),
       exitEditMode: vi.fn(),
@@ -54,7 +55,7 @@ describe('Keyboard Shortcut Isolation', () => {
       clearHighlights: vi.fn(),
       clearSearch: vi.fn(),
       focusSearch: vi.fn(),
-      refreshNotesAndUI: vi.fn(),
+      refreshCacheAndUI: vi.fn(),
     }
 
     keyboardActions = createKeyboardActions(mockDeps)

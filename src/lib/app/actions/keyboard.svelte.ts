@@ -24,7 +24,7 @@ interface KeyboardActionDeps {
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
   saveAndExitNote: () => Promise<void>
-  refreshNotesAndUI: () => void
+  refreshCacheAndUI: () => void
   showExitEditDialog: () => void
   showDeleteDialog: () => void
   showCreateDialog: () => void
@@ -159,7 +159,7 @@ export function createKeyboardActions(
         }
       },
       refreshCache: async ({ actions }: ActionContext) => {
-        actions.refreshNotesAndUI()
+        actions.refreshCacheAndUI()
       },
       deleteNote: ({ state, actions }: ActionContext) => {
         if (state.selectedNote) {

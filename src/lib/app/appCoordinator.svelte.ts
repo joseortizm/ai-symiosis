@@ -48,7 +48,7 @@ export interface AppActions {
   saveAndExitNote: () => Promise<void>
   enterEditMode: () => Promise<void>
   exitEditMode: () => void
-  refreshNotesAndUI: () => Promise<void>
+  refreshCacheAndUI: () => Promise<void>
   saveConfigAndRefresh: () => Promise<{ success: boolean; error?: string }>
 }
 
@@ -201,7 +201,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
         if (errorMessage.includes('Note not found')) {
           try {
-            await refreshNotesAndUI()
+            await refreshCacheAndUI()
           } catch (refreshError) {
             console.error('Auto-refresh failed:', refreshError)
           }
@@ -218,8 +218,12 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusManager.setSelectedIndex(0)
   }
 
-  async function refreshNotesAndUI(): Promise<void> {
+  async function refreshCacheAndUI(): Promise<void> {
     await invoke('refresh_cache')
+    await refreshUI()
+  }
+
+  async function refreshUI(): Promise<void> {
     const updatedNotes = await searchManager.searchImmediate('')
     searchManager.setFilteredNotes(updatedNotes)
     contentManager.setNoteContent('')
@@ -249,7 +253,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
     saveAndExitNote,
-    refreshNotesAndUI,
+    refreshCacheAndUI,
     showExitEditDialog: dialogManager.showExitEditDialog,
     showDeleteDialog: () => dialogManager.openDeleteDialog(),
     showCreateDialog: () =>
@@ -354,7 +358,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         saveAndExitNote,
         enterEditMode: () => noteActions.enterEditMode(selectedNote!),
         exitEditMode,
-        refreshNotesAndUI,
+        refreshCacheAndUI,
         saveConfigAndRefresh,
       }
     },
@@ -388,6 +392,10 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         await settingsActions.openSettingsPane()
       })
 
+      const unlistenCacheRefresh = await listen('cache-refreshed', async () => {
+        await refreshUI()
+      })
+
       const cleanupEffects = setupReactiveEffects()
 
       return () => {
@@ -398,6 +406,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         }
         cleanupEffects()
         unlisten()
+        unlistenCacheRefresh()
         configStateManager.cleanup()
       }
     },

@@ -88,7 +88,6 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     noteName: string,
     searchInput: string
   ): Promise<RefreshAfterSaveResult> {
-    await deps.invoke('refresh_cache')
     const searchResults = await deps.refreshSearch(searchInput)
     const content = await refreshContent(noteName)
 
