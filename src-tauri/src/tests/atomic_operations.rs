@@ -2,7 +2,7 @@
 //!
 //! Tests for atomic file operations, backup creation, and temp file cleanup.
 
-use crate::database::{get_backup_dir, get_backup_dir_for_notes_path, get_temp_dir};
+use crate::database::{get_backup_dir_for_notes_path, get_temp_dir};
 use crate::*;
 use std::fs;
 use std::path::PathBuf;
@@ -64,7 +64,8 @@ fn test_safe_write_creates_backup_structure() {
     // In real usage, safe_write_note checks against the configured notes directory
     // For this test, we'll verify the backup path logic separately
 
-    let backup_dir = get_backup_dir().expect("Should get backup directory");
+    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
+        .expect("Should get backup directory");
     assert!(backup_dir.to_string_lossy().contains("backups"));
 }
 
@@ -94,7 +95,8 @@ fn test_atomic_write_pattern() {
 
 #[test]
 fn test_backup_preservation_on_failure() {
-    let backup_dir = get_backup_dir().expect("Should get backup directory");
+    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
+        .expect("Should get backup directory");
 
     // Test that backup directory structure is logical
     assert!(backup_dir.is_absolute());
@@ -130,7 +132,8 @@ fn test_file_extension_handling() {
 
 #[test]
 fn test_directory_creation_safety() {
-    let backup_dir = get_backup_dir().expect("Should get backup directory");
+    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
+        .expect("Should get backup directory");
     let temp_dir = get_temp_dir().expect("Should get temp directory");
 
     // These should be safe to create without affecting user data

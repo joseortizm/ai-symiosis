@@ -2,9 +2,7 @@
 //!
 //! Tests for database integration functionality and backup systems.
 
-use crate::database::{
-    get_backup_dir, get_backup_dir_for_notes_path, get_database_path, get_temp_dir,
-};
+use crate::database::{get_backup_dir_for_notes_path, get_database_path, get_temp_dir};
 use crate::*;
 
 #[test]
@@ -24,7 +22,8 @@ fn test_notes_directory_validation() {
 
 #[test]
 fn test_backup_directory_creation() {
-    let backup_dir = get_backup_dir().expect("Should get backup directory");
+    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
+        .expect("Should get backup directory");
     assert!(backup_dir.is_absolute());
     assert!(backup_dir.to_string_lossy().contains("symiosis"));
     assert!(backup_dir.to_string_lossy().contains("backups"));
@@ -46,7 +45,8 @@ fn test_temp_directory_creation() {
 
     // Temp directory should be separate from notes and backup directories
     let notes_dir = get_config_notes_dir();
-    let backup_dir = get_backup_dir().expect("Should get backup directory");
+    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
+        .expect("Should get backup directory");
     assert_ne!(
         temp_dir, notes_dir,
         "Temp directory should not be the same as notes directory"
@@ -59,7 +59,8 @@ fn test_temp_directory_creation() {
 
 #[test]
 fn test_directory_hierarchy() {
-    let backup_dir = get_backup_dir().expect("Should get backup directory");
+    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
+        .expect("Should get backup directory");
     let temp_dir = get_temp_dir().expect("Should get temp directory");
 
     // Both should be under the same parent symiosis directory

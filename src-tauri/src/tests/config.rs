@@ -4,9 +4,7 @@
 //! These tests access internal/private functions and test the actual production behavior.
 
 use crate::config::{
-    get_config_path, get_default_notes_dir, load_config, parse_shortcut, reload_config,
-    validate_config, validate_editor_config, validate_notes_directory, validate_preferences_config,
-    validate_shortcut_format, AppConfig, EditorConfig,
+    get_config_path, get_default_notes_dir, load_config, parse_shortcut, AppConfig,
 };
 
 #[test]
@@ -156,8 +154,15 @@ max_search_results = 150
 
 [editor]
 mode = "vim"
+theme = "gruvbox-dark"
+word_wrap = true
+tab_size = 2
+show_line_numbers = true
 "#;
     let parse_result = toml::from_str::<AppConfig>(valid_toml);
+    if let Err(e) = &parse_result {
+        eprintln!("TOML parse error: {}", e);
+    }
     assert!(parse_result.is_ok(), "Valid TOML should parse successfully");
 
     // Invalid TOML should fail (this is what save_config_content checks)

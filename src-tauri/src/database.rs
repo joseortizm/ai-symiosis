@@ -45,13 +45,7 @@ pub fn get_temp_dir() -> Result<PathBuf, String> {
 }
 
 // Platform-specific utility functions
-#[cfg(test)]
 pub fn get_data_dir() -> Option<PathBuf> {
-    get_data_dir_impl()
-}
-
-#[cfg(not(test))]
-fn get_data_dir() -> Option<PathBuf> {
     get_data_dir_impl()
 }
 
