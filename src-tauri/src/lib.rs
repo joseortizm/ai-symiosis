@@ -150,7 +150,30 @@ fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
 
 // Database operations
 fn init_db(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, modified UNINDEXED);")
+    conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, modified UNINDEXED);")?;
+
+    // Check for corruption by looking for duplicate filenames
+    let mut stmt = conn.prepare(
+        "SELECT filename, COUNT(*) as count FROM notes GROUP BY filename HAVING count > 1",
+    )?;
+    let duplicate_rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
+    })?;
+
+    let duplicates: Result<Vec<_>, _> = duplicate_rows.collect();
+    if let Ok(dups) = duplicates {
+        if !dups.is_empty() {
+            return Err(rusqlite::Error::SqliteFailure(
+                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CORRUPT),
+                Some(format!(
+                    "Database corruption detected: {} files have duplicate entries",
+                    dups.len()
+                )),
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn recreate_database() -> Result<(), String> {
@@ -869,8 +892,16 @@ pub fn initialize_notes() {
     };
 
     if let Err(e) = init_db(&conn) {
-        eprintln!("Failed to initialize database: {}. Application will continue with limited functionality.", e);
-        return;
+        eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
+        eprintln!("🔄 Attempting automatic database recovery...");
+
+        // Attempt automatic recovery by recreating the database
+        if let Err(recovery_error) = recreate_database() {
+            eprintln!("💥 FATAL: Database recovery failed: {}. Application will continue with limited functionality.", recovery_error);
+            return;
+        } else {
+            eprintln!("✅ Database successfully recovered!");
+        }
     }
 
     if !get_config_path().exists() {
