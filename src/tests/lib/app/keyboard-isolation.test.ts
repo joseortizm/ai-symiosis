@@ -41,9 +41,7 @@ describe('Keyboard Shortcut Isolation', () => {
           navigate_next: 'Ctrl+n',
           open_settings: 'Meta+,',
         },
-      } as Partial<
-        typeof import('../../../lib/core/configStateManager.svelte').ConfigStateManager
-      >,
+      } as any,
       loadNoteContent: vi.fn(),
       enterEditMode: vi.fn(),
       exitEditMode: vi.fn(),
@@ -56,6 +54,7 @@ describe('Keyboard Shortcut Isolation', () => {
       clearHighlights: vi.fn(),
       clearSearch: vi.fn(),
       focusSearch: vi.fn(),
+      refreshNotesAndUI: vi.fn(),
     }
 
     keyboardActions = createKeyboardActions(mockDeps)

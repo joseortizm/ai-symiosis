@@ -219,9 +219,7 @@ describe('Content Loading Integration', () => {
             navigate_next: 'Ctrl+n',
             open_settings: 'Meta+,',
           },
-        } as Partial<
-          typeof import('../../../lib/core/configStateManager.svelte').ConfigStateManager
-        >,
+        } as any,
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
@@ -234,6 +232,7 @@ describe('Content Loading Integration', () => {
         clearHighlights: vi.fn(),
         clearSearch: vi.fn(),
         focusSearch: vi.fn(),
+        refreshNotesAndUI: vi.fn(),
       })
     })
 
@@ -380,9 +379,7 @@ describe('Content Loading Integration', () => {
             navigate_next: 'Ctrl+n',
             open_settings: 'Meta+,',
           },
-        } as Partial<
-          typeof import('../../../lib/core/configStateManager.svelte').ConfigStateManager
-        >,
+        } as any,
         loadNoteContent: appCoordinator.actions.loadNoteContent,
         enterEditMode: vi.fn(),
         exitEditMode: vi.fn(),
@@ -395,6 +392,7 @@ describe('Content Loading Integration', () => {
         clearHighlights: vi.fn(),
         clearSearch: vi.fn(),
         focusSearch: vi.fn(),
+        refreshNotesAndUI: vi.fn(),
       })
 
       mockFocusManager.selectedIndex = 0

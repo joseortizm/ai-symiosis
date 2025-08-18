@@ -249,6 +249,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     enterEditMode: () => noteActions.enterEditMode(selectedNote!),
     exitEditMode,
     saveAndExitNote,
+    refreshNotesAndUI,
     showExitEditDialog: dialogManager.showExitEditDialog,
     showDeleteDialog: () => dialogManager.openDeleteDialog(),
     showCreateDialog: () =>
