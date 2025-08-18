@@ -334,7 +334,7 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
     match get_db_connection() {
         Ok(conn) => {
             match conn.execute(
-                "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+                "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
                 params![note_name, "", modified],
             ) {
                 Ok(_) => Ok(()),
@@ -441,7 +441,7 @@ fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> Res
     // If no rows were updated, insert new note
     if updated_rows == 0 {
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+            "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
             params![note_name, content, modified],
         )
         .map_err(|e| format!("Database error: {}", e))?;
