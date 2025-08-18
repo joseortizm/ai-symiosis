@@ -20,7 +20,7 @@ use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{LazyLock, RwLock};
+use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -32,6 +32,9 @@ use walkdir::WalkDir;
 
 // Global static configuration
 static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
+
+// Global database lock to prevent concurrent database operations
+static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
@@ -198,6 +201,9 @@ fn recreate_database() -> Result<(), String> {
 }
 
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
+    // Prevent concurrent database operations to avoid FTS5 race conditions
+    let _lock = DB_LOCK.lock().unwrap();
+
     let notes_dir = get_config_notes_dir();
 
     if !notes_dir.exists() {
@@ -267,9 +273,10 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
         if fs_modified != db_modified {
             let content = fs::read_to_string(&path).unwrap_or_default();
 
-            // Use INSERT OR REPLACE for upsert behavior
+            // EXPLICIT DELETE before insert to avoid FTS5 quirks with INSERT OR REPLACE
+            tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
             tx.execute(
-                "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+                "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
                 params![filename, content, fs_modified],
             )?;
         }
@@ -311,6 +318,10 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
     let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
+        // File was deleted externally - clean up database entry
+        if let Ok(conn) = get_db_connection() {
+            let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
+        }
         return Err(format!("Note not found: {}", note_name));
     }
     let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
@@ -322,6 +333,10 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
     let note_path = get_config_notes_dir().join(note_name);
     if !note_path.exists() {
+        // File was deleted externally - clean up database entry
+        if let Ok(conn) = get_db_connection() {
+            let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
+        }
         return Err(format!("Note not found: {}", note_name));
     }
     let content = fs::read_to_string(&note_path).map_err(|e| e.to_string())?;
@@ -482,8 +497,28 @@ fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     let old_path = notes_dir.join(&old_name);
     let new_path = notes_dir.join(&new_name);
 
+    // If source file doesn't exist, it may have been renamed/deleted externally
     if !old_path.exists() {
-        return Err(format!("Note '{}' not found", old_name));
+        // Check if the target file already exists - this might be an external rename
+        if new_path.exists() {
+            // File was likely renamed externally - update database to reflect this
+            match get_db_connection() {
+                Ok(conn) => {
+                    let _ = conn.execute(
+                        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                        params![new_name, old_name],
+                    );
+                }
+                Err(_) => {
+                    // Database connection failed - trigger rebuild
+                    let _ = recreate_database();
+                }
+            }
+            return Ok(()); // Success - rename already happened externally
+        } else {
+            // File was deleted externally
+            return Err(format!("Note '{}' not found", old_name));
+        }
     }
 
     if new_path.exists() {
@@ -571,9 +606,19 @@ fn delete_note(note_name: &str) -> Result<(), String> {
     validate_note_name(note_name)?;
     let note_path = get_config_notes_dir().join(note_name);
 
-    // Check if note exists
+    // If note doesn't exist on filesystem, just remove from database and return success
     if !note_path.exists() {
-        return Err(format!("Note '{}' not found", note_name));
+        // File was already deleted externally - just clean up database
+        match get_db_connection() {
+            Ok(conn) => {
+                let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
+            }
+            Err(_) => {
+                // Database connection failed - trigger rebuild
+                let _ = recreate_database();
+            }
+        }
+        return Ok(()); // Success - file is already gone
     }
 
     // 1. Create backup before deletion (for potential recovery)

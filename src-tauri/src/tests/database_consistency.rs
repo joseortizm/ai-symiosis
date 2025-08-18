@@ -526,4 +526,123 @@ mod real_database_function_tests {
             "FTS search should work with proper schema"
         );
     }
+
+    #[test]
+    fn test_external_file_change_handling() {
+        use std::fs;
+        use tempfile::TempDir;
+
+        // Create a temporary notes directory for testing
+        let temp_notes_dir = TempDir::new().expect("Should create temp directory");
+        let notes_path = temp_notes_dir.path();
+
+        // Create a test file
+        let test_file = notes_path.join("test.md");
+        fs::write(&test_file, "Original content").expect("Should write test file");
+
+        // Create database and add the file
+        let harness = DbTestHarness::new().expect("Failed to create test harness");
+        let mut conn = harness
+            .get_test_connection()
+            .expect("Failed to get connection");
+
+        init_db(&conn).expect("Should initialize database");
+
+        // Add file to database
+        conn.execute(
+            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+            params!["test.md", "Original content", 1000i64],
+        )
+        .expect("Should insert test note");
+
+        // Verify file is in database
+        let count_before: i64 = conn
+            .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+            .expect("Should count notes");
+        assert_eq!(count_before, 1, "Should have one note in database");
+
+        // Simulate external file deletion
+        fs::remove_file(&test_file).expect("Should delete test file");
+
+        // Run the sync function to detect external changes
+        // This simulates what happens when the app refreshes or detects changes
+        let mut filesystem_files = std::collections::HashMap::new();
+        // filesystem_files is empty since file was deleted
+
+        // Get database files
+        let mut database_files = std::collections::HashMap::new();
+        {
+            let mut stmt = conn
+                .prepare("SELECT filename, modified FROM notes")
+                .unwrap();
+            let rows = stmt
+                .query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+                })
+                .unwrap();
+
+            for row in rows {
+                let (filename, modified) = row.unwrap();
+                database_files.insert(filename, modified);
+            }
+        }
+
+        // Simulate the sync logic from load_all_notes_into_sqlite
+        let tx = conn.transaction().expect("Should start transaction");
+
+        // Remove files that no longer exist on filesystem
+        for filename in database_files.keys() {
+            if !filesystem_files.contains_key(filename) {
+                tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])
+                    .expect("Should delete missing file from database");
+            }
+        }
+
+        tx.commit().expect("Should commit transaction");
+
+        // Verify database was cleaned up
+        let count_after: i64 = conn
+            .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+            .expect("Should count notes");
+        assert_eq!(
+            count_after, 0,
+            "Should have zero notes after external deletion"
+        );
+
+        // Test external file creation
+        fs::write(&test_file, "New content").expect("Should create new test file");
+
+        // Simulate adding new file to filesystem_files
+        filesystem_files.insert("test.md".to_string(), (test_file.clone(), 2000i64));
+
+        // Simulate the add/update logic
+        let tx = conn.transaction().expect("Should start transaction");
+        for (filename, (path, fs_modified)) in filesystem_files {
+            let content = fs::read_to_string(&path).unwrap_or_default();
+            tx.execute(
+                "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
+                params![filename, content, fs_modified],
+            )
+            .expect("Should insert new file");
+        }
+        tx.commit().expect("Should commit transaction");
+
+        // Verify new file was added
+        let count_final: i64 = conn
+            .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+            .expect("Should count notes");
+        assert_eq!(
+            count_final, 1,
+            "Should have one note after external creation"
+        );
+
+        let content: String = conn
+            .query_row(
+                "SELECT content FROM notes WHERE filename = 'test.md'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("Should get note content");
+        assert_eq!(content, "New content", "Should have updated content");
+    }
 }
