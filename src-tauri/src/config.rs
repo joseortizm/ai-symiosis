@@ -56,6 +56,7 @@ pub struct InterfaceConfig {
     pub editor_font_family: String,    // "JetBrains Mono, Consolas, monospace"
     pub editor_font_size: u16,         // 14
     pub markdown_render_theme: String, // "dark_dimmed"|"light"|"dark"|"auto"
+    pub md_render_code_theme: String,  // syntect code highlighting theme
     pub default_width: u32,            // 1200
     pub default_height: u32,           // 800
     pub center_on_startup: bool,       // true
@@ -156,6 +157,7 @@ impl Default for InterfaceConfig {
             editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
             editor_font_size: 14,
             markdown_render_theme: "dark_dimmed".to_string(),
+            md_render_code_theme: "base16-ocean.dark".to_string(),
             default_width: 1200,
             default_height: 800,
             center_on_startup: true,
@@ -274,6 +276,24 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
             "Invalid markdown render theme '{}'. Valid themes: {}",
             interface.markdown_render_theme,
             valid_markdown_render_themes.join(", ")
+        ));
+    }
+
+    // TODO: Add support for loading custom .tmTheme files in the future
+    let valid_md_code_themes = [
+        "base16-ocean.dark",
+        "base16-eighties.dark",
+        "base16-mocha.dark",
+        "base16-ocean.light",
+        "InspiredGitHub",
+        "Solarized (dark)",
+        "Solarized (light)",
+    ];
+    if !valid_md_code_themes.contains(&interface.md_render_code_theme.as_str()) {
+        return Err(format!(
+            "Invalid markdown code theme '{}'. Valid themes: {}",
+            interface.md_render_code_theme,
+            valid_md_code_themes.join(", ")
         ));
     }
 

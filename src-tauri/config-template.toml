@@ -45,6 +45,13 @@ editor_font_size = 14
 # Options: "light", "dark", "dark_dimmed", "auto"
 markdown_render_theme = "dark_dimmed"
 
+# Code syntax highlighting theme for markdown code blocks
+# Options: "base16-ocean.dark", "base16-eighties.dark", "base16-mocha.dark",
+#          "base16-ocean.light", "InspiredGitHub", "Solarized (dark)", "Solarized (light)"
+# Note: After changing this theme, press Ctrl+R to refresh cache and apply to all existing notes
+# TODO: Support for custom .tmTheme files will be added in the future
+md_render_code_theme = "base16-ocean.dark"
+
 # Window appearance and behavior
 default_width = 1200
 default_height = 800

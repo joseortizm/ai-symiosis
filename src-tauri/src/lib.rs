@@ -38,6 +38,9 @@ static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(lo
 // Global database lock to prevent concurrent database operations
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
+// Track last used theme to detect changes
+static LAST_RENDER_THEME: LazyLock<RwLock<Option<String>>> = LazyLock::new(|| RwLock::new(None));
+
 fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
     PathBuf::from(&config.notes_directory)
@@ -76,8 +79,30 @@ fn validate_note_name(note_name: &str) -> Result<(), String> {
 
 fn render_note(filename: &str, content: &str) -> String {
     if filename.ends_with(".md") || filename.ends_with(".markdown") {
+        // Get theme from config with fallback
+        let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+        let theme = &config.interface.md_render_code_theme;
+
+        // TODO: Add support for loading custom .tmTheme files in the future
+        // Validate theme exists, fallback to default if invalid
+        let valid_themes = [
+            "base16-ocean.dark",
+            "base16-eighties.dark",
+            "base16-mocha.dark",
+            "base16-ocean.light",
+            "InspiredGitHub",
+            "Solarized (dark)",
+            "Solarized (light)",
+        ];
+
+        let selected_theme = if valid_themes.contains(&theme.as_str()) {
+            theme.as_str()
+        } else {
+            "base16-ocean.dark" // fallback
+        };
+
         // Create syntax highlighter adapter
-        let adapter = comrak::plugins::syntect::SyntectAdapter::new(Some("base16-ocean.dark"));
+        let adapter = comrak::plugins::syntect::SyntectAdapter::new(Some(selected_theme));
 
         // Configure plugins
         let mut plugins = ComrakPlugins::default();
@@ -733,7 +758,34 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Reload config first
     reload_config(&APP_CONFIG, Some(app)).map_err(|e| format!("Failed to reload config: {}", e))?;
 
-    // Then refresh database
+    // Check if theme has changed
+    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    let current_theme = &config.interface.md_render_code_theme;
+
+    let theme_changed = {
+        let last_theme = LAST_RENDER_THEME.read().unwrap_or_else(|e| e.into_inner());
+        match &*last_theme {
+            Some(last) => last != current_theme,
+            None => true, // First time, consider it changed
+        }
+    };
+
+    // Update stored theme
+    {
+        let mut last_theme = LAST_RENDER_THEME.write().unwrap_or_else(|e| e.into_inner());
+        *last_theme = Some(current_theme.clone());
+    }
+
+    // If theme changed, force complete database rebuild to regenerate all HTML
+    if theme_changed {
+        eprintln!(
+            "Theme changed to '{}', rebuilding all HTML renders...",
+            current_theme
+        );
+        return recreate_database();
+    }
+
+    // Otherwise, do normal cache refresh
     let mut conn = get_db_connection()?;
     init_db(&conn).map_err(|e| format!("Database initialization error: {}", e))?;
 
