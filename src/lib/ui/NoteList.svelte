@@ -95,7 +95,6 @@ Handles note selection state and integrates with keyboard navigation.
     color: var(--theme-text-primary);
     text-align: left;
     font-size: 0.95em;
-    transition: background-color 0.1s ease;
     contain: layout;
   }
   .selected {

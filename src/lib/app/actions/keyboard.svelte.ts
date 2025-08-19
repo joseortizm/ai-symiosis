@@ -85,7 +85,7 @@ export function createKeyboardActions(
         const note = state.filteredNotes[newIndex]
         if (note) {
           actions.focusManager.setSelectedIndex(newIndex)
-          actions.loadNoteContent(note)
+          void actions.loadNoteContent(note)
         }
       },
       moveDown: ({ state, actions }: ActionContext) => {
@@ -97,7 +97,7 @@ export function createKeyboardActions(
         const note = state.filteredNotes[newIndex]
         if (note) {
           actions.focusManager.setSelectedIndex(newIndex)
-          actions.loadNoteContent(note)
+          void actions.loadNoteContent(note)
         }
       },
       focusSearch: ({ actions }: ActionContext) => {
