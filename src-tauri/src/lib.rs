@@ -7,7 +7,7 @@ mod tests;
 mod watcher;
 
 // External crates
-use comrak::{markdown_to_html, ComrakOptions};
+use comrak::{markdown_to_html_with_plugins, ComrakOptions, ComrakPlugins};
 use config::{
     get_config_path, get_default_notes_dir, get_editor_config, get_general_config,
     get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
@@ -76,7 +76,18 @@ fn validate_note_name(note_name: &str) -> Result<(), String> {
 
 fn render_note(filename: &str, content: &str) -> String {
     if filename.ends_with(".md") || filename.ends_with(".markdown") {
-        markdown_to_html(content, &ComrakOptions::default())
+        // Create syntax highlighter adapter
+        let adapter = comrak::plugins::syntect::SyntectAdapter::new(Some("base16-ocean.dark"));
+
+        // Configure plugins
+        let mut plugins = ComrakPlugins::default();
+        plugins.render.codefence_syntax_highlighter = Some(&adapter);
+
+        // Configure options
+        let mut options = ComrakOptions::default();
+        options.render.unsafe_ = true; // Allow HTML in markdown
+
+        markdown_to_html_with_plugins(content, &options, &plugins)
     } else {
         format!("<pre>{}</pre>", html_escape::encode_text(content))
     }
@@ -155,7 +166,7 @@ fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
 
 // Database operations
 fn init_db(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, modified UNINDEXED);")?;
+    conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, html_render, modified UNINDEXED);")?;
 
     // Check for corruption by looking for duplicate filenames
     let mut stmt = conn.prepare(
@@ -275,11 +286,14 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
         if fs_modified != db_modified {
             let content = fs::read_to_string(&path).unwrap_or_default();
 
+            // Generate HTML render from content
+            let html_render = render_note(&filename, &content);
+
             // EXPLICIT DELETE before insert to avoid FTS5 quirks with INSERT OR REPLACE
             tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
             tx.execute(
-                "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-                params![filename, content, fs_modified],
+                "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+                params![filename, content, html_render, fs_modified],
             )?;
         }
     }
@@ -328,7 +342,7 @@ fn get_note_content(note_name: &str) -> Result<String, String> {
         .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
         .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
 
-    Ok(render_note(note_name, &content))
+    Ok(content)
 }
 
 #[tauri::command]
@@ -345,6 +359,22 @@ fn get_note_raw_content(note_name: &str) -> Result<String, String> {
         .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
 
     Ok(content)
+}
+
+#[tauri::command]
+fn get_note_html_content(note_name: &str) -> Result<String, String> {
+    validate_note_name(note_name)?;
+
+    let conn = get_db_connection().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT html_render FROM notes WHERE filename = ?1")
+        .map_err(|e| e.to_string())?;
+
+    let html_content = stmt
+        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+        .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
+
+    Ok(html_content)
 }
 
 // Tauri command handlers - Mutation operations
@@ -375,9 +405,11 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
 
     match get_db_connection() {
         Ok(conn) => {
+            // Generate HTML render for empty content
+            let html_render = render_note(note_name, "");
             match conn.execute(
-                "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-                params![note_name, "", modified],
+                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+                params![note_name, "", html_render, modified],
             ) {
                 Ok(_) => Ok(()),
                 Err(e) => {
@@ -472,19 +504,22 @@ fn save_note(note_name: &str, content: &str) -> Result<(), String> {
 fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> Result<(), String> {
     let conn = get_db_connection()?;
 
+    // Generate HTML render from content
+    let html_render = render_note(note_name, content);
+
     // First try to update existing note
     let updated_rows = conn
         .execute(
-            "UPDATE notes SET content = ?2, modified = ?3 WHERE filename = ?1",
-            params![note_name, content, modified],
+            "UPDATE notes SET content = ?2, html_render = ?3, modified = ?4 WHERE filename = ?1",
+            params![note_name, content, html_render, modified],
         )
         .map_err(|e| format!("Database error: {}", e))?;
 
     // If no rows were updated, insert new note
     if updated_rows == 0 {
         conn.execute(
-            "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params![note_name, content, modified],
+            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![note_name, content, html_render, modified],
         )
         .map_err(|e| format!("Database error: {}", e))?;
     }
@@ -1053,6 +1088,7 @@ pub fn run() {
             search_notes,
             get_note_content,
             get_note_raw_content,
+            get_note_html_content,
             create_new_note,
             delete_note,
             rename_note,

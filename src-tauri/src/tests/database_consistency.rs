@@ -61,8 +61,8 @@ mod real_database_function_tests {
 
         // Test that it's a proper FTS5 table
         let insert_result = conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["test.md", "test content", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params!["test.md", "test content", "<p>test content</p>", 1000i64],
         );
         assert!(
             insert_result.is_ok(),
@@ -101,8 +101,13 @@ mod real_database_function_tests {
 
         // Add test data
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["health_test.md", "# Health Test Content", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "health_test.md",
+                "# Health Test Content",
+                "<h1>Health Test Content</h1>",
+                1000i64
+            ],
         )
         .expect("Should insert test data");
 
@@ -143,8 +148,13 @@ mod real_database_function_tests {
 
         // Add data to database
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["sync_test.md", "# Sync Test Content", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "sync_test.md",
+                "# Sync Test Content",
+                "<h1>Sync Test Content</h1>",
+                1000i64
+            ],
         )
         .expect("Should insert test data");
 
@@ -211,13 +221,23 @@ mod real_database_function_tests {
         // Test successful transaction using real database operations
         let tx = conn.transaction().expect("Should start transaction");
         tx.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["tx_test1.md", "Transaction test 1", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "tx_test1.md",
+                "Transaction test 1",
+                "<p>Transaction test 1</p>",
+                1000i64
+            ],
         )
         .expect("Should insert first file in transaction");
         tx.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["tx_test2.md", "Transaction test 2", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "tx_test2.md",
+                "Transaction test 2",
+                "<p>Transaction test 2</p>",
+                1000i64
+            ],
         )
         .expect("Should insert second file in transaction");
         tx.commit().expect("Should commit successful transaction");
@@ -231,8 +251,13 @@ mod real_database_function_tests {
         // Test failed transaction with rollback
         let tx = conn.transaction().expect("Should start second transaction");
         tx.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["tx_test3.md", "Transaction test 3", 2000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "tx_test3.md",
+                "Transaction test 3",
+                "<p>Transaction test 3</p>",
+                2000i64
+            ],
         )
         .expect("Should insert third file in transaction");
         // Simulate error by dropping transaction without commit
@@ -280,8 +305,8 @@ mod real_database_function_tests {
 
         for (filename, content) in &test_data {
             conn.execute(
-                "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-                params![filename, content, 1000i64],
+                "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+                params![filename, content, format!("<p>{}</p>", content), 1000i64],
             )
             .expect("Should insert test data");
         }
@@ -342,8 +367,13 @@ mod real_database_function_tests {
 
         // Test production database can handle large content
         let insert_result = conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["large.md", large_content, 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "large.md",
+                &large_content,
+                format!("<p>{}</p>", &large_content),
+                1000i64
+            ],
         );
         assert!(
             insert_result.is_ok(),
@@ -398,8 +428,13 @@ mod real_database_function_tests {
 
         // Insert normal data first
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["normal.md", "Normal content", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "normal.md",
+                "Normal content",
+                "<p>Normal content</p>",
+                1000i64
+            ],
         )
         .expect("Should insert normal data");
 
@@ -410,14 +445,19 @@ mod real_database_function_tests {
 
         // Insert data that should trigger corruption warnings
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["empty.md", "", 2000i64], // Empty content
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params!["empty.md", "", "", 2000i64], // Empty content
         )
         .expect("Should insert empty content");
 
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["null_bytes.md", "Content with\0null bytes", 2000i64], // Null bytes
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "null_bytes.md",
+                "Content with\0null bytes",
+                "<p>Content with\0null bytes</p>",
+                2000i64
+            ], // Null bytes
         )
         .expect("Should insert content with null bytes");
 
@@ -451,8 +491,8 @@ mod real_database_function_tests {
 
         // Insert test data
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["test1.md", "Content 1", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params!["test1.md", "Content 1", "<p>Content 1</p>", 1000i64],
         )
         .expect("Should insert test data");
 
@@ -503,15 +543,20 @@ mod real_database_function_tests {
 
         // 1. Test duplicate filename handling (should use INSERT OR REPLACE pattern)
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["duplicate.md", "First content", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "duplicate.md",
+                "First content",
+                "<p>First content</p>",
+                1000i64
+            ],
         )
         .expect("Should insert first version");
 
         // This should not fail due to our upsert pattern
         let result = conn.execute(
-            "INSERT OR REPLACE INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["duplicate.md", "Updated content", 2000i64],
+            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params!["duplicate.md", "Updated content", "<p>Updated content</p>", 2000i64],
         );
         assert!(result.is_ok(), "Upsert should handle duplicates gracefully");
 
@@ -550,8 +595,13 @@ mod real_database_function_tests {
 
         // Add file to database
         conn.execute(
-            "INSERT INTO notes (filename, content, modified) VALUES (?1, ?2, ?3)",
-            params!["test.md", "Original content", 1000i64],
+            "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                "test.md",
+                "Original content",
+                "<p>Original content</p>",
+                1000i64
+            ],
         )
         .expect("Should insert test note");
 

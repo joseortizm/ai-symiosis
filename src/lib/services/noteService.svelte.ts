@@ -93,9 +93,9 @@ export function createNoteService() {
 
   async function getContent(noteName: string): Promise<string> {
     try {
-      return await invoke<string>('get_note_content', { noteName })
+      return await invoke<string>('get_note_html_content', { noteName })
     } catch (e) {
-      console.error('Failed to get note content:', e)
+      console.error('Failed to get note HTML content:', e)
       throw e
     }
   }

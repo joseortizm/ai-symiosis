@@ -6,8 +6,6 @@ Shows highlighted content or renders the CodeMirror editor.
 
 <script lang="ts">
   import CodeEditor from './CodeEditor.svelte'
-  import hljs from 'highlight.js'
-  import 'highlight.js/styles/atom-one-dark.css'
   import { getContext } from 'svelte'
 
   import type {
@@ -32,20 +30,6 @@ Shows highlighted content or renders the CodeMirror editor.
       },
     }
   }
-
-  // Use $effect to highlight code blocks when content changes
-  $effect(() => {
-    // Run after highlightedContent changes and DOM updates
-    if (contentManager.highlightedContent && focusManager.noteContentElement) {
-      setTimeout(() => {
-        const blocks =
-          focusManager.noteContentElement!.querySelectorAll('pre code')
-        blocks.forEach((block: Element) => {
-          hljs.highlightElement(block as HTMLElement)
-        })
-      }, 0)
-    }
-  })
 </script>
 
 <div class="note-preview">
