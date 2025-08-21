@@ -5,7 +5,7 @@
  */
 
 // Type definitions
-interface KeyboardActionDeps {
+export interface KeyboardActionDeps {
   focusManager: ReturnType<
     typeof import('../../core/focusManager.svelte').createFocusManager
   >
