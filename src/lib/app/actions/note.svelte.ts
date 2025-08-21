@@ -7,51 +7,22 @@
 import { tick } from 'svelte'
 
 interface NoteActionDeps {
-  noteService: {
-    create: (
-      noteName: string
-    ) => Promise<{ success: boolean; noteName?: string; error?: string }>
-    delete: (noteName: string) => Promise<{ success: boolean; error?: string }>
-    rename: (
-      oldName: string,
-      newName: string
-    ) => Promise<{ success: boolean; newName?: string; error?: string }>
-  }
-  searchManager: {
-    searchInput: string
-    searchImmediate: (query: string) => Promise<string[]>
-    filteredNotes: string[]
-    setFilteredNotes: (notes: string[]) => void
-  }
-  dialogManager: {
-    newNoteName: string
-    newNoteNameForRename: string
-    closeCreateDialog: () => void
-    closeDeleteDialog: () => void
-    closeRenameDialog: () => void
-  }
-  focusManager: {
-    focusSearch: () => void
-    noteContentElement: HTMLElement | null
-    setSelectedIndex: (index: number) => void
-  }
-  editorManager: {
-    enterEditMode: (
-      noteName: string,
-      fallbackHtmlContent?: string,
-      noteContentElement?: HTMLElement
-    ) => Promise<void>
-    saveNote: (
-      noteName: string
-    ) => Promise<{ success: boolean; error?: string }>
-  }
-  contentManager: {
-    noteContent: string
-    refreshAfterSave: (
-      noteName: string,
-      query: string
-    ) => Promise<{ searchResults: string[] }>
-  }
+  noteService: typeof import('../../services/noteService.svelte').noteService
+  searchManager: ReturnType<
+    typeof import('../../core/searchManager.svelte').createSearchManager
+  >
+  dialogManager: ReturnType<
+    typeof import('../../core/dialogManager.svelte').createDialogManager
+  >
+  focusManager: ReturnType<
+    typeof import('../../core/focusManager.svelte').createFocusManager
+  >
+  editorManager: ReturnType<
+    typeof import('../../core/editorManager.svelte').createEditorManager
+  >
+  contentManager: ReturnType<
+    typeof import('../../core/contentManager.svelte').createContentManager
+  >
 }
 
 interface NoteActions {
@@ -71,7 +42,6 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     editorManager,
     contentManager,
   } = deps
-
   async function createNote(noteNameParam?: string): Promise<void> {
     const inputNoteName = noteNameParam || dialogManager.newNoteName.trim()
     if (!inputNoteName.trim()) return
@@ -82,7 +52,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
       await searchManager.searchImmediate('')
 
       const noteIndex = searchManager.filteredNotes.findIndex(
-        (note) => note === result.noteName
+        (note: string) => note === result.noteName
       )
       if (noteIndex >= 0) {
         focusManager.setSelectedIndex(noteIndex)
@@ -123,7 +93,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
       await searchManager.searchImmediate(searchManager.searchInput)
 
       const noteIndex = searchManager.filteredNotes.findIndex(
-        (note) => note === result.newName
+        (note: string) => note === result.newName
       )
       if (noteIndex >= 0) {
         focusManager.setSelectedIndex(noteIndex)

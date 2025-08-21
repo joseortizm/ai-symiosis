@@ -234,7 +234,8 @@ describe('Content Loading Integration', () => {
         clearSearch: vi.fn(),
         focusSearch: vi.fn(),
         refreshCacheAndUI: vi.fn(),
-      })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
     })
 
     it('should load content when keyboard navigation calls moveUp action', async () => {
@@ -356,7 +357,8 @@ describe('Content Loading Integration', () => {
       mockNoteService.getContent.mockResolvedValue(testContent)
 
       const keyboardActions = createKeyboardActions({
-        focusManager: mockFocusManager,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        focusManager: mockFocusManager as any,
         contentNavigationManager: {
           navigateNext: vi.fn(),
           navigatePrevious: vi.fn(),
@@ -394,7 +396,8 @@ describe('Content Loading Integration', () => {
         clearSearch: vi.fn(),
         focusSearch: vi.fn(),
         refreshCacheAndUI: vi.fn(),
-      })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
 
       mockFocusManager.selectedIndex = 0
       const mockActionContext = {

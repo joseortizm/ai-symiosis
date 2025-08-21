@@ -5,20 +5,18 @@
  */
 
 interface SearchActionDeps {
-  searchManager: {
-    clearSearch: () => void
-    setFilteredNotes: (notes: string[]) => void
-  }
-  contentManager: {
-    clearHighlights: () => void
-  }
-  focusManager: {
-    selectedIndex: number
-    setSelectedIndex: (index: number) => void
-  }
-  editorManager: {
-    exitEditMode: () => void
-  }
+  searchManager: ReturnType<
+    typeof import('../../core/searchManager.svelte').createSearchManager
+  >
+  contentManager: ReturnType<
+    typeof import('../../core/contentManager.svelte').createContentManager
+  >
+  focusManager: ReturnType<
+    typeof import('../../core/focusManager.svelte').createFocusManager
+  >
+  editorManager: ReturnType<
+    typeof import('../../core/editorManager.svelte').createEditorManager
+  >
 }
 
 interface SearchActions {

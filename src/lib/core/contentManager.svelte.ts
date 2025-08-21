@@ -4,21 +4,22 @@
  * Coordinates between content fetching, highlighting service, and UI updates.
  */
 
-import { invoke } from '@tauri-apps/api/core'
 import { getHighlightedContent } from './contentHighlighting.svelte'
 
 export interface ContentManagerDeps {
   noteService: {
     getContent: (noteName: string) => Promise<string>
   }
-  getQuery: () => string
-  getAreHighlightsCleared: () => boolean
-  clearHighlights: () => void
-  setHighlightsClearCallback: (callback: (cleared: boolean) => void) => void
-  setHighlightsClearedState: (cleared: boolean) => void
-  getNoteContentElement: () => HTMLElement | null
-  refreshSearch: (query: string) => Promise<string[]>
-  invoke: typeof invoke
+  searchManager: {
+    readonly query: string
+    areHighlightsCleared: boolean
+    clearHighlights(): void
+    setHighlightsClearCallback(callback: (cleared: boolean) => void): void
+    refreshSearch(query: string): Promise<string[]>
+  }
+  focusManager: {
+    readonly noteContentElement: HTMLElement | null
+  }
 }
 
 interface ContentState {
@@ -53,8 +54,8 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
   const highlightedContent = $derived(
     getHighlightedContent(
       state.noteContent,
-      deps.getQuery(),
-      deps.getAreHighlightsCleared()
+      deps.searchManager.query,
+      deps.searchManager.areHighlightsCleared
     )
   )
 
@@ -63,12 +64,12 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
   }
 
   function clearHighlights(): void {
-    deps.clearHighlights()
+    deps.searchManager.clearHighlights()
   }
 
   function scrollToFirstMatch(): void {
-    const noteContentElement = deps.getNoteContentElement()
-    if (noteContentElement && !deps.getAreHighlightsCleared()) {
+    const noteContentElement = deps.focusManager.noteContentElement
+    if (noteContentElement && !deps.searchManager.areHighlightsCleared) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight')
         if (firstMatch) {
@@ -88,7 +89,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     noteName: string,
     searchInput: string
   ): Promise<RefreshAfterSaveResult> {
-    const searchResults = await deps.refreshSearch(searchInput)
+    const searchResults = await deps.searchManager.refreshSearch(searchInput)
     const content = await refreshContent(noteName)
 
     return {
@@ -98,10 +99,10 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
   }
 
   function setHighlightsClearedState(cleared: boolean): void {
-    deps.setHighlightsClearedState(cleared)
+    deps.searchManager.areHighlightsCleared = cleared
   }
 
-  deps.setHighlightsClearCallback((cleared: boolean) => {
+  deps.searchManager.setHighlightsClearCallback((cleared: boolean) => {
     setHighlightsClearedState(cleared)
   })
 
@@ -115,7 +116,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     },
 
     get areHighlightsCleared(): boolean {
-      return deps.getAreHighlightsCleared()
+      return deps.searchManager.areHighlightsCleared
     },
 
     set areHighlightsCleared(value: boolean) {

@@ -9,9 +9,13 @@ import { createContentNavigationManager } from '../../../lib/core/contentNavigat
 describe('ContentNavigationManager', () => {
   let mockNoteContentElement: HTMLElement
   let mockDeps: {
-    getNoteContentElement: () => HTMLElement | null
-    getQuery: () => string
-    getAreHighlightsCleared: () => boolean
+    focusManager: {
+      noteContentElement: HTMLElement | null
+    }
+    searchManager: {
+      query: string
+      areHighlightsCleared: boolean
+    }
   }
   let navigationManager: ReturnType<typeof createContentNavigationManager>
 
@@ -44,9 +48,13 @@ describe('ContentNavigationManager', () => {
     Element.prototype.scrollIntoView = vi.fn()
 
     mockDeps = {
-      getNoteContentElement: vi.fn(() => mockNoteContentElement),
-      getQuery: vi.fn(() => ''),
-      getAreHighlightsCleared: vi.fn(() => false),
+      focusManager: {
+        noteContentElement: mockNoteContentElement,
+      },
+      searchManager: {
+        query: '',
+        areHighlightsCleared: false,
+      },
     }
 
     navigationManager = createContentNavigationManager(mockDeps)
@@ -54,7 +62,7 @@ describe('ContentNavigationManager', () => {
 
   describe('search highlight navigation', () => {
     beforeEach(() => {
-      mockDeps.getQuery = vi.fn(() => 'search')
+      mockDeps.searchManager.query = 'search'
     })
 
     it('should navigate to first highlight on navigateNext', () => {
@@ -106,7 +114,7 @@ describe('ContentNavigationManager', () => {
 
   describe('header navigation', () => {
     beforeEach(() => {
-      mockDeps.getQuery = vi.fn(() => '') // No search query = header mode
+      mockDeps.searchManager.query = '' // No search query = header mode
     })
 
     it('should navigate to first header on navigateNext', () => {
@@ -151,8 +159,8 @@ describe('ContentNavigationManager', () => {
   describe('highlight cleared behavior', () => {
     it('should switch to header navigation when highlights are cleared even with query present', () => {
       // Set up: query present, highlights cleared
-      mockDeps.getQuery = vi.fn(() => 'search')
-      mockDeps.getAreHighlightsCleared = vi.fn(() => true)
+      mockDeps.searchManager.query = 'search'
+      mockDeps.searchManager.areHighlightsCleared = true
 
       navigationManager.navigateNext()
 
@@ -170,8 +178,8 @@ describe('ContentNavigationManager', () => {
 
     it('should use highlight navigation when query present and highlights not cleared', () => {
       // Set up: query present, highlights not cleared
-      mockDeps.getQuery = vi.fn(() => 'search')
-      mockDeps.getAreHighlightsCleared = vi.fn(() => false)
+      mockDeps.searchManager.query = 'search'
+      mockDeps.searchManager.areHighlightsCleared = false
 
       navigationManager.navigateNext()
 
@@ -189,7 +197,7 @@ describe('ContentNavigationManager', () => {
 
   describe('edge cases', () => {
     it('should handle missing noteContentElement gracefully', () => {
-      mockDeps.getNoteContentElement = vi.fn(() => null)
+      mockDeps.focusManager.noteContentElement = null
 
       expect(() => {
         navigationManager.navigateNext()

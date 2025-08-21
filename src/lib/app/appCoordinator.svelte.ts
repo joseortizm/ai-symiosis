@@ -100,25 +100,15 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const contentManager = createContentManager({
     noteService,
-    getQuery: () => searchManager.query,
-    getAreHighlightsCleared: () => searchManager.areHighlightsCleared,
-    clearHighlights: () => searchManager.clearHighlights(),
-    setHighlightsClearCallback: (callback) =>
-      searchManager.setHighlightsClearCallback(callback),
-    setHighlightsClearedState: (cleared: boolean) => {
-      searchManager.areHighlightsCleared = cleared
-    },
-    getNoteContentElement: () => focusManager.noteContentElement,
-    refreshSearch: (query: string) => searchManager.refreshSearch(query),
-    invoke,
+    searchManager,
+    focusManager,
   })
 
   const configStateManager = createConfigStateManager()
 
   const contentNavigationManager = createContentNavigationManager({
-    getNoteContentElement: () => focusManager.noteContentElement,
-    getQuery: () => searchManager.query,
-    getAreHighlightsCleared: () => searchManager.areHighlightsCleared,
+    focusManager,
+    searchManager,
   })
 
   const isLoading = $derived(searchManager.isLoading)
@@ -249,21 +239,18 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusManager,
     contentNavigationManager,
     configStateManager,
-    loadNoteContent,
-    enterEditMode: () => noteActions.enterEditMode(selectedNote!),
-    exitEditMode,
-    saveAndExitNote,
-    refreshCacheAndUI,
-    showExitEditDialog: dialogManager.showExitEditDialog,
-    showDeleteDialog: () => dialogManager.openDeleteDialog(),
-    showCreateDialog: () =>
-      dialogManager.openCreateDialog(query, contentManager.highlightedContent),
-    showRenameDialog: () =>
-      dialogManager.openRenameDialog(selectedNote ?? undefined),
-    openSettingsPane: settingsActions.openSettingsPane,
-    clearHighlights: contentManager.clearHighlights,
-    clearSearch: searchManager.clearSearch,
-    focusSearch: () => focusManager.focusSearch(),
+    searchManager,
+    contentManager,
+    dialogManager,
+    noteActions,
+    settingsActions,
+    noteService,
+    appCoordinator: {
+      loadNoteContent,
+      exitEditMode,
+      saveAndExitNote,
+      refreshCacheAndUI,
+    },
   })
 
   function setupReactiveEffects(): () => void {

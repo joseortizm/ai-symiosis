@@ -4,35 +4,37 @@
  * Maps key combinations to business logic functions across different UI contexts.
  */
 
-import { invoke } from '@tauri-apps/api/core'
-import type { ConfigStateManager } from '../../core/configStateManager.svelte'
-
 // Type definitions
 interface KeyboardActionDeps {
-  focusManager: {
-    selectedIndex: number
-    setSelectedIndex: (index: number) => void
+  focusManager: ReturnType<
+    typeof import('../../core/focusManager.svelte').createFocusManager
+  >
+  contentNavigationManager: ReturnType<
+    typeof import('../../core/contentNavigationManager.svelte').createContentNavigationManager
+  >
+  configStateManager: ReturnType<
+    typeof import('../../core/configStateManager.svelte').createConfigStateManager
+  >
+  searchManager: ReturnType<
+    typeof import('../../core/searchManager.svelte').createSearchManager
+  >
+  contentManager: ReturnType<
+    typeof import('../../core/contentManager.svelte').createContentManager
+  >
+  dialogManager: ReturnType<
+    typeof import('../../core/dialogManager.svelte').createDialogManager
+  >
+  noteActions: ReturnType<typeof import('./note.svelte').createNoteActions>
+  settingsActions: ReturnType<
+    typeof import('./settings.svelte').createSettingsActions
+  >
+  noteService: typeof import('../../services/noteService.svelte').noteService
+  appCoordinator: {
+    loadNoteContent: (note: string) => Promise<void>
+    exitEditMode: () => void
+    saveAndExitNote: () => Promise<void>
+    refreshCacheAndUI: () => Promise<void>
   }
-  contentNavigationManager: {
-    navigateNext: () => void
-    navigatePrevious: () => void
-    resetNavigation: () => void
-    clearCurrentStyles: () => void
-  }
-  configStateManager: ConfigStateManager
-  loadNoteContent: (note: string) => Promise<void>
-  enterEditMode: () => Promise<void>
-  exitEditMode: () => void
-  saveAndExitNote: () => Promise<void>
-  refreshCacheAndUI: () => void
-  showExitEditDialog: () => void
-  showDeleteDialog: () => void
-  showCreateDialog: () => void
-  showRenameDialog: () => void
-  openSettingsPane: () => Promise<void>
-  clearHighlights: () => void
-  clearSearch: () => void
-  focusSearch: () => void
 }
 
 export interface AppState {
@@ -85,7 +87,7 @@ export function createKeyboardActions(
         const note = state.filteredNotes[newIndex]
         if (note) {
           actions.focusManager.setSelectedIndex(newIndex)
-          void actions.loadNoteContent(note)
+          void actions.appCoordinator.loadNoteContent(note)
         }
       },
       moveDown: ({ state, actions }: ActionContext) => {
@@ -97,11 +99,11 @@ export function createKeyboardActions(
         const note = state.filteredNotes[newIndex]
         if (note) {
           actions.focusManager.setSelectedIndex(newIndex)
-          void actions.loadNoteContent(note)
+          void actions.appCoordinator.loadNoteContent(note)
         }
       },
       focusSearch: ({ actions }: ActionContext) => {
-        actions.focusSearch()
+        actions.focusManager.focusSearch()
       },
       navigateNext: ({ actions }: ActionContext) => {
         actions.contentNavigationManager.navigateNext()
@@ -129,64 +131,64 @@ export function createKeyboardActions(
     editing: {
       enterEdit: async ({ state, actions }: ActionContext) => {
         if (state.selectedNote && state.filteredNotes.length > 0) {
-          await actions.enterEditMode()
+          await actions.noteActions.enterEditMode(state.selectedNote)
         }
       },
       exitEdit: ({ actions }: ActionContext) => {
-        actions.exitEditMode()
+        actions.appCoordinator.exitEditMode()
       },
       smartExitEdit: ({ state, actions }: ActionContext) => {
         if (state.isEditorDirty) {
-          actions.showExitEditDialog()
+          actions.dialogManager.showExitEditDialog()
         } else {
-          actions.exitEditMode()
+          actions.appCoordinator.exitEditMode()
         }
       },
       saveAndExit: async ({ actions }: ActionContext) => {
-        await actions.saveAndExitNote()
+        await actions.appCoordinator.saveAndExitNote()
       },
     },
 
     notes: {
-      openExternal: async ({ state }: ActionContext) => {
+      openExternal: async ({ state, actions }: ActionContext) => {
         if (state.selectedNote) {
-          await invoke('open_note_in_editor', { noteName: state.selectedNote })
+          await actions.noteService.openInEditor(state.selectedNote)
         }
       },
-      openFolder: async ({ state }: ActionContext) => {
+      openFolder: async ({ state, actions }: ActionContext) => {
         if (state.selectedNote) {
-          await invoke('open_note_folder', { noteName: state.selectedNote })
+          await actions.noteService.openFolder(state.selectedNote)
         }
       },
       refreshCache: async ({ actions }: ActionContext) => {
-        actions.refreshCacheAndUI()
+        actions.appCoordinator.refreshCacheAndUI()
       },
       deleteNote: ({ state, actions }: ActionContext) => {
         if (state.selectedNote) {
-          actions.showDeleteDialog()
+          actions.dialogManager.openDeleteDialog()
         }
       },
       createNote: ({ actions }: ActionContext) => {
-        actions.showCreateDialog()
+        actions.dialogManager.openCreateDialog()
       },
       renameNote: ({ actions }: ActionContext) => {
-        actions.showRenameDialog()
+        actions.dialogManager.openRenameDialog()
       },
     },
 
     search: {
       clearHighlights: ({ state, actions }: ActionContext) => {
         if (state.query.trim() && !state.areHighlightsCleared) {
-          actions.clearHighlights()
+          actions.contentManager.clearHighlights()
         } else if (state.areHighlightsCleared || !state.query.trim()) {
-          actions.clearSearch()
+          actions.searchManager.clearSearch()
         }
       },
     },
 
     settings: {
       openSettings: async ({ actions }: ActionContext) => {
-        await actions.openSettingsPane()
+        await actions.settingsActions.openSettingsPane()
       },
     },
   }
@@ -290,7 +292,7 @@ export function createKeyboardActions(
 
       if (event.metaKey && event.key === ',') {
         event.preventDefault()
-        await deps.openSettingsPane()
+        await deps.settingsActions.openSettingsPane()
         return
       }
 

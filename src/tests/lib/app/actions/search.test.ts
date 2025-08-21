@@ -10,17 +10,21 @@ describe('search actions', () => {
       searchManager: {
         clearSearch: vi.fn(),
         setFilteredNotes: vi.fn(),
-      },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       contentManager: {
         clearHighlights: vi.fn(),
-      },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       focusManager: {
         selectedIndex: 0,
         setSelectedIndex: vi.fn(),
-      },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       editorManager: {
         exitEditMode: vi.fn(),
-      },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
     }
 
     searchActions = createSearchActions(mockDeps)
@@ -38,7 +42,8 @@ describe('search actions', () => {
     })
 
     it('should reset selection to 0 when current index is -1 and notes exist', () => {
-      mockDeps.focusManager.selectedIndex = -1
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(mockDeps.focusManager as any).selectedIndex = -1
       const notes = ['note1.md', 'note2.md']
 
       searchActions.updateFilteredNotes(notes)
@@ -48,7 +53,8 @@ describe('search actions', () => {
     })
 
     it('should reset selection to 0 when current index exceeds notes length', () => {
-      mockDeps.focusManager.selectedIndex = 5
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(mockDeps.focusManager as any).selectedIndex = 5
       const notes = ['note1.md', 'note2.md']
 
       searchActions.updateFilteredNotes(notes)
@@ -58,7 +64,8 @@ describe('search actions', () => {
     })
 
     it('should not reset selection when index is valid', () => {
-      mockDeps.focusManager.selectedIndex = 1
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(mockDeps.focusManager as any).selectedIndex = 1
       const notes = ['note1.md', 'note2.md', 'note3.md']
 
       searchActions.updateFilteredNotes(notes)
@@ -68,7 +75,8 @@ describe('search actions', () => {
     })
 
     it('should not reset selection when no notes exist', () => {
-      mockDeps.focusManager.selectedIndex = 5
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(mockDeps.focusManager as any).selectedIndex = 5
       const notes: string[] = []
 
       searchActions.updateFilteredNotes(notes)

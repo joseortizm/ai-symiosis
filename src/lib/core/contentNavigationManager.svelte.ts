@@ -11,9 +11,13 @@ interface NavigationState {
 }
 
 interface NavigationDeps {
-  getNoteContentElement: () => HTMLElement | null
-  getQuery: () => string
-  getAreHighlightsCleared: () => boolean
+  focusManager: {
+    readonly noteContentElement: HTMLElement | null
+  }
+  searchManager: {
+    readonly query: string
+    readonly areHighlightsCleared: boolean
+  }
 }
 
 export interface ContentNavigationManager {
@@ -33,11 +37,11 @@ export function createContentNavigationManager(
   })
 
   function getNavigationElements(): Element[] {
-    const contentElement = deps.getNoteContentElement()
+    const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
 
-    const query = deps.getQuery()
-    const areHighlightsCleared = deps.getAreHighlightsCleared()
+    const query = deps.searchManager.query
+    const areHighlightsCleared = deps.searchManager.areHighlightsCleared
     const hasQuery = query.trim() !== ''
 
     // Use highlight navigation only if there's a query AND highlights haven't been cleared

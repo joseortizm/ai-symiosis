@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mockInvoke, resetAllMocks } from '../../test-utils'
+import { resetAllMocks } from '../../test-utils'
 import type {
   ContentManager,
   ContentManagerDeps,
@@ -14,17 +14,19 @@ describe('contentManager (factory-based - TDD)', () => {
     resetAllMocks()
 
     mockDeps = {
-      getQuery: vi.fn().mockReturnValue('test query'),
-      getAreHighlightsCleared: vi.fn().mockReturnValue(false),
-      clearHighlights: vi.fn(),
-      setHighlightsClearCallback: vi.fn(),
-      setHighlightsClearedState: vi.fn(),
       noteService: {
         getContent: vi.fn().mockResolvedValue('mock note content'),
       },
-      getNoteContentElement: vi.fn().mockReturnValue(null),
-      refreshSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
-      invoke: mockInvoke,
+      searchManager: {
+        query: 'test query',
+        areHighlightsCleared: false,
+        clearHighlights: vi.fn(),
+        setHighlightsClearCallback: vi.fn(),
+        refreshSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
+      },
+      focusManager: {
+        noteContentElement: null,
+      },
     }
 
     try {
@@ -73,14 +75,16 @@ describe('contentManager (factory-based - TDD)', () => {
     const searchInput = 'test'
     await contentManager.refreshAfterSave(noteName, searchInput)
 
-    expect(mockDeps.refreshSearch).toHaveBeenCalledWith(searchInput)
+    expect(mockDeps.searchManager.refreshSearch).toHaveBeenCalledWith(
+      searchInput
+    )
   })
 
   it('should call setHighlightsClearCallback during setup', () => {
     if (!contentManager) return // Skip if factory not implemented yet
 
-    expect(mockDeps.setHighlightsClearCallback).toHaveBeenCalledWith(
-      expect.any(Function)
-    )
+    expect(
+      mockDeps.searchManager.setHighlightsClearCallback
+    ).toHaveBeenCalledWith(expect.any(Function))
   })
 })
