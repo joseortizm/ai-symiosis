@@ -238,6 +238,36 @@ fn recreate_database() -> Result<(), String> {
     Ok(())
 }
 
+fn recreate_database_with_progress(app_handle: &AppHandle, reason: &str) -> Result<(), String> {
+    let _ = app_handle.emit("db-loading-progress", "Recreating database tables...");
+    eprintln!("{}", reason);
+
+    let mut conn = get_db_connection()?;
+
+    // Drop the existing table and recreate it
+    conn.execute("DROP TABLE IF EXISTS notes", [])
+        .map_err(|e| format!("Failed to drop corrupted table: {}", e))?;
+
+    init_db(&conn).map_err(|e| format!("Failed to initialize fresh database: {}", e))?;
+
+    let _ = app_handle.emit(
+        "db-loading-progress",
+        "Database tables created. Syncing from filesystem...",
+    );
+    eprintln!("Fresh database table created. Performing full sync from filesystem...");
+
+    // Perform a complete sync from filesystem
+    load_all_notes_into_sqlite(&mut conn)
+        .map_err(|e| format!("Failed to populate fresh database: {}", e))?;
+
+    let _ = app_handle.emit(
+        "db-loading-progress",
+        "Database rebuild completed successfully.",
+    );
+    eprintln!("Database rebuild completed successfully.");
+    Ok(())
+}
+
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     // Prevent concurrent database operations to avoid FTS5 race conditions
     let _lock = DB_LOCK.lock().unwrap();
@@ -755,8 +785,18 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 // Tauri command handlers - System operations
 #[tauri::command]
 fn refresh_cache(app: AppHandle) -> Result<(), String> {
+    // Emit loading start event
+    let _ = app.emit("db-loading-start", "Refreshing cache...");
+    let _ = app.emit("db-loading-progress", "Reloading configuration...");
+
     // Reload config first
-    reload_config(&APP_CONFIG, Some(app)).map_err(|e| format!("Failed to reload config: {}", e))?;
+    if let Err(e) = reload_config(&APP_CONFIG, Some(app.clone())) {
+        let _ = app.emit(
+            "db-loading-error",
+            format!("Failed to reload config: {}", e),
+        );
+        return Err(format!("Failed to reload config: {}", e));
+    }
 
     // Check if theme has changed
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
@@ -766,7 +806,7 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
         let last_theme = LAST_RENDER_THEME.read().unwrap_or_else(|e| e.into_inner());
         match &*last_theme {
             Some(last) => last != current_theme,
-            None => true, // First time, consider it changed
+            None => false, // First time, don't force rebuild unless theme actually different from default
         }
     };
 
@@ -778,32 +818,89 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
 
     // If theme changed, force complete database rebuild to regenerate all HTML
     if theme_changed {
+        let _ = app.emit(
+            "db-loading-progress",
+            format!(
+                "Theme changed to '{}', rebuilding all HTML renders...",
+                current_theme
+            ),
+        );
         eprintln!(
             "Theme changed to '{}', rebuilding all HTML renders...",
             current_theme
         );
-        return recreate_database();
+
+        let result = recreate_database_with_progress(
+            &app,
+            &format!(
+                "Theme changed to '{}', rebuilding all HTML renders...",
+                current_theme
+            ),
+        );
+        if result.is_ok() {
+            let _ = app.emit("db-loading-complete", ());
+        } else if let Err(ref e) = result {
+            let _ = app.emit("db-loading-error", e);
+        }
+        return result;
     }
 
     // Otherwise, do normal cache refresh
-    let mut conn = get_db_connection()?;
-    init_db(&conn).map_err(|e| format!("Database initialization error: {}", e))?;
-
-    match load_all_notes_into_sqlite(&mut conn) {
-        Ok(()) => Ok(()),
+    let _ = app.emit("db-loading-progress", "Connecting to database...");
+    let mut conn = match get_db_connection() {
+        Ok(conn) => conn,
         Err(e) => {
+            let _ = app.emit(
+                "db-loading-error",
+                format!("Database connection error: {}", e),
+            );
+            return Err(format!("Database connection error: {}", e));
+        }
+    };
+
+    let _ = app.emit("db-loading-progress", "Initializing database...");
+    if let Err(e) = init_db(&conn) {
+        let _ = app.emit(
+            "db-loading-error",
+            format!("Database initialization error: {}", e),
+        );
+        return Err(format!("Database initialization error: {}", e));
+    }
+
+    let _ = app.emit("db-loading-progress", "Syncing notes from filesystem...");
+    match load_all_notes_into_sqlite(&mut conn) {
+        Ok(()) => {
+            let _ = app.emit("db-loading-complete", ());
+            Ok(())
+        }
+        Err(e) => {
+            let _ = app.emit(
+                "db-loading-progress",
+                "Database sync failed, attempting recovery...",
+            );
             eprintln!(
                 "Failed to refresh notes cache: {}. Attempting recovery...",
                 e
             );
 
             // Attempt database recovery
-            recreate_database().map_err(|recovery_error| {
+            let result = recreate_database_with_progress(
+                &app,
+                "Database corruption detected. Recreating database tables...",
+            )
+            .map_err(|recovery_error| {
                 format!(
                     "Cache refresh failed and recovery failed: {}. Original error: {}",
                     recovery_error, e
                 )
-            })
+            });
+
+            if result.is_ok() {
+                let _ = app.emit("db-loading-complete", ());
+            } else if let Err(ref e) = result {
+                let _ = app.emit("db-loading-error", e);
+            }
+            result
         }
     }
 }
