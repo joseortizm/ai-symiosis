@@ -472,19 +472,7 @@ pub fn load_config() -> AppConfig {
     let config_path = get_config_path();
 
     match fs::read_to_string(&config_path) {
-        Ok(content) => match toml::from_str::<AppConfig>(&content) {
-            Ok(config) => match validate_config(&config) {
-                Ok(()) => config,
-                Err(e) => {
-                    eprintln!("Invalid config file: {}. Using defaults.", e);
-                    AppConfig::default()
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to parse config file: {}. Using defaults.", e);
-                AppConfig::default()
-            }
-        },
+        Ok(content) => load_config_from_content(&content),
         Err(_) => {
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
@@ -493,6 +481,364 @@ pub fn load_config() -> AppConfig {
             default_config
         }
     }
+}
+
+pub fn load_config_from_content(content: &str) -> AppConfig {
+    // Parse TOML content to flexible Value structure
+    let toml_value = match toml::from_str::<toml::Value>(content) {
+        Ok(value) => value,
+        Err(e) => {
+            eprintln!("Failed to parse config TOML: {}. Using defaults.", e);
+            return AppConfig::default();
+        }
+    };
+
+    // Extract each field/section independently with fallbacks
+    let notes_directory = extract_notes_directory(&toml_value);
+    let global_shortcut = extract_global_shortcut(&toml_value);
+    let general = extract_general_config(&toml_value);
+    let interface = extract_interface_config(&toml_value);
+    let editor = extract_editor_config(&toml_value);
+    let shortcuts = extract_shortcuts_config(&toml_value);
+    let preferences = extract_preferences_config(&toml_value);
+
+    AppConfig {
+        notes_directory,
+        global_shortcut,
+        general,
+        interface,
+        editor,
+        shortcuts,
+        preferences,
+    }
+}
+
+// ============================================================================
+// FIELD EXTRACTION HELPERS
+// ============================================================================
+
+fn extract_notes_directory(value: &toml::Value) -> String {
+    match value.get("notes_directory").and_then(|v| v.as_str()) {
+        Some(dir) => {
+            if let Err(e) = validate_notes_directory(dir) {
+                eprintln!(
+                    "Warning: Invalid notes_directory '{}': {}. Using default.",
+                    dir, e
+                );
+                get_default_notes_dir()
+            } else {
+                dir.to_string()
+            }
+        }
+        None => get_default_notes_dir(),
+    }
+}
+
+fn extract_global_shortcut(value: &toml::Value) -> String {
+    match value.get("global_shortcut").and_then(|v| v.as_str()) {
+        Some(shortcut) => {
+            if let Err(e) = validate_shortcut_format(shortcut) {
+                eprintln!(
+                    "Warning: Invalid global_shortcut '{}': {}. Using default.",
+                    shortcut, e
+                );
+                default_global_shortcut()
+            } else {
+                shortcut.to_string()
+            }
+        }
+        None => default_global_shortcut(),
+    }
+}
+
+fn extract_general_config(_value: &toml::Value) -> GeneralConfig {
+    // General config is currently empty, just return default
+    // When fields are added, implement extraction logic here
+    GeneralConfig::default()
+}
+
+fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
+    let interface_section = value.get("interface");
+    let mut config = InterfaceConfig::default();
+
+    if let Some(section) = interface_section {
+        // Extract UI theme
+        if let Some(theme) = section.get("ui_theme").and_then(|v| v.as_str()) {
+            let valid_themes = ["gruvbox-dark", "one-dark"];
+            if valid_themes.contains(&theme) {
+                config.ui_theme = theme.to_string();
+            } else {
+                eprintln!(
+                    "Warning: Invalid ui_theme '{}'. Using default '{}'.",
+                    theme, config.ui_theme
+                );
+            }
+        }
+
+        // Extract font family
+        if let Some(font) = section.get("font_family").and_then(|v| v.as_str()) {
+            config.font_family = font.to_string();
+        }
+
+        // Extract font size
+        if let Some(size) = section.get("font_size").and_then(|v| v.as_integer()) {
+            let size = size as u16;
+            if validate_font_size(size, "UI font size").is_ok() {
+                config.font_size = size;
+            } else {
+                eprintln!(
+                    "Warning: Invalid font_size {}. Using default {}.",
+                    size, config.font_size
+                );
+            }
+        }
+
+        // Extract editor font family
+        if let Some(font) = section.get("editor_font_family").and_then(|v| v.as_str()) {
+            config.editor_font_family = font.to_string();
+        }
+
+        // Extract editor font size
+        if let Some(size) = section.get("editor_font_size").and_then(|v| v.as_integer()) {
+            let size = size as u16;
+            if validate_font_size(size, "Editor font size").is_ok() {
+                config.editor_font_size = size;
+            } else {
+                eprintln!(
+                    "Warning: Invalid editor_font_size {}. Using default {}.",
+                    size, config.editor_font_size
+                );
+            }
+        }
+
+        // Extract markdown render theme
+        if let Some(theme) = section
+            .get("markdown_render_theme")
+            .and_then(|v| v.as_str())
+        {
+            let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
+            if valid_themes.contains(&theme) {
+                config.markdown_render_theme = theme.to_string();
+            } else {
+                eprintln!(
+                    "Warning: Invalid markdown_render_theme '{}'. Using default '{}'.",
+                    theme, config.markdown_render_theme
+                );
+            }
+        }
+
+        // Extract markdown code theme
+        if let Some(theme) = section.get("md_render_code_theme").and_then(|v| v.as_str()) {
+            let valid_themes = [
+                "base16-ocean.dark",
+                "base16-eighties.dark",
+                "base16-mocha.dark",
+                "base16-ocean.light",
+                "InspiredGitHub",
+                "Solarized (dark)",
+                "Solarized (light)",
+            ];
+            if valid_themes.contains(&theme) {
+                config.md_render_code_theme = theme.to_string();
+            } else {
+                eprintln!(
+                    "Warning: Invalid md_render_code_theme '{}'. Using default '{}'.",
+                    theme, config.md_render_code_theme
+                );
+            }
+        }
+
+        // Extract window dimensions
+        if let Some(width) = section.get("default_width").and_then(|v| v.as_integer()) {
+            let width = width as u32;
+            if width >= 400 && width <= 10000 {
+                config.default_width = width;
+            } else {
+                eprintln!(
+                    "Warning: Invalid default_width {}. Using default {}.",
+                    width, config.default_width
+                );
+            }
+        }
+
+        if let Some(height) = section.get("default_height").and_then(|v| v.as_integer()) {
+            let height = height as u32;
+            if height >= 300 && height <= 8000 {
+                config.default_height = height;
+            } else {
+                eprintln!(
+                    "Warning: Invalid default_height {}. Using default {}.",
+                    height, config.default_height
+                );
+            }
+        }
+
+        // Extract boolean flags
+        if let Some(center) = section.get("center_on_startup").and_then(|v| v.as_bool()) {
+            config.center_on_startup = center;
+        }
+
+        if let Some(remember_size) = section.get("remember_size").and_then(|v| v.as_bool()) {
+            config.remember_size = remember_size;
+        }
+
+        if let Some(remember_pos) = section.get("remember_position").and_then(|v| v.as_bool()) {
+            config.remember_position = remember_pos;
+        }
+
+        if let Some(always_top) = section.get("always_on_top").and_then(|v| v.as_bool()) {
+            config.always_on_top = always_top;
+        }
+    }
+
+    config
+}
+
+fn extract_editor_config(value: &toml::Value) -> EditorConfig {
+    let editor_section = value.get("editor");
+    let mut config = EditorConfig::default();
+
+    if let Some(section) = editor_section {
+        // Extract editor mode
+        if let Some(mode) = section.get("mode").and_then(|v| v.as_str()) {
+            let valid_modes = ["basic", "vim", "emacs"];
+            if valid_modes.contains(&mode) {
+                config.mode = mode.to_string();
+            } else {
+                eprintln!(
+                    "Warning: Invalid editor mode '{}'. Using default '{}'.",
+                    mode, config.mode
+                );
+            }
+        }
+
+        // Extract editor theme
+        if let Some(theme) = section.get("theme").and_then(|v| v.as_str()) {
+            let valid_themes = [
+                "abcdef",
+                "abyss",
+                "android-studio",
+                "andromeda",
+                "basic-dark",
+                "basic-light",
+                "forest",
+                "github-dark",
+                "github-light",
+                "gruvbox-dark",
+                "gruvbox-light",
+                "material-dark",
+                "material-light",
+                "monokai",
+                "nord",
+                "palenight",
+                "solarized-dark",
+                "solarized-light",
+                "tokyo-night-day",
+                "tokyo-night-storm",
+                "volcano",
+                "vscode-dark",
+                "vscode-light",
+            ];
+            if valid_themes.contains(&theme) {
+                config.theme = theme.to_string();
+            } else {
+                eprintln!(
+                    "Warning: Invalid editor theme '{}'. Using default '{}'.",
+                    theme, config.theme
+                );
+            }
+        }
+
+        // Extract word wrap
+        if let Some(wrap) = section.get("word_wrap").and_then(|v| v.as_bool()) {
+            config.word_wrap = wrap;
+        }
+
+        // Extract tab size
+        if let Some(size) = section.get("tab_size").and_then(|v| v.as_integer()) {
+            let size = size as u16;
+            if size > 0 && size <= 16 {
+                config.tab_size = size;
+            } else {
+                eprintln!(
+                    "Warning: Invalid tab_size {}. Using default {}.",
+                    size, config.tab_size
+                );
+            }
+        }
+
+        // Extract show line numbers
+        if let Some(show_numbers) = section.get("show_line_numbers").and_then(|v| v.as_bool()) {
+            config.show_line_numbers = show_numbers;
+        }
+    }
+
+    config
+}
+
+fn extract_shortcuts_config(value: &toml::Value) -> ShortcutsConfig {
+    let shortcuts_section = value.get("shortcuts");
+    let mut config = ShortcutsConfig::default();
+
+    if let Some(section) = shortcuts_section {
+        // Helper macro to extract and validate shortcuts
+        macro_rules! extract_shortcut {
+            ($field:ident, $key:literal) => {
+                if let Some(shortcut) = section.get($key).and_then(|v| v.as_str()) {
+                    if validate_basic_shortcut_format(shortcut).is_ok() {
+                        config.$field = shortcut.to_string();
+                    } else {
+                        eprintln!(
+                            "Warning: Invalid shortcut '{}' for {}. Using default '{}'.",
+                            shortcut, $key, config.$field
+                        );
+                    }
+                }
+            };
+        }
+
+        extract_shortcut!(create_note, "create_note");
+        extract_shortcut!(rename_note, "rename_note");
+        extract_shortcut!(delete_note, "delete_note");
+        extract_shortcut!(save_and_exit, "save_and_exit");
+        extract_shortcut!(open_external, "open_external");
+        extract_shortcut!(open_folder, "open_folder");
+        extract_shortcut!(refresh_cache, "refresh_cache");
+        extract_shortcut!(scroll_up, "scroll_up");
+        extract_shortcut!(scroll_down, "scroll_down");
+        extract_shortcut!(vim_up, "vim_up");
+        extract_shortcut!(vim_down, "vim_down");
+        extract_shortcut!(navigate_previous, "navigate_previous");
+        extract_shortcut!(navigate_next, "navigate_next");
+        extract_shortcut!(open_settings, "open_settings");
+    }
+
+    config
+}
+
+fn extract_preferences_config(value: &toml::Value) -> PreferencesConfig {
+    let preferences_section = value.get("preferences");
+    let mut config = PreferencesConfig::default();
+
+    if let Some(section) = preferences_section {
+        // Extract max search results
+        if let Some(max_results) = section
+            .get("max_search_results")
+            .and_then(|v| v.as_integer())
+        {
+            let max_results = max_results as usize;
+            if max_results > 0 && max_results <= 10000 {
+                config.max_search_results = max_results;
+            } else {
+                eprintln!(
+                    "Warning: Invalid max_search_results {}. Using default {}.",
+                    max_results, config.max_search_results
+                );
+            }
+        }
+    }
+
+    config
 }
 
 pub fn save_config(config: &AppConfig) -> Result<(), String> {

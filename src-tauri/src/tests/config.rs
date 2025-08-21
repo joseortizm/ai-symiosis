@@ -4,7 +4,8 @@
 //! These tests access internal/private functions and test the actual production behavior.
 
 use crate::config::{
-    get_config_path, get_default_notes_dir, load_config, parse_shortcut, AppConfig,
+    get_config_path, get_default_notes_dir, load_config, load_config_from_content, parse_shortcut,
+    AppConfig,
 };
 
 #[test]
@@ -177,4 +178,281 @@ max_search_results = "not_a_number"
         invalid_result.is_err(),
         "Invalid TOML should fail validation"
     );
+}
+
+// ============================================================================
+// ROBUSTNESS TESTS - Testing the new permissive loading behavior
+// ============================================================================
+
+#[test]
+fn test_load_config_single_field_only() {
+    // Test that a config with just one field works
+    let single_field_toml = r#"
+notes_directory = "/custom/notes"
+"#;
+
+    let config = load_config_from_content(single_field_toml);
+
+    // The specified field should be preserved
+    assert_eq!(config.notes_directory, "/custom/notes");
+    // All other fields should use defaults
+    assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
+    assert_eq!(config.preferences.max_search_results, 100);
+    assert_eq!(config.editor.mode, "basic");
+    assert_eq!(config.interface.markdown_render_theme, "dark_dimmed");
+}
+
+#[test]
+fn test_load_config_invalid_single_field_preserves_rest() {
+    // Test that invalid individual fields don't break the entire config
+    let mixed_valid_invalid_toml = r#"
+notes_directory = "/valid/path"
+global_shortcut = "Ctrl+Alt+N"
+
+[interface]
+ui_theme = "gruvbox-dark"
+md_render_code_theme = "completely_invalid_theme"
+font_size = 16
+
+[editor]
+mode = "vim"
+theme = "invalid_editor_theme"
+tab_size = 4
+
+[preferences]
+max_search_results = 200
+"#;
+
+    let config = load_config_from_content(mixed_valid_invalid_toml);
+
+    // Valid fields should be preserved
+    assert_eq!(config.notes_directory, "/valid/path");
+    assert_eq!(config.global_shortcut, "Ctrl+Alt+N");
+    assert_eq!(config.interface.ui_theme, "gruvbox-dark");
+    assert_eq!(config.interface.font_size, 16);
+    assert_eq!(config.editor.mode, "vim");
+    assert_eq!(config.editor.tab_size, 4);
+    assert_eq!(config.preferences.max_search_results, 200);
+
+    // Invalid fields should fall back to defaults
+    assert_eq!(config.interface.md_render_code_theme, "base16-ocean.dark"); // default
+    assert_eq!(config.editor.theme, "gruvbox-dark"); // default
+}
+
+#[test]
+fn test_load_config_invalid_font_sizes() {
+    let invalid_font_sizes_toml = r#"
+[interface]
+font_size = 999
+editor_font_size = 2
+"#;
+
+    let config = load_config_from_content(invalid_font_sizes_toml);
+
+    // Invalid font sizes should fall back to defaults
+    assert_eq!(config.interface.font_size, 14); // default
+    assert_eq!(config.interface.editor_font_size, 14); // default
+}
+
+#[test]
+fn test_load_config_invalid_window_dimensions() {
+    let invalid_dimensions_toml = r#"
+[interface]
+default_width = 50
+default_height = 20000
+"#;
+
+    let config = load_config_from_content(invalid_dimensions_toml);
+
+    // Invalid dimensions should fall back to defaults
+    assert_eq!(config.interface.default_width, 1200); // default
+    assert_eq!(config.interface.default_height, 800); // default
+}
+
+#[test]
+fn test_load_config_invalid_shortcuts() {
+    let invalid_shortcuts_toml = r#"
+global_shortcut = "InvalidShortcut"
+
+[shortcuts]
+create_note = "Ctrl+Enter"
+rename_note = "++Invalid++"
+delete_note = ""
+"#;
+
+    let config = load_config_from_content(invalid_shortcuts_toml);
+
+    // Valid shortcuts should be preserved
+    assert_eq!(config.shortcuts.create_note, "Ctrl+Enter");
+
+    // Invalid shortcuts should fall back to defaults
+    assert_eq!(config.global_shortcut, "Ctrl+Shift+N"); // default
+    assert_eq!(config.shortcuts.rename_note, "Ctrl+m"); // default
+    assert_eq!(config.shortcuts.delete_note, "Ctrl+x"); // default
+}
+
+#[test]
+fn test_load_config_invalid_editor_mode_and_theme() {
+    let invalid_editor_toml = r#"
+[editor]
+mode = "nonexistent_mode"
+theme = "nonexistent_theme"
+tab_size = 0
+word_wrap = true
+show_line_numbers = false
+"#;
+
+    let config = load_config_from_content(invalid_editor_toml);
+
+    // Valid fields should be preserved
+    assert_eq!(config.editor.word_wrap, true);
+    assert_eq!(config.editor.show_line_numbers, false);
+
+    // Invalid fields should fall back to defaults
+    assert_eq!(config.editor.mode, "basic"); // default
+    assert_eq!(config.editor.theme, "gruvbox-dark"); // default
+    assert_eq!(config.editor.tab_size, 2); // default
+}
+
+#[test]
+fn test_load_config_invalid_preferences() {
+    let invalid_preferences_toml = r#"
+[preferences]
+max_search_results = 0
+"#;
+
+    let config = load_config_from_content(invalid_preferences_toml);
+
+    // Invalid max_search_results should fall back to default
+    assert_eq!(config.preferences.max_search_results, 100); // default
+}
+
+#[test]
+fn test_load_config_mixed_sections_some_empty() {
+    let mixed_sections_toml = r#"
+notes_directory = "/test/notes"
+
+[interface]
+ui_theme = "one-dark"
+
+[editor]
+# Editor section exists but is empty - should use all defaults
+
+[preferences]
+max_search_results = 50
+
+[shortcuts]
+create_note = "Alt+Enter"
+"#;
+
+    let config = load_config_from_content(mixed_sections_toml);
+
+    // Specified values should be preserved
+    assert_eq!(config.notes_directory, "/test/notes");
+    assert_eq!(config.interface.ui_theme, "one-dark");
+    assert_eq!(config.preferences.max_search_results, 50);
+    assert_eq!(config.shortcuts.create_note, "Alt+Enter");
+
+    // Empty sections should use defaults
+    assert_eq!(config.editor.mode, "basic");
+    assert_eq!(config.editor.theme, "gruvbox-dark");
+    assert_eq!(config.editor.word_wrap, true);
+    assert_eq!(config.editor.tab_size, 2);
+    assert_eq!(config.editor.show_line_numbers, true);
+
+    // Unspecified shortcuts should use defaults
+    assert_eq!(config.shortcuts.rename_note, "Ctrl+m");
+    assert_eq!(config.shortcuts.delete_note, "Ctrl+x");
+}
+
+#[test]
+fn test_load_config_completely_invalid_toml_uses_defaults() {
+    let invalid_toml = r#"
+this is not valid toml at all
+notes_directory = missing quotes
+"#;
+
+    let config = load_config_from_content(invalid_toml);
+
+    // Should fall back to complete defaults when TOML parsing fails
+    let default_config = AppConfig::default();
+    assert_eq!(config.notes_directory, default_config.notes_directory);
+    assert_eq!(config.global_shortcut, default_config.global_shortcut);
+    assert_eq!(
+        config.preferences.max_search_results,
+        default_config.preferences.max_search_results
+    );
+}
+
+#[test]
+fn test_load_config_backward_compatibility() {
+    // Test that existing valid configs still work exactly as before
+    let valid_complete_toml = r#"
+notes_directory = "/home/user/notes"
+global_shortcut = "Ctrl+Space"
+
+[general]
+
+[interface]
+ui_theme = "gruvbox-dark"
+font_family = "Inter, sans-serif"
+font_size = 16
+editor_font_family = "JetBrains Mono"
+editor_font_size = 15
+markdown_render_theme = "dark"
+md_render_code_theme = "base16-ocean.dark"
+default_width = 1400
+default_height = 900
+center_on_startup = false
+remember_size = true
+remember_position = true
+always_on_top = false
+
+[editor]
+mode = "vim"
+theme = "nord"
+word_wrap = false
+tab_size = 4
+show_line_numbers = true
+
+[shortcuts]
+create_note = "Ctrl+Enter"
+rename_note = "Ctrl+r"
+delete_note = "Ctrl+d"
+save_and_exit = "Ctrl+s"
+open_external = "Ctrl+o"
+open_folder = "Ctrl+f"
+refresh_cache = "F5"
+scroll_up = "Ctrl+u"
+scroll_down = "Ctrl+d"
+vim_up = "Ctrl+k"
+vim_down = "Ctrl+j"
+navigate_previous = "Ctrl+p"
+navigate_next = "Ctrl+n"
+open_settings = "Meta+,"
+
+[preferences]
+max_search_results = 250
+"#;
+
+    let config = load_config_from_content(valid_complete_toml);
+
+    // All specified values should be exactly preserved
+    assert_eq!(config.notes_directory, "/home/user/notes");
+    assert_eq!(config.global_shortcut, "Ctrl+Space");
+    assert_eq!(config.interface.ui_theme, "gruvbox-dark");
+    assert_eq!(config.interface.font_size, 16);
+    assert_eq!(config.interface.editor_font_size, 15);
+    assert_eq!(config.interface.markdown_render_theme, "dark");
+    assert_eq!(config.interface.default_width, 1400);
+    assert_eq!(config.interface.default_height, 900);
+    assert_eq!(config.interface.center_on_startup, false);
+    assert_eq!(config.editor.mode, "vim");
+    assert_eq!(config.editor.theme, "nord");
+    assert_eq!(config.editor.word_wrap, false);
+    assert_eq!(config.editor.tab_size, 4);
+    assert_eq!(config.shortcuts.create_note, "Ctrl+Enter");
+    assert_eq!(config.shortcuts.rename_note, "Ctrl+r");
+    assert_eq!(config.shortcuts.refresh_cache, "F5");
+    assert_eq!(config.preferences.max_search_results, 250);
 }
