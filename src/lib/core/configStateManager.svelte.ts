@@ -6,7 +6,6 @@
  */
 
 import { listen } from '@tauri-apps/api/event'
-import { invoke } from '@tauri-apps/api/core'
 import { configService } from '../services/configService.svelte'
 import type {
   GeneralConfig,
@@ -283,7 +282,7 @@ export function createConfigStateManager(): ConfigStateManager {
 
     try {
       // Force refresh from backend
-      await invoke<void>('refresh_cache')
+      await configService.refreshCache()
 
       // Get fresh config values
       const [

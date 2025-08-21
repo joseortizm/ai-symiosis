@@ -137,6 +137,15 @@ export function createNoteService() {
     }
   }
 
+  async function search(query: string): Promise<string[]> {
+    try {
+      return await invoke<string[]>('search_notes', { query })
+    } catch (e) {
+      console.error('Failed to search notes:', e)
+      throw e
+    }
+  }
+
   // Public API
   return {
     // CRUD operations
@@ -148,6 +157,9 @@ export function createNoteService() {
     getContent,
     getRawContent,
     save,
+
+    // Search operations
+    search,
 
     // System integration
     openInEditor,

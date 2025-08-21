@@ -8,18 +8,23 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Create a fresh instance for each test
 let searchManager: ReturnType<typeof createSearchManager>
+let mockNoteService: { search: ReturnType<typeof vi.fn> }
 
 describe('searchManager', () => {
   beforeEach(() => {
     resetAllMocks()
     vi.clearAllMocks()
-    searchManager = createSearchManager()
+    mockNoteService = {
+      search: vi.fn(),
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    searchManager = createSearchManager({ noteService: mockNoteService as any })
   })
 
   describe('existing functionality', () => {
     it('should update search state with debouncing', async () => {
       const notes = ['note1.md', 'note2.md']
-      mockInvoke.mockResolvedValueOnce(notes)
+      mockNoteService.search.mockResolvedValueOnce(notes)
 
       // Use fake timers BEFORE setting searchInput
       vi.useFakeTimers()
@@ -34,9 +39,7 @@ describe('searchManager', () => {
       // Wait for promise resolution
       await vi.runAllTimersAsync()
 
-      expect(mockInvoke).toHaveBeenCalledWith('search_notes', {
-        query: 'test query',
-      })
+      expect(mockNoteService.search).toHaveBeenCalledWith('test query')
       expect(searchManager.query).toBe('test query')
       expect(searchManager.filteredNotes).toEqual(notes)
 
@@ -45,13 +48,11 @@ describe('searchManager', () => {
 
     it('should handle immediate search', async () => {
       const notes = ['immediate.md']
-      mockInvoke.mockResolvedValueOnce(notes)
+      mockNoteService.search.mockResolvedValueOnce(notes)
 
       const result = await searchManager.searchImmediate('immediate')
 
-      expect(mockInvoke).toHaveBeenCalledWith('search_notes', {
-        query: 'immediate',
-      })
+      expect(mockNoteService.search).toHaveBeenCalledWith('immediate')
       expect(result).toEqual(notes)
       expect(searchManager.filteredNotes).toEqual(notes)
     })
@@ -92,7 +93,7 @@ describe('searchManager', () => {
 
     it('should actually trigger search when using updateSearchInputWithEffects', async () => {
       const notes = ['search-result.md', 'another-note.md']
-      mockInvoke.mockResolvedValue(notes)
+      mockNoteService.search.mockResolvedValue(notes)
       const onHighlightsClear = vi.fn()
 
       // Use fake timers BEFORE calling updateSearchInputWithEffects
@@ -111,9 +112,7 @@ describe('searchManager', () => {
       await vi.runAllTimersAsync()
 
       // The critical assertion: verify search was actually performed
-      expect(mockInvoke).toHaveBeenCalledWith('search_notes', {
-        query: 'test search',
-      })
+      expect(mockNoteService.search).toHaveBeenCalledWith('test search')
       expect(searchManager.filteredNotes).toEqual(notes)
       expect(searchManager.query).toBe('test search')
 
@@ -122,13 +121,11 @@ describe('searchManager', () => {
 
     it('should provide refreshSearch method', async () => {
       const notes = ['refresh.md', 'test.md']
-      mockInvoke.mockResolvedValueOnce(notes)
+      mockNoteService.search.mockResolvedValueOnce(notes)
 
       const result = await searchManager.refreshSearch('refresh query')
 
-      expect(mockInvoke).toHaveBeenCalledWith('search_notes', {
-        query: 'refresh query',
-      })
+      expect(mockNoteService.search).toHaveBeenCalledWith('refresh query')
       expect(result).toEqual(notes)
       expect(searchManager.filteredNotes).toEqual(notes)
     })

@@ -171,8 +171,10 @@ export function createKeyboardActions(
       createNote: ({ actions }: ActionContext) => {
         actions.dialogManager.openCreateDialog()
       },
-      renameNote: ({ actions }: ActionContext) => {
-        actions.dialogManager.openRenameDialog()
+      renameNote: ({ state, actions }: ActionContext) => {
+        if (state.selectedNote) {
+          actions.dialogManager.openRenameDialog(state.selectedNote)
+        }
       },
     },
 

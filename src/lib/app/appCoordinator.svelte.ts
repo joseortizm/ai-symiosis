@@ -4,7 +4,6 @@
  * Maintains separation of concerns across the application architecture.
  */
 
-import { invoke } from '@tauri-apps/api/core'
 import { tick } from 'svelte'
 import { listen } from '@tauri-apps/api/event'
 import { createDialogManager } from '../core/dialogManager.svelte'
@@ -209,7 +208,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   }
 
   async function refreshCacheAndUI(): Promise<void> {
-    await invoke('refresh_cache')
+    await configService.refreshCache()
     await refreshUI()
   }
 
@@ -363,7 +362,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         }
       })
 
-      const configExists = await invoke<boolean>('config_exists')
+      const configExists = await configService.exists()
       if (!configExists) {
         await settingsActions.openSettingsPane()
       } else {

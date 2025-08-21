@@ -9,12 +9,21 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Create a fresh instance for each test
 let editorManager: EditorManager
+let mockNoteService: {
+  getRawContent: ReturnType<typeof vi.fn>
+  save: ReturnType<typeof vi.fn>
+}
 
 describe('editorManager', () => {
   beforeEach(() => {
     resetAllMocks()
-    // Create fresh editor manager instance
-    editorManager = createEditorManager()
+    // Create fresh editor manager instance with mock noteService
+    mockNoteService = {
+      getRawContent: vi.fn(),
+      save: vi.fn(),
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    editorManager = createEditorManager({ noteService: mockNoteService as any })
   })
 
   describe('state getters', () => {
@@ -29,13 +38,11 @@ describe('editorManager', () => {
   describe('enterEditMode', () => {
     it('should enter edit mode with raw content from API', async () => {
       const mockRawContent = '# Test Note\n\nThis is raw content'
-      mockInvoke.mockResolvedValue(mockRawContent)
+      mockNoteService.getRawContent.mockResolvedValue(mockRawContent)
 
       await editorManager.enterEditMode('test-note.md')
 
-      expect(mockInvoke).toHaveBeenCalledWith('get_note_raw_content', {
-        noteName: 'test-note.md',
-      })
+      expect(mockNoteService.getRawContent).toHaveBeenCalledWith('test-note.md')
       expect(editorManager.isEditMode).toBe(true)
       expect(editorManager.editContent).toBe(mockRawContent)
       expect(editorManager.isDirty).toBe(false)
@@ -43,7 +50,7 @@ describe('editorManager', () => {
 
     it('should fallback to HTML content extraction if API fails', async () => {
       const mockHtmlContent = '<h1>Test Note</h1><p>This is HTML content</p>'
-      mockInvoke.mockRejectedValue(new Error('API failed'))
+      mockNoteService.getRawContent.mockRejectedValue(new Error('API failed'))
 
       await editorManager.enterEditMode('test-note.md', mockHtmlContent)
 
@@ -56,7 +63,7 @@ describe('editorManager', () => {
     it('should detect nearest header text when entering edit mode', async () => {
       const mockRawContent =
         '# Header 1\n\nSome content\n\n## Header 2\n\nMore content'
-      mockInvoke.mockResolvedValue(mockRawContent)
+      mockNoteService.getRawContent.mockResolvedValue(mockRawContent)
 
       // Mock DOM element with getBoundingClientRect and querySelectorAll
       const mockElement: Partial<HTMLElement> = {
@@ -85,14 +92,14 @@ describe('editorManager', () => {
       await editorManager.enterEditMode('')
 
       expect(editorManager.isEditMode).toBe(false)
-      expect(mockInvoke).not.toHaveBeenCalled()
+      expect(mockNoteService.getRawContent).not.toHaveBeenCalled()
     })
   })
 
   describe('exitEditMode', () => {
     it('should exit edit mode and clear state', async () => {
       // First enter edit mode
-      mockInvoke.mockResolvedValue('test content')
+      mockNoteService.getRawContent.mockResolvedValue('test content')
       await editorManager.enterEditMode('test-note.md')
 
       // Then exit
@@ -107,7 +114,7 @@ describe('editorManager', () => {
 
   describe('updateContent', () => {
     beforeEach(async () => {
-      mockInvoke.mockResolvedValue('original content')
+      mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode('test-note.md')
     })
 
@@ -131,32 +138,32 @@ describe('editorManager', () => {
 
     it('should save note content via API', async () => {
       // Setup: enter edit mode first
-      mockInvoke.mockResolvedValue('original content')
+      mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode(mockNoteName)
       editorManager.updateContent('modified content')
 
       // Test: save the note
-      mockInvoke.mockResolvedValue(undefined)
+      mockNoteService.save.mockResolvedValue(undefined)
 
       const result = await editorManager.saveNote(mockNoteName)
 
-      expect(mockInvoke).toHaveBeenCalledWith('save_note', {
-        noteName: mockNoteName,
-        content: 'modified content',
-      })
+      expect(mockNoteService.save).toHaveBeenCalledWith(
+        mockNoteName,
+        'modified content'
+      )
       expect(result.success).toBe(true)
       expect(editorManager.isDirty).toBe(false)
     })
 
     it('should return error if save fails', async () => {
       // Setup: enter edit mode first
-      mockInvoke.mockResolvedValue('original content')
+      mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode(mockNoteName)
       editorManager.updateContent('modified content')
 
       // Test: simulate save failure
       const error = new Error('Save failed')
-      mockInvoke.mockRejectedValue(error)
+      mockNoteService.save.mockRejectedValue(error)
 
       const result = await editorManager.saveNote(mockNoteName)
 
@@ -170,30 +177,27 @@ describe('editorManager', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('No note selected')
-      expect(mockInvoke).not.toHaveBeenCalled()
+      expect(mockNoteService.save).not.toHaveBeenCalled()
     })
 
     it('should handle empty content', async () => {
       // Setup: enter edit mode first
-      mockInvoke.mockResolvedValue('original content')
+      mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode(mockNoteName)
       editorManager.updateContent('')
 
       // Test: save with empty content
-      mockInvoke.mockResolvedValue(undefined)
+      mockNoteService.save.mockResolvedValue(undefined)
       const result = await editorManager.saveNote(mockNoteName)
 
-      expect(mockInvoke).toHaveBeenCalledWith('save_note', {
-        noteName: mockNoteName,
-        content: '',
-      })
+      expect(mockNoteService.save).toHaveBeenCalledWith(mockNoteName, '')
       expect(result.success).toBe(true)
     })
   })
 
   describe('showExitEditDialog integration', () => {
     it('should work with dirty state', async () => {
-      mockInvoke.mockResolvedValue('content')
+      mockNoteService.getRawContent.mockResolvedValue('content')
       await editorManager.enterEditMode('test.md')
       editorManager.updateContent('modified')
 

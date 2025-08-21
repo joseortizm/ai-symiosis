@@ -4,7 +4,7 @@
  * Handles hybrid search queries to Rust backend and search state management.
  */
 
-import { invoke } from '@tauri-apps/api/core'
+import type { createNoteService } from '../services/noteService.svelte'
 
 interface SearchState {
   searchInput: string
@@ -14,6 +14,10 @@ interface SearchState {
   requestController: AbortController | null
   filteredNotes: string[]
   areHighlightsCleared: boolean
+}
+
+interface SearchManagerDeps {
+  noteService: ReturnType<typeof createNoteService>
 }
 
 interface SearchManager {
@@ -38,7 +42,7 @@ interface SearchManager {
 }
 
 // Manager factory function
-export function createSearchManager(): SearchManager {
+export function createSearchManager(deps: SearchManagerDeps): SearchManager {
   const state = $state<SearchState>({
     searchInput: '',
     query: '',
@@ -64,7 +68,7 @@ export function createSearchManager(): SearchManager {
 
     try {
       state.isLoading = true
-      const notes = await invoke<string[]>('search_notes', { query })
+      const notes = await deps.noteService.search(query)
 
       if (currentController.signal.aborted) {
         return

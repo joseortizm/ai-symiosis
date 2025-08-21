@@ -25,8 +25,11 @@ describe('Highlight Clear Integration', () => {
     )
 
     // Create manager instances for testing
-    const searchManager = createSearchManager()
-    const editorManager = createEditorManager()
+    const { noteService } = await import(
+      '../../../lib/services/noteService.svelte'
+    )
+    const searchManager = createSearchManager({ noteService })
+    const editorManager = createEditorManager({ noteService })
     const focusManager = createFocusManager()
     const appCoordinator = createAppCoordinator({
       searchManager,

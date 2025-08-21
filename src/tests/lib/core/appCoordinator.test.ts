@@ -31,8 +31,19 @@ const { createFocusManager } = await import(
 )
 
 // Create manager instances for testing
-const searchManager = createSearchManager()
-const editorManager = createEditorManager()
+const mockNoteService = {
+  getRawContent: vi.fn(),
+  save: vi.fn(),
+  search: vi.fn(),
+}
+const searchManager = createSearchManager({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  noteService: mockNoteService as any,
+})
+const editorManager = createEditorManager({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  noteService: mockNoteService as any,
+})
 const focusManager = createFocusManager()
 const appCoordinator = createAppCoordinator({
   searchManager,
@@ -43,6 +54,11 @@ const appCoordinator = createAppCoordinator({
 describe('appCoordinator', () => {
   beforeEach(() => {
     resetAllMocks()
+    // Reset mock note service
+    vi.clearAllMocks()
+    mockNoteService.getRawContent.mockReset()
+    mockNoteService.save.mockReset()
+    mockNoteService.search.mockReset()
     // Reset the appCoordinator state between tests using new pattern
     appCoordinator.managers.searchManager.searchInput = ''
     appCoordinator.managers.focusManager.setSelectedIndex(-1)
@@ -223,16 +239,16 @@ describe('appCoordinator', () => {
     it('should populate filteredNotes on initialization when config exists', async () => {
       const mockNotes = ['note1.md', 'note2.md', 'note3.md']
 
-      // Mock config exists
+      // Mock config exists and note search
       mockInvoke.mockImplementation((command) => {
         if (command === 'config_exists') {
           return Promise.resolve(true)
         }
-        if (command === 'search_notes') {
-          return Promise.resolve(mockNotes)
-        }
         return Promise.resolve()
       })
+
+      // Mock the note service search method
+      mockNoteService.search.mockResolvedValue(mockNotes)
 
       // Before initialization, filteredNotes should be empty
       expect(appCoordinator.filteredNotes).toEqual([])
@@ -244,7 +260,7 @@ describe('appCoordinator', () => {
       // This should come from searchManager.filteredNotes via reactive effects
       expect(appCoordinator.filteredNotes).toEqual(mockNotes)
       expect(mockInvoke).toHaveBeenCalledWith('config_exists')
-      expect(mockInvoke).toHaveBeenCalledWith('search_notes', { query: '' })
+      expect(mockNoteService.search).toHaveBeenCalledWith('')
 
       cleanup()
     })

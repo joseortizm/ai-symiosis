@@ -4,7 +4,7 @@
  * Handles raw content loading, dirty state tracking, and nearest header detection.
  */
 
-import { invoke } from '@tauri-apps/api/core'
+import type { createNoteService } from '../services/noteService.svelte'
 
 interface EditorState {
   isEditMode: boolean
@@ -16,6 +16,10 @@ interface EditorState {
 interface SaveResult {
   success: boolean
   error?: string
+}
+
+interface EditorManagerDeps {
+  noteService: ReturnType<typeof createNoteService>
 }
 
 export interface EditorManager {
@@ -33,7 +37,7 @@ export interface EditorManager {
   saveNote(noteName: string): Promise<SaveResult>
 }
 
-export function createEditorManager(): EditorManager {
+export function createEditorManager(deps: EditorManagerDeps): EditorManager {
   const state = $state<EditorState>({
     isEditMode: false,
     editContent: '',
@@ -98,9 +102,7 @@ export function createEditorManager(): EditorManager {
     fallbackHtmlContent?: string
   ): Promise<void> {
     try {
-      const rawContent = await invoke<string>('get_note_raw_content', {
-        noteName,
-      })
+      const rawContent = await deps.noteService.getRawContent(noteName)
       setEditState(rawContent)
     } catch (e) {
       console.error('Failed to load raw note content:', e)
@@ -170,10 +172,7 @@ export function createEditorManager(): EditorManager {
     }
 
     try {
-      await invoke('save_note', {
-        noteName,
-        content: state.editContent,
-      })
+      await deps.noteService.save(noteName, state.editContent)
 
       // Update original content to new saved content
       state.originalContent = state.editContent

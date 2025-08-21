@@ -14,9 +14,13 @@ const { createEditorManager } = await import(
 let editorManager: ReturnType<typeof createEditorManager>
 
 describe('editorManager integration', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetAllMocks()
-    editorManager = createEditorManager()
+    // Use real noteService for integration tests
+    const { noteService } = await import(
+      '../../../lib/services/noteService.svelte'
+    )
+    editorManager = createEditorManager({ noteService })
   })
 
   describe('real API compatibility', () => {

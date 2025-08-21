@@ -43,19 +43,34 @@ describe('Keyboard Shortcut Isolation', () => {
           open_settings: 'Meta+,',
         },
       } as ConfigStateManager,
-      loadNoteContent: vi.fn(),
-      enterEditMode: vi.fn(),
-      exitEditMode: vi.fn(),
-      saveAndExitNote: vi.fn(),
-      showExitEditDialog: vi.fn(),
-      showDeleteDialog: vi.fn(),
-      showCreateDialog: vi.fn(),
-      showRenameDialog: vi.fn(),
-      openSettingsPane: vi.fn(),
-      clearHighlights: vi.fn(),
-      clearSearch: vi.fn(),
-      focusSearch: vi.fn(),
-      refreshCacheAndUI: vi.fn(),
+      searchManager: {
+        clearSearch: vi.fn(),
+      },
+      contentManager: {
+        clearHighlights: vi.fn(),
+      },
+      dialogManager: {
+        showExitEditDialog: vi.fn(),
+        openDeleteDialog: vi.fn(),
+        openCreateDialog: vi.fn(),
+        openRenameDialog: vi.fn(),
+      },
+      noteActions: {
+        enterEditMode: vi.fn(),
+      },
+      settingsActions: {
+        openSettingsPane: vi.fn(),
+      },
+      noteService: {
+        openInEditor: vi.fn(),
+        openFolder: vi.fn(),
+      },
+      appCoordinator: {
+        loadNoteContent: vi.fn(),
+        exitEditMode: vi.fn(),
+        saveAndExitNote: vi.fn(),
+        refreshCacheAndUI: vi.fn(),
+      },
     }
 
     keyboardActions = createKeyboardActions(mockDeps)
@@ -85,7 +100,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should not process the arrow down shortcut
-      expect(mockDeps.loadNoteContent).not.toHaveBeenCalled()
+      expect(mockDeps.appCoordinator.loadNoteContent).not.toHaveBeenCalled()
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     })
 
@@ -112,7 +127,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should not call openSettingsPane again
-      expect(mockDeps.openSettingsPane).not.toHaveBeenCalled()
+      expect(mockDeps.settingsActions.openSettingsPane).not.toHaveBeenCalled()
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     })
   })
@@ -141,7 +156,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should not process the arrow down shortcut
-      expect(mockDeps.loadNoteContent).not.toHaveBeenCalled()
+      expect(mockDeps.appCoordinator.loadNoteContent).not.toHaveBeenCalled()
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     })
 
@@ -168,7 +183,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should not call openSettingsPane
-      expect(mockDeps.openSettingsPane).not.toHaveBeenCalled()
+      expect(mockDeps.settingsActions.openSettingsPane).not.toHaveBeenCalled()
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     })
   })
@@ -197,7 +212,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should process the arrow down shortcut
-      expect(mockDeps.loadNoteContent).toHaveBeenCalled()
+      expect(mockDeps.appCoordinator.loadNoteContent).toHaveBeenCalled()
       expect(preventDefaultSpy).toHaveBeenCalled()
     })
 
@@ -224,7 +239,7 @@ describe('Keyboard Shortcut Isolation', () => {
       await handler(event)
 
       // Should call openSettingsPane
-      expect(mockDeps.openSettingsPane).toHaveBeenCalled()
+      expect(mockDeps.settingsActions.openSettingsPane).toHaveBeenCalled()
       expect(preventDefaultSpy).toHaveBeenCalled()
     })
   })

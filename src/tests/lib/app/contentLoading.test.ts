@@ -47,6 +47,19 @@ const mockDialogManager = {
   openRenameDialog: vi.fn(),
 }
 
+const mockNoteActions = {
+  createNote: vi.fn(),
+  deleteNote: vi.fn(),
+  renameNote: vi.fn(),
+  openExternal: vi.fn(),
+  openFolder: vi.fn(),
+}
+
+const mockSettingsActions = {
+  openSettingsPane: vi.fn(),
+  closeSettingsPane: vi.fn(),
+}
+
 // Mock all the modules
 vi.mock('../../../lib/services/noteService.svelte', () => ({
   noteService: mockNoteService,
@@ -221,19 +234,18 @@ describe('Content Loading Integration', () => {
             open_settings: 'Meta+,',
           },
         } as ConfigStateManager,
-        loadNoteContent: appCoordinator.actions.loadNoteContent,
-        enterEditMode: vi.fn(),
-        exitEditMode: vi.fn(),
-        saveAndExitNote: vi.fn(),
-        showExitEditDialog: vi.fn(),
-        showDeleteDialog: vi.fn(),
-        showCreateDialog: vi.fn(),
-        showRenameDialog: vi.fn(),
-        openSettingsPane: vi.fn(),
-        clearHighlights: vi.fn(),
-        clearSearch: vi.fn(),
-        focusSearch: vi.fn(),
-        refreshCacheAndUI: vi.fn(),
+        searchManager: mockSearchManager,
+        contentManager: mockContentManager,
+        dialogManager: mockDialogManager,
+        noteActions: mockNoteActions,
+        settingsActions: mockSettingsActions,
+        noteService: mockNoteService,
+        appCoordinator: {
+          loadNoteContent: appCoordinator.actions.loadNoteContent,
+          exitEditMode: vi.fn(),
+          saveAndExitNote: vi.fn(),
+          refreshCacheAndUI: vi.fn(),
+        },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
     })
@@ -258,7 +270,9 @@ describe('Content Loading Integration', () => {
         state: mockState,
         actions: {
           focusManager: mockFocusManager,
-          loadNoteContent: appCoordinator.actions.loadNoteContent,
+          appCoordinator: {
+            loadNoteContent: appCoordinator.actions.loadNoteContent,
+          },
         },
       }
 
@@ -294,7 +308,9 @@ describe('Content Loading Integration', () => {
         state: mockState,
         actions: {
           focusManager: mockFocusManager,
-          loadNoteContent: appCoordinator.actions.loadNoteContent,
+          appCoordinator: {
+            loadNoteContent: appCoordinator.actions.loadNoteContent,
+          },
         },
       }
 
@@ -324,7 +340,9 @@ describe('Content Loading Integration', () => {
         state: mockState,
         actions: {
           focusManager: mockFocusManager,
-          loadNoteContent: appCoordinator.actions.loadNoteContent,
+          appCoordinator: {
+            loadNoteContent: appCoordinator.actions.loadNoteContent,
+          },
         },
       }
 
@@ -383,19 +401,18 @@ describe('Content Loading Integration', () => {
             open_settings: 'Meta+,',
           },
         } as ConfigStateManager,
-        loadNoteContent: appCoordinator.actions.loadNoteContent,
-        enterEditMode: vi.fn(),
-        exitEditMode: vi.fn(),
-        saveAndExitNote: vi.fn(),
-        showExitEditDialog: vi.fn(),
-        showDeleteDialog: vi.fn(),
-        showCreateDialog: vi.fn(),
-        showRenameDialog: vi.fn(),
-        openSettingsPane: vi.fn(),
-        clearHighlights: vi.fn(),
-        clearSearch: vi.fn(),
-        focusSearch: vi.fn(),
-        refreshCacheAndUI: vi.fn(),
+        searchManager: mockSearchManager,
+        contentManager: mockContentManager,
+        dialogManager: mockDialogManager,
+        noteActions: mockNoteActions,
+        settingsActions: mockSettingsActions,
+        noteService: mockNoteService,
+        appCoordinator: {
+          loadNoteContent: appCoordinator.actions.loadNoteContent,
+          exitEditMode: vi.fn(),
+          saveAndExitNote: vi.fn(),
+          refreshCacheAndUI: vi.fn(),
+        },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
@@ -404,7 +421,9 @@ describe('Content Loading Integration', () => {
         state: { filteredNotes: ['note1.md', 'note2.md', 'note3.md'] },
         actions: {
           focusManager: mockFocusManager,
-          loadNoteContent: appCoordinator.actions.loadNoteContent,
+          appCoordinator: {
+            loadNoteContent: appCoordinator.actions.loadNoteContent,
+          },
         },
       }
 
