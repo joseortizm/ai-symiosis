@@ -719,6 +719,7 @@ pub fn load_config() -> AppConfig {
     match fs::read_to_string(&config_path) {
         Ok(content) => load_config_from_content(&content),
         Err(_) => {
+            crate::WAS_FIRST_RUN.store(true, std::sync::atomic::Ordering::Relaxed);
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
                 eprintln!("Failed to create default config file: {}", e);

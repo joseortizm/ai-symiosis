@@ -35,6 +35,8 @@ use watcher::setup_notes_watcher;
 // Global static configuration
 static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
 
+static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 // Global database lock to prevent concurrent database operations
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
@@ -985,7 +987,7 @@ fn get_config_content() -> Result<String, String> {
 
 #[tauri::command]
 fn config_exists() -> bool {
-    get_config_path().exists()
+    !WAS_FIRST_RUN.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 // Tauri command handlers - Window operations
