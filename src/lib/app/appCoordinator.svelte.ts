@@ -10,6 +10,7 @@ import { createDialogManager } from '../core/dialogManager.svelte'
 import { createContentManager } from '../core/contentManager.svelte'
 import { createConfigStateManager } from '../core/configStateManager.svelte'
 import { createContentNavigationManager } from '../core/contentNavigationManager.svelte'
+import { createProgressManager } from '../core/progressManager.svelte'
 import { noteService } from '../services/noteService.svelte'
 import { configService } from '../services/configService.svelte'
 import { createNoteActions } from './actions/note.svelte'
@@ -73,6 +74,9 @@ export interface AppManagers {
   contentNavigationManager: ReturnType<
     typeof import('../core/contentNavigationManager.svelte').createContentNavigationManager
   >
+  progressManager: ReturnType<
+    typeof import('../core/progressManager.svelte').createProgressManager
+  >
 }
 
 export interface AppCoordinator {
@@ -109,6 +113,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusManager,
     searchManager,
   })
+
+  const progressManager = createProgressManager()
 
   const isLoading = $derived(searchManager.isLoading)
   const areHighlightsCleared = $derived(searchManager.areHighlightsCleared)
@@ -310,6 +316,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         dialogManager,
         configStateManager,
         contentNavigationManager,
+        progressManager,
       }
     },
 
@@ -382,6 +389,35 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         await refreshUI()
       })
 
+      // Database loading progress event listeners
+      const unlistenDbLoadingStart = await listen<string>(
+        'db-loading-start',
+        (event) => {
+          progressManager.start(event.payload)
+        }
+      )
+
+      const unlistenDbLoadingProgress = await listen<string>(
+        'db-loading-progress',
+        (event) => {
+          progressManager.updateProgress(event.payload)
+        }
+      )
+
+      const unlistenDbLoadingComplete = await listen(
+        'db-loading-complete',
+        () => {
+          progressManager.complete()
+        }
+      )
+
+      const unlistenDbLoadingError = await listen<string>(
+        'db-loading-error',
+        (event) => {
+          progressManager.setError(event.payload)
+        }
+      )
+
       const cleanupEffects = setupReactiveEffects()
 
       return () => {
@@ -393,6 +429,10 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         cleanupEffects()
         unlisten()
         unlistenCacheRefresh()
+        unlistenDbLoadingStart()
+        unlistenDbLoadingProgress()
+        unlistenDbLoadingComplete()
+        unlistenDbLoadingError()
         configStateManager.cleanup()
       }
     },
