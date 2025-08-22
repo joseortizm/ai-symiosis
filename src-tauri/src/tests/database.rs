@@ -63,8 +63,11 @@ fn test_directory_hierarchy() {
         .expect("Should get backup directory");
     let temp_dir = get_temp_dir().expect("Should get temp directory");
 
-    // Both should be under the same parent symiosis directory
-    let backup_parent = backup_dir.parent().expect("Backup should have parent");
+    // Both should be under the same symiosis directory
+    let backup_parent = backup_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("Backup should have symiosis parent");
     let temp_parent = temp_dir.parent().expect("Temp should have parent");
 
     assert_eq!(

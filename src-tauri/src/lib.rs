@@ -7,7 +7,6 @@ mod tests;
 mod watcher;
 
 // External crates
-use comrak::{markdown_to_html_with_plugins, ComrakOptions, ComrakPlugins};
 use config::{
     generate_config_template, get_available_themes, get_config_path, get_editor_config,
     get_general_config, get_interface_config, get_preferences_config, get_shortcuts_config,
@@ -17,12 +16,16 @@ use database::{
     get_backup_dir_for_notes_path, get_database_path as get_db_path, get_db_connection,
     get_temp_dir,
 };
+use pulldown_cmark::{html, Options, Parser};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
+use syntect::highlighting::ThemeSet;
+use syntect::html::highlighted_html_for_string;
+use syntect::parsing::SyntaxSet;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -83,7 +86,7 @@ fn render_note(filename: &str, content: &str) -> String {
     if filename.ends_with(".md") || filename.ends_with(".markdown") {
         // Get theme from config with fallback
         let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-        let theme = &config.interface.md_render_code_theme;
+        let theme_name = &config.interface.md_render_code_theme;
 
         // TODO: Add support for loading custom .tmTheme files in the future
         // Validate theme exists, fallback to default if invalid
@@ -97,24 +100,99 @@ fn render_note(filename: &str, content: &str) -> String {
             "Solarized (light)",
         ];
 
-        let selected_theme = if valid_themes.contains(&theme.as_str()) {
-            theme.as_str()
+        let selected_theme = if valid_themes.contains(&theme_name.as_str()) {
+            theme_name.as_str()
         } else {
             "base16-ocean.dark" // fallback
         };
 
-        // Create syntax highlighter adapter
-        let adapter = comrak::plugins::syntect::SyntectAdapter::new(Some(selected_theme));
+        // Initialize syntect components
+        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let theme_set = ThemeSet::load_defaults();
+        let theme = theme_set
+            .themes
+            .get(selected_theme)
+            .unwrap_or(&theme_set.themes["base16-ocean.dark"]);
 
-        // Configure plugins
-        let mut plugins = ComrakPlugins::default();
-        plugins.render.codefence_syntax_highlighter = Some(&adapter);
+        // Configure pulldown-cmark options
+        let mut options = Options::empty();
+        options.insert(Options::ENABLE_STRIKETHROUGH);
+        options.insert(Options::ENABLE_TABLES);
+        options.insert(Options::ENABLE_FOOTNOTES);
+        options.insert(Options::ENABLE_TASKLISTS);
 
-        // Configure options
-        let mut options = ComrakOptions::default();
-        options.render.unsafe_ = true; // Allow HTML in markdown
+        // Parse markdown into events
+        let parser = Parser::new_ext(content, options);
 
-        markdown_to_html_with_plugins(content, &options, &plugins)
+        // Track state for code block processing
+        let mut in_code_block = false;
+        let mut current_lang: Option<String> = None;
+        let mut code_content = String::new();
+
+        // Process events to handle code blocks with syntax highlighting
+        let events: Vec<_> = parser
+            .flat_map(|event| {
+                match event {
+                    pulldown_cmark::Event::Start(pulldown_cmark::Tag::CodeBlock(
+                        pulldown_cmark::CodeBlockKind::Fenced(lang),
+                    )) => {
+                        in_code_block = true;
+                        current_lang = if lang.is_empty() {
+                            None
+                        } else {
+                            Some(lang.to_string())
+                        };
+                        code_content.clear();
+                        vec![] // Don't emit the original start tag yet
+                    }
+                    pulldown_cmark::Event::End(pulldown_cmark::TagEnd::CodeBlock) => {
+                        in_code_block = false;
+
+                        // Apply syntax highlighting if we have a language
+                        let highlighted_html = if let Some(ref lang) = current_lang {
+                            if let Some(syntax) = syntax_set.find_syntax_by_token(lang) {
+                                highlighted_html_for_string(
+                                    &code_content,
+                                    &syntax_set,
+                                    syntax,
+                                    theme,
+                                )
+                                .unwrap_or_else(|_| {
+                                    format!(
+                                        "<pre><code>{}</code></pre>",
+                                        html_escape::encode_text(&code_content)
+                                    )
+                                })
+                            } else {
+                                format!(
+                                    "<pre><code>{}</code></pre>",
+                                    html_escape::encode_text(&code_content)
+                                )
+                            }
+                        } else {
+                            format!(
+                                "<pre><code>{}</code></pre>",
+                                html_escape::encode_text(&code_content)
+                            )
+                        };
+
+                        current_lang = None;
+                        vec![pulldown_cmark::Event::Html(highlighted_html.into())]
+                    }
+                    pulldown_cmark::Event::Text(text) if in_code_block => {
+                        code_content.push_str(&text);
+                        vec![] // Don't emit text events for code blocks
+                    }
+                    other => vec![other],
+                }
+            })
+            .collect();
+
+        // Convert events to HTML
+        let mut html_output = String::new();
+        html::push_html(&mut html_output, events.into_iter());
+
+        html_output
     } else {
         format!("<pre>{}</pre>", html_escape::encode_text(content))
     }
