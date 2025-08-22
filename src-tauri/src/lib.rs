@@ -9,9 +9,9 @@ mod watcher;
 // External crates
 use comrak::{markdown_to_html_with_plugins, ComrakOptions, ComrakPlugins};
 use config::{
-    generate_config_template, get_config_path, get_editor_config, get_general_config,
-    get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
-    parse_shortcut, reload_config, save_config_content, AppConfig,
+    generate_config_template, get_available_themes, get_config_path, get_editor_config,
+    get_general_config, get_interface_config, get_preferences_config, get_shortcuts_config,
+    load_config, parse_shortcut, reload_config, save_config_content, AppConfig,
 };
 use database::{
     get_backup_dir_for_notes_path, get_database_path as get_db_path, get_db_connection,
@@ -1264,7 +1264,8 @@ pub fn run() {
             get_interface_config,
             get_editor_config,
             get_shortcuts_config,
-            get_preferences_config
+            get_preferences_config,
+            get_available_themes
         ])
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {

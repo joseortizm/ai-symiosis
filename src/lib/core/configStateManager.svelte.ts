@@ -113,8 +113,17 @@ export function createConfigStateManager(): ConfigStateManager {
 
   let unlistenConfigChanged: (() => void) | null = null
 
-  // Valid UI themes that have corresponding CSS files
-  const VALID_UI_THEMES = ['gruvbox-dark', 'one-dark']
+  let validUIThemes: string[] = []
+
+  async function fetchAvailableThemes(): Promise<void> {
+    try {
+      const themes = await configService.getAvailableThemes()
+      validUIThemes = themes.ui_themes
+    } catch (error) {
+      console.warn('Failed to fetch available themes, using defaults:', error)
+      validUIThemes = ['gruvbox-dark', 'one-dark']
+    }
+  }
 
   function applyInterfaceConfig(interfaceConfig: InterfaceConfig): void {
     // Apply font configuration
@@ -143,7 +152,7 @@ export function createConfigStateManager(): ConfigStateManager {
       }
 
       // Validate theme
-      if (!VALID_UI_THEMES.includes(theme)) {
+      if (validUIThemes.length > 0 && !validUIThemes.includes(theme)) {
         console.warn(
           `Unknown UI theme: ${theme}. Using gruvbox-dark as default.`
         )
@@ -245,6 +254,8 @@ export function createConfigStateManager(): ConfigStateManager {
         configService.getShortcutsConfig(),
         configService.getPreferencesConfig(),
       ])
+
+      await fetchAvailableThemes()
 
       state.general = generalConfig
       state.interface = interfaceConfig

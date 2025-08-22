@@ -50,19 +50,19 @@ pub struct GeneralConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InterfaceConfig {
-    pub ui_theme: String,              // "gruvbox-dark"|"one-dark"|
-    pub font_family: String,           // "Inter, sans-serif"
-    pub font_size: u16,                // 14
-    pub editor_font_family: String,    // "JetBrains Mono, Consolas, monospace"
-    pub editor_font_size: u16,         // 14
-    pub markdown_render_theme: String, // "dark_dimmed"|"light"|"dark"|"auto"
-    pub md_render_code_theme: String,  // syntect code highlighting theme
-    pub default_width: u32,            // 1200
-    pub default_height: u32,           // 800
-    pub center_on_startup: bool,       // true
-    pub remember_size: bool,           // true
-    pub remember_position: bool,       // true
-    pub always_on_top: bool,           // false
+    pub ui_theme: String,
+    pub font_family: String,
+    pub font_size: u16,
+    pub editor_font_family: String,
+    pub editor_font_size: u16,
+    pub markdown_render_theme: String,
+    pub md_render_code_theme: String,
+    pub default_width: u32,
+    pub default_height: u32,
+    pub center_on_startup: bool,
+    pub remember_size: bool,
+    pub remember_position: bool,
+    pub always_on_top: bool,
 }
 
 // ============================================================================
@@ -71,20 +71,20 @@ pub struct InterfaceConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ShortcutsConfig {
-    pub create_note: String,       // "Ctrl+Enter"
-    pub rename_note: String,       // "Ctrl+m"
-    pub delete_note: String,       // "Ctrl+x"
-    pub save_and_exit: String,     // "Ctrl+s"
-    pub open_external: String,     // "Ctrl+o"
-    pub open_folder: String,       // "Ctrl+f"
-    pub refresh_cache: String,     // "Ctrl+r"
-    pub scroll_up: String,         // "Ctrl+u"
-    pub scroll_down: String,       // "Ctrl+d"
-    pub vim_up: String,            // "Ctrl+k"
-    pub vim_down: String,          // "Ctrl+j"
-    pub navigate_previous: String, // "Ctrl+p"
-    pub navigate_next: String,     // "Ctrl+n"
-    pub open_settings: String,     // "Meta+,"
+    pub create_note: String,
+    pub rename_note: String,
+    pub delete_note: String,
+    pub save_and_exit: String,
+    pub open_external: String,
+    pub open_folder: String,
+    pub refresh_cache: String,
+    pub scroll_up: String,
+    pub scroll_down: String,
+    pub vim_up: String,
+    pub vim_down: String,
+    pub navigate_previous: String,
+    pub navigate_next: String,
+    pub open_settings: String,
 }
 
 // ============================================================================
@@ -94,7 +94,7 @@ pub struct ShortcutsConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PreferencesConfig {
     #[serde(default = "default_max_results")]
-    pub max_search_results: usize, // 100
+    pub max_search_results: usize,
 }
 
 // ============================================================================
@@ -103,11 +103,11 @@ pub struct PreferencesConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EditorConfig {
-    pub mode: String,            // "basic"|"vim"|"emacs"
-    pub theme: String,           // "gruvbox-dark"
-    pub word_wrap: bool,         // true
-    pub tab_size: u16,           // 2
-    pub show_line_numbers: bool, // true
+    pub mode: String,
+    pub theme: String,
+    pub word_wrap: bool,
+    pub tab_size: u16,
+    pub show_line_numbers: bool,
 }
 
 // ============================================================================
@@ -1149,6 +1149,14 @@ pub fn save_config_content(content: &str) -> Result<(), String> {
 
     println!("Config content saved to: {}", config_path.display());
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_available_themes() -> serde_json::Value {
+    serde_json::json!({
+        "ui_themes": get_available_ui_themes(),
+        "markdown_themes": get_available_markdown_themes()
+    })
 }
 
 // ============================================================================

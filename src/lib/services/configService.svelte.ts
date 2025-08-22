@@ -84,6 +84,10 @@ export interface ConfigService {
   getEditorConfig(): Promise<EditorConfig>
   getShortcutsConfig(): Promise<ShortcutsConfig>
   getPreferencesConfig(): Promise<PreferencesConfig>
+  getAvailableThemes(): Promise<{
+    ui_themes: string[]
+    markdown_themes: string[]
+  }>
 }
 
 export function createConfigService(): ConfigService {
@@ -297,6 +301,25 @@ export function createConfigService(): ConfigService {
 
     get error(): string | null {
       return state.error
+    },
+
+    async getAvailableThemes(): Promise<{
+      ui_themes: string[]
+      markdown_themes: string[]
+    }> {
+      try {
+        const result = await invoke<{
+          ui_themes: string[]
+          markdown_themes: string[]
+        }>('get_available_themes')
+        return result
+      } catch (error) {
+        console.error('Failed to get available themes:', error)
+        return {
+          ui_themes: ['gruvbox-dark', 'one-dark'],
+          markdown_themes: ['light', 'dark', 'dark_dimmed', 'auto'],
+        }
+      }
     },
 
     get lastSaved(): number {
