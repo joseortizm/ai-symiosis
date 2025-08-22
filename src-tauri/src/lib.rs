@@ -9,7 +9,7 @@ mod watcher;
 // External crates
 use comrak::{markdown_to_html_with_plugins, ComrakOptions, ComrakPlugins};
 use config::{
-    get_config_path, get_default_notes_dir, get_editor_config, get_general_config,
+    generate_config_template, get_config_path, get_editor_config, get_general_config,
     get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
     parse_shortcut, reload_config, save_config_content, AppConfig,
 };
@@ -977,8 +977,7 @@ fn get_config_content() -> Result<String, String> {
     match fs::read_to_string(&config_path) {
         Ok(content) => Ok(content),
         Err(_) => {
-            let template = include_str!("../config-template.toml")
-                .replace("{DEFAULT_NOTES_DIR}", &get_default_notes_dir());
+            let template = generate_config_template();
             Ok(template)
         }
     }

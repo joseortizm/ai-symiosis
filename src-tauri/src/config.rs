@@ -210,6 +210,251 @@ impl Default for EditorConfig {
 }
 
 // ============================================================================
+// THEME DETECTION UTILITIES
+// ============================================================================
+
+/// Get available UI themes by scanning the ui-themes directory
+pub fn get_available_ui_themes() -> Vec<String> {
+    let static_path = get_static_css_path();
+    let ui_themes_path = static_path.join("ui-themes");
+
+    if !ui_themes_path.exists() {
+        return vec!["gruvbox-dark".to_string(), "one-dark".to_string()];
+    }
+
+    let mut themes = Vec::new();
+    if let Ok(entries) = fs::read_dir(&ui_themes_path) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            if let Some(filename) = entry.file_name().to_str() {
+                if filename.starts_with("ui-") && filename.ends_with(".css") {
+                    // Remove "ui-" prefix and ".css" suffix
+                    let theme_name = filename
+                        .strip_prefix("ui-")
+                        .and_then(|s| s.strip_suffix(".css"))
+                        .unwrap_or(filename);
+                    themes.push(theme_name.to_string());
+                }
+            }
+        }
+    }
+
+    if themes.is_empty() {
+        vec!["gruvbox-dark".to_string(), "one-dark".to_string()]
+    } else {
+        themes.sort();
+        themes
+    }
+}
+
+/// Get available markdown render themes by scanning the md_render_themes directory
+pub fn get_available_markdown_themes() -> Vec<String> {
+    let static_path = get_static_css_path();
+    let md_themes_path = static_path.join("md_render_themes");
+
+    if !md_themes_path.exists() {
+        return vec![
+            "light".to_string(),
+            "dark".to_string(),
+            "dark_dimmed".to_string(),
+            "auto".to_string(),
+        ];
+    }
+
+    let mut themes = Vec::new();
+    if let Ok(entries) = fs::read_dir(&md_themes_path) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            if let Some(filename) = entry.file_name().to_str() {
+                if filename.ends_with(".css") {
+                    // Remove ".css" suffix
+                    let theme_name = filename.strip_suffix(".css").unwrap_or(filename);
+                    themes.push(theme_name.to_string());
+                }
+            }
+        }
+    }
+
+    if themes.is_empty() {
+        vec![
+            "light".to_string(),
+            "dark".to_string(),
+            "dark_dimmed".to_string(),
+            "auto".to_string(),
+        ]
+    } else {
+        themes.sort();
+        themes
+    }
+}
+
+/// Get the path to the static CSS directory
+fn get_static_css_path() -> PathBuf {
+    // Try to find the static/css directory relative to the binary location
+    let exe_path = std::env::current_exe().unwrap_or_default();
+    let exe_dir = exe_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
+
+    // Look for static/css in various locations
+    let possible_paths = [
+        exe_dir.join("static/css"),
+        exe_dir.join("../static/css"),
+        exe_dir.join("../../static/css"),
+        exe_dir.join("../../../static/css"),
+        std::path::Path::new("./static/css").to_path_buf(),
+        std::path::Path::new("../static/css").to_path_buf(),
+    ];
+
+    for path in &possible_paths {
+        if path.exists() {
+            return path.clone();
+        }
+    }
+
+    // Fallback to current directory
+    std::path::Path::new("./static/css").to_path_buf()
+}
+
+/// Generate configuration template with dynamic theme options
+pub fn generate_config_template() -> String {
+    let ui_themes = get_available_ui_themes();
+    let markdown_themes = get_available_markdown_themes();
+
+    let ui_themes_comment = ui_themes
+        .iter()
+        .map(|theme| format!("\"{}\"", theme))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let markdown_themes_comment = markdown_themes
+        .iter()
+        .map(|theme| format!("\"{}\"", theme))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!(
+        r#"# Symiosis Configuration File
+# Uncomment and modify the options below to configure the application
+
+# ============================
+# TOP-LEVEL ESSENTIAL SETTINGS
+# ============================
+
+# Default: ~/Documents/Notes (or equivalent on your system)
+notes_directory = "{DEFAULT_NOTES_DIR}"
+
+# Format: modifier keys + key (e.g., "Ctrl+Shift+N", "Cmd+Space", "Alt+F1")
+# Supported modifiers: Ctrl, Alt, Shift, Cmd (macOS), Super (Linux)
+global_shortcut = "Ctrl+Shift+N"
+
+# =====================
+# GENERAL CONFIGURATION
+# =====================
+
+[general]
+# Future extensible core settings
+# This section is reserved for general application behavior settings
+
+# =======================
+# INTERFACE CONFIGURATION
+# =======================
+
+[interface]
+# UI theme for the application interface
+# Options: {ui_themes_comment}
+ui_theme = "gruvbox-dark"
+
+# Font family for the UI
+font_family = "Inter, sans-serif"
+
+# Font size for the UI (in pixels)
+font_size = 14
+
+# Font family for the editor
+editor_font_family = "JetBrains Mono, Consolas, monospace"
+
+# Font size for the editor (in pixels)
+editor_font_size = 14
+
+# Markdown rendering theme for note content
+# Options: {markdown_themes_comment}
+markdown_render_theme = "dark_dimmed"
+
+# Code syntax highlighting theme for markdown code blocks
+# Options: "base16-ocean.dark", "base16-eighties.dark", "base16-mocha.dark",
+#          "base16-ocean.light", "InspiredGitHub", "Solarized (dark)", "Solarized (light)"
+# Note: After changing this theme, press Ctrl+R to refresh cache and apply to all existing notes
+# TODO: Support for custom .tmTheme files will be added in the future
+md_render_code_theme = "base16-ocean.dark"
+
+# Window appearance and behavior
+default_width = 1200
+default_height = 800
+center_on_startup = true
+remember_size = true
+remember_position = true
+always_on_top = false
+
+# ====================
+# EDITOR CONFIGURATION
+# ====================
+
+[editor]
+# Editor mode: "basic", "vim", "emacs"
+mode = "basic"
+
+# Editor theme (separate from UI theme)
+# Options: "abcdef", "abyss", "android-studio", "andromeda", "basic-dark", "basic-light",
+#          "forest", "github-dark", "github-light", "gruvbox-dark", "gruvbox-light",
+#          "material-dark", "material-light", "monokai", "nord", "palenight",
+#          "solarized-dark", "solarized-light", "tokyo-night-day", "tokyo-night-storm",
+#          "volcano", "vscode-dark", "vscode-light"
+theme = "gruvbox-dark"
+
+# Enable word wrapping
+word_wrap = true
+
+# Tab size in spaces
+tab_size = 2
+
+# Show line numbers
+show_line_numbers = true
+
+# ==================
+# KEYBOARD SHORTCUTS
+# ==================
+
+[shortcuts]
+# All keyboard shortcuts in one unified section
+create_note = "Ctrl+Enter"
+rename_note = "Ctrl+m"
+delete_note = "Ctrl+x"
+save_and_exit = "Ctrl+s"
+open_external = "Ctrl+o"
+open_folder = "Ctrl+f"
+refresh_cache = "Ctrl+r"
+scroll_up = "Ctrl+u"
+scroll_down = "Ctrl+d"
+vim_up = "Ctrl+k"
+vim_down = "Ctrl+j"
+navigate_previous = "Ctrl+p"
+navigate_next = "Ctrl+n"
+open_settings = "Meta+,"
+
+# ===========
+# PREFERENCES
+# ===========
+
+[preferences]
+# Maximum number of search results to display
+max_search_results = 100
+"#,
+        DEFAULT_NOTES_DIR = get_default_notes_dir(),
+        ui_themes_comment = ui_themes_comment,
+        markdown_themes_comment = markdown_themes_comment
+    )
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
@@ -258,8 +503,8 @@ pub fn validate_general_config(_general: &GeneralConfig) -> Result<(), String> {
 }
 
 pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), String> {
-    let valid_themes = ["gruvbox-dark", "one-dark"];
-    if !valid_themes.contains(&interface.ui_theme.as_str()) {
+    let valid_themes = get_available_ui_themes();
+    if !valid_themes.contains(&interface.ui_theme) {
         return Err(format!(
             "Invalid UI theme '{}'. Valid themes: {}",
             interface.ui_theme,
@@ -270,8 +515,8 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
     validate_font_size(interface.font_size, "UI font size")?;
     validate_font_size(interface.editor_font_size, "Editor font size")?;
 
-    let valid_markdown_render_themes = ["light", "dark", "dark_dimmed", "auto"];
-    if !valid_markdown_render_themes.contains(&interface.markdown_render_theme.as_str()) {
+    let valid_markdown_render_themes = get_available_markdown_themes();
+    if !valid_markdown_render_themes.contains(&interface.markdown_render_theme) {
         return Err(format!(
             "Invalid markdown render theme '{}'. Valid themes: {}",
             interface.markdown_render_theme,
@@ -564,8 +809,8 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
     if let Some(section) = interface_section {
         // Extract UI theme
         if let Some(theme) = section.get("ui_theme").and_then(|v| v.as_str()) {
-            let valid_themes = ["gruvbox-dark", "one-dark"];
-            if valid_themes.contains(&theme) {
+            let valid_themes = get_available_ui_themes();
+            if valid_themes.contains(&theme.to_string()) {
                 config.ui_theme = theme.to_string();
             } else {
                 eprintln!(
@@ -616,8 +861,8 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             .get("markdown_render_theme")
             .and_then(|v| v.as_str())
         {
-            let valid_themes = ["light", "dark", "dark_dimmed", "auto"];
-            if valid_themes.contains(&theme) {
+            let valid_themes = get_available_markdown_themes();
+            if valid_themes.contains(&theme.to_string()) {
                 config.markdown_render_theme = theme.to_string();
             } else {
                 eprintln!(

@@ -181,7 +181,7 @@ export function createConfigStateManager(): ConfigStateManager {
       // Create new theme link
       const link = document.createElement('link')
       link.rel = 'stylesheet'
-      link.href = `/css/${theme}.css`
+      link.href = `/css/md_render_themes/${theme}.css`
       link.setAttribute('data-markdown-theme', theme)
 
       document.head.appendChild(link)
