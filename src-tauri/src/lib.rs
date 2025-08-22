@@ -347,7 +347,7 @@ async fn recreate_database_with_progress(
 
     init_db(&conn).map_err(|e| format!("Failed to initialize fresh database: {}", e))?;
 
-    let _ = app_handle.emit("db-loading-progress", "Loading notes...");
+    let _ = app_handle.emit("db-loading-progress", "Rendering notes...");
     eprintln!("Fresh database table created. Performing full sync from filesystem...");
 
     // Perform a complete sync from filesystem
