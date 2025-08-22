@@ -33,6 +33,7 @@ toml = "0.8.23"
 home = "0.5.11"
 rusqlite = { version = "0.37", features = ["bundled", "functions", "serde_json", "chrono"] }
 notify = "8.2.0"
+tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
 
 [dev-dependencies]
 tempfile = "3.20.0"

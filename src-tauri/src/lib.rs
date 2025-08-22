@@ -238,7 +238,10 @@ fn recreate_database() -> Result<(), String> {
     Ok(())
 }
 
-fn recreate_database_with_progress(app_handle: &AppHandle, reason: &str) -> Result<(), String> {
+async fn recreate_database_with_progress(
+    app_handle: &AppHandle,
+    reason: &str,
+) -> Result<(), String> {
     let _ = app_handle.emit("db-loading-progress", "Recreating database tables...");
     eprintln!("{}", reason);
 
@@ -257,8 +260,11 @@ fn recreate_database_with_progress(app_handle: &AppHandle, reason: &str) -> Resu
     eprintln!("Fresh database table created. Performing full sync from filesystem...");
 
     // Perform a complete sync from filesystem
-    load_all_notes_into_sqlite(&mut conn)
-        .map_err(|e| format!("Failed to populate fresh database: {}", e))?;
+    let result = tokio::task::spawn_blocking(move || load_all_notes_into_sqlite(&mut conn))
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?;
+
+    result.map_err(|e| format!("Failed to populate fresh database: {}", e))?;
 
     let _ = app_handle.emit(
         "db-loading-progress",
@@ -784,7 +790,7 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 
 // Tauri command handlers - System operations
 #[tauri::command]
-fn refresh_cache(app: AppHandle) -> Result<(), String> {
+async fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Emit loading start event
     let _ = app.emit("db-loading-start", "Refreshing cache...");
     let _ = app.emit("db-loading-progress", "Reloading configuration...");
@@ -799,13 +805,15 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
     }
 
     // Check if theme has changed
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    let current_theme = &config.interface.md_render_code_theme;
+    let current_theme = {
+        let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+        config.interface.md_render_code_theme.clone()
+    };
 
     let theme_changed = {
         let last_theme = LAST_RENDER_THEME.read().unwrap_or_else(|e| e.into_inner());
         match &*last_theme {
-            Some(last) => last != current_theme,
+            Some(last) => last != &current_theme,
             None => false, // First time, don't force rebuild unless theme actually different from default
         }
     };
@@ -836,7 +844,8 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
                 "Theme changed to '{}', rebuilding all HTML renders...",
                 current_theme
             ),
-        );
+        )
+        .await;
         if result.is_ok() {
             let _ = app.emit("db-loading-complete", ());
         } else if let Err(ref e) = result {
@@ -868,7 +877,13 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
     }
 
     let _ = app.emit("db-loading-progress", "Syncing notes from filesystem...");
-    match load_all_notes_into_sqlite(&mut conn) {
+
+    // Use spawn_blocking for CPU-intensive database operations
+    let result = tokio::task::spawn_blocking(move || load_all_notes_into_sqlite(&mut conn))
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?;
+
+    match result {
         Ok(()) => {
             let _ = app.emit("db-loading-complete", ());
             Ok(())
@@ -888,6 +903,7 @@ fn refresh_cache(app: AppHandle) -> Result<(), String> {
                 &app,
                 "Database corruption detected. Recreating database tables...",
             )
+            .await
             .map_err(|recovery_error| {
                 format!(
                     "Cache refresh failed and recovery failed: {}. Original error: {}",

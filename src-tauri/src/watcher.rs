@@ -45,14 +45,18 @@ pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::err
 
                     if involves_notes {
                         // Refresh the cache when note files change
-                        if let Err(e) = refresh_cache(app_handle_clone.clone()) {
-                            eprintln!("Failed to refresh cache after file change: {}", e);
-                        } else {
-                            // Emit event to notify frontend of cache refresh
-                            if let Err(e) = app_handle_clone.emit("cache-refreshed", ()) {
-                                eprintln!("Failed to emit cache-refreshed event: {}", e);
+                        // Spawn async task for cache refresh
+                        let app_handle_for_refresh = app_handle_clone.clone();
+                        tauri::async_runtime::spawn(async move {
+                            if let Err(e) = refresh_cache(app_handle_for_refresh.clone()).await {
+                                eprintln!("Failed to refresh cache after file change: {}", e);
+                            } else {
+                                // Emit event to notify frontend of cache refresh
+                                if let Err(e) = app_handle_for_refresh.emit("cache-refreshed", ()) {
+                                    eprintln!("Failed to emit cache-refreshed event: {}", e);
+                                }
                             }
-                        }
+                        });
                     }
                 }
                 _ => {} // Ignore other event types
