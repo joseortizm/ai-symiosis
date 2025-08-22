@@ -242,7 +242,7 @@ async fn recreate_database_with_progress(
     app_handle: &AppHandle,
     reason: &str,
 ) -> Result<(), String> {
-    let _ = app_handle.emit("db-loading-progress", "Recreating database tables...");
+    let _ = app_handle.emit("db-loading-progress", "Rebuilding notes database...");
     eprintln!("{}", reason);
 
     let mut conn = get_db_connection()?;
@@ -253,10 +253,7 @@ async fn recreate_database_with_progress(
 
     init_db(&conn).map_err(|e| format!("Failed to initialize fresh database: {}", e))?;
 
-    let _ = app_handle.emit(
-        "db-loading-progress",
-        "Database tables created. Syncing from filesystem...",
-    );
+    let _ = app_handle.emit("db-loading-progress", "Loading notes...");
     eprintln!("Fresh database table created. Performing full sync from filesystem...");
 
     // Perform a complete sync from filesystem
@@ -266,10 +263,7 @@ async fn recreate_database_with_progress(
 
     result.map_err(|e| format!("Failed to populate fresh database: {}", e))?;
 
-    let _ = app_handle.emit(
-        "db-loading-progress",
-        "Database rebuild completed successfully.",
-    );
+    let _ = app_handle.emit("db-loading-progress", "Notes database ready.");
     eprintln!("Database rebuild completed successfully.");
     Ok(())
 }
@@ -792,8 +786,8 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 #[tauri::command]
 async fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Emit loading start event
-    let _ = app.emit("db-loading-start", "Refreshing cache...");
-    let _ = app.emit("db-loading-progress", "Reloading configuration...");
+    let _ = app.emit("db-loading-start", "Refreshing notes...");
+    let _ = app.emit("db-loading-progress", "Loading settings...");
 
     // Reload config first
     if let Err(e) = reload_config(&APP_CONFIG, Some(app.clone())) {
@@ -855,7 +849,7 @@ async fn refresh_cache(app: AppHandle) -> Result<(), String> {
     }
 
     // Otherwise, do normal cache refresh
-    let _ = app.emit("db-loading-progress", "Connecting to database...");
+    let _ = app.emit("db-loading-progress", "Preparing notes database...");
     let mut conn = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -867,7 +861,7 @@ async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         }
     };
 
-    let _ = app.emit("db-loading-progress", "Initializing database...");
+    let _ = app.emit("db-loading-progress", "Setting up notes database...");
     if let Err(e) = init_db(&conn) {
         let _ = app.emit(
             "db-loading-error",
@@ -876,7 +870,7 @@ async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         return Err(format!("Database initialization error: {}", e));
     }
 
-    let _ = app.emit("db-loading-progress", "Syncing notes from filesystem...");
+    let _ = app.emit("db-loading-progress", "Loading notes...");
 
     // Use spawn_blocking for CPU-intensive database operations
     let result = tokio::task::spawn_blocking(move || load_all_notes_into_sqlite(&mut conn))

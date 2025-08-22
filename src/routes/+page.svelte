@@ -14,6 +14,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   import InputDialog from '../lib/ui/InputDialog.svelte'
   import DeleteDialog from '../lib/ui/DeleteDialog.svelte'
   import SettingsPane from '../lib/ui/SettingsPane.svelte'
+  import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
   import DebugPanel from '../lib/ui/DebugPanel.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
   import { createSearchManager } from '../lib/core/searchManager.svelte'
@@ -44,7 +45,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   setContext('actions', appCoordinator.actions)
 
   // Access properties directly since this is the root component
-  const { dialogManager } = appCoordinator.managers
+  const { dialogManager, progressManager } = appCoordinator.managers
   const appState = appCoordinator.state
   const actions = appCoordinator.actions
 
@@ -121,6 +122,12 @@ Composes all UI components and provides keyboard event handling for the entire a
       variant="default"
       onConfirm={() => dialogManager.handleSaveAndExit(actions.saveAndExitNote)}
       onCancel={() => dialogManager.handleDiscardAndExit(actions.exitEditMode)}
+    />
+
+    <ProgressOverlay
+      show={progressManager.isLoading}
+      message={progressManager.message}
+      error={progressManager.error}
     />
   </div>
 </AppLayout>
