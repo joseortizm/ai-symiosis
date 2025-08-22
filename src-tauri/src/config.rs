@@ -157,7 +157,7 @@ impl Default for InterfaceConfig {
             editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
             editor_font_size: 14,
             markdown_render_theme: "dark_dimmed".to_string(),
-            md_render_code_theme: "base16-ocean.dark".to_string(),
+            md_render_code_theme: "gruvbox-dark".to_string(),
             default_width: 1200,
             default_height: 800,
             center_on_startup: true,
@@ -314,144 +314,10 @@ fn get_static_css_path() -> PathBuf {
     std::path::Path::new("./static/css").to_path_buf()
 }
 
-/// Generate configuration template with dynamic theme options
+/// Generate a simple configuration template (deprecated - returns empty string)
+/// The app now creates a clean default config automatically via AppConfig::default()
 pub fn generate_config_template() -> String {
-    let ui_themes = get_available_ui_themes();
-    let markdown_themes = get_available_markdown_themes();
-
-    let ui_themes_comment = ui_themes
-        .iter()
-        .map(|theme| format!("\"{}\"", theme))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    let markdown_themes_comment = markdown_themes
-        .iter()
-        .map(|theme| format!("\"{}\"", theme))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    format!(
-        r#"# Symiosis Configuration File
-# Uncomment and modify the options below to configure the application
-
-# ============================
-# TOP-LEVEL ESSENTIAL SETTINGS
-# ============================
-
-# Default: ~/Documents/Notes (or equivalent on your system)
-notes_directory = "{DEFAULT_NOTES_DIR}"
-
-# Format: modifier keys + key (e.g., "Ctrl+Shift+N", "Cmd+Space", "Alt+F1")
-# Supported modifiers: Ctrl, Alt, Shift, Cmd (macOS), Super (Linux)
-global_shortcut = "Ctrl+Shift+N"
-
-# =====================
-# GENERAL CONFIGURATION
-# =====================
-
-[general]
-# Future extensible core settings
-# This section is reserved for general application behavior settings
-
-# =======================
-# INTERFACE CONFIGURATION
-# =======================
-
-[interface]
-# UI theme for the application interface
-# Options: {ui_themes_comment}
-ui_theme = "gruvbox-dark"
-
-# Font family for the UI
-font_family = "Inter, sans-serif"
-
-# Font size for the UI (in pixels)
-font_size = 14
-
-# Font family for the editor
-editor_font_family = "JetBrains Mono, Consolas, monospace"
-
-# Font size for the editor (in pixels)
-editor_font_size = 14
-
-# Markdown rendering theme for note content
-# Options: {markdown_themes_comment}
-markdown_render_theme = "dark_dimmed"
-
-# Code syntax highlighting theme for markdown code blocks
-# Options: "base16-ocean.dark", "base16-eighties.dark", "base16-mocha.dark",
-#          "base16-ocean.light", "InspiredGitHub", "Solarized (dark)", "Solarized (light)"
-# Note: After changing this theme, press Ctrl+R to refresh cache and apply to all existing notes
-# TODO: Support for custom .tmTheme files will be added in the future
-md_render_code_theme = "base16-ocean.dark"
-
-# Window appearance and behavior
-default_width = 1200
-default_height = 800
-center_on_startup = true
-remember_size = true
-remember_position = true
-always_on_top = false
-
-# ====================
-# EDITOR CONFIGURATION
-# ====================
-
-[editor]
-# Editor mode: "basic", "vim", "emacs"
-mode = "basic"
-
-# Editor theme (separate from UI theme)
-# Options: "abcdef", "abyss", "android-studio", "andromeda", "basic-dark", "basic-light",
-#          "forest", "github-dark", "github-light", "gruvbox-dark", "gruvbox-light",
-#          "material-dark", "material-light", "monokai", "nord", "palenight",
-#          "solarized-dark", "solarized-light", "tokyo-night-day", "tokyo-night-storm",
-#          "volcano", "vscode-dark", "vscode-light"
-theme = "gruvbox-dark"
-
-# Enable word wrapping
-word_wrap = true
-
-# Tab size in spaces
-tab_size = 2
-
-# Show line numbers
-show_line_numbers = true
-
-# ==================
-# KEYBOARD SHORTCUTS
-# ==================
-
-[shortcuts]
-# All keyboard shortcuts in one unified section
-create_note = "Ctrl+Enter"
-rename_note = "Ctrl+m"
-delete_note = "Ctrl+x"
-save_and_exit = "Ctrl+s"
-open_external = "Ctrl+o"
-open_folder = "Ctrl+f"
-refresh_cache = "Ctrl+r"
-scroll_up = "Ctrl+u"
-scroll_down = "Ctrl+d"
-vim_up = "Ctrl+k"
-vim_down = "Ctrl+j"
-navigate_previous = "Ctrl+p"
-navigate_next = "Ctrl+n"
-open_settings = "Meta+,"
-
-# ===========
-# PREFERENCES
-# ===========
-
-[preferences]
-# Maximum number of search results to display
-max_search_results = 100
-"#,
-        DEFAULT_NOTES_DIR = get_default_notes_dir(),
-        ui_themes_comment = ui_themes_comment,
-        markdown_themes_comment = markdown_themes_comment
-    )
+    String::new()
 }
 
 // ============================================================================
@@ -526,13 +392,30 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
 
     // TODO: Add support for loading custom .tmTheme files in the future
     let valid_md_code_themes = [
-        "base16-ocean.dark",
-        "base16-eighties.dark",
-        "base16-mocha.dark",
-        "base16-ocean.light",
-        "InspiredGitHub",
+        "1337",
+        "Coldark-Cold",
+        "Coldark-Dark",
+        "DarkNeon",
+        "Dracula",
+        "GitHub",
+        "Monokai Extended",
+        "Monokai Extended Bright",
+        "Monokai Extended Light",
+        "Monokai Extended Origin",
+        "Nord",
+        "OneHalfDark",
+        "OneHalfLight",
         "Solarized (dark)",
         "Solarized (light)",
+        "Sublime Snazzy",
+        "TwoDark",
+        "Visual Studio Dark+",
+        "ansi",
+        "base16",
+        "base16-256",
+        "gruvbox-dark",
+        "gruvbox-light",
+        "zenburn",
     ];
     if !valid_md_code_themes.contains(&interface.md_render_code_theme.as_str()) {
         return Err(format!(
@@ -876,13 +759,30 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
         // Extract markdown code theme
         if let Some(theme) = section.get("md_render_code_theme").and_then(|v| v.as_str()) {
             let valid_themes = [
-                "base16-ocean.dark",
-                "base16-eighties.dark",
-                "base16-mocha.dark",
-                "base16-ocean.light",
-                "InspiredGitHub",
+                "1337",
+                "Coldark-Cold",
+                "Coldark-Dark",
+                "DarkNeon",
+                "Dracula",
+                "GitHub",
+                "Monokai Extended",
+                "Monokai Extended Bright",
+                "Monokai Extended Light",
+                "Monokai Extended Origin",
+                "Nord",
+                "OneHalfDark",
+                "OneHalfLight",
                 "Solarized (dark)",
                 "Solarized (light)",
+                "Sublime Snazzy",
+                "TwoDark",
+                "Visual Studio Dark+",
+                "ansi",
+                "base16",
+                "base16-256",
+                "gruvbox-dark",
+                "gruvbox-light",
+                "zenburn",
             ];
             if valid_themes.contains(&theme) {
                 config.md_render_code_theme = theme.to_string();

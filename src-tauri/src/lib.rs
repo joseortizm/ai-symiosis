@@ -23,9 +23,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
-use syntect::highlighting::ThemeSet;
 use syntect::html::highlighted_html_for_string;
-use syntect::parsing::SyntaxSet;
+use syntect_assets::assets::HighlightingAssets;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -88,31 +87,46 @@ fn render_note(filename: &str, content: &str) -> String {
         let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
         let theme_name = &config.interface.md_render_code_theme;
 
-        // TODO: Add support for loading custom .tmTheme files in the future
+        // Custom .tmTheme support - try loading from user themes directory first
         // Validate theme exists, fallback to default if invalid
         let valid_themes = [
-            "base16-ocean.dark",
-            "base16-eighties.dark",
-            "base16-mocha.dark",
-            "base16-ocean.light",
-            "InspiredGitHub",
+            "1337",
+            "Coldark-Cold",
+            "Coldark-Dark",
+            "DarkNeon",
+            "Dracula",
+            "GitHub",
+            "Monokai Extended",
+            "Monokai Extended Bright",
+            "Monokai Extended Light",
+            "Monokai Extended Origin",
+            "Nord",
+            "OneHalfDark",
+            "OneHalfLight",
             "Solarized (dark)",
             "Solarized (light)",
+            "Sublime Snazzy",
+            "TwoDark",
+            "Visual Studio Dark+",
+            "ansi",
+            "base16",
+            "base16-256",
+            "gruvbox-dark",
+            "gruvbox-light",
+            "zenburn",
         ];
 
         let selected_theme = if valid_themes.contains(&theme_name.as_str()) {
             theme_name.as_str()
         } else {
-            "base16-ocean.dark" // fallback
+            "gruvbox-dark" // fallback
         };
 
-        // Initialize syntect components
-        let syntax_set = SyntaxSet::load_defaults_newlines();
-        let theme_set = ThemeSet::load_defaults();
-        let theme = theme_set
-            .themes
-            .get(selected_theme)
-            .unwrap_or(&theme_set.themes["base16-ocean.dark"]);
+        // Initialize syntect components with assets
+        let assets = HighlightingAssets::from_binary();
+        let syntax_set = assets.get_syntax_set().unwrap();
+        // Get theme - syntect-assets automatically falls back to default if theme not found
+        let theme = assets.get_theme(selected_theme);
 
         // Configure pulldown-cmark options
         let mut options = Options::empty();

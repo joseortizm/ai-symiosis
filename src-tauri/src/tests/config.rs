@@ -235,7 +235,7 @@ max_search_results = 200
     assert_eq!(config.preferences.max_search_results, 200);
 
     // Invalid fields should fall back to defaults
-    assert_eq!(config.interface.md_render_code_theme, "base16-ocean.dark"); // default
+    assert_eq!(config.interface.md_render_code_theme, "gruvbox-dark"); // default
     assert_eq!(config.editor.theme, "gruvbox-dark"); // default
 }
 

@@ -59,6 +59,122 @@ When viewing a note (not in edit mode):
 
 *   **`Ctrl + Shift + N`:** Toggle Symiosis window visibility (works system-wide).
 
+## Configuration
+
+Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On first run, a default configuration file is created automatically with sensible defaults.
+
+### Configuration Options
+
+#### Top-Level Settings
+
+- `notes_directory` - Directory where notes are stored (default: `~/Documents/Notes`)
+- `global_shortcut` - Global keyboard shortcut to toggle app visibility (default: `"Ctrl+Shift+N"`)
+
+#### Interface Configuration (`[interface]`)
+
+- `ui_theme` - Application UI theme (default: `"gruvbox-dark"`)
+- `font_family` - UI font family (default: `"Inter, sans-serif"`)
+- `font_size` - UI font size in pixels (default: `14`)
+- `editor_font_family` - Editor font family (default: `"JetBrains Mono, Consolas, monospace"`)
+- `editor_font_size` - Editor font size in pixels (default: `14`)
+- `markdown_render_theme` - Theme for rendered markdown content (default: `"dark_dimmed"`)
+- `md_render_code_theme` - Syntax highlighting theme for code blocks (default: `"gruvbox-dark"`)
+
+**Available Code Highlighting Themes:**
+`1337`, `Coldark-Cold`, `Coldark-Dark`, `DarkNeon`, `Dracula`, `GitHub`, `Monokai Extended`, `Monokai Extended Bright`, `Monokai Extended Light`, `Monokai Extended Origin`, `Nord`, `OneHalfDark`, `OneHalfLight`, `Solarized (dark)`, `Solarized (light)`, `Sublime Snazzy`, `TwoDark`, `Visual Studio Dark+`, `ansi`, `base16`, `base16-256`, `gruvbox-dark`, `gruvbox-light`, `zenburn`
+
+**Window Settings:**
+- `default_width` - Default window width (default: `1200`)
+- `default_height` - Default window height (default: `800`)
+- `center_on_startup` - Center window on startup (default: `true`)
+- `remember_size` - Remember window size between sessions (default: `true`)
+- `remember_position` - Remember window position between sessions (default: `true`)
+- `always_on_top` - Keep window always on top (default: `false`)
+
+#### Editor Configuration (`[editor]`)
+
+- `mode` - Editor mode: `"basic"`, `"vim"`, or `"emacs"` (default: `"basic"`)
+- `theme` - Editor color theme (default: `"gruvbox-dark"`)
+- `word_wrap` - Enable word wrapping (default: `true`)
+- `tab_size` - Tab size in spaces (default: `2`)
+- `show_line_numbers` - Show line numbers in editor (default: `true`)
+
+#### Keyboard Shortcuts (`[shortcuts]`)
+
+All keyboard shortcuts are configurable:
+- `create_note` - Create new note (default: `"Ctrl+Enter"`)
+- `rename_note` - Rename selected note (default: `"Ctrl+m"`)
+- `delete_note` - Delete selected note (default: `"Ctrl+x"`)
+- `save_and_exit` - Save and exit edit mode (default: `"Ctrl+s"`)
+- `open_external` - Open note in external editor (default: `"Ctrl+o"`)
+- `open_folder` - Open notes folder (default: `"Ctrl+f"`)
+- `refresh_cache` - Refresh syntax highlighting cache (default: `"Ctrl+r"`)
+- `scroll_up` - Scroll up in note view (default: `"Ctrl+u"`)
+- `scroll_down` - Scroll down in note view (default: `"Ctrl+d"`)
+- `vim_up` - Navigate up (vim-style) (default: `"Ctrl+k"`)
+- `vim_down` - Navigate down (vim-style) (default: `"Ctrl+j"`)
+- `navigate_previous` - Navigate to previous note (default: `"Ctrl+p"`)
+- `navigate_next` - Navigate to next note (default: `"Ctrl+n"`)
+- `open_settings` - Open settings panel (default: `"Meta+,"`)
+
+#### Preferences (`[preferences]`)
+
+- `max_search_results` - Maximum number of search results to display (default: `100`)
+
+### Example Configuration
+
+The app creates a minimal default configuration like this:
+
+```toml
+notes_directory = "/Users/username/Documents/Notes"
+global_shortcut = "Ctrl+Shift+N"
+
+[general]
+
+[interface]
+ui_theme = "gruvbox-dark"
+font_family = "Inter, sans-serif"
+font_size = 14
+editor_font_family = "JetBrains Mono, Consolas, monospace"
+editor_font_size = 14
+markdown_render_theme = "dark_dimmed"
+md_render_code_theme = "gruvbox-dark"
+default_width = 1200
+default_height = 800
+center_on_startup = true
+remember_size = true
+remember_position = true
+always_on_top = false
+
+[editor]
+mode = "basic"
+theme = "gruvbox-dark"
+word_wrap = true
+tab_size = 2
+show_line_numbers = true
+
+[shortcuts]
+create_note = "Ctrl+Enter"
+rename_note = "Ctrl+m"
+delete_note = "Ctrl+x"
+save_and_exit = "Ctrl+s"
+open_external = "Ctrl+o"
+open_folder = "Ctrl+f"
+refresh_cache = "Ctrl+r"
+scroll_up = "Ctrl+u"
+scroll_down = "Ctrl+d"
+vim_up = "Ctrl+k"
+vim_down = "Ctrl+j"
+navigate_previous = "Ctrl+p"
+navigate_next = "Ctrl+n"
+open_settings = "Meta+,"
+
+[preferences]
+max_search_results = 100
+```
+
+Simply edit the configuration file to customize Symiosis to your preferences.
+
 Have fun 🙂
 
 ---
