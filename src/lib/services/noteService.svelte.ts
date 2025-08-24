@@ -146,6 +146,27 @@ export function createNoteService() {
     }
   }
 
+  // Database initialization
+  async function initializeDatabase(): Promise<{
+    success: boolean
+    error?: string
+  }> {
+    state.isLoading = true
+    state.error = null
+
+    try {
+      await invoke<void>('initialize_notes_with_progress')
+      return { success: true }
+    } catch (e) {
+      const error = `Failed to initialize notes database: ${e}`
+      state.error = error
+      console.error('Failed to initialize notes database:', e)
+      return { success: false, error }
+    } finally {
+      state.isLoading = false
+    }
+  }
+
   // Public API
   return {
     // CRUD operations
@@ -164,6 +185,7 @@ export function createNoteService() {
     // System integration
     openInEditor,
     openFolder,
+    initializeDatabase,
 
     // Utility functions
     clearError,

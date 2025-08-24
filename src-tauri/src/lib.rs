@@ -363,6 +363,13 @@ async fn recreate_database_with_progress(
 }
 
 fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
+    load_all_notes_into_sqlite_with_progress(conn, None)
+}
+
+fn load_all_notes_into_sqlite_with_progress(
+    conn: &mut Connection,
+    app_handle: Option<&AppHandle>,
+) -> rusqlite::Result<()> {
     // Prevent concurrent database operations to avoid FTS5 race conditions
     let _lock = DB_LOCK.lock().unwrap();
 
@@ -375,8 +382,8 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
         }
     }
 
-    // Get current files from filesystem
-    let mut filesystem_files = std::collections::HashMap::new();
+    // Get current files from filesystem, sorted by modification time (newest first)
+    let mut filesystem_files = Vec::new();
 
     for entry in WalkDir::new(&notes_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
@@ -400,9 +407,12 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
                 })
                 .unwrap_or(0);
 
-            filesystem_files.insert(filename, (path.to_path_buf(), modified));
+            filesystem_files.push((filename, path.to_path_buf(), modified));
         }
     }
+
+    // Sort by modification time, newest first
+    filesystem_files.sort_by(|a, b| b.2.cmp(&a.2));
 
     // Get current files from database
     let mut database_files = std::collections::HashMap::new();
@@ -421,28 +431,40 @@ fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     let tx = conn.transaction()?;
 
     // Remove files that no longer exist on filesystem
+    let filesystem_filenames: std::collections::HashSet<_> =
+        filesystem_files.iter().map(|(name, _, _)| name).collect();
     for filename in database_files.keys() {
-        if !filesystem_files.contains_key(filename) {
+        if !filesystem_filenames.contains(filename) {
             tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
         }
     }
 
-    // Add or update files that are new or modified
-    for (filename, (path, fs_modified)) in filesystem_files {
-        let db_modified = database_files.get(&filename).copied().unwrap_or(0);
+    let total_files = filesystem_files.len();
+
+    // Process files with progress reporting
+    for (index, (filename, path, fs_modified)) in filesystem_files.iter().enumerate() {
+        // Emit progress update every 10 files or on first/last file
+        if let Some(app) = app_handle {
+            if index == 0 || (index + 1) % 10 == 0 || index == total_files - 1 {
+                let progress_msg = format!("Loading {} of {} notes...", index + 1, total_files);
+                let _ = app.emit("db-loading-progress", progress_msg);
+            }
+        }
+
+        let db_modified = database_files.get(filename).copied().unwrap_or(0);
 
         // Only update if file is new or has been modified
-        if fs_modified != db_modified {
-            let content = fs::read_to_string(&path).unwrap_or_default();
+        if *fs_modified != db_modified {
+            let content = fs::read_to_string(path).unwrap_or_default();
 
             // Generate HTML render from content
-            let html_render = render_note(&filename, &content);
+            let html_render = render_note(filename, &content);
 
             // EXPLICIT DELETE before insert to avoid FTS5 quirks with INSERT OR REPLACE
             tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
             tx.execute(
                 "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
-                params![filename, content, html_render, fs_modified],
+                params![filename, content, html_render, *fs_modified],
             )?;
         }
     }
@@ -878,6 +900,53 @@ fn delete_note(note_name: &str) -> Result<(), String> {
 
 // Tauri command handlers - System operations
 #[tauri::command]
+async fn initialize_notes_with_progress(app: AppHandle) -> Result<(), String> {
+    // Give frontend a moment to set up event listeners
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    // Emit loading start event
+    let _ = app.emit("db-loading-start", "Initializing notes database...");
+
+    if !get_config_path().exists() {
+        let _ = app.emit("db-loading-complete", ());
+        return Ok(());
+    }
+
+    let _ = app.emit("db-loading-progress", "Setting up notes database...");
+
+    let mut conn = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            let error_msg = format!("Database connection error: {}", e);
+            let _ = app.emit("db-loading-error", &error_msg);
+            return Err(error_msg);
+        }
+    };
+
+    let _ = app.emit("db-loading-progress", "Loading notes from filesystem...");
+
+    // Use spawn_blocking for CPU-intensive database operations
+    let app_clone = app.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        load_all_notes_into_sqlite_with_progress(&mut conn, Some(&app_clone))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?;
+
+    match result {
+        Ok(()) => {
+            let _ = app.emit("db-loading-complete", ());
+            Ok(())
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to initialize notes database: {}", e);
+            let _ = app.emit("db-loading-error", &error_msg);
+            Err(error_msg)
+        }
+    }
+}
+
+#[tauri::command]
 async fn refresh_cache(app: AppHandle) -> Result<(), String> {
     // Emit loading start event
     let _ = app.emit("db-loading-start", "Refreshing notes...");
@@ -1219,7 +1288,7 @@ pub fn initialize_notes() {
     // Clean up any leftover temp files from previous runs
     let _ = cleanup_temp_files();
 
-    let mut conn = match get_db_connection() {
+    let conn = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Failed to open database: {}. Application will continue with limited functionality.", e);
@@ -1244,23 +1313,10 @@ pub fn initialize_notes() {
         if let Err(e) = conn.execute("DELETE FROM notes", []) {
             eprintln!("Failed to purge database: {}. Continuing anyway.", e);
         }
-        return;
     }
 
-    if let Err(e) = load_all_notes_into_sqlite(&mut conn) {
-        eprintln!(
-            "Failed to load notes into database: {}. Attempting recovery...",
-            e
-        );
-
-        // Attempt database recovery
-        if let Err(recovery_error) = recreate_database() {
-            eprintln!(
-                "Database recovery failed: {}. Some notes may not be searchable.",
-                recovery_error
-            );
-        }
-    }
+    // Note: Notes loading is now deferred to async initialization command
+    // This allows the UI to render first before blocking on note loading
 }
 
 // Main application entry point
@@ -1345,6 +1401,7 @@ pub fn run() {
             delete_note,
             rename_note,
             save_note,
+            initialize_notes_with_progress,
             refresh_cache,
             open_note_in_editor,
             open_note_folder,

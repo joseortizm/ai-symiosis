@@ -369,18 +369,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         }
       })
 
-      const configExists = await configService.exists()
-      if (!configExists) {
-        await settingsActions.openSettingsPane()
-      } else {
-        focusManager.focusSearch()
-        const notes = await searchManager.searchImmediate('')
-        if (notes.length > 0) {
-          focusManager.setSelectedIndex(0)
-          await loadNoteContent(notes[0])
-        }
-      }
-
       const unlisten = await listen('open-preferences', async () => {
         await settingsActions.openSettingsPane()
       })
@@ -389,7 +377,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         await refreshUI()
       })
 
-      // Database loading progress event listeners
+      // Database loading progress event listeners - MUST be set up before initialization
       const unlistenDbLoadingStart = await listen<string>(
         'db-loading-start',
         (event) => {
@@ -417,6 +405,24 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
           progressManager.setError(event.payload)
         }
       )
+
+      const configExists = await configService.exists()
+      if (!configExists) {
+        await settingsActions.openSettingsPane()
+      } else {
+        // Initialize notes database with progress
+        const result = await noteService.initializeDatabase()
+        if (!result.success) {
+          console.error('Failed to initialize notes:', result.error)
+        }
+
+        focusManager.focusSearch()
+        const notes = await searchManager.searchImmediate('')
+        if (notes.length > 0) {
+          focusManager.setSelectedIndex(0)
+          await loadNoteContent(notes[0])
+        }
+      }
 
       const cleanupEffects = setupReactiveEffects()
 
