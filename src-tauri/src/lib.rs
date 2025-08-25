@@ -24,6 +24,7 @@ use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use syntect::html::highlighted_html_for_string;
+use syntect::parsing::SyntaxSet;
 use syntect_assets::assets::HighlightingAssets;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -44,6 +45,15 @@ static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 // Track last used theme to detect changes
 static LAST_RENDER_THEME: LazyLock<RwLock<Option<String>>> = LazyLock::new(|| RwLock::new(None));
+
+// Cache syntax highlighting assets globally to avoid loading for every file
+// Using Mutex to make them thread-safe since HighlightingAssets is not Sync
+static SYNTAX_ASSETS: LazyLock<Mutex<HighlightingAssets>> =
+    LazyLock::new(|| Mutex::new(HighlightingAssets::from_binary()));
+static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(|| {
+    let assets = SYNTAX_ASSETS.lock().unwrap();
+    assets.get_syntax_set().unwrap().clone()
+});
 
 fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
@@ -122,11 +132,13 @@ fn render_note(filename: &str, content: &str) -> String {
             "gruvbox-dark" // fallback
         };
 
-        // Initialize syntect components with assets
-        let assets = HighlightingAssets::from_binary();
-        let syntax_set = assets.get_syntax_set().unwrap();
-        // Get theme - syntect-assets automatically falls back to default if theme not found
-        let theme = assets.get_theme(selected_theme);
+        // Use cached syntect components for performance
+        let syntax_set = &*SYNTAX_SET; // Use cached syntax set
+                                       // Get theme - syntect-assets automatically falls back to default if theme not found
+        let theme = {
+            let assets = SYNTAX_ASSETS.lock().unwrap();
+            assets.get_theme(selected_theme).clone()
+        };
 
         // Configure pulldown-cmark options
         let mut options = Options::empty();
@@ -167,9 +179,9 @@ fn render_note(filename: &str, content: &str) -> String {
                             if let Some(syntax) = syntax_set.find_syntax_by_token(lang) {
                                 highlighted_html_for_string(
                                     &code_content,
-                                    &syntax_set,
+                                    syntax_set,
                                     syntax,
-                                    theme,
+                                    &theme,
                                 )
                                 .unwrap_or_else(|_| {
                                     format!(
