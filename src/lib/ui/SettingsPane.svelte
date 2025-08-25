@@ -35,8 +35,13 @@ Uses CodeEditor component for syntax highlighting of configuration files.
       handleCancel()
     } else if (event.ctrlKey && event.key === 's') {
       event.preventDefault()
-      handleSave()
+      handleSaveAndClose()
     }
+  }
+
+  async function handleSaveAndClose(): Promise<void> {
+    await actions.saveConfigAndRefresh()
+    onClose()
   }
 
   function handleOverlayClick(e: MouseEvent): void {
