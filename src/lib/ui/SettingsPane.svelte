@@ -110,31 +110,27 @@ Uses CodeEditor component for syntax highlighting of configuration files.
     border: 1px solid #504945;
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    max-height: 90vh;
-    overflow: auto;
-    padding: 24px;
+    overflow: hidden;
+    padding: 12px;
   }
 
   .dialog h3 {
-    margin: 0 0 16px 0;
+    margin: 0 0 8px 0;
     color: #ebdbb2;
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: 600;
   }
 
   .settings-pane {
-    width: 900px;
-    max-width: 90vw;
-    height: 500px;
-    max-height: 80vh;
+    width: 95vw;
+    height: 92vh;
     display: flex;
     flex-direction: column;
   }
 
   .settings-editor-container {
     width: 100%;
-    height: 500px;
-    margin: 16px 0;
+    margin: 8px 0;
     border: 1px solid #504945;
     border-radius: 6px;
     overflow: hidden;
@@ -145,22 +141,22 @@ Uses CodeEditor component for syntax highlighting of configuration files.
 
   .settings-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-content: flex-end;
-    margin-top: 16px;
+    margin-top: 8px;
   }
 
   .keyboard-hint {
-    margin: 16px 0;
-    padding: 12px;
+    margin: 6px 0;
+    padding: 6px 8px;
     background-color: #32302f;
     border-radius: 4px;
-    border-left: 3px solid #83a598;
+    border-left: 2px solid #83a598;
   }
 
   .keyboard-hint p {
-    margin: 4px 0;
-    font-size: 13px;
+    margin: 2px 0;
+    font-size: 11px;
     color: #a89984;
   }
 
@@ -176,10 +172,10 @@ Uses CodeEditor component for syntax highlighting of configuration files.
   }
 
   .settings-buttons button {
-    padding: 8px 16px;
+    padding: 6px 12px;
     border: none;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
     font-weight: 500;
   }
