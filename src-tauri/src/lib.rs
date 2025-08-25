@@ -477,20 +477,17 @@ fn load_all_notes_into_sqlite_with_progress(
         if *fs_modified != db_modified {
             let content = fs::read_to_string(path).unwrap_or_default();
 
-            // EXPLICIT DELETE before insert to avoid FTS5 quirks with INSERT OR REPLACE
-            tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
-
             if index < IMMEDIATE_RENDER_COUNT {
                 // First 300 files: full processing with HTML render
                 let html_render = render_note(filename, &content);
                 tx.execute(
-                    "INSERT INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![filename, content, html_render, *fs_modified, true],
                 )?;
             } else {
                 // Remaining files: metadata only, defer HTML rendering
                 tx.execute(
-                    "INSERT INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![filename, content, "", *fs_modified, false],
                 )?;
             }
