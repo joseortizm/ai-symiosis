@@ -55,6 +55,10 @@ static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(|| {
     assets.get_syntax_set().unwrap().clone()
 });
 
+// Number of most recent notes to get immediate HTML rendering during startup
+// Remaining notes get metadata-only and are processed in background
+const IMMEDIATE_RENDER_COUNT: usize = 300;
+
 fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
     PathBuf::from(&config.notes_directory)
@@ -297,7 +301,7 @@ fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
 
 // Database operations
 fn init_db(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, html_render, modified UNINDEXED);")?;
+    conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, html_render, modified UNINDEXED, is_indexed UNINDEXED);")?;
 
     // Check for corruption by looking for duplicate filenames
     let mut stmt = conn.prepare(
@@ -429,14 +433,18 @@ fn load_all_notes_into_sqlite_with_progress(
     // Get current files from database
     let mut database_files = std::collections::HashMap::new();
     {
-        let mut stmt = conn.prepare("SELECT filename, modified FROM notes")?;
+        let mut stmt = conn.prepare("SELECT filename, modified, is_indexed FROM notes")?;
         let rows = stmt.query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, bool>(2).unwrap_or(false),
+            ))
         })?;
 
         for row in rows {
-            let (filename, modified) = row?;
-            database_files.insert(filename, modified);
+            let (filename, modified, is_indexed) = row?;
+            database_files.insert(filename, (modified, is_indexed));
         }
     }
 
@@ -463,20 +471,36 @@ fn load_all_notes_into_sqlite_with_progress(
             }
         }
 
-        let db_modified = database_files.get(filename).copied().unwrap_or(0);
+        let (db_modified, is_indexed) = database_files.get(filename).copied().unwrap_or((0, false));
 
         // Only update if file is new or has been modified
         if *fs_modified != db_modified {
             let content = fs::read_to_string(path).unwrap_or_default();
 
-            // Generate HTML render from content
-            let html_render = render_note(filename, &content);
-
             // EXPLICIT DELETE before insert to avoid FTS5 quirks with INSERT OR REPLACE
             tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
+
+            if index < IMMEDIATE_RENDER_COUNT {
+                // First 300 files: full processing with HTML render
+                let html_render = render_note(filename, &content);
+                tx.execute(
+                    "INSERT INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![filename, content, html_render, *fs_modified, true],
+                )?;
+            } else {
+                // Remaining files: metadata only, defer HTML rendering
+                tx.execute(
+                    "INSERT INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![filename, content, "", *fs_modified, false],
+                )?;
+            }
+        } else if !is_indexed && index < IMMEDIATE_RENDER_COUNT {
+            // File hasn't changed but needs indexing (upgrade existing entry)
+            let content = fs::read_to_string(path).unwrap_or_default();
+            let html_render = render_note(filename, &content);
             tx.execute(
-                "INSERT INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
-                params![filename, content, html_render, *fs_modified],
+                "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
+                params![filename, html_render, true],
             )?;
         }
     }
@@ -591,8 +615,8 @@ fn create_new_note(note_name: &str) -> Result<(), String> {
             // Generate HTML render for empty content
             let html_render = render_note(note_name, "");
             match conn.execute(
-                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
-                params![note_name, "", html_render, modified],
+                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![note_name, "", html_render, modified, true],
             ) {
                 Ok(_) => Ok(()),
                 Err(e) => {
@@ -693,16 +717,16 @@ fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> Res
     // First try to update existing note
     let updated_rows = conn
         .execute(
-            "UPDATE notes SET content = ?2, html_render = ?3, modified = ?4 WHERE filename = ?1",
-            params![note_name, content, html_render, modified],
+            "UPDATE notes SET content = ?2, html_render = ?3, modified = ?4, is_indexed = ?5 WHERE filename = ?1",
+            params![note_name, content, html_render, modified, true],
         )
         .map_err(|e| format!("Database error: {}", e))?;
 
     // If no rows were updated, insert new note
     if updated_rows == 0 {
         conn.execute(
-            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified) VALUES (?1, ?2, ?3, ?4)",
-            params![note_name, content, html_render, modified],
+            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![note_name, content, html_render, modified, true],
         )
         .map_err(|e| format!("Database error: {}", e))?;
     }
