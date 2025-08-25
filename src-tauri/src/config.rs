@@ -394,13 +394,13 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
     let valid_md_code_themes = [
         // Gruvbox variants
         "gruvbox-dark-hard",
-        "gruvbox-dark-medium", 
+        "gruvbox-dark-medium",
         "gruvbox-dark-soft",
         "gruvbox-light-hard",
         "gruvbox-light-medium",
         // Popular dark themes
         "atom-one-dark",
-        "dracula", 
+        "dracula",
         "nord",
         "monokai",
         "github-dark",
@@ -410,7 +410,7 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
         // Popular light themes
         "atom-one-light",
         "github",
-        "vs", 
+        "vs",
         "xcode",
         "tokyo-night-light",
         // Base16 classics
@@ -765,13 +765,13 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             let valid_themes = [
                 // Gruvbox variants
                 "gruvbox-dark-hard",
-                "gruvbox-dark-medium", 
+                "gruvbox-dark-medium",
                 "gruvbox-dark-soft",
                 "gruvbox-light-hard",
                 "gruvbox-light-medium",
                 // Popular dark themes
                 "atom-one-dark",
-                "dracula", 
+                "dracula",
                 "nord",
                 "monokai",
                 "github-dark",
@@ -781,7 +781,7 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
                 // Popular light themes
                 "atom-one-light",
                 "github",
-                "vs", 
+                "vs",
                 "xcode",
                 "tokyo-night-light",
                 // Base16 classics

@@ -1,4 +1,5 @@
 // Module declarations
+mod commands;
 mod config;
 mod database;
 mod search;
@@ -7,10 +8,11 @@ mod tests;
 mod watcher;
 
 // External crates
+use commands::*;
 use config::{
-    generate_config_template, get_available_themes, get_config_path, get_editor_config,
-    get_general_config, get_interface_config, get_preferences_config, get_shortcuts_config,
-    load_config, parse_shortcut, reload_config, save_config_content, AppConfig,
+    get_available_themes, get_config_path, get_editor_config, get_general_config,
+    get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
+    parse_shortcut, save_config_content, AppConfig,
 };
 use database::{
     get_backup_dir_for_notes_path, get_database_path as get_db_path, get_db_connection,
@@ -19,7 +21,6 @@ use database::{
 use html_escape;
 use pulldown_cmark::{html, Options, Parser};
 use rusqlite::{params, Connection};
-use search::search_notes_hybrid;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, RwLock};
@@ -27,16 +28,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder,
+    AppHandle, Emitter, Manager,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use walkdir::WalkDir;
 use watcher::setup_notes_watcher;
 
 // Global static configuration
-static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
+pub static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
 
-static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 // Global database lock to prevent concurrent database operations
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
@@ -45,12 +46,12 @@ static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 // Remaining notes get metadata-only and are processed in background
 const IMMEDIATE_RENDER_COUNT: usize = 300;
 
-fn get_config_notes_dir() -> PathBuf {
+pub fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
     PathBuf::from(&config.notes_directory)
 }
 
-fn validate_note_name(note_name: &str) -> Result<(), String> {
+pub fn validate_note_name(note_name: &str) -> Result<(), String> {
     // Check for empty name
     if note_name.trim().is_empty() {
         return Err("Note name cannot be empty".to_string());
@@ -81,7 +82,7 @@ fn validate_note_name(note_name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn render_note(filename: &str, content: &str) -> String {
+pub fn render_note(filename: &str, content: &str) -> String {
     if filename.ends_with(".md") || filename.ends_with(".markdown") {
         // Configure pulldown-cmark options
         let mut options = Options::empty();
@@ -102,7 +103,7 @@ fn render_note(filename: &str, content: &str) -> String {
 }
 
 // Atomic file operations with backup support
-fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
+pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
     // 1. Create backup in app data directory (preserving relative path structure)
     if note_path.exists() {
         let backup_path = safe_backup_path(note_path)?.with_extension("md.bak");
@@ -156,7 +157,7 @@ fn cleanup_temp_files() -> Result<(), String> {
     Ok(())
 }
 
-fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
+pub fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
     let notes_dir = get_config_notes_dir();
     let backup_dir = get_backup_dir_for_notes_path(&notes_dir)?;
 
@@ -173,7 +174,7 @@ fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
 }
 
 // Database operations
-fn init_db(conn: &Connection) -> rusqlite::Result<()> {
+pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, html_render, modified UNINDEXED, is_indexed UNINDEXED);")?;
 
     // Check for corruption by looking for duplicate filenames
@@ -200,7 +201,7 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-fn recreate_database() -> Result<(), String> {
+pub fn recreate_database() -> Result<(), String> {
     eprintln!("Database corruption detected. Recreating database tables...");
 
     let mut conn = get_db_connection()?;
@@ -221,7 +222,7 @@ fn recreate_database() -> Result<(), String> {
     Ok(())
 }
 
-async fn recreate_database_with_progress(
+pub async fn recreate_database_with_progress(
     app_handle: &AppHandle,
     reason: &str,
 ) -> Result<(), String> {
@@ -251,11 +252,11 @@ async fn recreate_database_with_progress(
     Ok(())
 }
 
-fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
+pub fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
     load_all_notes_into_sqlite_with_progress(conn, None)
 }
 
-fn load_all_notes_into_sqlite_with_progress(
+pub fn load_all_notes_into_sqlite_with_progress(
     conn: &mut Connection,
     app_handle: Option<&AppHandle>,
 ) -> rusqlite::Result<()> {
@@ -378,232 +379,11 @@ fn load_all_notes_into_sqlite_with_progress(
     tx.commit()
 }
 
-// Tauri command handlers - Query operations
-#[tauri::command]
-fn list_all_notes() -> Result<Vec<String>, String> {
-    let conn = get_db_connection()?;
-
-    let mut stmt = conn
-        .prepare("SELECT filename FROM notes ORDER BY modified DESC")
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map([], |row| row.get(0))
-        .map_err(|e| e.to_string())?;
-    let mut results = Vec::new();
-    for r in rows {
-        if let Ok(filename) = r {
-            results.push(filename);
-        }
-    }
-
-    Ok(results)
-}
-
-#[tauri::command]
-fn search_notes(query: &str) -> Result<Vec<String>, String> {
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    search_notes_hybrid(query, config.preferences.max_search_results)
-}
-
-#[tauri::command]
-fn get_note_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)?;
-
-    let conn = get_db_connection().map_err(|e| e.to_string())?;
-    let mut stmt = conn
-        .prepare("SELECT content FROM notes WHERE filename = ?1")
-        .map_err(|e| e.to_string())?;
-
-    let content = stmt
-        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-        .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
-
-    Ok(content)
-}
-
-#[tauri::command]
-fn get_note_raw_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)?;
-
-    let conn = get_db_connection().map_err(|e| e.to_string())?;
-    let mut stmt = conn
-        .prepare("SELECT content FROM notes WHERE filename = ?1")
-        .map_err(|e| e.to_string())?;
-
-    let content = stmt
-        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-        .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
-
-    Ok(content)
-}
-
-#[tauri::command]
-fn get_note_html_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)?;
-
-    let conn = get_db_connection().map_err(|e| e.to_string())?;
-
-    // Check if note is indexed and get content
-    let mut stmt = conn
-        .prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")
-        .map_err(|e| e.to_string())?;
-
-    let (html_content, is_indexed, content): (String, bool, String) = stmt
-        .query_row(params![note_name], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, bool>(1).unwrap_or(false),
-                row.get::<_, String>(2)?,
-            ))
-        })
-        .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
-
-    if is_indexed {
-        // Already indexed, return cached HTML
-        Ok(html_content)
-    } else {
-        // Not indexed, generate HTML and update database
-        let html_render = render_note(note_name, &content);
-
-        // Update the database with the rendered HTML
-        if let Err(e) = conn.execute(
-            "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
-            params![note_name, html_render, true],
-        ) {
-            eprintln!("Failed to update note indexing for '{}': {}", note_name, e);
-            // Still return the rendered content even if database update fails
-        }
-
-        Ok(html_render)
-    }
-}
-
-// Tauri command handlers - Mutation operations
-#[tauri::command]
-fn create_new_note(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-
-    let note_path = get_config_notes_dir().join(note_name);
-
-    // Check if note already exists
-    if note_path.exists() {
-        return Err(format!("Note '{}' already exists", note_name));
-    }
-
-    // Create parent directories if they don't exist
-    if let Some(parent) = note_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
-    }
-
-    // 1. Create empty note file atomically (no backup needed for new files)
-    safe_write_note(&note_path, "")?;
-
-    // 2. Update database (if this fails, we rebuild from files)
-    let modified = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
-
-    match get_db_connection() {
-        Ok(conn) => {
-            // Generate HTML render for empty content
-            let html_render = render_note(note_name, "");
-            match conn.execute(
-                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![note_name, "", html_render, modified, true],
-            ) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    eprintln!(
-                        "Database insert failed for '{}': {}. Rebuilding database...",
-                        note_name, e
-                    );
-
-                    // Database operation failed - rebuild from markdown files
-                    match recreate_database() {
-                        Ok(()) => {
-                            eprintln!("Database successfully rebuilt from files.");
-                            Ok(())
-                        }
-                        Err(rebuild_error) => {
-                            eprintln!("Database rebuild failed: {}. Note was created but may not be searchable.", rebuild_error);
-                            // Don't fail the user operation - file was created successfully
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Database connection failed for '{}': {}. Rebuilding database...",
-                note_name, e
-            );
-
-            // Database connection failed - rebuild from markdown files
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!(
-                        "Database rebuild failed: {}. Note was created but may not be searchable.",
-                        rebuild_error
-                    );
-                    // Don't fail the user operation - file was created successfully
-                    Ok(())
-                }
-            }
-        }
-    }
-}
-
-#[tauri::command]
-fn save_note(note_name: &str, content: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-
-    // Ensure parent directory exists
-    if let Some(parent) = note_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
-    }
-
-    // 1. Write file atomically with backup (file operation is primary, never fails the user)
-    safe_write_note(&note_path, content)?;
-
-    // 2. Update database (if this fails, we rebuild from files)
-    let modified = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
-
-    match update_note_in_database(note_name, content, modified) {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            eprintln!(
-                "Database update failed for '{}': {}. Rebuilding database...",
-                note_name, e
-            );
-
-            // Database operation failed - rebuild from markdown files
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!("Database rebuild failed: {}. Note was saved to file but may not be searchable.", rebuild_error);
-                    // Don't fail the user operation - file was saved successfully
-                    Ok(())
-                }
-            }
-        }
-    }
-}
-
-fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> Result<(), String> {
+pub fn update_note_in_database(
+    note_name: &str,
+    content: &str,
+    modified: i64,
+) -> Result<(), String> {
     let conn = get_db_connection()?;
 
     // Generate HTML render from content
@@ -626,445 +406,6 @@ fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> Res
         .map_err(|e| format!("Database error: {}", e))?;
     }
 
-    Ok(())
-}
-
-#[tauri::command]
-fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
-    validate_note_name(&old_name)?;
-    validate_note_name(&new_name)?;
-
-    let notes_dir = get_config_notes_dir();
-    let old_path = notes_dir.join(&old_name);
-    let new_path = notes_dir.join(&new_name);
-
-    // If source file doesn't exist, it may have been renamed/deleted externally
-    if !old_path.exists() {
-        // Check if the target file already exists - this might be an external rename
-        if new_path.exists() {
-            // File was likely renamed externally - update database to reflect this
-            match get_db_connection() {
-                Ok(conn) => {
-                    let _ = conn.execute(
-                        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                        params![new_name, old_name],
-                    );
-                }
-                Err(_) => {
-                    // Database connection failed - trigger rebuild
-                    let _ = recreate_database();
-                }
-            }
-            return Ok(()); // Success - rename already happened externally
-        } else {
-            // File was deleted externally
-            return Err(format!("Note '{}' not found", old_name));
-        }
-    }
-
-    if new_path.exists() {
-        return Err(format!("Note '{}' already exists", new_name));
-    }
-
-    // 1. Create backup before rename operation
-    let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
-
-    // Ensure backup directory structure exists
-    if let Some(backup_parent) = backup_path.parent() {
-        fs::create_dir_all(backup_parent)
-            .map_err(|e| format!("Failed to create backup directory: {}", e))?;
-    }
-
-    // Copy to backup
-    fs::copy(&old_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
-
-    // 2. Rename the file atomically
-    fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))?;
-
-    // 3. Update database (if this fails, we can restore from backup)
-    match get_db_connection() {
-        Ok(conn) => {
-            match conn.execute(
-                "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                params![new_name, old_name],
-            ) {
-                Ok(_) => {
-                    // Success - cleanup backup
-                    let _ = fs::remove_file(&backup_path);
-                    Ok(())
-                }
-                Err(e) => {
-                    eprintln!("Database update failed for rename '{}' -> '{}': {}. Rebuilding database...", old_name, new_name, e);
-
-                    // Database operation failed - rebuild from markdown files
-                    match recreate_database() {
-                        Ok(()) => {
-                            eprintln!("Database successfully rebuilt from files.");
-                            // Success - cleanup backup
-                            let _ = fs::remove_file(&backup_path);
-                            Ok(())
-                        }
-                        Err(rebuild_error) => {
-                            eprintln!("Database rebuild failed: {}. Note was renamed but may not be searchable.", rebuild_error);
-                            // Don't fail the user operation - file was renamed successfully
-                            // Keep backup for potential manual recovery
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Database connection failed for rename '{}' -> '{}': {}. Rebuilding database...",
-                old_name, new_name, e
-            );
-
-            // Database connection failed - rebuild from markdown files
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    // Success - cleanup backup
-                    let _ = fs::remove_file(&backup_path);
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!(
-                        "Database rebuild failed: {}. Note was renamed but may not be searchable.",
-                        rebuild_error
-                    );
-                    // Don't fail the user operation - file was renamed successfully
-                    // Keep backup for potential manual recovery
-                    Ok(())
-                }
-            }
-        }
-    }
-}
-
-#[tauri::command]
-fn delete_note(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-
-    // If note doesn't exist on filesystem, just remove from database and return success
-    if !note_path.exists() {
-        // File was already deleted externally - just clean up database
-        match get_db_connection() {
-            Ok(conn) => {
-                let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
-            }
-            Err(_) => {
-                // Database connection failed - trigger rebuild
-                let _ = recreate_database();
-            }
-        }
-        return Ok(()); // Success - file is already gone
-    }
-
-    // 1. Create backup before deletion (for potential recovery)
-    let backup_path = safe_backup_path(&note_path)?.with_extension("md.bak.deleted");
-
-    // Ensure backup directory structure exists
-    if let Some(backup_parent) = backup_path.parent() {
-        fs::create_dir_all(backup_parent)
-            .map_err(|e| format!("Failed to create backup directory: {}", e))?;
-    }
-
-    // Copy to backup before deletion
-    fs::copy(&note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
-
-    // 2. Delete the file
-    fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
-
-    // 3. Update database (if this fails, we rebuild from remaining files)
-    match get_db_connection() {
-        Ok(conn) => {
-            match conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]) {
-                Ok(_) => {
-                    // Success - keep backup for a while in case user wants to restore
-                    // Note: We intentionally keep the backup file for potential recovery
-                    Ok(())
-                }
-                Err(e) => {
-                    eprintln!(
-                        "Database delete failed for '{}': {}. Rebuilding database...",
-                        note_name, e
-                    );
-
-                    // Database operation failed - rebuild from remaining markdown files
-                    match recreate_database() {
-                        Ok(()) => {
-                            eprintln!("Database successfully rebuilt from files.");
-                            Ok(())
-                        }
-                        Err(rebuild_error) => {
-                            eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
-                            // Don't fail the user operation - file was deleted successfully
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Database connection failed for delete '{}': {}. Rebuilding database...",
-                note_name, e
-            );
-
-            // Database connection failed - rebuild from remaining markdown files
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
-                    // Don't fail the user operation - file was deleted successfully
-                    Ok(())
-                }
-            }
-        }
-    }
-}
-
-// Tauri command handlers - System operations
-#[tauri::command]
-async fn initialize_notes_with_progress(app: AppHandle) -> Result<(), String> {
-    // Give frontend a moment to set up event listeners
-    std::thread::sleep(std::time::Duration::from_millis(50));
-
-    // Emit loading start event
-    let _ = app.emit("db-loading-start", "Initializing notes database...");
-
-    if !get_config_path().exists() {
-        let _ = app.emit("db-loading-complete", ());
-        return Ok(());
-    }
-
-    let _ = app.emit("db-loading-progress", "Setting up notes database...");
-
-    let mut conn = match get_db_connection() {
-        Ok(conn) => conn,
-        Err(e) => {
-            let error_msg = format!("Database connection error: {}", e);
-            let _ = app.emit("db-loading-error", &error_msg);
-            return Err(error_msg);
-        }
-    };
-
-    let _ = app.emit("db-loading-progress", "Loading notes from filesystem...");
-
-    // Use spawn_blocking for CPU-intensive database operations
-    let app_clone = app.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        load_all_notes_into_sqlite_with_progress(&mut conn, Some(&app_clone))
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?;
-
-    match result {
-        Ok(()) => {
-            let _ = app.emit("db-loading-complete", ());
-            Ok(())
-        }
-        Err(e) => {
-            let error_msg = format!("Failed to initialize notes database: {}", e);
-            let _ = app.emit("db-loading-error", &error_msg);
-            Err(error_msg)
-        }
-    }
-}
-
-#[tauri::command]
-async fn refresh_cache(app: AppHandle) -> Result<(), String> {
-    // Emit loading start event
-    let _ = app.emit("db-loading-start", "Refreshing notes...");
-    let _ = app.emit("db-loading-progress", "Loading settings...");
-
-    // Reload config first
-    if let Err(e) = reload_config(&APP_CONFIG, Some(app.clone())) {
-        let _ = app.emit(
-            "db-loading-error",
-            format!("Failed to reload config: {}", e),
-        );
-        return Err(format!("Failed to reload config: {}", e));
-    }
-
-    // Do normal cache refresh
-    let _ = app.emit("db-loading-progress", "Preparing notes database...");
-    let mut conn = match get_db_connection() {
-        Ok(conn) => conn,
-        Err(e) => {
-            let _ = app.emit(
-                "db-loading-error",
-                format!("Database connection error: {}", e),
-            );
-            return Err(format!("Database connection error: {}", e));
-        }
-    };
-
-    let _ = app.emit("db-loading-progress", "Setting up notes database...");
-    if let Err(e) = init_db(&conn) {
-        let _ = app.emit(
-            "db-loading-error",
-            format!("Database initialization error: {}", e),
-        );
-        return Err(format!("Database initialization error: {}", e));
-    }
-
-    let _ = app.emit("db-loading-progress", "Loading notes...");
-
-    // Use spawn_blocking for CPU-intensive database operations
-    let result = tokio::task::spawn_blocking(move || load_all_notes_into_sqlite(&mut conn))
-        .await
-        .map_err(|e| format!("Task join error: {}", e))?;
-
-    match result {
-        Ok(()) => {
-            let _ = app.emit("db-loading-complete", ());
-            Ok(())
-        }
-        Err(e) => {
-            let _ = app.emit(
-                "db-loading-progress",
-                "Database sync failed, attempting recovery...",
-            );
-            eprintln!(
-                "Failed to refresh notes cache: {}. Attempting recovery...",
-                e
-            );
-
-            // Attempt database recovery
-            let result = recreate_database_with_progress(
-                &app,
-                "Database corruption detected. Recreating database tables...",
-            )
-            .await
-            .map_err(|recovery_error| {
-                format!(
-                    "Cache refresh failed and recovery failed: {}. Original error: {}",
-                    recovery_error, e
-                )
-            });
-
-            if result.is_ok() {
-                let _ = app.emit("db-loading-complete", ());
-            } else if let Err(ref e) = result {
-                let _ = app.emit("db-loading-error", e);
-            }
-            result
-        }
-    }
-}
-
-#[tauri::command]
-fn open_note_in_editor(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-    if !note_path.exists() {
-        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
-    }
-
-    std::process::Command::new("open")
-        // .arg("-a")
-        // .arg("TextEdit")
-        .arg(&note_path)
-        .status()
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-fn open_note_folder(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-    if !note_path.exists() {
-        return Err(format!("Note not found: {}", note_name)); // Frontend depends on this exact error message format
-    }
-
-    #[cfg(target_os = "macos")]
-    std::process::Command::new("open")
-        .arg("-R")
-        .arg(note_path)
-        .status()
-        .map_err(|e| e.to_string())?;
-
-    #[cfg(target_os = "windows")]
-    {
-        let path_str = note_path.to_str().ok_or("Invalid path encoding")?;
-        std::process::Command::new("explorer")
-            .arg(format!("/select,\"{}\"", path_str)) // Quotes required for spaces
-            .status()
-            .map_err(|e| e.to_string())?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let folder_path = note_path.parent().ok_or("Unable to determine folder")?;
-        std::process::Command::new("xdg-open")
-            .arg(folder_path)
-            .status()
-            .map_err(|e| e.to_string())?;
-    }
-
-    Ok(())
-}
-
-// Tauri command handlers - Configuration operations
-#[tauri::command]
-fn get_config_content() -> Result<String, String> {
-    let config_path = get_config_path();
-
-    match fs::read_to_string(&config_path) {
-        Ok(content) => Ok(content),
-        Err(_) => {
-            let template = generate_config_template();
-            Ok(template)
-        }
-    }
-}
-
-#[tauri::command]
-fn config_exists() -> bool {
-    !WAS_FIRST_RUN.load(std::sync::atomic::Ordering::Relaxed)
-}
-
-// Tauri command handlers - Window operations
-#[tauri::command]
-fn show_main_window(app: AppHandle) -> Result<(), String> {
-    match app.get_webview_window("main") {
-        Some(window) => {
-            window
-                .show()
-                .map_err(|e| format!("Failed to show window: {}", e))?;
-            window
-                .set_focus()
-                .map_err(|e| format!("Failed to focus window: {}", e))?;
-        }
-        None => {
-            // Create the window if it doesn't exist
-            let _window = WebviewWindowBuilder::new(&app, "main", WebviewUrl::default())
-                .title("Symiosis Notes")
-                .inner_size(1200.0, 800.0)
-                .center()
-                .visible(false) // Let window-state plugin handle visibility to prevent flash
-                .build()
-                .map_err(|e| format!("Failed to create window: {}", e))?;
-        }
-    }
-    Ok(())
-}
-
-#[tauri::command]
-fn hide_main_window(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("main") {
-        window
-            .hide()
-            .map_err(|e| format!("Failed to hide window: {}", e))?;
-    }
     Ok(())
 }
 
