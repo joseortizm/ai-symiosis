@@ -573,15 +573,40 @@ fn get_note_html_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
 
     let conn = get_db_connection().map_err(|e| e.to_string())?;
+
+    // Check if note is indexed and get content
     let mut stmt = conn
-        .prepare("SELECT html_render FROM notes WHERE filename = ?1")
+        .prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")
         .map_err(|e| e.to_string())?;
 
-    let html_content = stmt
-        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+    let (html_content, is_indexed, content): (String, bool, String) = stmt
+        .query_row(params![note_name], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, bool>(1).unwrap_or(false),
+                row.get::<_, String>(2)?,
+            ))
+        })
         .map_err(|_| format!("Note not found: {}", note_name))?; // Frontend depends on this exact error message format
 
-    Ok(html_content)
+    if is_indexed {
+        // Already indexed, return cached HTML
+        Ok(html_content)
+    } else {
+        // Not indexed, generate HTML and update database
+        let html_render = render_note(note_name, &content);
+
+        // Update the database with the rendered HTML
+        if let Err(e) = conn.execute(
+            "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
+            params![note_name, html_render, true],
+        ) {
+            eprintln!("Failed to update note indexing for '{}': {}", note_name, e);
+            // Still return the rendered content even if database update fails
+        }
+
+        Ok(html_render)
+    }
 }
 
 // Tauri command handlers - Mutation operations
