@@ -78,10 +78,21 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 - `editor_font_family` - Editor font family (default: `"JetBrains Mono, Consolas, monospace"`)
 - `editor_font_size` - Editor font size in pixels (default: `14`)
 - `markdown_render_theme` - Theme for rendered markdown content (default: `"dark_dimmed"`)
-- `md_render_code_theme` - Syntax highlighting theme for code blocks (default: `"gruvbox-dark"`)
+- `md_render_code_theme` - Syntax highlighting theme for code blocks (default: `"gruvbox-dark-medium"`)
 
 **Available Code Highlighting Themes:**
-`1337`, `Coldark-Cold`, `Coldark-Dark`, `DarkNeon`, `Dracula`, `GitHub`, `Monokai Extended`, `Monokai Extended Bright`, `Monokai Extended Light`, `Monokai Extended Origin`, `Nord`, `OneHalfDark`, `OneHalfLight`, `Solarized (dark)`, `Solarized (light)`, `Sublime Snazzy`, `TwoDark`, `Visual Studio Dark+`, `ansi`, `base16`, `base16-256`, `gruvbox-dark`, `gruvbox-light`, `zenburn`
+
+*Gruvbox Variants:*
+`gruvbox-dark-hard`, `gruvbox-dark-medium`, `gruvbox-dark-soft`, `gruvbox-light-hard`, `gruvbox-light-medium`
+
+*Popular Dark Themes:*
+`atom-one-dark`, `dracula`, `nord`, `monokai`, `github-dark`, `vs2015`, `night-owl`, `tokyo-night-dark`
+
+*Popular Light Themes:*
+`atom-one-light`, `github`, `vs`, `xcode`, `tokyo-night-light`
+
+*Base16 Classics:*
+`base16-tomorrow-night`, `base16-ocean`, `base16-solarized-dark`, `base16-solarized-light`, `base16-monokai`, `base16-dracula`
 
 **Window Settings:**
 - `default_width` - Default window width (default: `1200`)
@@ -138,7 +149,7 @@ font_size = 14
 editor_font_family = "JetBrains Mono, Consolas, monospace"
 editor_font_size = 14
 markdown_render_theme = "dark_dimmed"
-md_render_code_theme = "gruvbox-dark"
+md_render_code_theme = "gruvbox-dark-medium"
 default_width = 1200
 default_height = 800
 center_on_startup = true
