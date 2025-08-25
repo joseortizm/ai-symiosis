@@ -16,6 +16,7 @@ use database::{
     get_backup_dir_for_notes_path, get_database_path as get_db_path, get_db_connection,
     get_temp_dir,
 };
+use html_escape;
 use pulldown_cmark::{html, Options, Parser};
 use rusqlite::{params, Connection};
 use search::search_notes_hybrid;
@@ -23,9 +24,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
-use syntect::html::highlighted_html_for_string;
-use syntect::parsing::SyntaxSet;
-use syntect_assets::assets::HighlightingAssets;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -42,18 +40,6 @@ static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicB
 
 // Global database lock to prevent concurrent database operations
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
-// Track last used theme to detect changes
-static LAST_RENDER_THEME: LazyLock<RwLock<Option<String>>> = LazyLock::new(|| RwLock::new(None));
-
-// Cache syntax highlighting assets globally to avoid loading for every file
-// Using Mutex to make them thread-safe since HighlightingAssets is not Sync
-static SYNTAX_ASSETS: LazyLock<Mutex<HighlightingAssets>> =
-    LazyLock::new(|| Mutex::new(HighlightingAssets::from_binary()));
-static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(|| {
-    let assets = SYNTAX_ASSETS.lock().unwrap();
-    assets.get_syntax_set().unwrap().clone()
-});
 
 // Number of most recent notes to get immediate HTML rendering during startup
 // Remaining notes get metadata-only and are processed in background
@@ -97,53 +83,6 @@ fn validate_note_name(note_name: &str) -> Result<(), String> {
 
 fn render_note(filename: &str, content: &str) -> String {
     if filename.ends_with(".md") || filename.ends_with(".markdown") {
-        // Get theme from config with fallback
-        let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-        let theme_name = &config.interface.md_render_code_theme;
-
-        // Custom .tmTheme support - try loading from user themes directory first
-        // Validate theme exists, fallback to default if invalid
-        let valid_themes = [
-            "1337",
-            "Coldark-Cold",
-            "Coldark-Dark",
-            "DarkNeon",
-            "Dracula",
-            "GitHub",
-            "Monokai Extended",
-            "Monokai Extended Bright",
-            "Monokai Extended Light",
-            "Monokai Extended Origin",
-            "Nord",
-            "OneHalfDark",
-            "OneHalfLight",
-            "Solarized (dark)",
-            "Solarized (light)",
-            "Sublime Snazzy",
-            "TwoDark",
-            "Visual Studio Dark+",
-            "ansi",
-            "base16",
-            "base16-256",
-            "gruvbox-dark",
-            "gruvbox-light",
-            "zenburn",
-        ];
-
-        let selected_theme = if valid_themes.contains(&theme_name.as_str()) {
-            theme_name.as_str()
-        } else {
-            "gruvbox-dark" // fallback
-        };
-
-        // Use cached syntect components for performance
-        let syntax_set = &*SYNTAX_SET; // Use cached syntax set
-                                       // Get theme - syntect-assets automatically falls back to default if theme not found
-        let theme = {
-            let assets = SYNTAX_ASSETS.lock().unwrap();
-            assets.get_theme(selected_theme).clone()
-        };
-
         // Configure pulldown-cmark options
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -151,76 +90,10 @@ fn render_note(filename: &str, content: &str) -> String {
         options.insert(Options::ENABLE_FOOTNOTES);
         options.insert(Options::ENABLE_TASKLISTS);
 
-        // Parse markdown into events
+        // Parse markdown and convert to HTML
         let parser = Parser::new_ext(content, options);
-
-        // Track state for code block processing
-        let mut in_code_block = false;
-        let mut current_lang: Option<String> = None;
-        let mut code_content = String::new();
-
-        // Process events to handle code blocks with syntax highlighting
-        let events: Vec<_> = parser
-            .flat_map(|event| {
-                match event {
-                    pulldown_cmark::Event::Start(pulldown_cmark::Tag::CodeBlock(
-                        pulldown_cmark::CodeBlockKind::Fenced(lang),
-                    )) => {
-                        in_code_block = true;
-                        current_lang = if lang.is_empty() {
-                            None
-                        } else {
-                            Some(lang.to_string())
-                        };
-                        code_content.clear();
-                        vec![] // Don't emit the original start tag yet
-                    }
-                    pulldown_cmark::Event::End(pulldown_cmark::TagEnd::CodeBlock) => {
-                        in_code_block = false;
-
-                        // Apply syntax highlighting if we have a language
-                        let highlighted_html = if let Some(ref lang) = current_lang {
-                            if let Some(syntax) = syntax_set.find_syntax_by_token(lang) {
-                                highlighted_html_for_string(
-                                    &code_content,
-                                    syntax_set,
-                                    syntax,
-                                    &theme,
-                                )
-                                .unwrap_or_else(|_| {
-                                    format!(
-                                        "<pre><code>{}</code></pre>",
-                                        html_escape::encode_text(&code_content)
-                                    )
-                                })
-                            } else {
-                                format!(
-                                    "<pre><code>{}</code></pre>",
-                                    html_escape::encode_text(&code_content)
-                                )
-                            }
-                        } else {
-                            format!(
-                                "<pre><code>{}</code></pre>",
-                                html_escape::encode_text(&code_content)
-                            )
-                        };
-
-                        current_lang = None;
-                        vec![pulldown_cmark::Event::Html(highlighted_html.into())]
-                    }
-                    pulldown_cmark::Event::Text(text) if in_code_block => {
-                        code_content.push_str(&text);
-                        vec![] // Don't emit text events for code blocks
-                    }
-                    other => vec![other],
-                }
-            })
-            .collect();
-
-        // Convert events to HTML
         let mut html_output = String::new();
-        html::push_html(&mut html_output, events.into_iter());
+        html::push_html(&mut html_output, parser);
 
         html_output
     } else {
@@ -1019,57 +892,7 @@ async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         return Err(format!("Failed to reload config: {}", e));
     }
 
-    // Check if theme has changed
-    let current_theme = {
-        let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-        config.interface.md_render_code_theme.clone()
-    };
-
-    let theme_changed = {
-        let last_theme = LAST_RENDER_THEME.read().unwrap_or_else(|e| e.into_inner());
-        match &*last_theme {
-            Some(last) => last != &current_theme,
-            None => false, // First time, don't force rebuild unless theme actually different from default
-        }
-    };
-
-    // Update stored theme
-    {
-        let mut last_theme = LAST_RENDER_THEME.write().unwrap_or_else(|e| e.into_inner());
-        *last_theme = Some(current_theme.clone());
-    }
-
-    // If theme changed, force complete database rebuild to regenerate all HTML
-    if theme_changed {
-        let _ = app.emit(
-            "db-loading-progress",
-            format!(
-                "Theme changed to '{}', rebuilding all HTML renders...",
-                current_theme
-            ),
-        );
-        eprintln!(
-            "Theme changed to '{}', rebuilding all HTML renders...",
-            current_theme
-        );
-
-        let result = recreate_database_with_progress(
-            &app,
-            &format!(
-                "Theme changed to '{}', rebuilding all HTML renders...",
-                current_theme
-            ),
-        )
-        .await;
-        if result.is_ok() {
-            let _ = app.emit("db-loading-complete", ());
-        } else if let Err(ref e) = result {
-            let _ = app.emit("db-loading-error", e);
-        }
-        return result;
-    }
-
-    // Otherwise, do normal cache refresh
+    // Do normal cache refresh
     let _ = app.emit("db-loading-progress", "Preparing notes database...");
     let mut conn = match get_db_connection() {
         Ok(conn) => conn,

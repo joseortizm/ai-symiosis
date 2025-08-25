@@ -141,7 +141,7 @@
 }
 
 /* Preformatted blocks */
-.markdown-body pre {
+.markdown-body pre:not(:has(.hljs)) {
   padding: 1em;
   overflow: auto;
   font-size: 0.9em;

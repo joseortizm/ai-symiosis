@@ -6,6 +6,7 @@ Shows highlighted content or renders the CodeMirror editor.
 
 <script lang="ts">
   import CodeEditor from './CodeEditor.svelte'
+  import SyntaxHighlighter from './SyntaxHighlighter.svelte'
   import { getContext } from 'svelte'
 
   import type {
@@ -57,7 +58,7 @@ Shows highlighted content or renders the CodeMirror editor.
         ondblclick={actions.enterEditMode}
       >
         <div class="markdown-body">
-          {@html contentManager.highlightedContent}
+          <SyntaxHighlighter content={contentManager.highlightedContent} />
         </div>
       </div>
     {/if}

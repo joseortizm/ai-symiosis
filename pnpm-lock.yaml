@@ -53,6 +53,9 @@ importers:
       codemirror:
         specifier: ^6.0.0
         version: 6.0.2
+      highlight.js:
+        specifier: ^11.11.1
+        version: 11.11.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.33.0
@@ -1414,6 +1417,10 @@ packages:
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
+
+  highlight.js@11.11.1:
+    resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
+    engines: {node: '>=12.0.0'}
 
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
@@ -3365,6 +3372,8 @@ snapshots:
       whatwg-mimetype: 3.0.0
 
   has-flag@4.0.0: {}
+
+  highlight.js@11.11.1: {}
 
   ignore@5.3.2: {}
 
