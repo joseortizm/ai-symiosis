@@ -157,7 +157,7 @@ impl Default for InterfaceConfig {
             editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
             editor_font_size: 14,
             markdown_render_theme: "dark_dimmed".to_string(),
-            md_render_code_theme: "gruvbox-dark".to_string(),
+            md_render_code_theme: "gruvbox-dark-medium".to_string(),
             default_width: 1200,
             default_height: 800,
             center_on_startup: true,
@@ -390,32 +390,36 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
         ));
     }
 
-    // TODO: Add support for loading custom .tmTheme files in the future
+    // Modern highlight.js themes (curated selection)
     let valid_md_code_themes = [
-        "1337",
-        "Coldark-Cold",
-        "Coldark-Dark",
-        "DarkNeon",
-        "Dracula",
-        "GitHub",
-        "Monokai Extended",
-        "Monokai Extended Bright",
-        "Monokai Extended Light",
-        "Monokai Extended Origin",
-        "Nord",
-        "OneHalfDark",
-        "OneHalfLight",
-        "Solarized (dark)",
-        "Solarized (light)",
-        "Sublime Snazzy",
-        "TwoDark",
-        "Visual Studio Dark+",
-        "ansi",
-        "base16",
-        "base16-256",
-        "gruvbox-dark",
-        "gruvbox-light",
-        "zenburn",
+        // Gruvbox variants
+        "gruvbox-dark-hard",
+        "gruvbox-dark-medium", 
+        "gruvbox-dark-soft",
+        "gruvbox-light-hard",
+        "gruvbox-light-medium",
+        // Popular dark themes
+        "atom-one-dark",
+        "dracula", 
+        "nord",
+        "monokai",
+        "github-dark",
+        "vs2015",
+        "night-owl",
+        "tokyo-night-dark",
+        // Popular light themes
+        "atom-one-light",
+        "github",
+        "vs", 
+        "xcode",
+        "tokyo-night-light",
+        // Base16 classics
+        "base16-tomorrow-night",
+        "base16-ocean",
+        "base16-solarized-dark",
+        "base16-solarized-light",
+        "base16-monokai",
+        "base16-dracula",
     ];
     if !valid_md_code_themes.contains(&interface.md_render_code_theme.as_str()) {
         return Err(format!(
@@ -759,30 +763,34 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
         // Extract markdown code theme
         if let Some(theme) = section.get("md_render_code_theme").and_then(|v| v.as_str()) {
             let valid_themes = [
-                "1337",
-                "Coldark-Cold",
-                "Coldark-Dark",
-                "DarkNeon",
-                "Dracula",
-                "GitHub",
-                "Monokai Extended",
-                "Monokai Extended Bright",
-                "Monokai Extended Light",
-                "Monokai Extended Origin",
-                "Nord",
-                "OneHalfDark",
-                "OneHalfLight",
-                "Solarized (dark)",
-                "Solarized (light)",
-                "Sublime Snazzy",
-                "TwoDark",
-                "Visual Studio Dark+",
-                "ansi",
-                "base16",
-                "base16-256",
-                "gruvbox-dark",
-                "gruvbox-light",
-                "zenburn",
+                // Gruvbox variants
+                "gruvbox-dark-hard",
+                "gruvbox-dark-medium", 
+                "gruvbox-dark-soft",
+                "gruvbox-light-hard",
+                "gruvbox-light-medium",
+                // Popular dark themes
+                "atom-one-dark",
+                "dracula", 
+                "nord",
+                "monokai",
+                "github-dark",
+                "vs2015",
+                "night-owl",
+                "tokyo-night-dark",
+                // Popular light themes
+                "atom-one-light",
+                "github",
+                "vs", 
+                "xcode",
+                "tokyo-night-light",
+                // Base16 classics
+                "base16-tomorrow-night",
+                "base16-ocean",
+                "base16-solarized-dark",
+                "base16-solarized-light",
+                "base16-monokai",
+                "base16-dracula",
             ];
             if valid_themes.contains(&theme) {
                 config.md_render_code_theme = theme.to_string();

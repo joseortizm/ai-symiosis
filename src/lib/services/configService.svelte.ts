@@ -19,6 +19,7 @@ export interface InterfaceConfig {
   editor_font_family: string
   editor_font_size: number
   markdown_render_theme: string
+  md_render_code_theme: string
   default_width: number
   default_height: number
   center_on_startup: boolean
@@ -203,6 +204,7 @@ export function createConfigService(): ConfigService {
         editor_font_family: 'JetBrains Mono, Consolas, monospace',
         editor_font_size: 14,
         markdown_render_theme: 'dark_dimmed',
+        md_render_code_theme: 'gruvbox-dark-medium',
         default_width: 1200,
         default_height: 800,
         center_on_startup: true,

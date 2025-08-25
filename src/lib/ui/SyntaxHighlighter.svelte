@@ -5,17 +5,16 @@ Processes content after it's rendered to avoid blocking initial load.
 -->
 
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, getContext } from 'svelte'
   import hljs from 'highlight.js'
-
-  // Import gruvbox dark medium theme
-  import 'highlight.js/styles/base16/gruvbox-dark-medium.css'
+  import type { AppManagers } from '../app/appCoordinator.svelte'
 
   interface Props {
     content: string
   }
 
   let { content }: Props = $props()
+  const { configStateManager } = getContext<AppManagers>('managers')
   let containerElement: HTMLDivElement | undefined = $state()
 
   // Configure highlight.js for automatic language detection
@@ -49,6 +48,15 @@ Processes content after it's rendered to avoid blocking initial load.
     })
   }
 
+  // Load theme reactively when it changes
+  $effect(() => {
+    if (configStateManager.isThemeInitialized) {
+      configStateManager.loadHighlightJSTheme(
+        configStateManager.currentCodeTheme
+      )
+    }
+  })
+
   // Re-highlight when content changes or component mounts
   $effect(() => {
     // React to content changes by accessing the content prop
@@ -58,10 +66,20 @@ Processes content after it's rendered to avoid blocking initial load.
     }
   })
 
-  // Also highlight on mount
-  onMount(() => {
+  // Also highlight on mount and ensure theme is loaded
+  onMount(async () => {
+    // Force theme loading if needed
+    if (
+      configStateManager.isThemeInitialized &&
+      configStateManager.currentCodeTheme
+    ) {
+      await configStateManager.loadHighlightJSTheme(
+        configStateManager.currentCodeTheme
+      )
+    }
+
     if (containerElement) {
-      setTimeout(highlightCodeBlocks, 10)
+      setTimeout(highlightCodeBlocks, 50)
     }
   })
 </script>
@@ -77,21 +95,20 @@ Processes content after it's rendered to avoid blocking initial load.
     min-height: 100%;
   }
 
-  /* Code block container styling */
+  /* Code block container styling - ensure it shows hljs background */
   .syntax-container :global(pre:has(.hljs)) {
-    background: #282828 !important;
     border-radius: 8px;
-    border: 1px solid rgba(235, 219, 178, 0.1);
+    border: 1px solid rgba(128, 128, 128, 0.2);
     margin: 1.5em 0;
     padding: 0;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    /* Remove any background so hljs can show through */
+    background: none !important;
   }
 
   /* Code content styling */
   .syntax-container :global(.hljs) {
-    color: #d5c4a1;
-    background: #282828;
     padding: 1.25em 1.5em;
     margin: 0;
     overflow-x: auto;
@@ -109,17 +126,17 @@ Processes content after it's rendered to avoid blocking initial load.
   }
 
   .syntax-container :global(.hljs::-webkit-scrollbar-track) {
-    background: #3c3836;
+    background: rgba(128, 128, 128, 0.2);
     border-radius: 4px;
   }
 
   .syntax-container :global(.hljs::-webkit-scrollbar-thumb) {
-    background: #665c54;
+    background: rgba(128, 128, 128, 0.4);
     border-radius: 4px;
   }
 
   .syntax-container :global(.hljs::-webkit-scrollbar-thumb:hover) {
-    background: #7c6f64;
+    background: rgba(128, 128, 128, 0.6);
   }
 
   /* Non-highlighted pre elements (fallback) */

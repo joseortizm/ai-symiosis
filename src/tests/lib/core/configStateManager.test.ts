@@ -60,6 +60,7 @@ describe('configStateManager', () => {
           editor_font_family: 'JetBrains Mono, Consolas, monospace',
           editor_font_size: 14,
           markdown_render_theme: 'dark_dimmed',
+          md_render_code_theme: 'gruvbox-dark-medium',
           default_width: 1200,
           default_height: 800,
           center_on_startup: true,
@@ -156,6 +157,7 @@ describe('configStateManager', () => {
           editor_font_family: 'Monaco',
           editor_font_size: 12,
           markdown_render_theme: 'light',
+          md_render_code_theme: 'atom-one-dark',
           default_width: 1200,
           default_height: 800,
           center_on_startup: true,
@@ -239,6 +241,7 @@ describe('configStateManager', () => {
         .mockResolvedValueOnce({
           ui_theme: 'one-dark',
           markdown_render_theme: 'light',
+          md_render_code_theme: 'atom-one-dark',
           font_family: 'Inter, sans-serif',
           font_size: 14,
           editor_font_family: 'JetBrains Mono, Consolas, monospace',
@@ -258,6 +261,7 @@ describe('configStateManager', () => {
 
       expect(manager.currentUITheme).toBe('one-dark')
       expect(manager.currentMarkdownTheme).toBe('light')
+      expect(manager.currentCodeTheme).toBe('atom-one-dark')
     })
 
     it('should handle mixed success/failure during initialization', async () => {
@@ -267,6 +271,7 @@ describe('configStateManager', () => {
         .mockResolvedValueOnce({
           ui_theme: 'gruvbox-dark',
           markdown_render_theme: 'dark_dimmed',
+          md_render_code_theme: 'gruvbox-dark-medium',
           font_family: 'Inter, sans-serif',
           font_size: 14,
           editor_font_family: 'JetBrains Mono, Consolas, monospace',

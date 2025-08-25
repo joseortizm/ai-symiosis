@@ -153,7 +153,7 @@
   padding: 0;
 }
 
-.markdown-body code,
+.markdown-body code:not(.hljs),
 .markdown-body tt {
   padding: .2em .4em;
   margin: 0;
@@ -178,7 +178,7 @@
   word-wrap: normal;
 }
 
-.markdown-body pre code,
+.markdown-body pre code:not(.hljs),
 .markdown-body pre tt {
   display: inline;
   max-width: auto;
