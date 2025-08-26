@@ -134,6 +134,19 @@ Shows highlighted content or renders the CodeMirror editor.
     margin-left: -0.5em;
     border-radius: 3px;
   }
+  :global(.header-expanded) {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  :global(.header-collapsed) {
+    opacity: 0.5;
+    font-size: 0.9em;
+    margin: 0.2em 0;
+    transition: all 0.3s ease;
+  }
+  :global(.content-collapsed) {
+    display: none;
+  }
   .no-selection {
     flex: 1;
     display: flex;
