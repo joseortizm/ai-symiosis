@@ -116,13 +116,13 @@ export function createKeyboardActions(
     scrolling: {
       scrollUpBy: ({ state }: ActionContext) => {
         state.noteContentElement?.scrollBy({
-          top: -250,
+          top: -(state.noteContentElement.clientHeight * 0.4), // 40% up
           behavior: 'smooth',
         })
       },
       scrollDownBy: ({ state }: ActionContext) => {
         state.noteContentElement?.scrollBy({
-          top: 250,
+          top: state.noteContentElement.clientHeight * 0.4, // 40% down
           behavior: 'smooth',
         })
       },
