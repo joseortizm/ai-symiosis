@@ -218,7 +218,7 @@ export function createConfigStateManager(): ConfigStateManager {
         existingLink.remove()
       }
 
-      // Map theme names to their file paths
+      // Map theme names to their file paths in static directory
       const getThemePath = (themeName: string): string => {
         // Base16 themes are in a subdirectory
         const base16Themes = [
@@ -236,16 +236,16 @@ export function createConfigStateManager(): ConfigStateManager {
         )
 
         if (isBase16Theme) {
-          return `highlight.js/styles/base16/${themeName}.css`
+          return `base16/${themeName}.css`
         }
         // Regular themes
-        return `highlight.js/styles/${themeName}.css`
+        return `${themeName}.css`
       }
 
-      // Create new theme link - load from node_modules
+      // Create new theme link - load from static directory
       const link = document.createElement('link')
       link.rel = 'stylesheet'
-      link.href = `/node_modules/${getThemePath(theme)}`
+      link.href = `/highlight-js-themes/${getThemePath(theme)}`
       link.setAttribute('data-highlight-theme', theme)
 
       document.head.appendChild(link)

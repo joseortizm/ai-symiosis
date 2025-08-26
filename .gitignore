@@ -24,3 +24,4 @@ vite.config.ts.timestamp-*
 # Development tools
 /.ai/
 docs
+.archive/highlight-js-themes-unused/highlight-js-themes
