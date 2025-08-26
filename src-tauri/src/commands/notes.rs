@@ -220,6 +220,7 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     let old_path = notes_dir.join(&old_name);
     let new_path = notes_dir.join(&new_name);
 
+    // Pre-flight checks
     if !old_path.exists() {
         if new_path.exists() {
             match get_db_connection() {
@@ -243,6 +244,15 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         return Err(format!("Note '{}' already exists", new_name));
     }
 
+    // Additional pre-flight checks
+    if let Ok(metadata) = old_path.metadata() {
+        if !metadata.permissions().readonly() == false {
+            return Err(format!("Source file '{}' is not readable", old_name));
+        }
+    } else {
+        return Err(format!("Cannot access source file '{}'", old_name));
+    }
+
     let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
 
     if let Some(backup_parent) = backup_path.parent() {
@@ -253,6 +263,32 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     fs::copy(&old_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
 
     fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))?;
+
+    // Post-operation verification
+    if !new_path.exists() {
+        return Err(format!(
+            "Rename operation failed - destination file '{}' not found",
+            new_name
+        ));
+    }
+
+    if old_path.exists() {
+        return Err(format!(
+            "Rename operation failed - source file '{}' still exists",
+            old_name
+        ));
+    }
+
+    // Log successful rename operation
+    eprintln!(
+        "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        old_name,
+        new_name
+    );
 
     match get_db_connection() {
         Ok(conn) => {
@@ -332,6 +368,32 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
     fs::copy(&note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
 
     fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
+
+    // Post-operation verification
+    if note_path.exists() {
+        return Err(format!(
+            "Delete operation failed - file '{}' still exists",
+            note_name
+        ));
+    }
+
+    if !backup_path.exists() {
+        return Err(format!(
+            "Delete operation completed but backup was not created for '{}'",
+            note_name
+        ));
+    }
+
+    // Log successful delete operation
+    eprintln!(
+        "[{}] File Operation: DELETE | File: {} | Backup: {} | Result: SUCCESS",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        note_name,
+        backup_path.display()
+    );
 
     match get_db_connection() {
         Ok(conn) => {

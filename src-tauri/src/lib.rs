@@ -136,6 +136,17 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String>
     fs::rename(&temp_path, note_path)
         .map_err(|e| format!("Failed to move temp file to final location: {}", e))?;
 
+    // Log successful operation
+    eprintln!(
+        "[{}] File Operation: WRITE | File: {} | Size: {} bytes | Result: SUCCESS",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        note_path.display(),
+        content.len()
+    );
+
     // 5. Verify content was written correctly
     let written_content = fs::read_to_string(note_path)
         .map_err(|e| format!("Failed to verify written content: {}", e))?;
@@ -427,6 +438,44 @@ pub fn update_note_in_database(
         )
         .map_err(|e| format!("Database error: {}", e))?;
     }
+
+    // Verify database was updated correctly
+    let db_content = conn
+        .query_row(
+            "SELECT content FROM notes WHERE filename = ?1",
+            params![note_name],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(|e| format!("Failed to verify database update: {}", e))?;
+
+    if db_content != content {
+        let error_msg = format!(
+            "Database update verification failed for '{}': expected {} bytes, found {} bytes",
+            note_name,
+            content.len(),
+            db_content.len()
+        );
+        eprintln!(
+            "[{}] {}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            error_msg
+        );
+        return Err(error_msg);
+    }
+
+    // Log successful database operation
+    eprintln!(
+        "[{}] Database Operation: UPDATE/INSERT | File: {} | Size: {} bytes | Result: SUCCESS",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        note_name,
+        content.len()
+    );
 
     Ok(())
 }
