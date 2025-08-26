@@ -18,7 +18,6 @@ use config::{
 use database::{get_database_path as get_db_path, get_db_connection, with_db};
 use services::{database_service, note_service};
 use std::fs;
-use std::path::PathBuf;
 use std::sync::{atomic::AtomicBool, LazyLock, RwLock};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -35,11 +34,6 @@ pub static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::Ato
 
 // Global flag to prevent file watcher from triggering cache refresh during programmatic operations
 pub static PROGRAMMATIC_OPERATION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
-
-pub fn get_config_notes_dir() -> PathBuf {
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    PathBuf::from(&config.notes_directory)
-}
 
 // Database operations
 

@@ -348,6 +348,11 @@ pub fn get_config_path() -> PathBuf {
     }
 }
 
+pub fn get_config_notes_dir() -> PathBuf {
+    let config = crate::APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    PathBuf::from(&config.notes_directory)
+}
+
 // ============================================================================
 // VALIDATION FUNCTIONS
 // ============================================================================

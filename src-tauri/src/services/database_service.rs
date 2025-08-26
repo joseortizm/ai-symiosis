@@ -1,6 +1,6 @@
 use crate::{
+    config::get_config_notes_dir,
     database::{get_db_connection, with_db},
-    get_config_notes_dir,
     services::note_service,
 };
 use rusqlite::{params, Connection};

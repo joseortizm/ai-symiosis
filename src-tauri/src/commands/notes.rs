@@ -1,6 +1,6 @@
 use crate::{
+    config::get_config_notes_dir,
     database::with_db,
-    get_config_notes_dir,
     search::search_notes_hybrid,
     services::{
         database_service::recreate_database,

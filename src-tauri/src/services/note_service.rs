@@ -1,6 +1,6 @@
 use crate::{
+    config::get_config_notes_dir,
     database::{get_backup_dir_for_notes_path, get_temp_dir, with_db},
-    get_config_notes_dir,
 };
 use html_escape;
 use pulldown_cmark::{html, Options, Parser};
