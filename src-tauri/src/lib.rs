@@ -136,6 +136,28 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String>
     fs::rename(&temp_path, note_path)
         .map_err(|e| format!("Failed to move temp file to final location: {}", e))?;
 
+    // 5. Verify content was written correctly
+    let written_content = fs::read_to_string(note_path)
+        .map_err(|e| format!("Failed to verify written content: {}", e))?;
+
+    if written_content != content {
+        let error_msg = format!(
+            "Content verification failed for '{}': expected {} bytes, found {} bytes",
+            note_path.display(),
+            content.len(),
+            written_content.len()
+        );
+        eprintln!(
+            "[{}] {}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            error_msg
+        );
+        return Err(error_msg);
+    }
+
     Ok(())
 }
 
