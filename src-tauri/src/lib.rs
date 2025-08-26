@@ -44,7 +44,7 @@ static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 // Number of most recent notes to get immediate HTML rendering during startup
 // Remaining notes get metadata-only and are processed in background
-const IMMEDIATE_RENDER_COUNT: usize = 300;
+const IMMEDIATE_RENDER_COUNT: usize = 2000;
 
 pub fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
@@ -177,7 +177,7 @@ pub fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
 pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, html_render, modified UNINDEXED, is_indexed UNINDEXED);")?;
 
-    // Check for corruption by looking for duplicate filenames
+    // Check for discrepancy by looking for duplicate filenames
     let mut stmt = conn.prepare(
         "SELECT filename, COUNT(*) as count FROM notes GROUP BY filename HAVING count > 1",
     )?;
@@ -191,7 +191,7 @@ pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
             return Err(rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CORRUPT),
                 Some(format!(
-                    "Database corruption detected: {} files have duplicate entries",
+                    "Database discrepancy detected: {} files have duplicate entries",
                     dups.len()
                 )),
             ));
@@ -202,7 +202,7 @@ pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
 }
 
 pub fn recreate_database() -> Result<(), String> {
-    eprintln!("Database corruption detected. Recreating database tables...");
+    eprintln!("Database discrepancy detected. Recreating database tables...");
 
     let mut conn = get_db_connection()?;
 
@@ -499,6 +499,92 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+// Database integrity checking
+pub fn quick_filesystem_sync_check() -> Result<bool, String> {
+    let notes_dir = get_config_notes_dir();
+
+    // Skip check if notes directory doesn't exist (new user)
+    if !notes_dir.exists() {
+        return Ok(true);
+    }
+
+    let conn = get_db_connection()?;
+
+    // Get up to 100 most recently modified files
+    let mut files: Vec<_> = WalkDir::new(&notes_dir)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+        .collect();
+
+    // Skip check if no files found
+    if files.is_empty() {
+        return Ok(true);
+    }
+
+    // Sort by modification time (most recent first) and take up to 100
+    files.sort_by_key(|e| std::cmp::Reverse(e.metadata().ok().and_then(|m| m.modified().ok())));
+    files.truncate(100);
+
+    // Check each file against database
+    for entry in files {
+        let file_path = entry.path();
+        let relative_path = file_path
+            .strip_prefix(&notes_dir)
+            .map_err(|e| format!("Failed to get relative path: {}", e))?;
+        let filename = relative_path.to_string_lossy().to_string();
+
+        // Try to read file content (skip on permission issues with warning)
+        let file_content = match std::fs::read_to_string(file_path) {
+            Ok(content) => content,
+            Err(_) => {
+                eprintln!(
+                    "Warning: Could not read file {} during sync check",
+                    filename
+                );
+                continue;
+            }
+        };
+
+        // Get modification time
+        let file_modified = entry
+            .metadata()
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        // Check if file exists in database with matching content
+        let db_result: Result<(String, i64), rusqlite::Error> = conn.query_row(
+            "SELECT content, modified FROM notes WHERE filename = ?1",
+            params![filename],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        );
+
+        match db_result {
+            Ok((db_content, db_modified)) => {
+                // Check content match
+                if db_content != file_content {
+                    return Ok(false);
+                }
+                // Check modification time match (allow 1 second tolerance)
+                if (db_modified - file_modified).abs() > 1 {
+                    return Ok(false);
+                }
+            }
+            Err(_) => {
+                // File exists in filesystem but not in database
+                return Ok(false);
+            }
+        }
+    }
+
+    Ok(true)
+}
+
 // Initialization functions
 pub fn initialize_notes() {
     if let Ok(db_path) = get_db_path() {
@@ -528,6 +614,28 @@ pub fn initialize_notes() {
             return;
         } else {
             eprintln!("✅ Database successfully recovered!");
+        }
+    } else {
+        // Database initialized successfully, perform filesystem sync check
+        match quick_filesystem_sync_check() {
+            Ok(true) => {
+                // Database and filesystem are in sync
+            }
+            Ok(false) => {
+                eprintln!("🔄 Database-filesystem mismatch detected. Rebuilding database...");
+                if let Err(e) = recreate_database() {
+                    eprintln!("💥 FATAL: Database rebuild failed: {}. Application will continue with limited functionality.", e);
+                    return;
+                } else {
+                    eprintln!("✅ Database successfully rebuilt from filesystem!");
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "⚠️  Filesystem sync check failed: {}. Continuing without rebuild.",
+                    e
+                );
+            }
         }
     }
 
