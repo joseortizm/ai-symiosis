@@ -188,10 +188,30 @@ export function createContentNavigationManager(
 
   function scrollToElement(element: Element): void {
     setCurrentElementStyle(element)
-    element.scrollIntoView({
+
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest',
+      })
+      return
+    }
+
+    const elementRect = element.getBoundingClientRect()
+    const containerRect = contentElement.getBoundingClientRect()
+    const containerHeight = contentElement.clientHeight
+    const targetPosition = containerHeight * 0.25 // 3/4 up = 1/4 down from top
+
+    const scrollTop =
+      contentElement.scrollTop +
+      (elementRect.top - containerRect.top) -
+      targetPosition
+
+    contentElement.scrollTo({
+      top: scrollTop,
       behavior: 'smooth',
-      block: 'center',
-      inline: 'nearest',
     })
   }
 
