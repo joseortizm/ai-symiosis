@@ -1,8 +1,50 @@
 // External crates
 use rusqlite::Connection;
 use std::path::PathBuf;
+use std::sync::{Arc, LazyLock, Mutex};
 
-// Public API functions
+// Shared database connection manager
+pub struct DatabaseManager {
+    connection: Arc<Mutex<Connection>>,
+}
+
+impl DatabaseManager {
+    pub fn new() -> Result<Self, String> {
+        let db_path = get_database_path()?;
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create database directory: {}", e))?;
+        }
+
+        let conn =
+            Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+
+        Ok(Self {
+            connection: Arc::new(Mutex::new(conn)),
+        })
+    }
+
+    pub fn with_connection<T, F>(&self, f: F) -> Result<T, String>
+    where
+        F: FnOnce(&Connection) -> Result<T, String>,
+    {
+        let conn = self.connection.lock().unwrap();
+        f(&*conn)
+    }
+}
+
+// Global database manager instance
+static DB_MANAGER: LazyLock<DatabaseManager> =
+    LazyLock::new(|| DatabaseManager::new().expect("Failed to initialize database manager"));
+
+pub fn with_db<T, F>(f: F) -> Result<T, String>
+where
+    F: FnOnce(&Connection) -> Result<T, String>,
+{
+    DB_MANAGER.with_connection(f)
+}
+
+// Keep existing function for backward compatibility during transition
 pub fn get_db_connection() -> Result<Connection, String> {
     let db_path = get_database_path()?;
     if let Some(parent) = db_path.parent() {

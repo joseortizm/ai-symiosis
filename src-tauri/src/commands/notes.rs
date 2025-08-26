@@ -1,7 +1,8 @@
 use crate::{
-    database::get_db_connection, get_config_notes_dir, recreate_database, render_note,
-    safe_backup_path, safe_write_note, search::search_notes_hybrid, update_note_in_database,
-    validate_note_name, APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
+    database::{get_db_connection, with_db},
+    get_config_notes_dir, recreate_database, render_note, safe_backup_path, safe_write_note,
+    search::search_notes_hybrid,
+    update_note_in_database, validate_note_name, APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use rusqlite::params;
 use std::fs;
@@ -30,23 +31,24 @@ where
 
 #[tauri::command]
 pub fn list_all_notes() -> Result<Vec<String>, String> {
-    let conn = get_db_connection()?;
+    with_db(|conn| {
+        let mut stmt = conn
+            .prepare("SELECT filename FROM notes ORDER BY modified DESC")
+            .map_err(|e| e.to_string())?;
 
-    let mut stmt = conn
-        .prepare("SELECT filename FROM notes ORDER BY modified DESC")
-        .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([], |row| row.get(0))
+            .map_err(|e| e.to_string())?;
 
-    let rows = stmt
-        .query_map([], |row| row.get(0))
-        .map_err(|e| e.to_string())?;
-    let mut results = Vec::new();
-    for r in rows {
-        if let Ok(filename) = r {
-            results.push(filename);
+        let mut results = Vec::new();
+        for r in rows {
+            if let Ok(filename) = r {
+                results.push(filename);
+            }
         }
-    }
 
-    Ok(results)
+        Ok(results)
+    })
 }
 
 #[tauri::command]
