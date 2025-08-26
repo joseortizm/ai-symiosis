@@ -583,13 +583,25 @@ pub fn quick_filesystem_sync_check() -> Result<bool, String> {
     }
 
     with_db(|conn| {
-        // Get up to 100 most recently modified files
+        // Get up to 100 most recently modified files (matching main app's file filtering)
         let mut files: Vec<_> = WalkDir::new(&notes_dir)
             .follow_links(false)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+            .filter(|e| {
+                let path = e.path();
+                let relative = path.strip_prefix(&notes_dir).unwrap_or(path);
+                let filename = relative.to_string_lossy().to_string();
+
+                // Skip hidden files/folders (same logic as main app)
+                if filename.contains("/.") || filename.starts_with('.') {
+                    return false;
+                }
+
+                // Only include .md files
+                path.extension().map_or(false, |ext| ext == "md")
+            })
             .collect();
 
         // Skip check if no files found

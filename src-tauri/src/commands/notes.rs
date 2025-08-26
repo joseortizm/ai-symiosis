@@ -1,8 +1,7 @@
 use crate::{
-    database::with_db,
-    get_config_notes_dir, recreate_database, render_note, safe_backup_path, safe_write_note,
-    search::search_notes_hybrid,
-    update_note_in_database, validate_note_name, APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
+    database::with_db, get_config_notes_dir, recreate_database, render_note, safe_backup_path,
+    safe_write_note, search::search_notes_hybrid, update_note_in_database, validate_note_name,
+    APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use rusqlite::params;
 use std::fs;
