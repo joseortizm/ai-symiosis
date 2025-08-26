@@ -23,7 +23,7 @@ use pulldown_cmark::{html, Options, Parser};
 use rusqlite::{params, Connection};
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{LazyLock, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, LazyLock, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -41,6 +41,9 @@ pub static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::Ato
 
 // Global database lock to prevent concurrent database operations
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+// Global flag to prevent file watcher from triggering cache refresh during programmatic operations
+pub static PROGRAMMATIC_OPERATION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 // Number of most recent notes to get immediate HTML rendering during startup
 // Remaining notes get metadata-only and are processed in background

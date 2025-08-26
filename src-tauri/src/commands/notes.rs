@@ -1,11 +1,32 @@
 use crate::{
     database::get_db_connection, get_config_notes_dir, recreate_database, render_note,
     safe_backup_path, safe_write_note, search::search_notes_hybrid, update_note_in_database,
-    validate_note_name, APP_CONFIG,
+    validate_note_name, APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use rusqlite::params;
 use std::fs;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::Ordering;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+/// Helper function to wrap file operations with programmatic operation flag
+fn with_programmatic_flag<T, F>(operation: F) -> Result<T, String>
+where
+    F: FnOnce() -> Result<T, String>,
+{
+    // Set flag immediately
+    PROGRAMMATIC_OPERATION_IN_PROGRESS.store(true, Ordering::SeqCst);
+
+    // Execute operation (this is still synchronous and fast)
+    let result = operation();
+
+    // Spawn background thread to clear flag after delay - NON-BLOCKING
+    std::thread::spawn(|| {
+        std::thread::sleep(Duration::from_secs(5)); // Long enough for watcher to process
+        PROGRAMMATIC_OPERATION_IN_PROGRESS.store(false, Ordering::SeqCst);
+    });
+
+    result
+}
 
 #[tauri::command]
 pub fn list_all_notes() -> Result<Vec<String>, String> {
@@ -116,7 +137,7 @@ pub fn create_new_note(note_name: &str) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    safe_write_note(&note_path, "")?;
+    with_programmatic_flag(|| safe_write_note(&note_path, ""))?;
 
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -182,7 +203,7 @@ pub fn save_note(note_name: &str, content: &str) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    safe_write_note(&note_path, content)?;
+    with_programmatic_flag(|| safe_write_note(&note_path, content))?;
 
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -262,7 +283,9 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
 
     fs::copy(&old_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
 
-    fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))?;
+    with_programmatic_flag(|| {
+        fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))
+    })?;
 
     // Post-operation verification
     if !new_path.exists() {
@@ -367,7 +390,9 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
 
     fs::copy(&note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
 
-    fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))?;
+    with_programmatic_flag(|| {
+        fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))
+    })?;
 
     // Post-operation verification
     if note_path.exists() {

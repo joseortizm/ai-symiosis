@@ -3,7 +3,8 @@ use std::sync::mpsc;
 use std::thread;
 use tauri::{AppHandle, Emitter};
 
-use crate::{get_config_notes_dir, refresh_cache};
+use crate::{get_config_notes_dir, refresh_cache, PROGRAMMATIC_OPERATION_IN_PROGRESS};
+use std::sync::atomic::Ordering;
 
 pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let notes_dir = get_config_notes_dir();
@@ -44,19 +45,25 @@ pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::err
                     });
 
                     if involves_notes {
-                        // Refresh the cache when note files change
-                        // Spawn async task for cache refresh
-                        let app_handle_for_refresh = app_handle_clone.clone();
-                        tauri::async_runtime::spawn(async move {
-                            if let Err(e) = refresh_cache(app_handle_for_refresh.clone()).await {
-                                eprintln!("Failed to refresh cache after file change: {}", e);
-                            } else {
-                                // Emit event to notify frontend of cache refresh
-                                if let Err(e) = app_handle_for_refresh.emit("cache-refreshed", ()) {
-                                    eprintln!("Failed to emit cache-refreshed event: {}", e);
+                        // Only refresh cache if this is NOT a programmatic operation
+                        if !PROGRAMMATIC_OPERATION_IN_PROGRESS.load(Ordering::SeqCst) {
+                            // Refresh the cache when note files change
+                            // Spawn async task for cache refresh
+                            let app_handle_for_refresh = app_handle_clone.clone();
+                            tauri::async_runtime::spawn(async move {
+                                if let Err(e) = refresh_cache(app_handle_for_refresh.clone()).await
+                                {
+                                    eprintln!("Failed to refresh cache after file change: {}", e);
+                                } else {
+                                    // Emit event to notify frontend of cache refresh
+                                    if let Err(e) =
+                                        app_handle_for_refresh.emit("cache-refreshed", ())
+                                    {
+                                        eprintln!("Failed to emit cache-refreshed event: {}", e);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 }
                 _ => {} // Ignore other event types
