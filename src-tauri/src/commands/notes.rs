@@ -1,9 +1,13 @@
 use crate::{
     database::with_db,
-    get_config_notes_dir, recreate_database,
+    get_config_notes_dir,
     search::search_notes_hybrid,
-    services::note_service::{
-        render_note, safe_backup_path, safe_write_note, update_note_in_database, validate_note_name,
+    services::{
+        database_service::recreate_database,
+        note_service::{
+            render_note, safe_backup_path, safe_write_note, update_note_in_database,
+            validate_note_name,
+        },
     },
     APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };

@@ -1,6 +1,11 @@
 use crate::{
-    config::reload_config, database::get_db_connection, init_db, load_all_notes_into_sqlite,
-    load_all_notes_into_sqlite_with_progress, recreate_database_with_progress, APP_CONFIG,
+    config::reload_config,
+    database::get_db_connection,
+    services::database_service::{
+        init_db, load_all_notes_into_sqlite, load_all_notes_into_sqlite_with_progress,
+        recreate_database_with_progress,
+    },
+    APP_CONFIG,
 };
 use tauri::{AppHandle, Emitter};
 
