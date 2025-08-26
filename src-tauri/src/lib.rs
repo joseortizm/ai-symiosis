@@ -46,8 +46,11 @@ static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 pub static PROGRAMMATIC_OPERATION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 // Number of most recent notes to get immediate HTML rendering during startup
-// Remaining notes get metadata-only and are processed in background
+// Remaining notes get metadata-only and are processed on demand
 const IMMEDIATE_RENDER_COUNT: usize = 2000;
+
+// How many backup versions we keep
+const MAX_BACKUPS: usize = 20;
 
 pub fn get_config_notes_dir() -> PathBuf {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
@@ -106,19 +109,34 @@ pub fn render_note(filename: &str, content: &str) -> String {
 }
 
 // Atomic file operations with backup support
-pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
-    // 1. Create backup in app data directory (preserving relative path structure)
-    if note_path.exists() {
-        let backup_path = safe_backup_path(note_path)?.with_extension("md.bak");
 
-        // Ensure backup directory structure exists
+pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
+    // 1. Create backup if file exists
+    if note_path.exists() {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut backup_path = safe_backup_path(note_path)?;
+        let backup_filename = format!(
+            "{}.{}.bak",
+            backup_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .ok_or("Invalid filename")?,
+            timestamp
+        );
+        backup_path.set_file_name(backup_filename);
+
         if let Some(backup_parent) = backup_path.parent() {
             fs::create_dir_all(backup_parent)
                 .map_err(|e| format!("Failed to create backup directory: {}", e))?;
         }
 
-        // Copy existing file to backup
         fs::copy(note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
+
+        prune_old_backups(&backup_path, MAX_BACKUPS)?;
     }
 
     // 2. Create temp file in app data directory
@@ -170,6 +188,42 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String>
             error_msg
         );
         return Err(error_msg);
+    }
+
+    Ok(())
+}
+
+fn prune_old_backups(latest_backup: &PathBuf, max_backups: usize) -> Result<(), String> {
+    let parent = latest_backup
+        .parent()
+        .ok_or("Failed to get backup parent directory")?;
+
+    let stem = latest_backup
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or("Invalid backup stem")?;
+
+    // Strip trailing ".<timestamp>" from stem
+    let base_name = stem.rsplitn(2, '.').last().unwrap_or(stem);
+
+    let mut backups: Vec<_> = fs::read_dir(parent)
+        .map_err(|e| format!("Failed to read backup directory: {}", e))?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .map(|f| f.starts_with(base_name) && f.ends_with(".bak"))
+                .unwrap_or(false)
+        })
+        .collect();
+
+    backups.sort_by_key(|e| e.file_name());
+
+    if backups.len() > max_backups {
+        for old in &backups[..backups.len() - max_backups] {
+            let _ = fs::remove_file(old.path());
+        }
     }
 
     Ok(())
