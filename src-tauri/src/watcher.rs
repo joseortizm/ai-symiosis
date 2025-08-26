@@ -6,7 +6,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
-use crate::{get_config_notes_dir, update_note_in_database, PROGRAMMATIC_OPERATION_IN_PROGRESS};
+use crate::{
+    get_config_notes_dir, services::note_service::update_note_in_database,
+    PROGRAMMATIC_OPERATION_IN_PROGRESS,
+};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 struct DebouncedWatcher {

@@ -6,7 +6,7 @@
 use super::test_utils::database_testing::{
     check_database_integrity, quick_health_check, verify_sync_consistency,
 };
-use crate::*;
+use crate::init_db;
 use rusqlite::{params, Connection};
 use std::collections::HashMap;
 use std::path::PathBuf;

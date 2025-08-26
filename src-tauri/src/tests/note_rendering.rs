@@ -2,7 +2,7 @@
 //!
 //! Tests for note content rendering functionality.
 
-use crate::*;
+use crate::services::note_service::render_note;
 
 #[test]
 fn test_render_markdown_note() {

@@ -3,7 +3,7 @@
 //! Tests for database integration functionality and backup systems.
 
 use crate::database::{get_backup_dir_for_notes_path, get_database_path, get_temp_dir};
-use crate::*;
+use crate::get_config_notes_dir;
 
 #[test]
 fn test_database_path_creation() {

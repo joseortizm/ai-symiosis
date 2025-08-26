@@ -51,24 +51,6 @@ pub fn get_config_notes_dir() -> PathBuf {
     PathBuf::from(&config.notes_directory)
 }
 
-pub fn validate_note_name(note_name: &str) -> Result<(), String> {
-    note_service::validate_note_name(note_name)
-}
-
-pub fn render_note(filename: &str, content: &str) -> String {
-    note_service::render_note(filename, content)
-}
-
-// Atomic file operations with backup support
-
-pub fn safe_write_note(note_path: &PathBuf, content: &str) -> Result<(), String> {
-    note_service::safe_write_note(note_path, content)
-}
-
-pub fn safe_backup_path(note_path: &PathBuf) -> Result<PathBuf, String> {
-    note_service::safe_backup_path(note_path)
-}
-
 // Database operations
 pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(filename, content, html_render, modified UNINDEXED, is_indexed UNINDEXED);")?;
@@ -249,7 +231,7 @@ pub fn load_all_notes_into_sqlite_with_progress(
 
             if index < IMMEDIATE_RENDER_COUNT {
                 // First 300 files: full processing with HTML render
-                let html_render = render_note(filename, &content);
+                let html_render = note_service::render_note(filename, &content);
                 tx.execute(
                     "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![filename, content, html_render, *fs_modified, true],
@@ -264,7 +246,7 @@ pub fn load_all_notes_into_sqlite_with_progress(
         } else if !is_indexed && index < IMMEDIATE_RENDER_COUNT {
             // File hasn't changed but needs indexing (upgrade existing entry)
             let content = fs::read_to_string(path).unwrap_or_default();
-            let html_render = render_note(filename, &content);
+            let html_render = note_service::render_note(filename, &content);
             tx.execute(
                 "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
                 params![filename, html_render, true],
@@ -273,14 +255,6 @@ pub fn load_all_notes_into_sqlite_with_progress(
     }
 
     tx.commit()
-}
-
-pub fn update_note_in_database(
-    note_name: &str,
-    content: &str,
-    modified: i64,
-) -> Result<(), String> {
-    note_service::update_note_in_database(note_name, content, modified)
 }
 
 // System tray setup
