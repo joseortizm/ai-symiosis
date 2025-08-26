@@ -128,11 +128,11 @@ Shows highlighted content or renders the CodeMirror editor.
     transform: scale(1.05) !important;
   }
   :global(.header-current) {
-    background-color: rgba(97, 175, 239, 0.2) !important;
-    border-left: 4px solid #61afef !important;
-    padding-left: 0.5em !important;
-    margin-left: -0.5em !important;
-    border-radius: 3px !important;
+    background-color: rgba(97, 175, 239, 0.2);
+    border-left: 4px solid #61afef;
+    padding-left: 0.5em;
+    margin-left: -0.5em;
+    border-radius: 3px;
   }
   .no-selection {
     flex: 1;
