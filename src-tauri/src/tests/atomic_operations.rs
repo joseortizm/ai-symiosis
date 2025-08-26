@@ -3,6 +3,7 @@
 //! Tests for atomic file operations, backup creation, and temp file cleanup.
 
 use crate::database::{get_backup_dir_for_notes_path, get_temp_dir};
+use crate::services::note_service::cleanup_temp_files;
 use crate::*;
 use std::fs;
 use std::path::PathBuf;
