@@ -1,0 +1,234 @@
+/* Sepia Pastel Article Theme (playful but elegant with animations) */
+
+.markdown-body {
+  color-scheme: light;
+  margin: 0;
+  padding: 2rem;
+  font-family: 'Palatino', 'Georgia', serif;
+  font-size: 17.5px;
+  line-height: 1.8;
+  color: #2d2b28;
+  background: #f3ece1; /* warm sepia base */
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.6s ease;
+}
+
+/* Links with animated underline */
+.markdown-body a {
+  color: #b85c38; /* earthy terracotta */
+  text-decoration: none;
+  position: relative;
+}
+.markdown-body a::after {
+  content: '';
+  position: absolute;
+  height: 2px;
+  width: 100%;
+  left: 0;
+  bottom: -2px;
+  background: #e2b091; /* soft pastel accent */
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+.markdown-body a:hover::after {
+  transform: scaleX(1);
+}
+
+/* Headings */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 28px;
+  margin-bottom: 14px;
+  font-family: 'Palatino', 'Georgia', serif;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #2b2a28;
+  position: relative;
+}
+
+/* Gentle animated accent under headings */
+.markdown-body h1,
+.markdown-body h2 {
+  padding-bottom: 0.25em;
+}
+.markdown-body h1::after,
+.markdown-body h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  width: 40%;
+  background: #d6c0a8;
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s ease;
+}
+.markdown-body h1:hover::after,
+.markdown-body h2:hover::after {
+  transform: scaleX(1);
+}
+
+.markdown-body h1 {
+  font-size: 2.2em;
+  letter-spacing: 0.03em;
+}
+.markdown-body h2 {
+  font-size: 1.7em;
+  font-variant: small-caps;
+}
+.markdown-body h3 {
+  font-size: 1.4em;
+  font-style: italic;
+  color: #4a3f35;
+}
+.markdown-body h4 {
+  font-size: 1.2em;
+}
+.markdown-body h5 {
+  font-size: 1em;
+  letter-spacing: 0.02em;
+}
+.markdown-body h6 {
+  font-size: 0.9em;
+  color: #6b6259;
+}
+
+/* Paragraphs */
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 1em;
+  animation: fadein 0.8s ease;
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Blockquotes */
+.markdown-body blockquote {
+  margin: 1.5em 0;
+  padding: 1em 1.2em;
+  color: #5a524a;
+  border-left: 5px solid #cbb79c;
+  background: #f9f6f1;
+  border-radius: 6px;
+  font-style: italic;
+  animation: subtlefade 1s ease;
+}
+@keyframes subtlefade {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Inline code */
+.markdown-body code:not(.hljs),
+.markdown-body tt {
+  padding: 0.15em 0.3em;
+  font-size: 90%;
+  background-color: #e8e1d7;
+  color: #5b3c11;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  transition: background 0.3s ease;
+}
+.markdown-body code:hover {
+  background-color: #dfd6c8;
+}
+
+/* Code blocks */
+.markdown-body pre:not(:has(.hljs)) {
+  padding: 1em;
+  overflow: auto;
+  font-size: 90%;
+  line-height: 1.6;
+  background-color: #ece6dc;
+  border-radius: 8px;
+  margin: 1.2em 0;
+  border: 1px solid #d7cfc2;
+  animation: fadein 0.6s ease;
+}
+
+/* Tables */
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+  font-size: 95%;
+}
+.markdown-body table th,
+.markdown-body table td {
+  padding: 8px 12px;
+  border: 1px solid #d7cfc2;
+}
+.markdown-body table th {
+  background-color: #f1e8dd;
+  color: #3e352b;
+}
+.markdown-body table tr:nth-child(even) {
+  background-color: #f8f4ef;
+}
+
+/* Horizontal rule with subtle animation */
+.markdown-body hr {
+  border: 0;
+  height: 2px;
+  margin: 2em 0;
+  background: linear-gradient(to right, #d8c7b0, #cbb79c);
+  border-radius: 2px;
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Images */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+  margin: 1.5em auto;
+  transition:
+    transform 0.4s ease,
+    box-shadow 0.4s ease;
+}
+.markdown-body img:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Highlights */
+.markdown-body mark {
+  background-color: #ffe7a1;
+  color: #2d2b28;
+  padding: 0.1em 0.25em;
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+.markdown-body mark:hover {
+  background-color: #ffd86e;
+}

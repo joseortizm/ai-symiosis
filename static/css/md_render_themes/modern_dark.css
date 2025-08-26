@@ -1,0 +1,169 @@
+/* Modern Dark */
+/* Optional fonts:
+  @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;500&family=Inter:wght@400;500&display=swap');
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500&display=swap');
+
+/* ===== TYPOGRAPHY ===== */
+
+.markdown-body {
+  color-scheme: dark;
+  margin: 0;
+  padding: 2rem;
+  font-size: 18px;
+  line-height: 1.75;
+  color: #e7e4df;
+  background: #16181b;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+/* ===== HEADINGS ===== */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 32px;
+  margin-bottom: 18px;
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 400; /* thin elegance */
+  line-height: 1.2;
+  color: #f5f4f2;
+  letter-spacing: -0.01em;
+  font-feature-settings:
+    'liga' 1,
+    'clig' 1;
+}
+
+/* Stronger visual hierarchy */
+.markdown-body h1 {
+  font-size: 2.8rem;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+.markdown-body h2 {
+  font-size: 2.1rem;
+  line-height: 1.2;
+}
+.markdown-body h3 {
+  font-size: 1.6rem;
+  font-weight: 400;
+}
+.markdown-body h4 {
+  font-size: 1.25rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===== BODY TEXT ===== */
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body pre,
+.markdown-body table {
+  margin-top: 0;
+  margin-bottom: 1.2em;
+}
+
+/* Links */
+.markdown-body a {
+  color: #91a8ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color 0.2s ease;
+}
+.markdown-body a:hover {
+  color: #b2c3ff;
+  text-decoration-thickness: 2px;
+}
+
+/* Blockquote */
+.markdown-body blockquote {
+  margin: 1.8em 0;
+  padding: 1.1em 1.4em;
+  color: #d0cbc5;
+  background: #1b1e22;
+  border-left: 3px solid #6c82e7;
+  font-style: italic;
+  border-radius: 6px;
+}
+
+/* Inline code */
+.markdown-body code:not(.hljs),
+.markdown-body tt {
+  padding: 0.15em 0.35em;
+  font-size: 90%;
+  background-color: #202329;
+  color: #f0c78a;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Code blocks */
+.markdown-body pre {
+  padding: 1em;
+  overflow: auto;
+  font-size: 90%;
+  line-height: 1.6;
+  background-color: #1f2329;
+  border-radius: 8px;
+  margin: 1.4em 0;
+  border: 1px solid #2a2e36;
+}
+
+/* Tables */
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+  font-size: 95%;
+}
+.markdown-body table th,
+.markdown-body table td {
+  padding: 8px 12px;
+  border: 1px solid #2a2e36;
+}
+.markdown-body table th {
+  background-color: #1b1f25;
+  color: #f0eeec;
+  font-weight: 500;
+}
+.markdown-body table tr:nth-child(even) {
+  background-color: #181c21;
+}
+
+/* Divider */
+.markdown-body hr {
+  border: 0;
+  height: 1px;
+  margin: 2.5em 0;
+  background: #2a2e36;
+}
+
+/* Images */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 6px;
+  display: block;
+  margin: 1.8em auto;
+}
+
+/* Highlight */
+.markdown-body mark {
+  background-color: #3a2f00;
+  color: #f3f0ea;
+  padding: 0.08em 0.3em;
+  border-radius: 2px;
+}

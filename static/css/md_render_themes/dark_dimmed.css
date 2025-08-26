@@ -8,7 +8,7 @@
   color: #adbac7;
   background-color: #22272e;
 
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: 'Georgia', 'Times New Roman', serif;
   font-size: 17px;
   line-height: 1.7;
   word-wrap: break-word;
@@ -62,9 +62,15 @@
   border-bottom: 1px solid #373e47;
 }
 
-.markdown-body h3 { font-size: 1.25em; }
-.markdown-body h4 { font-size: 1.1em; }
-.markdown-body h5 { font-size: 1em; }
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+.markdown-body h4 {
+  font-size: 1.1em;
+}
+.markdown-body h5 {
+  font-size: 1em;
+}
 .markdown-body h6 {
   font-size: 0.9em;
   color: #768390;
@@ -87,11 +93,11 @@
 
 /* Lists */
 
-.markdown-body blockquote>:first-child {
+.markdown-body blockquote > :first-child {
   margin-top: 0;
 }
 
-.markdown-body blockquote>:last-child {
+.markdown-body blockquote > :last-child {
   margin-bottom: 0;
 }
 
@@ -137,7 +143,14 @@
   font-size: 0.9em;
   background-color: #6e768166;
   border-radius: 4px;
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace;
+  font-family:
+    'JetBrains Mono',
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    Liberation Mono,
+    monospace;
 }
 
 /* Preformatted blocks */
@@ -150,7 +163,14 @@
   background-color: #2d333b;
   border-radius: 6px;
   margin: 1.2em 0;
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace;
+  font-family:
+    'JetBrains Mono',
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    Liberation Mono,
+    monospace;
 }
 
 .markdown-body pre code:not(.hljs),
@@ -190,7 +210,7 @@
   line-height: 1.6;
 }
 
-.markdown-body table td>:last-child {
+.markdown-body table td > :last-child {
   margin-bottom: 0;
 }
 
@@ -211,7 +231,6 @@
   margin: 2em 0;
 }
 
-
 .markdown-body img {
   border-style: none;
   max-width: 100%;
@@ -220,6 +239,6 @@
 }
 
 .markdown-body mark {
-  background-color: rgba(187,128,9,0.15);
+  background-color: rgba(187, 128, 9, 0.15);
   color: #adbac7;
 }
