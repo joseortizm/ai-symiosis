@@ -44,7 +44,9 @@ where
     DB_MANAGER.with_connection(f)
 }
 
-// Keep existing function for backward compatibility during transition
+// Legacy function for cases requiring mutable database access
+// Use with_db() for read operations and simple writes
+// Use get_db_connection() only for schema changes, bulk operations, or when mutable access is required
 pub fn get_db_connection() -> Result<Connection, String> {
     let db_path = get_database_path()?;
     if let Some(parent) = db_path.parent() {

@@ -1,5 +1,5 @@
 use crate::{
-    database::{get_db_connection, with_db},
+    database::with_db,
     get_config_notes_dir, recreate_database, render_note, safe_backup_path, safe_write_note,
     search::search_notes_hybrid,
     update_note_in_database, validate_note_name, APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
@@ -61,68 +61,70 @@ pub fn search_notes(query: &str) -> Result<Vec<String>, String> {
 pub fn get_note_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
 
-    let conn = get_db_connection().map_err(|e| e.to_string())?;
-    let mut stmt = conn
-        .prepare("SELECT content FROM notes WHERE filename = ?1")
-        .map_err(|e| e.to_string())?;
+    with_db(|conn| {
+        let mut stmt = conn
+            .prepare("SELECT content FROM notes WHERE filename = ?1")
+            .map_err(|e| e.to_string())?;
 
-    let content = stmt
-        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-        .map_err(|_| format!("Note not found: {}", note_name))?;
+        let content = stmt
+            .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+            .map_err(|_| format!("Note not found: {}", note_name))?;
 
-    Ok(content)
+        Ok(content)
+    })
 }
 
 #[tauri::command]
 pub fn get_note_raw_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
 
-    let conn = get_db_connection().map_err(|e| e.to_string())?;
-    let mut stmt = conn
-        .prepare("SELECT content FROM notes WHERE filename = ?1")
-        .map_err(|e| e.to_string())?;
+    with_db(|conn| {
+        let mut stmt = conn
+            .prepare("SELECT content FROM notes WHERE filename = ?1")
+            .map_err(|e| e.to_string())?;
 
-    let content = stmt
-        .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-        .map_err(|_| format!("Note not found: {}", note_name))?;
+        let content = stmt
+            .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+            .map_err(|_| format!("Note not found: {}", note_name))?;
 
-    Ok(content)
+        Ok(content)
+    })
 }
 
 #[tauri::command]
 pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name)?;
 
-    let conn = get_db_connection().map_err(|e| e.to_string())?;
+    with_db(|conn| {
+        let mut stmt = conn
+            .prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")
+            .map_err(|e| e.to_string())?;
 
-    let mut stmt = conn
-        .prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")
-        .map_err(|e| e.to_string())?;
+        let (html_content, is_indexed, content): (String, bool, String) = stmt
+            .query_row(params![note_name], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, bool>(1).unwrap_or(false),
+                    row.get::<_, String>(2)?,
+                ))
+            })
+            .map_err(|_| format!("Note not found: {}", note_name))?;
 
-    let (html_content, is_indexed, content): (String, bool, String) = stmt
-        .query_row(params![note_name], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, bool>(1).unwrap_or(false),
-                row.get::<_, String>(2)?,
-            ))
-        })
-        .map_err(|_| format!("Note not found: {}", note_name))?;
+        if is_indexed {
+            Ok(html_content)
+        } else {
+            let html_render = render_note(note_name, &content);
 
-    if is_indexed {
-        Ok(html_content)
-    } else {
-        let html_render = render_note(note_name, &content);
+            if let Err(e) = conn.execute(
+                "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
+                params![note_name, html_render, true],
+            ) {
+                eprintln!("Failed to update note indexing for '{}': {}", note_name, e);
+            }
 
-        if let Err(e) = conn.execute(
-            "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
-            params![note_name, html_render, true],
-        ) {
-            eprintln!("Failed to update note indexing for '{}': {}", note_name, e);
+            Ok(html_render)
         }
-
-        Ok(html_render)
-    }
+    })
 }
 
 #[tauri::command]
@@ -146,36 +148,17 @@ pub fn create_new_note(note_name: &str) -> Result<(), String> {
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
 
-    match get_db_connection() {
-        Ok(conn) => {
-            let html_render = render_note(note_name, "");
-            match conn.execute(
-                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![note_name, "", html_render, modified, true],
-            ) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    eprintln!(
-                        "Database insert failed for '{}': {}. Rebuilding database...",
-                        note_name, e
-                    );
-
-                    match recreate_database() {
-                        Ok(()) => {
-                            eprintln!("Database successfully rebuilt from files.");
-                            Ok(())
-                        }
-                        Err(rebuild_error) => {
-                            eprintln!("Database rebuild failed: {}. Note was created but may not be searchable.", rebuild_error);
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
+    match with_db(|conn| {
+        let html_render = render_note(note_name, "");
+        conn.execute(
+            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![note_name, "", html_render, modified, true],
+        ).map_err(|e| format!("Database insert failed: {}", e))
+    }) {
+        Ok(_) => Ok(()),
         Err(e) => {
             eprintln!(
-                "Database connection failed for '{}': {}. Rebuilding database...",
+                "Database operation failed for '{}': {}. Rebuilding database...",
                 note_name, e
             );
 
@@ -246,13 +229,14 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     // Pre-flight checks
     if !old_path.exists() {
         if new_path.exists() {
-            match get_db_connection() {
-                Ok(conn) => {
-                    let _ = conn.execute(
-                        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                        params![new_name, old_name],
-                    );
-                }
+            match with_db(|conn| {
+                conn.execute(
+                    "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                    params![new_name, old_name],
+                )
+                .map_err(|e| e.to_string())
+            }) {
+                Ok(_) => {}
                 Err(_) => {
                     let _ = recreate_database();
                 }
@@ -315,36 +299,20 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         new_name
     );
 
-    match get_db_connection() {
-        Ok(conn) => {
-            match conn.execute(
-                "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                params![new_name, old_name],
-            ) {
-                Ok(_) => {
-                    let _ = fs::remove_file(&backup_path);
-                    Ok(())
-                }
-                Err(e) => {
-                    eprintln!("Database update failed for rename '{}' -> '{}': {}. Rebuilding database...", old_name, new_name, e);
-
-                    match recreate_database() {
-                        Ok(()) => {
-                            eprintln!("Database successfully rebuilt from files.");
-                            let _ = fs::remove_file(&backup_path);
-                            Ok(())
-                        }
-                        Err(rebuild_error) => {
-                            eprintln!("Database rebuild failed: {}. Note was renamed but may not be searchable.", rebuild_error);
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
+    match with_db(|conn| {
+        conn.execute(
+            "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+            params![new_name, old_name],
+        )
+        .map(|_| {
+            let _ = fs::remove_file(&backup_path);
+        })
+        .map_err(|e| format!("Database update failed: {}", e))
+    }) {
+        Ok(_) => Ok(()),
         Err(e) => {
             eprintln!(
-                "Database connection failed for rename '{}' -> '{}': {}. Rebuilding database...",
+                "Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...",
                 old_name, new_name, e
             );
 
@@ -372,10 +340,11 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
     let note_path = get_config_notes_dir().join(note_name);
 
     if !note_path.exists() {
-        match get_db_connection() {
-            Ok(conn) => {
-                let _ = conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]);
-            }
+        match with_db(|conn| {
+            conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
+                .map_err(|e| e.to_string())
+        }) {
+            Ok(_) => {}
             Err(_) => {
                 let _ = recreate_database();
             }
@@ -422,32 +391,14 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
         backup_path.display()
     );
 
-    match get_db_connection() {
-        Ok(conn) => {
-            match conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name]) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    eprintln!(
-                        "Database delete failed for '{}': {}. Rebuilding database...",
-                        note_name, e
-                    );
-
-                    match recreate_database() {
-                        Ok(()) => {
-                            eprintln!("Database successfully rebuilt from files.");
-                            Ok(())
-                        }
-                        Err(rebuild_error) => {
-                            eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
+    match with_db(|conn| {
+        conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
+            .map_err(|e| format!("Database delete failed: {}", e))
+    }) {
+        Ok(_) => Ok(()),
         Err(e) => {
             eprintln!(
-                "Database connection failed for delete '{}': {}. Rebuilding database...",
+                "Database operation failed for delete '{}': {}. Rebuilding database...",
                 note_name, e
             );
 

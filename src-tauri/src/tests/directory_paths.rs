@@ -157,9 +157,9 @@ fn test_database_path_uses_data_dir() {
     }
 
     // Test the function integration - database path should actually work with database connection
-    let db_path_from_database_module = crate::database::get_db_connection();
+    let db_result = crate::database::with_db(|_conn| Ok("Connection works"));
     assert!(
-        db_path_from_database_module.is_ok() || db_path_from_database_module.is_err(),
+        db_result.is_ok() || db_result.is_err(),
         "Database connection should either succeed or fail gracefully"
     );
 }

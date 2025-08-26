@@ -16,7 +16,7 @@ use config::{
 };
 use database::{
     get_backup_dir_for_notes_path, get_database_path as get_db_path, get_db_connection,
-    get_temp_dir,
+    get_temp_dir, with_db,
 };
 use html_escape;
 use pulldown_cmark::{html, Options, Parser};
@@ -420,67 +420,67 @@ pub fn update_note_in_database(
     content: &str,
     modified: i64,
 ) -> Result<(), String> {
-    let conn = get_db_connection()?;
+    with_db(|conn| {
+        // Generate HTML render from content
+        let html_render = render_note(note_name, content);
 
-    // Generate HTML render from content
-    let html_render = render_note(note_name, content);
+        // First try to update existing note
+        let updated_rows = conn
+            .execute(
+                "UPDATE notes SET content = ?2, html_render = ?3, modified = ?4, is_indexed = ?5 WHERE filename = ?1",
+                params![note_name, content, html_render, modified, true],
+            )
+            .map_err(|e| format!("Database error: {}", e))?;
 
-    // First try to update existing note
-    let updated_rows = conn
-        .execute(
-            "UPDATE notes SET content = ?2, html_render = ?3, modified = ?4, is_indexed = ?5 WHERE filename = ?1",
-            params![note_name, content, html_render, modified, true],
-        )
-        .map_err(|e| format!("Database error: {}", e))?;
+        // If no rows were updated, insert new note
+        if updated_rows == 0 {
+            conn.execute(
+                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![note_name, content, html_render, modified, true],
+            )
+            .map_err(|e| format!("Database error: {}", e))?;
+        }
 
-    // If no rows were updated, insert new note
-    if updated_rows == 0 {
-        conn.execute(
-            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![note_name, content, html_render, modified, true],
-        )
-        .map_err(|e| format!("Database error: {}", e))?;
-    }
+        // Verify database was updated correctly
+        let db_content = conn
+            .query_row(
+                "SELECT content FROM notes WHERE filename = ?1",
+                params![note_name],
+                |row| row.get::<_, String>(0),
+            )
+            .map_err(|e| format!("Failed to verify database update: {}", e))?;
 
-    // Verify database was updated correctly
-    let db_content = conn
-        .query_row(
-            "SELECT content FROM notes WHERE filename = ?1",
-            params![note_name],
-            |row| row.get::<_, String>(0),
-        )
-        .map_err(|e| format!("Failed to verify database update: {}", e))?;
+        if db_content != content {
+            let error_msg = format!(
+                "Database update verification failed for '{}': expected {} bytes, found {} bytes",
+                note_name,
+                content.len(),
+                db_content.len()
+            );
+            eprintln!(
+                "[{}] {}",
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                error_msg
+            );
+            return Err(error_msg);
+        }
 
-    if db_content != content {
-        let error_msg = format!(
-            "Database update verification failed for '{}': expected {} bytes, found {} bytes",
-            note_name,
-            content.len(),
-            db_content.len()
-        );
+        // Log successful database operation
         eprintln!(
-            "[{}] {}",
+            "[{}] Database Operation: UPDATE/INSERT | File: {} | Size: {} bytes | Result: SUCCESS",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs(),
-            error_msg
+            note_name,
+            content.len()
         );
-        return Err(error_msg);
-    }
 
-    // Log successful database operation
-    eprintln!(
-        "[{}] Database Operation: UPDATE/INSERT | File: {} | Size: {} bytes | Result: SUCCESS",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-        note_name,
-        content.len()
-    );
-
-    Ok(())
+        Ok(())
+    })
 }
 
 // System tray setup
@@ -582,81 +582,81 @@ pub fn quick_filesystem_sync_check() -> Result<bool, String> {
         return Ok(true);
     }
 
-    let conn = get_db_connection()?;
+    with_db(|conn| {
+        // Get up to 100 most recently modified files
+        let mut files: Vec<_> = WalkDir::new(&notes_dir)
+            .follow_links(false)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+            .collect();
 
-    // Get up to 100 most recently modified files
-    let mut files: Vec<_> = WalkDir::new(&notes_dir)
-        .follow_links(false)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "md"))
-        .collect();
+        // Skip check if no files found
+        if files.is_empty() {
+            return Ok(true);
+        }
 
-    // Skip check if no files found
-    if files.is_empty() {
-        return Ok(true);
-    }
+        // Sort by modification time (most recent first) and take up to 100
+        files.sort_by_key(|e| std::cmp::Reverse(e.metadata().ok().and_then(|m| m.modified().ok())));
+        files.truncate(100);
 
-    // Sort by modification time (most recent first) and take up to 100
-    files.sort_by_key(|e| std::cmp::Reverse(e.metadata().ok().and_then(|m| m.modified().ok())));
-    files.truncate(100);
+        // Check each file against database
+        for entry in files {
+            let file_path = entry.path();
+            let relative_path = file_path
+                .strip_prefix(&notes_dir)
+                .map_err(|e| format!("Failed to get relative path: {}", e))?;
+            let filename = relative_path.to_string_lossy().to_string();
 
-    // Check each file against database
-    for entry in files {
-        let file_path = entry.path();
-        let relative_path = file_path
-            .strip_prefix(&notes_dir)
-            .map_err(|e| format!("Failed to get relative path: {}", e))?;
-        let filename = relative_path.to_string_lossy().to_string();
+            // Try to read file content (skip on permission issues with warning)
+            let file_content = match std::fs::read_to_string(file_path) {
+                Ok(content) => content,
+                Err(_) => {
+                    eprintln!(
+                        "Warning: Could not read file {} during sync check",
+                        filename
+                    );
+                    continue;
+                }
+            };
 
-        // Try to read file content (skip on permission issues with warning)
-        let file_content = match std::fs::read_to_string(file_path) {
-            Ok(content) => content,
-            Err(_) => {
-                eprintln!(
-                    "Warning: Could not read file {} during sync check",
-                    filename
-                );
-                continue;
-            }
-        };
+            // Get modification time
+            let file_modified = entry
+                .metadata()
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
 
-        // Get modification time
-        let file_modified = entry
-            .metadata()
-            .ok()
-            .and_then(|m| m.modified().ok())
-            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
+            // Check if file exists in database with matching content
+            let db_result: Result<(String, i64), rusqlite::Error> = conn.query_row(
+                "SELECT content, modified FROM notes WHERE filename = ?1",
+                params![filename],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            );
 
-        // Check if file exists in database with matching content
-        let db_result: Result<(String, i64), rusqlite::Error> = conn.query_row(
-            "SELECT content, modified FROM notes WHERE filename = ?1",
-            params![filename],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        );
-
-        match db_result {
-            Ok((db_content, db_modified)) => {
-                // Check content match
-                if db_content != file_content {
+            match db_result {
+                Ok((db_content, db_modified)) => {
+                    // Check content match
+                    if db_content != file_content {
+                        return Ok(false);
+                    }
+                    // Check modification time match (allow 1 second tolerance)
+                    if (db_modified - file_modified).abs() > 1 {
+                        return Ok(false);
+                    }
+                }
+                Err(_) => {
+                    // File exists in filesystem but not in database
                     return Ok(false);
                 }
-                // Check modification time match (allow 1 second tolerance)
-                if (db_modified - file_modified).abs() > 1 {
-                    return Ok(false);
-                }
-            }
-            Err(_) => {
-                // File exists in filesystem but not in database
-                return Ok(false);
             }
         }
-    }
 
-    Ok(true)
+        Ok(true)
+    })
 }
 
 // Initialization functions
