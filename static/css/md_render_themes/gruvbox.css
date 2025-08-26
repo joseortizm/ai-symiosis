@@ -1,0 +1,176 @@
+/* Gruvbox Notes */
+/* Clean, readable for note-taking */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+/* ===== TYPOGRAPHY ===== */
+.markdown-body {
+  color-scheme: dark;
+  margin: 0;
+  padding: 2rem;
+  font-size: 18px;
+  line-height: 1.75;
+  color: #d6d1ca;
+  background: #1c1917;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-family:
+    'IBM Plex Sans',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+/* ===== HEADINGS ===== */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 32px;
+  margin-bottom: 18px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #f4f1eb;
+  letter-spacing: -0.01em;
+  font-feature-settings:
+    'liga' 1,
+    'clig' 1;
+}
+
+/* Stronger visual hierarchy */
+.markdown-body h1 {
+  font-size: 2.8rem;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: #fbbf24;
+}
+
+.markdown-body h2 {
+  font-size: 2.1rem;
+  line-height: 1.2;
+  color: #fb923c;
+}
+
+.markdown-body h3 {
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: #f87171;
+}
+
+.markdown-body h4 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #c084fc;
+}
+
+/* ===== BODY TEXT ===== */
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body pre,
+.markdown-body table {
+  margin-top: 0;
+  margin-bottom: 1.2em;
+}
+
+/* Links */
+.markdown-body a {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color 0.2s ease;
+}
+
+.markdown-body a:hover {
+  color: #93c5fd;
+  text-decoration-thickness: 2px;
+}
+
+/* Blockquote */
+.markdown-body blockquote {
+  margin: 1.8em 0;
+  padding: 1.1em 1.4em;
+  color: #c7c2bb;
+  background: #292524;
+  border-left: 3px solid #fbbf24;
+  font-style: italic;
+  border-radius: 6px;
+}
+
+/* Inline code */
+.markdown-body code:not(.hljs),
+.markdown-body tt {
+  padding: 0.15em 0.35em;
+  font-size: 90%;
+  background-color: #44403c;
+  color: #fde047;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Code blocks */
+.markdown-body pre {
+  padding: 1em;
+  overflow: auto;
+  font-size: 90%;
+  line-height: 1.6;
+  background-color: #292524;
+  border-radius: 8px;
+  margin: 1.4em 0;
+  border: 1px solid #44403c;
+}
+
+/* Tables */
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+  font-size: 95%;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  padding: 8px 12px;
+  border: 1px solid #44403c;
+}
+
+.markdown-body table th {
+  background-color: #292524;
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+.markdown-body table tr:nth-child(even) {
+  background-color: #1f1f1f;
+}
+
+/* Divider */
+.markdown-body hr {
+  border: 0;
+  height: 1px;
+  margin: 2.5em 0;
+  background: #44403c;
+}
+
+/* Images */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 6px;
+  display: block;
+  margin: 1.8em auto;
+}
+
+/* Highlight */
+.markdown-body mark {
+  background-color: #7c2d12;
+  color: #fed7aa;
+  padding: 0.08em 0.3em;
+  border-radius: 2px;
+}
