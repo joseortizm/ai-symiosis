@@ -26,10 +26,6 @@ interface SearchManager {
   readonly query: string
   setSearchInput(value: string): void
   setFilteredNotes(notes: string[]): void
-  updateSearchInputWithEffects(
-    newInput: string,
-    onHighlightsClear: (cleared: boolean) => void
-  ): void
   clearSearch(): void
   searchImmediate(query: string): Promise<string[]>
   refreshSearch(searchInput: string): Promise<string[]>
@@ -102,17 +98,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     state.filteredNotes = notes
   }
 
-  function updateSearchInputWithEffects(
-    newInput: string,
-    onHighlightsClear: (cleared: boolean) => void
-  ): void {
-    if (newInput.trim()) {
-      onHighlightsClear(false)
-    }
-
-    setSearchInput(newInput)
-  }
-
   function clearSearch(): void {
     setSearchInput('')
   }
@@ -123,7 +108,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     setSearchInput,
     setFilteredNotes,
     clearSearch,
-    updateSearchInputWithEffects,
 
     // State getters/setters
     get isLoading(): boolean {
@@ -136,7 +120,7 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
       return state.searchInput
     },
     set searchInput(value: string) {
-      updateSearchInputWithEffects(value, () => {})
+      setSearchInput(value)
     },
     get query(): string {
       return state.query

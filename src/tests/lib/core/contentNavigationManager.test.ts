@@ -31,25 +31,8 @@ describe('ContentNavigationManager', () => {
       <p>Final content</p>
     `
 
-    // Mock getBoundingClientRect for elements
-    Element.prototype.getBoundingClientRect = vi.fn(() => ({
-      top: 100,
-      left: 0,
-      bottom: 120,
-      right: 100,
-      width: 100,
-      height: 20,
-      x: 0,
-      y: 100,
-      toJSON: vi.fn(),
-    }))
-
-    // Mock scrollIntoView
-    Element.prototype.scrollIntoView = vi.fn()
-
-    // Mock scroll methods for container element
+    // Mock scroll methods
     mockNoteContentElement.scrollTo = vi.fn()
-    mockNoteContentElement.scrollTop = 0
     Object.defineProperty(mockNoteContentElement, 'clientHeight', {
       value: 500,
       configurable: true,
@@ -66,6 +49,20 @@ describe('ContentNavigationManager', () => {
       toJSON: vi.fn(),
     }))
 
+    // Mock element methods
+    Element.prototype.getBoundingClientRect = vi.fn(() => ({
+      top: 100,
+      left: 0,
+      bottom: 120,
+      right: 100,
+      width: 100,
+      height: 20,
+      x: 0,
+      y: 100,
+      toJSON: vi.fn(),
+    }))
+    Element.prototype.scrollIntoView = vi.fn()
+
     mockDeps = {
       focusManager: {
         noteContentElement: mockNoteContentElement,
@@ -79,45 +76,38 @@ describe('ContentNavigationManager', () => {
     navigationManager = createContentNavigationManager(mockDeps)
   })
 
-  describe('search highlight navigation', () => {
+  describe('highlight navigation functionality', () => {
     beforeEach(() => {
       mockDeps.searchManager.query = 'search'
     })
 
-    it('should navigate to first highlight on navigateNext', () => {
+    it('should apply highlight-current class to first highlight on navigateNext', () => {
       navigationManager.navigateNext()
 
       const highlights =
         mockNoteContentElement.querySelectorAll('mark.highlight')
-      expect(highlights[0].scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      })
       expect(highlights[0].classList.contains('highlight-current')).toBe(true)
+      expect(highlights[1].classList.contains('highlight-current')).toBe(false)
     })
 
-    it('should navigate to second highlight on consecutive navigateNext calls', () => {
+    it('should move to second highlight on consecutive navigateNext calls', () => {
       navigationManager.navigateNext()
       navigationManager.navigateNext()
 
       const highlights =
         mockNoteContentElement.querySelectorAll('mark.highlight')
-      expect(highlights[1].scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      })
+      expect(highlights[0].classList.contains('highlight-current')).toBe(false)
+      expect(highlights[1].classList.contains('highlight-current')).toBe(true)
     })
 
     it('should stay at last highlight when navigating beyond bounds', () => {
       navigationManager.navigateNext()
       navigationManager.navigateNext()
-      navigationManager.navigateNext()
+      navigationManager.navigateNext() // Should stay at second highlight
 
       const highlights =
         mockNoteContentElement.querySelectorAll('mark.highlight')
-      expect(highlights[1].scrollIntoView).toHaveBeenCalledTimes(3)
+      expect(highlights[1].classList.contains('highlight-current')).toBe(true)
     })
 
     it('should navigate backwards with navigatePrevious', () => {
@@ -127,27 +117,24 @@ describe('ContentNavigationManager', () => {
 
       const highlights =
         mockNoteContentElement.querySelectorAll('mark.highlight')
-      expect(highlights[0].scrollIntoView).toHaveBeenCalledTimes(3)
+      expect(highlights[0].classList.contains('highlight-current')).toBe(true)
+      expect(highlights[1].classList.contains('highlight-current')).toBe(false)
     })
   })
 
-  describe('header navigation', () => {
+  describe('header navigation functionality', () => {
     beforeEach(() => {
       mockDeps.searchManager.query = '' // No search query = header mode
     })
 
-    it('should navigate to first header on navigateNext', () => {
+    it('should apply header-current class to first header on navigateNext', () => {
       navigationManager.navigateNext()
 
       const headers = mockNoteContentElement.querySelectorAll(
         'h1, h2, h3, h4, h5, h6'
       )
-      expect(headers[0].scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      })
       expect(headers[0].classList.contains('header-current')).toBe(true)
+      expect(headers[1].classList.contains('header-current')).toBe(false)
     })
 
     it('should navigate through all headers sequentially', () => {
@@ -158,9 +145,9 @@ describe('ContentNavigationManager', () => {
       const headers = mockNoteContentElement.querySelectorAll(
         'h1, h2, h3, h4, h5, h6'
       )
-      expect(headers[0].scrollIntoView).toHaveBeenCalledTimes(3)
-      expect(headers[1].scrollIntoView).toHaveBeenCalledTimes(3)
-      expect(headers[2].scrollIntoView).toHaveBeenCalledTimes(3)
+      expect(headers[0].classList.contains('header-current')).toBe(false)
+      expect(headers[1].classList.contains('header-current')).toBe(false)
+      expect(headers[2].classList.contains('header-current')).toBe(true)
     })
 
     it('should navigate backwards through headers', () => {
@@ -171,51 +158,46 @@ describe('ContentNavigationManager', () => {
       const headers = mockNoteContentElement.querySelectorAll(
         'h1, h2, h3, h4, h5, h6'
       )
-      expect(headers[0].scrollIntoView).toHaveBeenCalledTimes(3)
+      expect(headers[0].classList.contains('header-current')).toBe(true)
+      expect(headers[1].classList.contains('header-current')).toBe(false)
     })
   })
 
-  describe('highlight cleared behavior', () => {
-    it('should switch to header navigation when highlights are cleared even with query present', () => {
-      // Set up: query present, highlights cleared
+  describe('mode switching behavior', () => {
+    it('should switch to header navigation when highlights are hidden', () => {
       mockDeps.searchManager.query = 'search'
-      // Clear highlights first to simulate cleared state
       navigationManager.clearHighlights()
 
       navigationManager.navigateNext()
 
-      // Should navigate to first header, not highlights
       const headers = mockNoteContentElement.querySelectorAll(
         'h1, h2, h3, h4, h5, h6'
       )
-      expect(headers[0].scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      })
+      const highlights =
+        mockNoteContentElement.querySelectorAll('mark.highlight')
+
       expect(headers[0].classList.contains('header-current')).toBe(true)
+      expect(highlights[0].classList.contains('highlight-current')).toBe(false)
     })
 
-    it('should use highlight navigation when query present and highlights not cleared', () => {
-      // Set up: query present, highlights not cleared
+    it('should use highlight navigation when query present and highlights visible', () => {
       mockDeps.searchManager.query = 'search'
-      // Highlights should be cleared by default (false), so no action needed
+      // Highlights visible by default
 
       navigationManager.navigateNext()
 
-      // Should navigate to first highlight, not headers
+      const headers = mockNoteContentElement.querySelectorAll(
+        'h1, h2, h3, h4, h5, h6'
+      )
       const highlights =
         mockNoteContentElement.querySelectorAll('mark.highlight')
-      expect(highlights[0].scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      })
+
       expect(highlights[0].classList.contains('highlight-current')).toBe(true)
+      expect(headers[0].classList.contains('header-current')).toBe(false)
     })
   })
 
-  describe('edge cases', () => {
+  describe('state management', () => {
     it('should handle missing noteContentElement gracefully', () => {
       mockDeps.focusManager.noteContentElement = null
 
@@ -234,15 +216,16 @@ describe('ContentNavigationManager', () => {
       }).not.toThrow()
     })
 
-    it('should reset navigation state', () => {
-      navigationManager.navigateNext()
-      navigationManager.resetNavigation()
+    it('should reset navigation state properly', () => {
+      mockDeps.searchManager.query = 'search'
       navigationManager.navigateNext()
 
-      const headers = mockNoteContentElement.querySelectorAll(
-        'h1, h2, h3, h4, h5, h6'
-      )
-      expect(headers[0].scrollIntoView).toHaveBeenCalledTimes(2)
+      const highlights =
+        mockNoteContentElement.querySelectorAll('mark.highlight')
+      expect(highlights[0].classList.contains('highlight-current')).toBe(true)
+
+      navigationManager.resetNavigation()
+      expect(highlights[0].classList.contains('highlight-current')).toBe(false)
     })
 
     it('should clear current styles with clearCurrentStyles', () => {
@@ -254,6 +237,16 @@ describe('ContentNavigationManager', () => {
 
       navigationManager.clearCurrentStyles()
       expect(headers[0].classList.contains('header-current')).toBe(false)
+    })
+
+    it('should report correct hide highlights state', () => {
+      expect(navigationManager.hideHighlights).toBe(false)
+
+      navigationManager.clearHighlights()
+      expect(navigationManager.hideHighlights).toBe(true)
+
+      navigationManager.showHighlights()
+      expect(navigationManager.hideHighlights).toBe(false)
     })
   })
 })

@@ -82,43 +82,6 @@ describe('searchManager', () => {
       expect(searchManager.searchInput).toBe('test input')
     })
 
-    it('should handle search input coordination with highlight clearing', () => {
-      const onHighlightsClear = vi.fn()
-
-      searchManager.updateSearchInputWithEffects('new query', onHighlightsClear)
-
-      expect(searchManager.searchInput).toBe('new query')
-      expect(onHighlightsClear).toHaveBeenCalledWith(false)
-    })
-
-    it('should actually trigger search when using updateSearchInputWithEffects', async () => {
-      const notes = ['search-result.md', 'another-note.md']
-      mockNoteService.search.mockResolvedValue(notes)
-      const onHighlightsClear = vi.fn()
-
-      // Use fake timers BEFORE calling updateSearchInputWithEffects
-      vi.useFakeTimers()
-
-      // CRITICAL: This test verifies search execution actually happens (catches state pre-setting bugs)
-      searchManager.updateSearchInputWithEffects(
-        'test search',
-        onHighlightsClear
-      )
-
-      // Fast-forward past debounce delay
-      vi.advanceTimersByTime(200)
-
-      // Wait for promise resolution
-      await vi.runAllTimersAsync()
-
-      // The critical assertion: verify search was actually performed
-      expect(mockNoteService.search).toHaveBeenCalledWith('test search')
-      expect(searchManager.filteredNotes).toEqual(notes)
-      expect(searchManager.query).toBe('test search')
-
-      vi.useRealTimers()
-    })
-
     it('should provide refreshSearch method', async () => {
       const notes = ['refresh.md', 'test.md']
       mockNoteService.search.mockResolvedValueOnce(notes)

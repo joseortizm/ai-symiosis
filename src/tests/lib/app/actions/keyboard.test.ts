@@ -29,7 +29,7 @@ describe('keyboard actions', () => {
         navigatePrevious: vi.fn(),
         resetNavigation: vi.fn(),
         clearCurrentStyles: vi.fn(),
-        isNavigationActive: false,
+        isActivelyNavigating: false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       configStateManager: {
@@ -95,7 +95,7 @@ describe('keyboard actions', () => {
       filteredNotes: ['note1.md', 'note2.md', 'note3.md'],
       selectedNote: 'note1.md',
       noteContentElement: document.createElement('div'),
-      areHighlightsCleared: false,
+      hideHighlights: false,
       isEditorDirty: false,
       query: 'test query',
       isSettingsOpen: false,
@@ -220,7 +220,10 @@ describe('keyboard actions', () => {
   describe('scrolling actions', () => {
     it('scrollUpBy should call scrollBy on noteContentElement', () => {
       const mockScrollBy = vi.fn()
-      const mockElement = { scrollBy: mockScrollBy } as unknown as HTMLElement
+      const mockElement = {
+        scrollBy: mockScrollBy,
+        clientHeight: 625,
+      } as unknown as HTMLElement
       const stateWithElement = { ...mockState, noteContentElement: mockElement }
       const context: ActionContext = {
         state: stateWithElement,
@@ -237,7 +240,10 @@ describe('keyboard actions', () => {
 
     it('scrollDownBy should call scrollBy on noteContentElement', () => {
       const mockScrollBy = vi.fn()
-      const mockElement = { scrollBy: mockScrollBy } as unknown as HTMLElement
+      const mockElement = {
+        scrollBy: mockScrollBy,
+        clientHeight: 625,
+      } as unknown as HTMLElement
       const stateWithElement = { ...mockState, noteContentElement: mockElement }
       const context: ActionContext = {
         state: stateWithElement,
@@ -533,7 +539,7 @@ describe('keyboard actions', () => {
       expect(mappings.searchInput['Ctrl+x']).toBe('notes.deleteNote')
       expect(mappings.searchInput.ArrowUp).toBe('navigation.moveUp')
       expect(mappings.searchInput.ArrowDown).toBe('navigation.moveDown')
-      expect(mappings.searchInput.Escape).toBe('search.clearHighlights')
+      expect(mappings.searchInput.Escape).toBe('search.handleEscape')
       expect(mappings.searchInput['Meta+,']).toBe('settings.openSettings')
 
       // Test editMode context mappings

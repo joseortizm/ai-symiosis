@@ -85,9 +85,9 @@ function highlightMatches(content: string, query: string): string {
 export function getHighlightedContent(
   content: string,
   query: string,
-  areHighlightsCleared: boolean
+  hideHighlights: boolean
 ): string {
-  if (!query.trim() || areHighlightsCleared) {
+  if (!query.trim() || hideHighlights) {
     return content
   }
   return highlightMatches(content, query)

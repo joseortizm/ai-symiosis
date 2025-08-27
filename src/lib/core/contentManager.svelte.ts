@@ -18,7 +18,7 @@ export interface ContentManagerDeps {
     readonly noteContentElement: HTMLElement | null
   }
   contentNavigationManager: {
-    readonly areHighlightsCleared: boolean
+    readonly hideHighlights: boolean
     clearHighlights(): void
   }
 }
@@ -53,7 +53,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     getHighlightedContent(
       state.noteContent,
       deps.searchManager.query,
-      deps.contentNavigationManager.areHighlightsCleared
+      deps.contentNavigationManager.hideHighlights
     )
   )
 
@@ -63,10 +63,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
 
   function scrollToFirstMatch(): void {
     const noteContentElement = deps.focusManager.noteContentElement
-    if (
-      noteContentElement &&
-      !deps.contentNavigationManager.areHighlightsCleared
-    ) {
+    if (noteContentElement && !deps.contentNavigationManager.hideHighlights) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight')
         if (firstMatch) {

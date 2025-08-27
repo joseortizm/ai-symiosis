@@ -8,11 +8,11 @@ import { SvelteSet } from 'svelte/reactivity'
 
 interface NavigationState {
   currentIndex: number
-  isNavigatingHighlights: boolean
+  navigationMode: 'inactive' | 'highlights' | 'headers'
+  highlightVisibility: 'visible' | 'hidden'
   currentElement: Element | null
   collapsedSections: SvelteSet<Element>
   currentSection: Element | null
-  areHighlightsCleared: boolean
 }
 
 interface NavigationDeps {
@@ -37,9 +37,10 @@ export interface ContentNavigationManager {
   resetNavigation(): void
   clearCurrentStyles(): void
   clearHighlights(): void
+  showHighlights(): void
   handleEscape(): EscapeAction
-  readonly isNavigationActive: boolean
-  readonly areHighlightsCleared: boolean
+  readonly isActivelyNavigating: boolean
+  readonly hideHighlights: boolean
 }
 
 export function createContentNavigationManager(
@@ -47,52 +48,67 @@ export function createContentNavigationManager(
 ): ContentNavigationManager {
   const state = $state<NavigationState>({
     currentIndex: -1,
-    isNavigatingHighlights: false,
+    navigationMode: 'inactive',
+    highlightVisibility: 'visible',
     currentElement: null,
     collapsedSections: new SvelteSet<Element>(),
     currentSection: null,
-    areHighlightsCleared: false,
   })
 
-  function getNavigationElements(): Element[] {
-    const contentElement = deps.focusManager.noteContentElement
-    if (!contentElement) return []
-
+  function determineNavigationMode(): 'highlights' | 'headers' {
     const query = deps.searchManager.query
     const hasQuery = query.trim() !== ''
 
-    // Use highlight navigation only if there's a query AND highlights haven't been cleared
-    const shouldNavigateHighlights = hasQuery && !state.areHighlightsCleared
+    // Use highlights if: query exists AND highlights are visible AND highlights exist in DOM
+    if (hasQuery && state.highlightVisibility === 'visible') {
+      const contentElement = deps.focusManager.noteContentElement
+      if (contentElement) {
+        const highlightElements =
+          contentElement.querySelectorAll('mark.highlight')
+        if (highlightElements.length > 0) {
+          return 'highlights'
+        }
+      }
+    }
 
-    if (state.isNavigatingHighlights !== shouldNavigateHighlights) {
+    // Otherwise use headers
+    return 'headers'
+  }
+
+  function getHighlightElements(): Element[] {
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return []
+
+    return Array.from(contentElement.querySelectorAll('mark.highlight'))
+  }
+
+  function getHeaderElements(): Element[] {
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return []
+
+    return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+  }
+
+  function getCurrentNavigationElements(): Element[] {
+    const targetMode = determineNavigationMode()
+
+    // If mode changed, reset navigation state
+    if (
+      state.navigationMode !== 'inactive' &&
+      state.navigationMode !== targetMode
+    ) {
       clearCurrentElementStyle()
       state.currentIndex = -1
     }
 
-    if (shouldNavigateHighlights) {
-      const highlightElements =
-        contentElement.querySelectorAll('mark.highlight')
-      if (highlightElements.length === 0) {
-        // No actual highlights found despite expecting them, switch to headers
-        state.isNavigatingHighlights = false
-        return Array.from(
-          contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
-        )
-      } else {
-        state.isNavigatingHighlights = true
-        return Array.from(highlightElements)
-      }
-    } else {
-      state.isNavigatingHighlights = false
-      return Array.from(
-        contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
-      )
-    }
+    return targetMode === 'highlights'
+      ? getHighlightElements()
+      : getHeaderElements()
   }
 
   function clearCurrentElementStyle(): void {
     if (state.currentElement) {
-      if (state.isNavigatingHighlights) {
+      if (state.navigationMode === 'highlights') {
         state.currentElement.classList.remove('highlight-current')
       } else {
         state.currentElement.classList.remove('header-current')
@@ -131,7 +147,7 @@ export function createContentNavigationManager(
 
   function updateAccordionState(currentHeader: Element): void {
     // Skip accordion logic for highlight navigation
-    if (state.isNavigatingHighlights) return
+    if (state.navigationMode === 'highlights') return
 
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return
@@ -196,10 +212,15 @@ export function createContentNavigationManager(
     )
   }
 
-  function setCurrentElementStyle(element: Element): void {
+  function setCurrentElementStyle(
+    element: Element,
+    mode: 'highlights' | 'headers'
+  ): void {
     clearCurrentElementStyle()
     state.currentElement = element
-    if (state.isNavigatingHighlights) {
+    state.navigationMode = mode
+
+    if (mode === 'highlights') {
       element.classList.add('highlight-current')
     } else {
       element.classList.add('header-current')
@@ -208,7 +229,8 @@ export function createContentNavigationManager(
   }
 
   function scrollToElement(element: Element): void {
-    setCurrentElementStyle(element)
+    const mode = determineNavigationMode()
+    setCurrentElementStyle(element, mode)
 
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) {
@@ -237,7 +259,7 @@ export function createContentNavigationManager(
   }
 
   function navigateNext(): void {
-    const elements = getNavigationElements()
+    const elements = getCurrentNavigationElements()
     if (elements.length === 0) return
 
     // If no current position, start with first element
@@ -253,7 +275,7 @@ export function createContentNavigationManager(
   }
 
   function navigatePrevious(): void {
-    const elements = getNavigationElements()
+    const elements = getCurrentNavigationElements()
     if (elements.length === 0) return
 
     // If no current position, start with first element
@@ -288,6 +310,7 @@ export function createContentNavigationManager(
     state.collapsedSections.clear()
     state.currentSection = null
     state.currentIndex = -1
+    state.navigationMode = 'inactive'
   }
 
   function clearCurrentStyles(): void {
@@ -295,16 +318,16 @@ export function createContentNavigationManager(
   }
 
   function clearHighlights(): void {
-    state.areHighlightsCleared = true
+    state.highlightVisibility = 'hidden'
   }
 
-  function resetHighlightState(): void {
-    state.areHighlightsCleared = false
+  function showHighlights(): void {
+    state.highlightVisibility = 'visible'
   }
 
   function handleEscape(): EscapeAction {
     // Priority 1: Clear active navigation
-    if (state.currentElement !== null || state.currentIndex > -1) {
+    if (state.navigationMode !== 'inactive') {
       resetNavigation()
       return 'navigation_cleared'
     }
@@ -313,15 +336,15 @@ export function createContentNavigationManager(
     const query = deps.searchManager.query
     const hasQuery = query.trim() !== ''
 
-    if (hasQuery && !state.areHighlightsCleared) {
+    if (hasQuery && state.highlightVisibility === 'visible') {
       clearHighlights()
       return 'highlights_cleared'
     }
 
-    // Priority 3: Clear search if highlights already cleared but query exists
-    if (hasQuery && state.areHighlightsCleared) {
+    // Priority 3: Clear search if highlights hidden but query exists
+    if (hasQuery && state.highlightVisibility === 'hidden') {
       deps.searchManager.clearSearch()
-      resetHighlightState()
+      showHighlights() // Reset highlights for next search
       return 'search_cleared'
     }
 
@@ -335,14 +358,15 @@ export function createContentNavigationManager(
     resetNavigation,
     clearCurrentStyles,
     clearHighlights,
+    showHighlights,
     handleEscape,
 
-    get isNavigationActive(): boolean {
-      return state.currentElement !== null || state.currentIndex > -1
+    get isActivelyNavigating(): boolean {
+      return state.navigationMode !== 'inactive'
     },
 
-    get areHighlightsCleared(): boolean {
-      return state.areHighlightsCleared
+    get hideHighlights(): boolean {
+      return state.highlightVisibility === 'hidden'
     },
   }
 }

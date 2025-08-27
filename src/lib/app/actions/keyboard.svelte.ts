@@ -44,7 +44,7 @@ export interface AppState {
   filteredNotes: string[]
   selectedNote: string | null
   noteContentElement: HTMLElement | null
-  areHighlightsCleared: boolean
+  hideHighlights: boolean
   isEditorDirty: boolean
   query: string
   isSettingsOpen: boolean

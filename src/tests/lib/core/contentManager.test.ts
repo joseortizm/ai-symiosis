@@ -25,7 +25,7 @@ describe('contentManager (factory-based - TDD)', () => {
         noteContentElement: null,
       },
       contentNavigationManager: {
-        areHighlightsCleared: false,
+        hideHighlights: false,
         clearHighlights: vi.fn(),
       },
     }

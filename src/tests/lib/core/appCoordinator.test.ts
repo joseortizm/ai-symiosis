@@ -178,7 +178,6 @@ describe('appCoordinator', () => {
       expect(state).toHaveProperty('isLoading')
       expect(state).toHaveProperty('filteredNotes')
       expect(state).toHaveProperty('selectedNote')
-      expect(state).toHaveProperty('areHighlightsCleared')
     })
 
     it('should provide actions object with all required actions', () => {

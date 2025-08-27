@@ -259,10 +259,11 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   function setupReactiveEffects(): () => void {
     return setupAppEffects({
-      getAreHighlightsCleared: () =>
-        contentNavigationManager.areHighlightsCleared,
+      getHideHighlights: () => contentNavigationManager.hideHighlights,
       focusManager,
       contentManager,
+      searchManager,
+      contentNavigationManager,
     })
   }
 
@@ -292,7 +293,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         filteredNotes: filteredNotes,
         selectedNote: selectedNote,
         noteContentElement: focusManager.noteContentElement,
-        areHighlightsCleared: contentNavigationManager.areHighlightsCleared,
+        hideHighlights: contentNavigationManager.hideHighlights,
         isEditorDirty: editorManager.isDirty,
         query: query,
         isSettingsOpen: configService.isVisible,
