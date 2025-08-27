@@ -103,6 +103,9 @@ export function createConfigStateManager(): ConfigStateManager {
       vim_down: 'Ctrl+j',
       navigate_previous: 'Ctrl+p',
       navigate_next: 'Ctrl+n',
+      navigate_code_previous: 'Ctrl+h',
+      navigate_code_next: 'Ctrl+l',
+      copy_current_section: 'Ctrl+y',
       open_settings: 'Meta+,',
     },
     preferences: {

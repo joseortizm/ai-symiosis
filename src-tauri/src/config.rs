@@ -85,6 +85,9 @@ pub struct ShortcutsConfig {
     pub vim_down: String,
     pub navigate_previous: String,
     pub navigate_next: String,
+    pub navigate_code_previous: String,
+    pub navigate_code_next: String,
+    pub copy_current_section: String,
     pub open_settings: String,
 }
 
@@ -185,6 +188,9 @@ impl Default for ShortcutsConfig {
             vim_down: "Ctrl+j".to_string(),
             navigate_previous: "Ctrl+p".to_string(),
             navigate_next: "Ctrl+n".to_string(),
+            navigate_code_previous: "Ctrl+h".to_string(),
+            navigate_code_next: "Ctrl+l".to_string(),
+            copy_current_section: "Ctrl+y".to_string(),
             open_settings: "Meta+,".to_string(),
         }
     }

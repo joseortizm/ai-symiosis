@@ -13,6 +13,9 @@ interface NavigationState {
   currentElement: Element | null
   collapsedSections: SvelteSet<Element>
   currentSection: Element | null
+  // Separate state for code block navigation
+  codeBlockIndex: number
+  codeBlockElement: Element | null
 }
 
 interface NavigationDeps {
@@ -34,12 +37,15 @@ export type EscapeAction =
 export interface ContentNavigationManager {
   navigateNext(): void
   navigatePrevious(): void
+  navigateCodeNext(): void
+  navigateCodePrevious(): void
   resetNavigation(): void
   clearCurrentStyles(): void
   clearHighlights(): void
   showHighlights(): void
   startHighlightNavigation(): void
   handleEscape(): EscapeAction
+  copyCurrentSection(): Promise<boolean>
   readonly isActivelyNavigating: boolean
   readonly hideHighlights: boolean
 }
@@ -54,6 +60,8 @@ export function createContentNavigationManager(
     currentElement: null,
     collapsedSections: new SvelteSet<Element>(),
     currentSection: null,
+    codeBlockIndex: -1,
+    codeBlockElement: null,
   })
 
   function determineNavigationMode(): 'highlights' | 'headers' {
@@ -90,6 +98,13 @@ export function createContentNavigationManager(
     return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
   }
 
+  function getCodeBlockElements(): Element[] {
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return []
+
+    return Array.from(contentElement.querySelectorAll('pre > code'))
+  }
+
   function getCurrentNavigationElements(): Element[] {
     const targetMode = determineNavigationMode()
 
@@ -115,6 +130,11 @@ export function createContentNavigationManager(
         state.currentElement.classList.remove('header-current')
       }
       state.currentElement = null
+    }
+
+    if (state.codeBlockElement) {
+      state.codeBlockElement.classList.remove('codeblock-current')
+      state.codeBlockElement = null
     }
   }
 
@@ -259,6 +279,40 @@ export function createContentNavigationManager(
     })
   }
 
+  function scrollToCodeBlock(element: Element): void {
+    if (state.codeBlockElement) {
+      state.codeBlockElement.classList.remove('codeblock-current')
+    }
+
+    state.codeBlockElement = element
+    element.classList.add('codeblock-current')
+
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest',
+      })
+      return
+    }
+
+    const elementRect = element.getBoundingClientRect()
+    const containerRect = contentElement.getBoundingClientRect()
+    const containerHeight = contentElement.clientHeight
+    const targetPosition = containerHeight * 0.25
+
+    const scrollTop =
+      contentElement.scrollTop +
+      (elementRect.top - containerRect.top) -
+      targetPosition
+
+    contentElement.scrollTo({
+      top: scrollTop,
+      behavior: 'smooth',
+    })
+  }
+
   function navigateNext(): void {
     const elements = getCurrentNavigationElements()
     if (elements.length === 0) return
@@ -291,6 +345,35 @@ export function createContentNavigationManager(
     scrollToElement(elements[state.currentIndex])
   }
 
+  function navigateCodeNext(): void {
+    const elements = getCodeBlockElements()
+    if (elements.length === 0) return
+
+    if (state.codeBlockIndex === -1) {
+      state.codeBlockIndex = 0
+    } else {
+      state.codeBlockIndex = Math.min(
+        state.codeBlockIndex + 1,
+        elements.length - 1
+      )
+    }
+
+    scrollToCodeBlock(elements[state.codeBlockIndex])
+  }
+
+  function navigateCodePrevious(): void {
+    const elements = getCodeBlockElements()
+    if (elements.length === 0) return
+
+    if (state.codeBlockIndex === -1) {
+      state.codeBlockIndex = 0
+    } else {
+      state.codeBlockIndex = Math.max(state.codeBlockIndex - 1, 0)
+    }
+
+    scrollToCodeBlock(elements[state.codeBlockIndex])
+  }
+
   function resetNavigation(): void {
     clearCurrentElementStyle()
 
@@ -312,6 +395,7 @@ export function createContentNavigationManager(
     state.currentSection = null
     state.currentIndex = -1
     state.navigationMode = 'inactive'
+    state.codeBlockIndex = -1
   }
 
   function clearCurrentStyles(): void {
@@ -344,6 +428,34 @@ export function createContentNavigationManager(
     state.navigationMode = 'highlights'
     state.currentIndex = 0
     scrollToElement(elements[0])
+  }
+
+  async function copyCurrentSection(): Promise<boolean> {
+    let textToCopy = ''
+
+    if (state.codeBlockElement) {
+      textToCopy = state.codeBlockElement.textContent || ''
+    } else if (state.currentElement && state.navigationMode === 'highlights') {
+      textToCopy = state.currentElement.textContent || ''
+    } else if (state.currentElement && state.navigationMode === 'headers') {
+      const headerText = state.currentElement.textContent || ''
+      const content = getContentBetweenHeaders(state.currentElement)
+      const contentTexts = content
+        .map((el) => el.textContent || '')
+        .filter((text) => text.trim())
+      textToCopy = [headerText, ...contentTexts].join('\n\n')
+    }
+
+    if (textToCopy.trim()) {
+      try {
+        await navigator.clipboard.writeText(textToCopy)
+        return true
+      } catch (error) {
+        console.warn('Failed to copy to clipboard:', error)
+      }
+    }
+
+    return false
   }
 
   function handleEscape(): EscapeAction {
@@ -383,12 +495,15 @@ export function createContentNavigationManager(
   return {
     navigateNext,
     navigatePrevious,
+    navigateCodeNext,
+    navigateCodePrevious,
     resetNavigation,
     clearCurrentStyles,
     clearHighlights,
     showHighlights,
     startHighlightNavigation,
     handleEscape,
+    copyCurrentSection,
 
     get isActivelyNavigating(): boolean {
       return state.navigationMode !== 'inactive'

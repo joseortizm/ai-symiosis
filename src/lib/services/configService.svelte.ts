@@ -50,6 +50,9 @@ export interface ShortcutsConfig {
   vim_down: string
   navigate_previous: string
   navigate_next: string
+  navigate_code_previous: string
+  navigate_code_next: string
+  copy_current_section: string
   open_settings: string
 }
 
@@ -251,6 +254,9 @@ export function createConfigService(): ConfigService {
         vim_down: 'Ctrl+j',
         navigate_previous: 'Ctrl+p',
         navigate_next: 'Ctrl+n',
+        navigate_code_previous: 'Ctrl+h',
+        navigate_code_next: 'Ctrl+l',
+        copy_current_section: 'Ctrl+y',
         open_settings: 'Meta+,',
       }
     }

@@ -111,6 +111,15 @@ export function createKeyboardActions(
       navigatePrevious: ({ actions }: ActionContext) => {
         actions.contentNavigationManager.navigatePrevious()
       },
+      navigateCodeNext: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.navigateCodeNext()
+      },
+      navigateCodePrevious: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.navigateCodePrevious()
+      },
+      copyCurrentSection: async ({ actions }: ActionContext) => {
+        await actions.contentNavigationManager.copyCurrentSection()
+      },
     },
 
     scrolling: {
@@ -226,6 +235,9 @@ export function createKeyboardActions(
         [shortcuts.vim_down]: 'navigation.moveDown',
         [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
         [shortcuts.navigate_next]: 'navigation.navigateNext',
+        [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
+        [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
+        [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
         Escape: 'search.handleEscape',
         [shortcuts.open_settings]: 'settings.openSettings',
       },
@@ -240,6 +252,9 @@ export function createKeyboardActions(
         Escape: 'navigation.focusSearch',
         [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
         [shortcuts.navigate_next]: 'navigation.navigateNext',
+        [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
+        [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
+        [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
       },
 
       default: {

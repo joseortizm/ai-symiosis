@@ -136,6 +136,12 @@ Shows highlighted content or renders the CodeMirror editor.
     margin-left: -0.5em;
     border-radius: 3px;
   }
+  :global(.codeblock-current) {
+    background-color: rgba(152, 195, 121, 0.2) !important;
+    border: 2px solid #98c379 !important;
+    box-shadow: 0 0 10px rgba(152, 195, 121, 0.4) !important;
+    border-radius: 8px !important;
+  }
   :global(.header-expanded) {
     opacity: 1;
     transition: opacity 0.3s ease;
