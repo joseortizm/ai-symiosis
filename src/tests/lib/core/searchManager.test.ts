@@ -68,27 +68,51 @@ describe('searchManager', () => {
   })
 
   describe('minimum search length', () => {
-    it('should not trigger search for queries shorter than 3 characters', async () => {
+    it('should show recent notes on initial load', async () => {
+      const recentNotes = ['recent1.md', 'recent2.md']
+      mockNoteService.search.mockResolvedValueOnce(recentNotes)
+
+      // Trigger initial load by calling refreshSearch with empty string
+      await searchManager.refreshSearch('')
+
+      expect(mockNoteService.search).toHaveBeenCalledWith('')
+      expect(searchManager.filteredNotes).toEqual(recentNotes)
+    })
+
+    it('should show recent notes for queries shorter than 3 characters', async () => {
+      const recentNotes = ['recent1.md', 'recent2.md', 'recent3.md']
+      mockNoteService.search.mockResolvedValueOnce(recentNotes)
       vi.useFakeTimers()
 
-      // Test empty string
+      // First set a non-empty value, then set to empty to trigger the change
+      searchManager.searchInput = 'test'
       searchManager.searchInput = ''
       vi.advanceTimersByTime(200)
       await vi.runAllTimersAsync()
-      expect(mockNoteService.search).not.toHaveBeenCalled()
-      expect(searchManager.filteredNotes).toEqual([])
+      expect(mockNoteService.search).toHaveBeenCalledWith('')
+      expect(searchManager.filteredNotes).toEqual(recentNotes)
 
-      // Test 1 character
+      // Reset for next test
+      mockNoteService.search.mockClear()
+      mockNoteService.search.mockResolvedValueOnce(recentNotes)
+
+      // Test 1 character - should show recent notes
       searchManager.searchInput = 'a'
       vi.advanceTimersByTime(200)
       await vi.runAllTimersAsync()
-      expect(mockNoteService.search).not.toHaveBeenCalled()
+      expect(mockNoteService.search).toHaveBeenCalledWith('')
+      expect(searchManager.filteredNotes).toEqual(recentNotes)
 
-      // Test 2 characters
+      // Reset for next test
+      mockNoteService.search.mockClear()
+      mockNoteService.search.mockResolvedValueOnce(recentNotes)
+
+      // Test 2 characters - should show recent notes
       searchManager.searchInput = 'ab'
       vi.advanceTimersByTime(200)
       await vi.runAllTimersAsync()
-      expect(mockNoteService.search).not.toHaveBeenCalled()
+      expect(mockNoteService.search).toHaveBeenCalledWith('')
+      expect(searchManager.filteredNotes).toEqual(recentNotes)
 
       vi.useRealTimers()
     })
@@ -109,22 +133,29 @@ describe('searchManager', () => {
       vi.useRealTimers()
     })
 
-    it('should clear results when search input drops below 3 characters', async () => {
-      const notes = ['note1.md']
-      mockNoteService.search.mockResolvedValueOnce(notes)
+    it('should show recent notes when search input drops below 3 characters', async () => {
+      const searchNotes = ['search1.md']
+      const recentNotes = ['recent1.md', 'recent2.md']
+
+      mockNoteService.search.mockResolvedValueOnce(searchNotes)
       vi.useFakeTimers()
 
       // First set a valid search
       searchManager.searchInput = 'test'
       vi.advanceTimersByTime(200)
       await vi.runAllTimersAsync()
-      expect(searchManager.filteredNotes).toEqual(notes)
+      expect(searchManager.filteredNotes).toEqual(searchNotes)
 
-      // Then reduce to less than 3 characters
+      // Reset mock and prepare recent notes response
+      mockNoteService.search.mockClear()
+      mockNoteService.search.mockResolvedValueOnce(recentNotes)
+
+      // Then reduce to less than 3 characters - should show recent notes
       searchManager.searchInput = 'te'
       vi.advanceTimersByTime(200)
       await vi.runAllTimersAsync()
-      expect(searchManager.filteredNotes).toEqual([])
+      expect(mockNoteService.search).toHaveBeenCalledWith('')
+      expect(searchManager.filteredNotes).toEqual(recentNotes)
 
       vi.useRealTimers()
     })

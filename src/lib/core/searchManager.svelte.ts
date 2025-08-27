@@ -89,7 +89,10 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
       if (value.length < 3) {
         state.query = ''
-        state.filteredNotes = []
+        // Show recent notes by searching with empty string
+        state.searchTimeout = setTimeout(async () => {
+          await performSearch('')
+        }, 100)
         return
       }
 
