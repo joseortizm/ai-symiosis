@@ -38,6 +38,7 @@ export interface ContentNavigationManager {
   clearCurrentStyles(): void
   clearHighlights(): void
   showHighlights(): void
+  startHighlightNavigation(): void
   handleEscape(): EscapeAction
   readonly isActivelyNavigating: boolean
   readonly hideHighlights: boolean
@@ -325,6 +326,26 @@ export function createContentNavigationManager(
     state.highlightVisibility = 'visible'
   }
 
+  function startHighlightNavigation(): void {
+    // Only start if we have highlights and they're visible
+    const query = deps.searchManager.query
+    const hasQuery = query.trim() !== ''
+
+    if (!hasQuery || state.highlightVisibility !== 'visible') {
+      return
+    }
+
+    const elements = getHighlightElements()
+    if (elements.length === 0) {
+      return
+    }
+
+    // Set navigation to highlight mode and select first element
+    state.navigationMode = 'highlights'
+    state.currentIndex = 0
+    scrollToElement(elements[0])
+  }
+
   function handleEscape(): EscapeAction {
     // Priority 1: Clear highlights immediately if actively navigating highlights
     if (state.navigationMode === 'highlights') {
@@ -366,6 +387,7 @@ export function createContentNavigationManager(
     clearCurrentStyles,
     clearHighlights,
     showHighlights,
+    startHighlightNavigation,
     handleEscape,
 
     get isActivelyNavigating(): boolean {

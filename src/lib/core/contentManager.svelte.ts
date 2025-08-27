@@ -20,6 +20,7 @@ export interface ContentManagerDeps {
   contentNavigationManager: {
     readonly hideHighlights: boolean
     clearHighlights(): void
+    startHighlightNavigation(): void
   }
 }
 
@@ -65,10 +66,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     const noteContentElement = deps.focusManager.noteContentElement
     if (noteContentElement && !deps.contentNavigationManager.hideHighlights) {
       setTimeout(() => {
-        const firstMatch = noteContentElement.querySelector('.highlight')
-        if (firstMatch) {
-          firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
+        deps.contentNavigationManager.startHighlightNavigation()
       }, 100)
     }
   }
