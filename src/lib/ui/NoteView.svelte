@@ -142,9 +142,11 @@ Shows highlighted content or renders the CodeMirror editor.
   }
   :global(.header-collapsed) {
     opacity: 0.5;
-    font-size: 0.9em;
-    margin: 0.2em 0;
-    transition: all 0.3s ease;
+    transform: scale(0.85);
+    transform-origin: left center;
+    transition:
+      opacity 0.3s ease-out,
+      transform 0.15s ease-out;
   }
   :global(.content-collapsed) {
     display: none;
