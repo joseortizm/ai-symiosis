@@ -180,6 +180,11 @@ export function createKeyboardActions(
 
     search: {
       clearHighlights: ({ state, actions }: ActionContext) => {
+        if (actions.contentNavigationManager.isNavigationActive) {
+          actions.contentNavigationManager.resetNavigation()
+          return
+        }
+
         if (state.query.trim() && !state.areHighlightsCleared) {
           actions.contentManager.clearHighlights()
         } else if (state.areHighlightsCleared || !state.query.trim()) {

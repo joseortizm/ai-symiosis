@@ -29,6 +29,7 @@ export interface ContentNavigationManager {
   navigatePrevious(): void
   resetNavigation(): void
   clearCurrentStyles(): void
+  readonly isNavigationActive: boolean
 }
 
 export function createContentNavigationManager(
@@ -59,7 +60,8 @@ export function createContentNavigationManager(
     }
 
     if (shouldNavigateHighlights) {
-      const highlightElements = contentElement.querySelectorAll('mark.highlight')
+      const highlightElements =
+        contentElement.querySelectorAll('mark.highlight')
       if (highlightElements.length === 0) {
         // No actual highlights found despite expecting them, switch to headers
         state.isNavigatingHighlights = false
@@ -287,5 +289,9 @@ export function createContentNavigationManager(
     navigatePrevious,
     resetNavigation,
     clearCurrentStyles,
+
+    get isNavigationActive(): boolean {
+      return state.currentElement !== null || state.currentIndex > -1
+    },
   }
 }

@@ -29,6 +29,7 @@ describe('keyboard actions', () => {
         navigatePrevious: vi.fn(),
         resetNavigation: vi.fn(),
         clearCurrentStyles: vi.fn(),
+        isNavigationActive: false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       configStateManager: {
@@ -453,6 +454,29 @@ describe('keyboard actions', () => {
 
       expect(mockDeps.searchManager.clearSearch).toHaveBeenCalled()
       expect(mockDeps.contentManager.clearHighlights).not.toHaveBeenCalled()
+    })
+
+    it('clearHighlights should clear navigation when navigation is active', () => {
+      // Mock navigation as active
+      const mockDepsWithActiveNav = {
+        ...mockDeps,
+        contentNavigationManager: {
+          ...mockDeps.contentNavigationManager,
+          isNavigationActive: true,
+        },
+      }
+      const context: ActionContext = {
+        state: mockState,
+        actions: mockDepsWithActiveNav,
+      }
+
+      keyboardActions.actionRegistry.search.clearHighlights(context)
+
+      expect(
+        mockDepsWithActiveNav.contentNavigationManager.resetNavigation
+      ).toHaveBeenCalled()
+      expect(mockDeps.contentManager.clearHighlights).not.toHaveBeenCalled()
+      expect(mockDeps.searchManager.clearSearch).not.toHaveBeenCalled()
     })
   })
 

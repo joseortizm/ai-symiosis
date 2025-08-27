@@ -47,6 +47,25 @@ describe('ContentNavigationManager', () => {
     // Mock scrollIntoView
     Element.prototype.scrollIntoView = vi.fn()
 
+    // Mock scroll methods for container element
+    mockNoteContentElement.scrollTo = vi.fn()
+    mockNoteContentElement.scrollTop = 0
+    Object.defineProperty(mockNoteContentElement, 'clientHeight', {
+      value: 500,
+      configurable: true,
+    })
+    mockNoteContentElement.getBoundingClientRect = vi.fn(() => ({
+      top: 0,
+      left: 0,
+      bottom: 500,
+      right: 800,
+      width: 800,
+      height: 500,
+      x: 0,
+      y: 0,
+      toJSON: vi.fn(),
+    }))
+
     mockDeps = {
       focusManager: {
         noteContentElement: mockNoteContentElement,
