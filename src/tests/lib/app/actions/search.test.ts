@@ -13,7 +13,6 @@ describe('search actions', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       contentManager: {
-        clearHighlights: vi.fn(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       focusManager: {
@@ -23,6 +22,10 @@ describe('search actions', () => {
       } as any,
       editorManager: {
         exitEditMode: vi.fn(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+      contentNavigationManager: {
+        clearHighlights: vi.fn(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
     }
@@ -98,13 +101,16 @@ describe('search actions', () => {
 
       expect(mockDeps.searchManager.clearSearch).toHaveBeenCalledOnce()
       expect(mockDeps.searchManager.setFilteredNotes).toHaveBeenCalledWith([])
-      expect(mockDeps.contentManager.clearHighlights).toHaveBeenCalledOnce()
+      expect(
+        mockDeps.contentNavigationManager.clearHighlights
+      ).toHaveBeenCalledOnce()
     })
 
     it('should call methods in correct order', () => {
       const clearSearchSpy = mockDeps.searchManager.clearSearch
       const setFilteredNotesSpy = mockDeps.searchManager.setFilteredNotes
-      const clearHighlightsSpy = mockDeps.contentManager.clearHighlights
+      const clearHighlightsSpy =
+        mockDeps.contentNavigationManager.clearHighlights
 
       searchActions.resetSearchState()
 
@@ -118,7 +124,9 @@ describe('search actions', () => {
     it('should delegate to content manager clearHighlights', () => {
       searchActions.clearHighlights()
 
-      expect(mockDeps.contentManager.clearHighlights).toHaveBeenCalledOnce()
+      expect(
+        mockDeps.contentNavigationManager.clearHighlights
+      ).toHaveBeenCalledOnce()
     })
   })
 

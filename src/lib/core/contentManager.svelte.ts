@@ -12,13 +12,14 @@ export interface ContentManagerDeps {
   }
   searchManager: {
     readonly query: string
-    areHighlightsCleared: boolean
-    clearHighlights(): void
-    setHighlightsClearCallback(callback: (cleared: boolean) => void): void
     refreshSearch(query: string): Promise<string[]>
   }
   focusManager: {
     readonly noteContentElement: HTMLElement | null
+  }
+  contentNavigationManager: {
+    readonly areHighlightsCleared: boolean
+    clearHighlights(): void
   }
 }
 
@@ -34,16 +35,13 @@ interface RefreshAfterSaveResult {
 export interface ContentManager {
   readonly noteContent: string
   readonly highlightedContent: string
-  areHighlightsCleared: boolean
   setNoteContent(content: string): void
-  clearHighlights(): void
   scrollToFirstMatch(): void
   refreshContent(noteName: string): Promise<string>
   refreshAfterSave(
     noteName: string,
     searchInput: string
   ): Promise<RefreshAfterSaveResult>
-  setHighlightsClearedState(cleared: boolean): void
 }
 
 export function createContentManager(deps: ContentManagerDeps): ContentManager {
@@ -55,7 +53,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     getHighlightedContent(
       state.noteContent,
       deps.searchManager.query,
-      deps.searchManager.areHighlightsCleared
+      deps.contentNavigationManager.areHighlightsCleared
     )
   )
 
@@ -63,13 +61,12 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     state.noteContent = content
   }
 
-  function clearHighlights(): void {
-    deps.searchManager.clearHighlights()
-  }
-
   function scrollToFirstMatch(): void {
     const noteContentElement = deps.focusManager.noteContentElement
-    if (noteContentElement && !deps.searchManager.areHighlightsCleared) {
+    if (
+      noteContentElement &&
+      !deps.contentNavigationManager.areHighlightsCleared
+    ) {
       setTimeout(() => {
         const firstMatch = noteContentElement.querySelector('.highlight')
         if (firstMatch) {
@@ -98,14 +95,6 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     }
   }
 
-  function setHighlightsClearedState(cleared: boolean): void {
-    deps.searchManager.areHighlightsCleared = cleared
-  }
-
-  deps.searchManager.setHighlightsClearCallback((cleared: boolean) => {
-    setHighlightsClearedState(cleared)
-  })
-
   return {
     get noteContent(): string {
       return state.noteContent
@@ -115,19 +104,9 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
       return highlightedContent
     },
 
-    get areHighlightsCleared(): boolean {
-      return deps.searchManager.areHighlightsCleared
-    },
-
-    set areHighlightsCleared(value: boolean) {
-      setHighlightsClearedState(value)
-    },
-
     setNoteContent,
-    clearHighlights,
     scrollToFirstMatch,
     refreshContent,
     refreshAfterSave,
-    setHighlightsClearedState,
   }
 }

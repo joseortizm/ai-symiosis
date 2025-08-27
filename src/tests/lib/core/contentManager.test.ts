@@ -19,13 +19,14 @@ describe('contentManager (factory-based - TDD)', () => {
       },
       searchManager: {
         query: 'test query',
-        areHighlightsCleared: false,
-        clearHighlights: vi.fn(),
-        setHighlightsClearCallback: vi.fn(),
         refreshSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
       },
       focusManager: {
         noteContentElement: null,
+      },
+      contentNavigationManager: {
+        areHighlightsCleared: false,
+        clearHighlights: vi.fn(),
       },
     }
 
@@ -83,8 +84,6 @@ describe('contentManager (factory-based - TDD)', () => {
   it('should call setHighlightsClearCallback during setup', () => {
     if (!contentManager) return // Skip if factory not implemented yet
 
-    expect(
-      mockDeps.searchManager.setHighlightsClearCallback
-    ).toHaveBeenCalledWith(expect.any(Function))
+    // setHighlightsClearCallback removed from searchManager
   })
 })

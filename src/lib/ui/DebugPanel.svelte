@@ -203,7 +203,7 @@ Shows reactive state from managers and services for debugging.
             </div>
             <div class="debug-item">
               <strong>areHighlightsCleared:</strong>
-              <code>{formatValue(searchManager.areHighlightsCleared)}</code>
+              <code>moved to contentNavigationManager</code>
             </div>
           </div>
           <div class="debug-subsection">
@@ -282,7 +282,7 @@ Shows reactive state from managers and services for debugging.
             </div>
             <div class="debug-item">
               <strong>areHighlightsCleared:</strong>
-              <code>{formatValue(contentManager.areHighlightsCleared)}</code>
+              <code>moved to contentNavigationManager</code>
             </div>
           </div>
           <div class="debug-subsection">
@@ -340,7 +340,7 @@ Shows reactive state from managers and services for debugging.
           </div>
           <div class="debug-item">
             <strong>areHighlightsCleared:</strong>
-            <code>{formatValue(appCoordinator.areHighlightsCleared)}</code>
+            <code>moved to contentNavigationManager</code>
           </div>
         </div>
       {/if}

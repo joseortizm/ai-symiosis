@@ -179,16 +179,22 @@ export function createKeyboardActions(
     },
 
     search: {
-      clearHighlights: ({ state, actions }: ActionContext) => {
-        if (actions.contentNavigationManager.isNavigationActive) {
-          actions.contentNavigationManager.resetNavigation()
-          return
-        }
+      handleEscape: ({ actions }: ActionContext) => {
+        const escapeAction = actions.contentNavigationManager.handleEscape()
 
-        if (state.query.trim() && !state.areHighlightsCleared) {
-          actions.contentManager.clearHighlights()
-        } else if (state.areHighlightsCleared || !state.query.trim()) {
-          actions.searchManager.clearSearch()
+        switch (escapeAction) {
+          case 'navigation_cleared':
+            // Navigation was cleared, done
+            break
+          case 'highlights_cleared':
+            // Highlights were cleared, done
+            break
+          case 'search_cleared':
+            // Search was cleared, done
+            break
+          case 'focus_search':
+            actions.focusManager.focusSearch()
+            break
         }
       },
     },
@@ -220,7 +226,7 @@ export function createKeyboardActions(
         [shortcuts.vim_down]: 'navigation.moveDown',
         [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
         [shortcuts.navigate_next]: 'navigation.navigateNext',
-        Escape: 'search.clearHighlights',
+        Escape: 'search.handleEscape',
         [shortcuts.open_settings]: 'settings.openSettings',
       },
 

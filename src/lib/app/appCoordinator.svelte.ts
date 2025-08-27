@@ -34,7 +34,6 @@ interface AppCoordinatorDeps {
 export interface AppState {
   readonly query: string
   readonly isLoading: boolean
-  readonly areHighlightsCleared: boolean
   readonly filteredNotes: string[]
   readonly selectedNote: string | null
 }
@@ -82,7 +81,6 @@ export interface AppManagers {
 export interface AppCoordinator {
   readonly query: string
   readonly isLoading: boolean
-  readonly areHighlightsCleared: boolean
   readonly filteredNotes: string[]
   readonly selectedNote: string | null
   readonly keyboardActions: (event: KeyboardEvent) => Promise<void>
@@ -101,12 +99,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     focusSearch: () => focusManager.focusSearch(),
   })
 
-  const contentManager = createContentManager({
-    noteService,
-    searchManager,
-    focusManager,
-  })
-
   const configStateManager = createConfigStateManager()
 
   const contentNavigationManager = createContentNavigationManager({
@@ -114,10 +106,16 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     searchManager,
   })
 
+  const contentManager = createContentManager({
+    noteService,
+    searchManager,
+    focusManager,
+    contentNavigationManager,
+  })
+
   const progressManager = createProgressManager()
 
   const isLoading = $derived(searchManager.isLoading)
-  const areHighlightsCleared = $derived(searchManager.areHighlightsCleared)
   const filteredNotes = $derived(searchManager.filteredNotes)
   const query = $derived(searchManager.searchInput)
 
@@ -152,6 +150,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     contentManager,
     focusManager,
     editorManager,
+    contentNavigationManager,
   })
 
   const settingsActions = createSettingsActions({
@@ -260,7 +259,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   function setupReactiveEffects(): () => void {
     return setupAppEffects({
-      getAreHighlightsCleared: () => areHighlightsCleared,
+      getAreHighlightsCleared: () =>
+        contentNavigationManager.areHighlightsCleared,
       focusManager,
       contentManager,
     })
@@ -274,9 +274,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     },
     get isLoading(): boolean {
       return isLoading
-    },
-    get areHighlightsCleared(): boolean {
-      return areHighlightsCleared
     },
     get filteredNotes(): string[] {
       return filteredNotes
@@ -295,7 +292,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         filteredNotes: filteredNotes,
         selectedNote: selectedNote,
         noteContentElement: focusManager.noteContentElement,
-        areHighlightsCleared: areHighlightsCleared,
+        areHighlightsCleared: contentNavigationManager.areHighlightsCleared,
         isEditorDirty: editorManager.isDirty,
         query: query,
         isSettingsOpen: configService.isVisible,
@@ -327,9 +324,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         },
         get isLoading() {
           return isLoading
-        },
-        get areHighlightsCleared() {
-          return areHighlightsCleared
         },
         get filteredNotes() {
           return filteredNotes

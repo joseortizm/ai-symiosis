@@ -14,7 +14,7 @@ describe('ContentNavigationManager', () => {
     }
     searchManager: {
       query: string
-      areHighlightsCleared: boolean
+      clearSearch(): void
     }
   }
   let navigationManager: ReturnType<typeof createContentNavigationManager>
@@ -72,7 +72,7 @@ describe('ContentNavigationManager', () => {
       },
       searchManager: {
         query: '',
-        areHighlightsCleared: false,
+        clearSearch: vi.fn(),
       },
     }
 
@@ -179,7 +179,8 @@ describe('ContentNavigationManager', () => {
     it('should switch to header navigation when highlights are cleared even with query present', () => {
       // Set up: query present, highlights cleared
       mockDeps.searchManager.query = 'search'
-      mockDeps.searchManager.areHighlightsCleared = true
+      // Clear highlights first to simulate cleared state
+      navigationManager.clearHighlights()
 
       navigationManager.navigateNext()
 
@@ -198,7 +199,7 @@ describe('ContentNavigationManager', () => {
     it('should use highlight navigation when query present and highlights not cleared', () => {
       // Set up: query present, highlights not cleared
       mockDeps.searchManager.query = 'search'
-      mockDeps.searchManager.areHighlightsCleared = false
+      // Highlights should be cleared by default (false), so no action needed
 
       navigationManager.navigateNext()
 

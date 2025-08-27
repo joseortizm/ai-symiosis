@@ -427,56 +427,88 @@ describe('keyboard actions', () => {
   })
 
   describe('search actions', () => {
-    it('clearHighlights should call contentManager.clearHighlights when query exists and highlights not cleared', () => {
-      const context: ActionContext = { state: mockState, actions: mockDeps }
-
-      keyboardActions.actionRegistry.search.clearHighlights(context)
-
-      expect(mockDeps.contentManager.clearHighlights).toHaveBeenCalled()
-      expect(mockDeps.searchManager.clearSearch).not.toHaveBeenCalled()
-    })
-
-    it('clearHighlights should call searchManager.clearSearch when highlights already cleared', () => {
-      const clearedState = { ...mockState, areHighlightsCleared: true }
-      const context: ActionContext = { state: clearedState, actions: mockDeps }
-
-      keyboardActions.actionRegistry.search.clearHighlights(context)
-
-      expect(mockDeps.searchManager.clearSearch).toHaveBeenCalled()
-      expect(mockDeps.contentManager.clearHighlights).not.toHaveBeenCalled()
-    })
-
-    it('clearHighlights should call searchManager.clearSearch when no query', () => {
-      const noQueryState = { ...mockState, query: '' }
-      const context: ActionContext = { state: noQueryState, actions: mockDeps }
-
-      keyboardActions.actionRegistry.search.clearHighlights(context)
-
-      expect(mockDeps.searchManager.clearSearch).toHaveBeenCalled()
-      expect(mockDeps.contentManager.clearHighlights).not.toHaveBeenCalled()
-    })
-
-    it('clearHighlights should clear navigation when navigation is active', () => {
-      // Mock navigation as active
-      const mockDepsWithActiveNav = {
+    it('handleEscape should call contentNavigationManager.handleEscape and focus search when action is focus_search', () => {
+      const mockDepsWithHandleEscape = {
         ...mockDeps,
         contentNavigationManager: {
           ...mockDeps.contentNavigationManager,
-          isNavigationActive: true,
+          handleEscape: vi.fn().mockReturnValue('focus_search'),
         },
       }
       const context: ActionContext = {
         state: mockState,
-        actions: mockDepsWithActiveNav,
+        actions: mockDepsWithHandleEscape,
       }
 
-      keyboardActions.actionRegistry.search.clearHighlights(context)
+      keyboardActions.actionRegistry.search.handleEscape(context)
 
       expect(
-        mockDepsWithActiveNav.contentNavigationManager.resetNavigation
+        mockDepsWithHandleEscape.contentNavigationManager.handleEscape
       ).toHaveBeenCalled()
-      expect(mockDeps.contentManager.clearHighlights).not.toHaveBeenCalled()
-      expect(mockDeps.searchManager.clearSearch).not.toHaveBeenCalled()
+      expect(mockDeps.focusManager.focusSearch).toHaveBeenCalled()
+    })
+
+    it('handleEscape should call contentNavigationManager.handleEscape and not focus search when action is navigation_cleared', () => {
+      const mockDepsWithHandleEscape = {
+        ...mockDeps,
+        contentNavigationManager: {
+          ...mockDeps.contentNavigationManager,
+          handleEscape: vi.fn().mockReturnValue('navigation_cleared'),
+        },
+      }
+      const context: ActionContext = {
+        state: mockState,
+        actions: mockDepsWithHandleEscape,
+      }
+
+      keyboardActions.actionRegistry.search.handleEscape(context)
+
+      expect(
+        mockDepsWithHandleEscape.contentNavigationManager.handleEscape
+      ).toHaveBeenCalled()
+      expect(mockDeps.focusManager.focusSearch).not.toHaveBeenCalled()
+    })
+
+    it('handleEscape should call contentNavigationManager.handleEscape and not focus search when action is highlights_cleared', () => {
+      const mockDepsWithHandleEscape = {
+        ...mockDeps,
+        contentNavigationManager: {
+          ...mockDeps.contentNavigationManager,
+          handleEscape: vi.fn().mockReturnValue('highlights_cleared'),
+        },
+      }
+      const context: ActionContext = {
+        state: mockState,
+        actions: mockDepsWithHandleEscape,
+      }
+
+      keyboardActions.actionRegistry.search.handleEscape(context)
+
+      expect(
+        mockDepsWithHandleEscape.contentNavigationManager.handleEscape
+      ).toHaveBeenCalled()
+      expect(mockDeps.focusManager.focusSearch).not.toHaveBeenCalled()
+    })
+
+    it('handleEscape should call contentNavigationManager.handleEscape and not focus search when action is search_cleared', () => {
+      const mockDepsWithHandleEscape = {
+        ...mockDeps,
+        contentNavigationManager: {
+          ...mockDeps.contentNavigationManager,
+          handleEscape: vi.fn().mockReturnValue('search_cleared'),
+        },
+      }
+      const context: ActionContext = {
+        state: mockState,
+        actions: mockDepsWithHandleEscape,
+      }
+
+      keyboardActions.actionRegistry.search.handleEscape(context)
+
+      expect(
+        mockDepsWithHandleEscape.contentNavigationManager.handleEscape
+      ).toHaveBeenCalled()
+      expect(mockDeps.focusManager.focusSearch).not.toHaveBeenCalled()
     })
   })
 

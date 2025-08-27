@@ -17,6 +17,9 @@ interface SearchActionDeps {
   editorManager: ReturnType<
     typeof import('../../core/editorManager.svelte').createEditorManager
   >
+  contentNavigationManager: ReturnType<
+    typeof import('../../core/contentNavigationManager.svelte').createContentNavigationManager
+  >
 }
 
 interface SearchActions {
@@ -27,7 +30,12 @@ interface SearchActions {
 }
 
 export function createSearchActions(deps: SearchActionDeps): SearchActions {
-  const { searchManager, contentManager, focusManager, editorManager } = deps
+  const {
+    searchManager,
+    focusManager,
+    editorManager,
+    contentNavigationManager,
+  } = deps
 
   function updateFilteredNotes(notes: string[]): void {
     searchManager.setFilteredNotes(notes)
@@ -47,13 +55,13 @@ export function createSearchActions(deps: SearchActionDeps): SearchActions {
   function resetSearchState(): void {
     searchManager.clearSearch()
     searchManager.setFilteredNotes([])
-    contentManager.clearHighlights()
+    contentNavigationManager.clearHighlights()
   }
 
   return {
     updateFilteredNotes,
     resetSearchState,
-    clearHighlights: contentManager.clearHighlights,
+    clearHighlights: contentNavigationManager.clearHighlights,
     clearSearch: searchManager.clearSearch,
   }
 }

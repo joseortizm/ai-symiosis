@@ -63,14 +63,14 @@ describe('appCoordinator', () => {
     appCoordinator.managers.searchManager.searchInput = ''
     appCoordinator.managers.focusManager.setSelectedIndex(-1)
     appCoordinator.managers.searchManager.setFilteredNotes([])
-    appCoordinator.managers.searchManager.areHighlightsCleared = false
+    // areHighlightsCleared moved to contentNavigationManager
   })
 
   describe('state management', () => {
     it('should provide reactive getters for central state', () => {
       expect(appCoordinator.query).toBe('')
       expect(appCoordinator.isLoading).toBe(false)
-      expect(appCoordinator.areHighlightsCleared).toBe(false)
+      // areHighlightsCleared moved to contentNavigationManager
       expect(appCoordinator.filteredNotes).toEqual([])
       expect(appCoordinator.selectedNote).toBe(null)
       expect(appCoordinator.managers.focusManager.selectedIndex).toBe(-1)
@@ -98,7 +98,7 @@ describe('appCoordinator', () => {
       appCoordinator.managers.searchManager.searchInput = ''
       appCoordinator.managers.focusManager.setSelectedIndex(-1)
       appCoordinator.managers.searchManager.setFilteredNotes([])
-      appCoordinator.managers.searchManager.areHighlightsCleared = false
+      // areHighlightsCleared moved to contentNavigationManager
       expect(appCoordinator.selectedNote).toBe(null)
       expect(appCoordinator.managers.focusManager.selectedIndex).toBe(-1)
 
@@ -118,7 +118,7 @@ describe('appCoordinator', () => {
       appCoordinator.managers.searchManager.searchInput = ''
       appCoordinator.managers.focusManager.setSelectedIndex(-1)
       appCoordinator.managers.searchManager.setFilteredNotes([])
-      appCoordinator.managers.searchManager.areHighlightsCleared = false
+      // areHighlightsCleared moved to contentNavigationManager
 
       // Ensure no notes
       searchManager.setFilteredNotes([])

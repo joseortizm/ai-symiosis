@@ -37,19 +37,21 @@ describe('Highlight Clear Integration', () => {
       focusManager,
     })
 
-    const { contentManager } = appCoordinator.managers
+    const { contentNavigationManager } = appCoordinator.managers
 
     searchManager.searchInput = 'test query'
-    contentManager.setHighlightsClearedState(false)
-    expect(contentManager.areHighlightsCleared).toBe(false)
+    // areHighlightsCleared starts as false by default
+    expect(contentNavigationManager.areHighlightsCleared).toBe(false)
 
-    contentManager.clearHighlights()
-    expect(contentManager.areHighlightsCleared).toBe(true)
+    contentNavigationManager.clearHighlights()
+    expect(contentNavigationManager.areHighlightsCleared).toBe(true)
 
     searchManager.searchInput = 'new search'
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(contentManager.areHighlightsCleared).toBe(false)
+    // Highlights are re-enabled when new search happens
+    // This behavior might need to be implemented in the search logic
+    expect(contentNavigationManager.areHighlightsCleared).toBe(false)
   })
 })

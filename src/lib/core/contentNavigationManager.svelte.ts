@@ -12,6 +12,7 @@ interface NavigationState {
   currentElement: Element | null
   collapsedSections: SvelteSet<Element>
   currentSection: Element | null
+  areHighlightsCleared: boolean
 }
 
 interface NavigationDeps {
@@ -20,16 +21,25 @@ interface NavigationDeps {
   }
   searchManager: {
     readonly query: string
-    readonly areHighlightsCleared: boolean
+    clearSearch(): void
   }
 }
+
+export type EscapeAction =
+  | 'navigation_cleared'
+  | 'highlights_cleared'
+  | 'search_cleared'
+  | 'focus_search'
 
 export interface ContentNavigationManager {
   navigateNext(): void
   navigatePrevious(): void
   resetNavigation(): void
   clearCurrentStyles(): void
+  clearHighlights(): void
+  handleEscape(): EscapeAction
   readonly isNavigationActive: boolean
+  readonly areHighlightsCleared: boolean
 }
 
 export function createContentNavigationManager(
@@ -41,6 +51,7 @@ export function createContentNavigationManager(
     currentElement: null,
     collapsedSections: new SvelteSet<Element>(),
     currentSection: null,
+    areHighlightsCleared: false,
   })
 
   function getNavigationElements(): Element[] {
@@ -48,11 +59,10 @@ export function createContentNavigationManager(
     if (!contentElement) return []
 
     const query = deps.searchManager.query
-    const areHighlightsCleared = deps.searchManager.areHighlightsCleared
     const hasQuery = query.trim() !== ''
 
     // Use highlight navigation only if there's a query AND highlights haven't been cleared
-    const shouldNavigateHighlights = hasQuery && !areHighlightsCleared
+    const shouldNavigateHighlights = hasQuery && !state.areHighlightsCleared
 
     if (state.isNavigatingHighlights !== shouldNavigateHighlights) {
       clearCurrentElementStyle()
@@ -284,14 +294,55 @@ export function createContentNavigationManager(
     clearCurrentElementStyle()
   }
 
+  function clearHighlights(): void {
+    state.areHighlightsCleared = true
+  }
+
+  function resetHighlightState(): void {
+    state.areHighlightsCleared = false
+  }
+
+  function handleEscape(): EscapeAction {
+    // Priority 1: Clear active navigation
+    if (state.currentElement !== null || state.currentIndex > -1) {
+      resetNavigation()
+      return 'navigation_cleared'
+    }
+
+    // Priority 2: Clear highlights if they exist and query exists
+    const query = deps.searchManager.query
+    const hasQuery = query.trim() !== ''
+
+    if (hasQuery && !state.areHighlightsCleared) {
+      clearHighlights()
+      return 'highlights_cleared'
+    }
+
+    // Priority 3: Clear search if highlights already cleared but query exists
+    if (hasQuery && state.areHighlightsCleared) {
+      deps.searchManager.clearSearch()
+      resetHighlightState()
+      return 'search_cleared'
+    }
+
+    // Priority 4: Focus search (default case)
+    return 'focus_search'
+  }
+
   return {
     navigateNext,
     navigatePrevious,
     resetNavigation,
     clearCurrentStyles,
+    clearHighlights,
+    handleEscape,
 
     get isNavigationActive(): boolean {
       return state.currentElement !== null || state.currentIndex > -1
+    },
+
+    get areHighlightsCleared(): boolean {
+      return state.areHighlightsCleared
     },
   }
 }

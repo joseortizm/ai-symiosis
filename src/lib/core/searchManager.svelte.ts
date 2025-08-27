@@ -13,7 +13,6 @@ interface SearchState {
   searchTimeout: ReturnType<typeof setTimeout> | undefined
   requestController: AbortController | null
   filteredNotes: string[]
-  areHighlightsCleared: boolean
 }
 
 interface SearchManagerDeps {
@@ -25,7 +24,6 @@ interface SearchManager {
   readonly filteredNotes: string[]
   searchInput: string
   readonly query: string
-  areHighlightsCleared: boolean
   setSearchInput(value: string): void
   setFilteredNotes(notes: string[]): void
   updateSearchInputWithEffects(
@@ -33,10 +31,8 @@ interface SearchManager {
     onHighlightsClear: (cleared: boolean) => void
   ): void
   clearSearch(): void
-  clearHighlights(): void
   searchImmediate(query: string): Promise<string[]>
   refreshSearch(searchInput: string): Promise<string[]>
-  setHighlightsClearCallback(callback: (cleared: boolean) => void): void
   setSearchCompleteCallback(callback: (notes: string[]) => void): void
   abort(): void
 }
@@ -50,11 +46,9 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     searchTimeout: undefined,
     requestController: null,
     filteredNotes: [],
-    areHighlightsCleared: false,
   })
 
   // Callback storage
-  let onHighlightsClearCallback: ((cleared: boolean) => void) | null = null
   let onSearchCompleteCallback: ((notes: string[]) => void) | null = null
 
   // Private helper functions
@@ -114,7 +108,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
   ): void {
     if (newInput.trim()) {
       onHighlightsClear(false)
-      state.areHighlightsCleared = false
     }
 
     setSearchInput(newInput)
@@ -124,10 +117,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     setSearchInput('')
   }
 
-  function clearHighlights(): void {
-    state.areHighlightsCleared = true
-  }
-
   // Public API
   return {
     // Core operations
@@ -135,7 +124,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     setFilteredNotes,
     clearSearch,
     updateSearchInputWithEffects,
-    clearHighlights,
 
     // State getters/setters
     get isLoading(): boolean {
@@ -148,25 +136,13 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
       return state.searchInput
     },
     set searchInput(value: string) {
-      updateSearchInputWithEffects(
-        value,
-        onHighlightsClearCallback || (() => {})
-      )
+      updateSearchInputWithEffects(value, () => {})
     },
     get query(): string {
       return state.query
     },
-    get areHighlightsCleared(): boolean {
-      return state.areHighlightsCleared
-    },
-    set areHighlightsCleared(value: boolean) {
-      state.areHighlightsCleared = value
-    },
 
     // Callback management
-    setHighlightsClearCallback(callback: (cleared: boolean) => void): void {
-      onHighlightsClearCallback = callback
-    },
     setSearchCompleteCallback(callback: (notes: string[]) => void): void {
       onSearchCompleteCallback = callback
     },
