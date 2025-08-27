@@ -1,6 +1,6 @@
 use crate::{
     config::get_config_notes_dir,
-    core::AppError,
+    core::{AppError, AppResult},
     database::with_db,
     search::search_notes_hybrid,
     services::{
@@ -18,9 +18,9 @@ use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Helper function to wrap file operations with programmatic operation flag
-fn with_programmatic_flag<T, F>(operation: F) -> Result<T, String>
+fn with_programmatic_flag<T, F>(operation: F) -> AppResult<T>
 where
-    F: FnOnce() -> Result<T, String>,
+    F: FnOnce() -> AppResult<T>,
 {
     // Set flag immediately
     PROGRAMMATIC_OPERATION_IN_PROGRESS.store(true, Ordering::SeqCst);
@@ -39,7 +39,7 @@ where
 
 #[tauri::command]
 pub fn list_all_notes() -> Result<Vec<String>, String> {
-    with_db(|conn| {
+    let result = with_db(|conn| {
         let mut stmt = conn.prepare("SELECT filename FROM notes ORDER BY modified DESC")?;
         let rows = stmt.query_map([], |row| row.get(0))?;
 
@@ -51,42 +51,49 @@ pub fn list_all_notes() -> Result<Vec<String>, String> {
         }
 
         Ok(results)
-    })
-    .map_err(|e| e.to_string())
+    });
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn search_notes(query: &str) -> Result<Vec<String>, String> {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    search_notes_hybrid(query, config.preferences.max_search_results).map_err(|e| e.to_string())
+    let result = search_notes_hybrid(query, config.preferences.max_search_results);
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_note_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name).map_err(|e| e.to_string())?;
-
-    with_db(|conn| {
-        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
-        let content = stmt
-            .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-            .map_err(|_| AppError::FileNotFound(format!("Note not found: {}", note_name)))?;
-        Ok(content)
-    })
-    .map_err(|e| e.to_string())
+    validate_note_name(note_name)
+        .and_then(|_| {
+            with_db(|conn| {
+                let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
+                let content = stmt
+                    .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+                    .map_err(|_| {
+                        AppError::FileNotFound(format!("Note not found: {}", note_name))
+                    })?;
+                Ok(content)
+            })
+        })
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_note_raw_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name).map_err(|e| e.to_string())?;
-
-    with_db(|conn| {
-        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
-        let content = stmt
-            .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-            .map_err(|_| AppError::FileNotFound(format!("Note not found: {}", note_name)))?;
-        Ok(content)
-    })
-    .map_err(|e| e.to_string())
+    validate_note_name(note_name)
+        .and_then(|_| {
+            with_db(|conn| {
+                let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
+                let content = stmt
+                    .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
+                    .map_err(|_| {
+                        AppError::FileNotFound(format!("Note not found: {}", note_name))
+                    })?;
+                Ok(content)
+            })
+        })
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -127,348 +134,389 @@ pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
 
 #[tauri::command]
 pub fn create_new_note(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
+    let result = || -> AppResult<()> {
+        validate_note_name(note_name)?;
 
-    let note_path = get_config_notes_dir().join(note_name);
+        let note_path = get_config_notes_dir().join(note_name);
 
-    if note_path.exists() {
-        return Err(format!("Note '{}' already exists", note_name));
-    }
+        if note_path.exists() {
+            return Err(AppError::InvalidNoteName(format!(
+                "Note '{}' already exists",
+                note_name
+            )));
+        }
 
-    if let Some(parent) = note_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
-    }
+        if let Some(parent) = note_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
 
-    with_programmatic_flag(|| safe_write_note(&note_path, "").map_err(|e| e.to_string()))?;
+        with_programmatic_flag(|| safe_write_note(&note_path, ""))?;
 
-    let modified = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
+        let modified = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
 
-    match with_db(|conn| {
-        let html_render = render_note(note_name, "");
-        conn.execute(
-            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![note_name, "", html_render, modified, true],
-        )?;
-        Ok(())
-    }).map_err(|e| e.to_string()) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            eprintln!(
-                "Database operation failed for '{}': {}. Rebuilding database...",
-                note_name, e
-            );
+        match with_db(|conn| {
+            let html_render = render_note(note_name, "");
+            conn.execute(
+                "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![note_name, "", html_render, modified, true],
+            )?;
+            Ok(())
+        }) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!(
+                    "Database operation failed for '{}': {}. Rebuilding database...",
+                    note_name, e
+                );
 
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!(
-                        "Database rebuild failed: {}. Note was created but may not be searchable.",
-                        rebuild_error
-                    );
-                    Ok(())
+                match recreate_database() {
+                    Ok(()) => {
+                        eprintln!("Database successfully rebuilt from files.");
+                        Ok(())
+                    }
+                    Err(rebuild_error) => {
+                        eprintln!(
+                            "Database rebuild failed: {}. Note was created but may not be searchable.",
+                            rebuild_error
+                        );
+                        Err(AppError::DatabaseRebuild(format!(
+                            "Note created but database rebuild failed: {}",
+                            rebuild_error
+                        )))
+                    }
                 }
             }
         }
-    }
+    }();
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn save_note(note_name: &str, content: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
+    let result = || -> AppResult<()> {
+        validate_note_name(note_name)?;
+        let note_path = get_config_notes_dir().join(note_name);
 
-    if let Some(parent) = note_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
-    }
+        if let Some(parent) = note_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
 
-    with_programmatic_flag(|| safe_write_note(&note_path, content).map_err(|e| e.to_string()))?;
+        with_programmatic_flag(|| safe_write_note(&note_path, content))?;
 
-    let modified = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
+        let modified = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
 
-    match update_note_in_database(note_name, content, modified) {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            eprintln!(
-                "Database update failed for '{}': {}. Rebuilding database...",
-                note_name, e
-            );
+        match update_note_in_database(note_name, content, modified) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                eprintln!(
+                    "Database update failed for '{}': {}. Rebuilding database...",
+                    note_name, e
+                );
 
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!("Database rebuild failed: {}. Note was saved to file but may not be searchable.", rebuild_error);
-                    Ok(())
+                match recreate_database() {
+                    Ok(()) => {
+                        eprintln!("Database successfully rebuilt from files.");
+                        Ok(())
+                    }
+                    Err(rebuild_error) => {
+                        eprintln!("Database rebuild failed: {}. Note was saved to file but may not be searchable.", rebuild_error);
+                        Err(AppError::DatabaseRebuild(format!(
+                            "Note saved but database rebuild failed: {}",
+                            rebuild_error
+                        )))
+                    }
                 }
             }
         }
-    }
+    }();
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
-    validate_note_name(&old_name)?;
-    validate_note_name(&new_name)?;
+    let result = || -> AppResult<()> {
+        validate_note_name(&old_name)?;
+        validate_note_name(&new_name)?;
 
-    let notes_dir = get_config_notes_dir();
-    let old_path = notes_dir.join(&old_name);
-    let new_path = notes_dir.join(&new_name);
+        let notes_dir = get_config_notes_dir();
+        let old_path = notes_dir.join(&old_name);
+        let new_path = notes_dir.join(&new_name);
 
-    // Pre-flight checks
-    if !old_path.exists() {
+        // Pre-flight checks
+        if !old_path.exists() {
+            if new_path.exists() {
+                match with_db(|conn| {
+                    conn.execute(
+                        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                        params![new_name, old_name],
+                    )?;
+                    Ok(())
+                }) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        let _ = recreate_database();
+                    }
+                }
+                return Ok(());
+            } else {
+                return Err(AppError::FileNotFound(format!(
+                    "Note '{}' not found",
+                    old_name
+                )));
+            }
+        }
+
         if new_path.exists() {
+            return Err(AppError::InvalidNoteName(format!(
+                "Note '{}' already exists",
+                new_name
+            )));
+        }
+
+        // Additional pre-flight checks
+        if let Ok(metadata) = old_path.metadata() {
+            if metadata.permissions().readonly() {
+                return Err(AppError::FilePermission(format!(
+                    "Source file '{}' is read-only",
+                    old_name
+                )));
+            }
+        } else {
+            return Err(AppError::FileNotFound(format!(
+                "Cannot access source file '{}'",
+                old_name
+            )));
+        }
+
+        let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
+
+        if let Some(backup_parent) = backup_path.parent() {
+            fs::create_dir_all(backup_parent)?;
+        }
+
+        fs::copy(&old_path, &backup_path)?;
+
+        with_programmatic_flag(|| fs::rename(&old_path, &new_path).map_err(AppError::from))?;
+
+        // Post-operation verification
+        if !new_path.exists() {
+            return Err(AppError::FileWrite(format!(
+                "Rename operation failed - destination file '{}' not found",
+                new_name
+            )));
+        }
+
+        if old_path.exists() {
+            return Err(AppError::FileWrite(format!(
+                "Rename operation failed - source file '{}' still exists",
+                old_name
+            )));
+        }
+
+        // Log successful rename operation
+        eprintln!(
+            "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            old_name,
+            new_name
+        );
+
+        match with_db(|conn| {
+            conn.execute(
+                "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                params![new_name, old_name],
+            )?;
+            let _ = fs::remove_file(&backup_path);
+            Ok(())
+        }) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!(
+                    "Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...",
+                    old_name, new_name, e
+                );
+
+                match recreate_database() {
+                    Ok(()) => {
+                        eprintln!("Database successfully rebuilt from files.");
+                        let _ = fs::remove_file(&backup_path);
+                        Ok(())
+                    }
+                    Err(rebuild_error) => {
+                        eprintln!(
+                            "Database rebuild failed: {}. Note was renamed but may not be searchable.",
+                            rebuild_error
+                        );
+                        Err(AppError::DatabaseRebuild(format!(
+                            "Note renamed but database rebuild failed: {}",
+                            rebuild_error
+                        )))
+                    }
+                }
+            }
+        }
+    }();
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_note(note_name: &str) -> Result<(), String> {
+    let result = || -> AppResult<()> {
+        validate_note_name(note_name)?;
+        let note_path = get_config_notes_dir().join(note_name);
+
+        if !note_path.exists() {
             match with_db(|conn| {
-                conn.execute(
-                    "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                    params![new_name, old_name],
-                )?;
+                conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
                 Ok(())
-            })
-            .map_err(|e| e.to_string())
-            {
+            }) {
                 Ok(_) => {}
                 Err(_) => {
                     let _ = recreate_database();
                 }
             }
             return Ok(());
-        } else {
-            return Err(format!("Note '{}' not found", old_name));
         }
-    }
 
-    if new_path.exists() {
-        return Err(format!("Note '{}' already exists", new_name));
-    }
+        let backup_path = safe_backup_path(&note_path)?.with_extension("md.bak.deleted");
 
-    // Additional pre-flight checks
-    if let Ok(metadata) = old_path.metadata() {
-        if !metadata.permissions().readonly() == false {
-            return Err(format!("Source file '{}' is not readable", old_name));
+        if let Some(backup_parent) = backup_path.parent() {
+            fs::create_dir_all(backup_parent)?;
         }
-    } else {
-        return Err(format!("Cannot access source file '{}'", old_name));
-    }
 
-    let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
+        fs::copy(&note_path, &backup_path)?;
 
-    if let Some(backup_parent) = backup_path.parent() {
-        fs::create_dir_all(backup_parent)
-            .map_err(|e| format!("Failed to create backup directory: {}", e))?;
-    }
+        with_programmatic_flag(|| fs::remove_file(&note_path).map_err(AppError::from))?;
 
-    fs::copy(&old_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
-
-    with_programmatic_flag(|| {
-        fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename note: {}", e))
-    })?;
-
-    // Post-operation verification
-    if !new_path.exists() {
-        return Err(format!(
-            "Rename operation failed - destination file '{}' not found",
-            new_name
-        ));
-    }
-
-    if old_path.exists() {
-        return Err(format!(
-            "Rename operation failed - source file '{}' still exists",
-            old_name
-        ));
-    }
-
-    // Log successful rename operation
-    eprintln!(
-        "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-        old_name,
-        new_name
-    );
-
-    match with_db(|conn| {
-        conn.execute(
-            "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-            params![new_name, old_name],
-        )?;
-        let _ = fs::remove_file(&backup_path);
-        Ok(())
-    })
-    .map_err(|e| e.to_string())
-    {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            eprintln!(
-                "Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...",
-                old_name, new_name, e
-            );
-
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    let _ = fs::remove_file(&backup_path);
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!(
-                        "Database rebuild failed: {}. Note was renamed but may not be searchable.",
-                        rebuild_error
-                    );
-                    Ok(())
-                }
-            }
+        // Post-operation verification
+        if note_path.exists() {
+            return Err(AppError::FileWrite(format!(
+                "Delete operation failed - file '{}' still exists",
+                note_name
+            )));
         }
-    }
-}
 
-#[tauri::command]
-pub fn delete_note(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
+        if !backup_path.exists() {
+            return Err(AppError::FileWrite(format!(
+                "Delete operation completed but backup was not created for '{}'",
+                note_name
+            )));
+        }
 
-    if !note_path.exists() {
+        // Log successful delete operation
+        eprintln!(
+            "[{}] File Operation: DELETE | File: {} | Backup: {} | Result: SUCCESS",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            note_name,
+            backup_path.display()
+        );
+
         match with_db(|conn| {
             conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
             Ok(())
-        })
-        .map_err(|e| e.to_string())
-        {
-            Ok(_) => {}
-            Err(_) => {
-                let _ = recreate_database();
-            }
-        }
-        return Ok(());
-    }
+        }) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!(
+                    "Database operation failed for delete '{}': {}. Rebuilding database...",
+                    note_name, e
+                );
 
-    let backup_path = safe_backup_path(&note_path)?.with_extension("md.bak.deleted");
-
-    if let Some(backup_parent) = backup_path.parent() {
-        fs::create_dir_all(backup_parent)
-            .map_err(|e| format!("Failed to create backup directory: {}", e))?;
-    }
-
-    fs::copy(&note_path, &backup_path).map_err(|e| format!("Failed to create backup: {}", e))?;
-
-    with_programmatic_flag(|| {
-        fs::remove_file(&note_path).map_err(|e| format!("Failed to delete note: {}", e))
-    })?;
-
-    // Post-operation verification
-    if note_path.exists() {
-        return Err(format!(
-            "Delete operation failed - file '{}' still exists",
-            note_name
-        ));
-    }
-
-    if !backup_path.exists() {
-        return Err(format!(
-            "Delete operation completed but backup was not created for '{}'",
-            note_name
-        ));
-    }
-
-    // Log successful delete operation
-    eprintln!(
-        "[{}] File Operation: DELETE | File: {} | Backup: {} | Result: SUCCESS",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-        note_name,
-        backup_path.display()
-    );
-
-    match with_db(|conn| {
-        conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
-        Ok(())
-    })
-    .map_err(|e| e.to_string())
-    {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            eprintln!(
-                "Database operation failed for delete '{}': {}. Rebuilding database...",
-                note_name, e
-            );
-
-            match recreate_database() {
-                Ok(()) => {
-                    eprintln!("Database successfully rebuilt from files.");
-                    Ok(())
-                }
-                Err(rebuild_error) => {
-                    eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
-                    Ok(())
+                match recreate_database() {
+                    Ok(()) => {
+                        eprintln!("Database successfully rebuilt from files.");
+                        Ok(())
+                    }
+                    Err(rebuild_error) => {
+                        eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
+                        Err(AppError::DatabaseRebuild(format!(
+                            "Note deleted but database rebuild failed: {}",
+                            rebuild_error
+                        )))
+                    }
                 }
             }
         }
-    }
+    }();
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn open_note_in_editor(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-    if !note_path.exists() {
-        return Err(format!("Note not found: {}", note_name));
-    }
+    validate_note_name(note_name)
+        .and_then(|_| {
+            let note_path = get_config_notes_dir().join(note_name);
+            if !note_path.exists() {
+                return Err(AppError::FileNotFound(format!(
+                    "Note not found: {}",
+                    note_name
+                )));
+            }
 
-    std::process::Command::new("open")
-        .arg(&note_path)
-        .status()
-        .map_err(|e| e.to_string())?;
+            std::process::Command::new("open")
+                .arg(&note_path)
+                .status()
+                .map_err(AppError::from)?;
 
-    Ok(())
+            Ok(())
+        })
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn open_note_folder(note_name: &str) -> Result<(), String> {
-    validate_note_name(note_name)?;
-    let note_path = get_config_notes_dir().join(note_name);
-    if !note_path.exists() {
-        return Err(format!("Note not found: {}", note_name));
-    }
+    let result = || -> AppResult<()> {
+        validate_note_name(note_name)?;
+        let note_path = get_config_notes_dir().join(note_name);
+        if !note_path.exists() {
+            return Err(AppError::FileNotFound(format!(
+                "Note not found: {}",
+                note_name
+            )));
+        }
 
-    #[cfg(target_os = "macos")]
-    std::process::Command::new("open")
-        .arg("-R")
-        .arg(note_path)
-        .status()
-        .map_err(|e| e.to_string())?;
-
-    #[cfg(target_os = "windows")]
-    {
-        let path_str = note_path.to_str().ok_or("Invalid path encoding")?;
-        std::process::Command::new("explorer")
-            .arg(format!("/select,\"{}\"", path_str))
+        #[cfg(target_os = "macos")]
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(note_path)
             .status()
-            .map_err(|e| e.to_string())?;
-    }
+            .map_err(AppError::from)?;
 
-    #[cfg(target_os = "linux")]
-    {
-        let folder_path = note_path.parent().ok_or("Unable to determine folder")?;
-        std::process::Command::new("xdg-open")
-            .arg(folder_path)
-            .status()
-            .map_err(|e| e.to_string())?;
-    }
+        #[cfg(target_os = "windows")]
+        {
+            let path_str = note_path
+                .to_str()
+                .ok_or_else(|| AppError::InvalidPath("Invalid path encoding".to_string()))?;
+            std::process::Command::new("explorer")
+                .arg(format!("/select,\"{}\"", path_str))
+                .status()
+                .map_err(AppError::from)?;
+        }
 
-    Ok(())
+        #[cfg(target_os = "linux")]
+        {
+            let folder_path = note_path
+                .parent()
+                .ok_or_else(|| AppError::InvalidPath("Unable to determine folder".to_string()))?;
+            std::process::Command::new("xdg-open")
+                .arg(folder_path)
+                .status()
+                .map_err(AppError::from)?;
+        }
+
+        Ok(())
+    }();
+    result.map_err(|e| e.to_string())
 }

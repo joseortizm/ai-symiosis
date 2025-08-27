@@ -27,6 +27,9 @@ pub enum AppError {
     // Search errors
     SearchIndex(String),
     SearchQuery(String),
+
+    // UI/Window errors
+    WindowOperation(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +73,8 @@ impl fmt::Display for AppError {
 
             AppError::SearchIndex(msg) => write!(f, "Search index error: {}", msg),
             AppError::SearchQuery(msg) => write!(f, "Search query error: {}", msg),
+
+            AppError::WindowOperation(msg) => write!(f, "Window operation error: {}", msg),
         }
     }
 }
@@ -120,6 +125,14 @@ impl From<&str> for AppError {
     }
 }
 
+impl From<tauri::Error> for AppError {
+    fn from(err: tauri::Error) -> Self {
+        let error = AppError::WindowOperation(err.to_string());
+        crate::logging::log("ERROR", &error.to_string(), Some("From tauri::Error"));
+        error
+    }
+}
+
 // For converting AppError back to String (for backward compatibility)
 impl From<AppError> for String {
     fn from(err: AppError) -> Self {
@@ -150,4 +163,3 @@ impl AppError {
 }
 
 pub type AppResult<T> = Result<T, AppError>;
-pub type OperationAppResult<T> = Result<OperationResult<T>, AppError>;

@@ -222,11 +222,7 @@ pub fn cleanup_temp_files() -> AppResult<()> {
     Ok(())
 }
 
-pub fn update_note_in_database(
-    note_name: &str,
-    content: &str,
-    modified: i64,
-) -> Result<(), String> {
+pub fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> AppResult<()> {
     with_db(|conn| {
         // Generate HTML render from content
         let html_render = render_note(note_name, content);
@@ -236,16 +232,14 @@ pub fn update_note_in_database(
             .execute(
                 "UPDATE notes SET content = ?2, html_render = ?3, modified = ?4, is_indexed = ?5 WHERE filename = ?1",
                 params![note_name, content, html_render, modified, true],
-            )
-            .map_err(|e| format!("Database error: {}", e))?;
+            )?;
 
         // If no rows were updated, insert new note
         if updated_rows == 0 {
             conn.execute(
                 "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![note_name, content, html_render, modified, true],
-            )
-            .map_err(|e| format!("Database error: {}", e))?;
+            )?;
         }
 
         // Verify database was updated correctly
@@ -255,7 +249,9 @@ pub fn update_note_in_database(
                 params![note_name],
                 |row| row.get::<_, String>(0),
             )
-            .map_err(|e| format!("Failed to verify database update: {}", e))?;
+            .map_err(|e| {
+                AppError::DatabaseQuery(format!("Failed to verify database update: {}", e))
+            })?;
 
         if db_content != content {
             let error_msg = format!(
@@ -287,5 +283,5 @@ pub fn update_note_in_database(
         );
 
         Ok(())
-    }).map_err(|e| e.to_string())
+    })
 }

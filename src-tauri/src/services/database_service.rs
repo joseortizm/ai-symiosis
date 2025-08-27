@@ -223,7 +223,7 @@ pub async fn recreate_database_with_progress(
     Ok(())
 }
 
-pub fn quick_filesystem_sync_check() -> Result<bool, String> {
+pub fn quick_filesystem_sync_check() -> AppResult<bool> {
     let notes_dir = get_config_notes_dir();
 
     // Skip check if notes directory doesn't exist (new user)
@@ -265,9 +265,9 @@ pub fn quick_filesystem_sync_check() -> Result<bool, String> {
         // Check each file against database
         for entry in files {
             let file_path = entry.path();
-            let relative_path = file_path
-                .strip_prefix(&notes_dir)
-                .map_err(|e| format!("Failed to get relative path: {}", e))?;
+            let relative_path = file_path.strip_prefix(&notes_dir).map_err(|e| {
+                AppError::InvalidPath(format!("Failed to get relative path: {}", e))
+            })?;
             let filename = relative_path.to_string_lossy().to_string();
 
             // Try to read file content (skip on permission issues with warning)
@@ -318,5 +318,4 @@ pub fn quick_filesystem_sync_check() -> Result<bool, String> {
 
         Ok(true)
     })
-    .map_err(|e| e.to_string())
 }
