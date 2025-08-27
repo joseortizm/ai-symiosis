@@ -326,13 +326,20 @@ export function createContentNavigationManager(
   }
 
   function handleEscape(): EscapeAction {
-    // Priority 1: Clear active navigation
+    // Priority 1: Clear highlights immediately if actively navigating highlights
+    if (state.navigationMode === 'highlights') {
+      resetNavigation()
+      clearHighlights()
+      return 'highlights_cleared'
+    }
+
+    // Priority 2: Clear active header navigation
     if (state.navigationMode !== 'inactive') {
       resetNavigation()
       return 'navigation_cleared'
     }
 
-    // Priority 2: Clear highlights if they exist and query exists
+    // Priority 3: Clear highlights if they exist and query exists
     const query = deps.searchManager.query
     const hasQuery = query.trim() !== ''
 
@@ -341,14 +348,14 @@ export function createContentNavigationManager(
       return 'highlights_cleared'
     }
 
-    // Priority 3: Clear search if highlights hidden but query exists
+    // Priority 4: Clear search if highlights hidden but query exists
     if (hasQuery && state.highlightVisibility === 'hidden') {
       deps.searchManager.clearSearch()
       showHighlights() // Reset highlights for next search
       return 'search_cleared'
     }
 
-    // Priority 4: Focus search (default case)
+    // Priority 5: Focus search (default case)
     return 'focus_search'
   }
 
