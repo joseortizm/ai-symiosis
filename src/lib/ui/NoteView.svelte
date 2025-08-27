@@ -131,6 +131,8 @@ Shows highlighted content or renders the CodeMirror editor.
     background-color: rgba(97, 175, 239, 0.2);
     border-left: 4px solid #61afef;
     padding-left: 0.5em;
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
     margin-left: -0.5em;
     border-radius: 3px;
   }
