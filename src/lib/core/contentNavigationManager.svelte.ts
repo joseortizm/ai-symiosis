@@ -59,8 +59,17 @@ export function createContentNavigationManager(
     }
 
     if (shouldNavigateHighlights) {
-      state.isNavigatingHighlights = true
-      return Array.from(contentElement.querySelectorAll('mark.highlight'))
+      const highlightElements = contentElement.querySelectorAll('mark.highlight')
+      if (highlightElements.length === 0) {
+        // No actual highlights found despite expecting them, switch to headers
+        state.isNavigatingHighlights = false
+        return Array.from(
+          contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+        )
+      } else {
+        state.isNavigatingHighlights = true
+        return Array.from(highlightElements)
+      }
     } else {
       state.isNavigatingHighlights = false
       return Array.from(
