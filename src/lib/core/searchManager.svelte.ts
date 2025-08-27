@@ -87,6 +87,12 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
       state.searchInput = value
 
+      if (value.length < 3) {
+        state.query = ''
+        state.filteredNotes = []
+        return
+      }
+
       state.searchTimeout = setTimeout(async () => {
         state.query = state.searchInput
         await performSearch(state.searchInput)

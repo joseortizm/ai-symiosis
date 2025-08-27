@@ -67,6 +67,69 @@ describe('searchManager', () => {
     })
   })
 
+  describe('minimum search length', () => {
+    it('should not trigger search for queries shorter than 3 characters', async () => {
+      vi.useFakeTimers()
+
+      // Test empty string
+      searchManager.searchInput = ''
+      vi.advanceTimersByTime(200)
+      await vi.runAllTimersAsync()
+      expect(mockNoteService.search).not.toHaveBeenCalled()
+      expect(searchManager.filteredNotes).toEqual([])
+
+      // Test 1 character
+      searchManager.searchInput = 'a'
+      vi.advanceTimersByTime(200)
+      await vi.runAllTimersAsync()
+      expect(mockNoteService.search).not.toHaveBeenCalled()
+
+      // Test 2 characters
+      searchManager.searchInput = 'ab'
+      vi.advanceTimersByTime(200)
+      await vi.runAllTimersAsync()
+      expect(mockNoteService.search).not.toHaveBeenCalled()
+
+      vi.useRealTimers()
+    })
+
+    it('should trigger search for queries with 3 or more characters', async () => {
+      const notes = ['note1.md', 'note2.md']
+      mockNoteService.search.mockResolvedValueOnce(notes)
+      vi.useFakeTimers()
+
+      // Test exactly 3 characters
+      searchManager.searchInput = 'abc'
+      vi.advanceTimersByTime(200)
+      await vi.runAllTimersAsync()
+
+      expect(mockNoteService.search).toHaveBeenCalledWith('abc')
+      expect(searchManager.filteredNotes).toEqual(notes)
+
+      vi.useRealTimers()
+    })
+
+    it('should clear results when search input drops below 3 characters', async () => {
+      const notes = ['note1.md']
+      mockNoteService.search.mockResolvedValueOnce(notes)
+      vi.useFakeTimers()
+
+      // First set a valid search
+      searchManager.searchInput = 'test'
+      vi.advanceTimersByTime(200)
+      await vi.runAllTimersAsync()
+      expect(searchManager.filteredNotes).toEqual(notes)
+
+      // Then reduce to less than 3 characters
+      searchManager.searchInput = 'te'
+      vi.advanceTimersByTime(200)
+      await vi.runAllTimersAsync()
+      expect(searchManager.filteredNotes).toEqual([])
+
+      vi.useRealTimers()
+    })
+  })
+
   describe('search clearing functionality', () => {
     it('should clear search input and query', () => {
       searchManager.searchInput = 'some query'
