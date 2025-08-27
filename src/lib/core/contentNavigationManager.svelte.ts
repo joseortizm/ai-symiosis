@@ -430,18 +430,44 @@ export function createContentNavigationManager(
     scrollToElement(elements[0])
   }
 
+  function getFormattedText(element: Element): string {
+    if (element.tagName === 'UL' || element.tagName === 'OL') {
+      const items = Array.from(element.children)
+      const marker =
+        element.tagName === 'UL' ? '- ' : (index: number) => `${index + 1}. `
+      return items
+        .map((item, index) => {
+          const prefix = typeof marker === 'string' ? marker : marker(index)
+          return prefix + (item.textContent || '').trim()
+        })
+        .join('\n')
+    }
+
+    if (element.tagName === 'LI') {
+      const parent = element.parentElement
+      if (parent?.tagName === 'UL') {
+        return '- ' + (element.textContent || '').trim()
+      } else if (parent?.tagName === 'OL') {
+        const index = Array.from(parent.children).indexOf(element)
+        return `${index + 1}. ` + (element.textContent || '').trim()
+      }
+    }
+
+    return element.textContent || ''
+  }
+
   async function copyCurrentSection(): Promise<boolean> {
     let textToCopy = ''
 
     if (state.codeBlockElement) {
       textToCopy = state.codeBlockElement.textContent || ''
     } else if (state.currentElement && state.navigationMode === 'highlights') {
-      textToCopy = state.currentElement.textContent || ''
+      textToCopy = getFormattedText(state.currentElement)
     } else if (state.currentElement && state.navigationMode === 'headers') {
       const headerText = state.currentElement.textContent || ''
       const content = getContentBetweenHeaders(state.currentElement)
       const contentTexts = content
-        .map((el) => el.textContent || '')
+        .map((el) => getFormattedText(el))
         .filter((text) => text.trim())
       textToCopy = [headerText, ...contentTexts].join('\n\n')
     }
