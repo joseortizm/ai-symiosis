@@ -17,10 +17,11 @@ fn test_error_message_quality() {
 
     for (input, expected_error_content) in test_cases {
         let error_msg = validate_note_name(input).unwrap_err();
-        assert!(error_msg.contains(expected_error_content));
+        let error_string = error_msg.to_string();
+        assert!(error_string.contains(expected_error_content));
 
         if input.len() > 10 {
-            assert!(!error_msg.contains(input));
+            assert!(!error_string.contains(input));
         }
     }
 }

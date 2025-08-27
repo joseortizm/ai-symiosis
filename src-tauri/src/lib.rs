@@ -1,7 +1,9 @@
 // Module declarations
 mod commands;
 mod config;
+mod core;
 mod database;
+mod logging;
 mod search;
 mod services;
 #[cfg(test)]

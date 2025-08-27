@@ -1,3 +1,4 @@
+use crate::core::{AppError, AppResult};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
 use std::cmp::Ordering;
@@ -90,7 +91,7 @@ impl HybridSearcher {
         filtered_words.join(" ").trim().to_string()
     }
 
-    pub fn search(&mut self, query: &str, max_results: usize) -> Result<Vec<String>, String> {
+    pub fn search(&mut self, query: &str, max_results: usize) -> AppResult<Vec<String>> {
         if query.trim().is_empty() {
             return self.get_recent_notes(max_results);
         }
@@ -110,7 +111,7 @@ impl HybridSearcher {
         Ok(results.into_iter().map(|r| r.filename).collect())
     }
 
-    fn get_candidates_from_sqlite(&self, query: &str) -> Result<Vec<SearchCandidate>, String> {
+    fn get_candidates_from_sqlite(&self, query: &str) -> AppResult<Vec<SearchCandidate>> {
         let sanitized_query = Self::sanitize_fts_query(query);
 
         if sanitized_query.trim().is_empty() {
@@ -128,36 +129,31 @@ impl HybridSearcher {
             format!("{}*", sanitized_query)
         };
 
-        let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT filename, content, modified FROM notes
+        let mut stmt = self.conn.prepare(
+            "SELECT filename, content, modified FROM notes
                  WHERE notes MATCH ?
                  ORDER BY rank
                  LIMIT 500",
-            )
-            .map_err(|e| e.to_string())?;
+        )?;
 
-        let rows = stmt
-            .query_map(params![fts_pattern], |row| {
-                let filename: String = row.get(0)?;
-                let content: String = row.get(1)?;
-                let modified: i64 = row.get(2)?;
+        let rows = stmt.query_map(params![fts_pattern], |row| {
+            let filename: String = row.get(0)?;
+            let content: String = row.get(1)?;
+            let modified: i64 = row.get(2)?;
 
-                let title = Self::extract_title_from_content(&content)
-                    .unwrap_or_else(|| Self::extract_title_from_filename(&filename));
+            let title = Self::extract_title_from_content(&content)
+                .unwrap_or_else(|| Self::extract_title_from_filename(&filename));
 
-                Ok(SearchCandidate {
-                    filename,
-                    title,
-                    content,
-                    modified,
-                })
+            Ok(SearchCandidate {
+                filename,
+                title,
+                content,
+                modified,
             })
-            .map_err(|e| e.to_string())?;
+        })?;
 
-        rows.collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())
+        let candidates = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(candidates)
     }
 
     fn score_candidate(
@@ -254,22 +250,20 @@ impl HybridSearcher {
             .then_with(|| a.title.cmp(&b.title))
     }
 
-    fn get_recent_notes(&self, max_results: usize) -> Result<Vec<String>, String> {
+    fn get_recent_notes(&self, max_results: usize) -> AppResult<Vec<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")
-            .map_err(|e| e.to_string())?;
+            .prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")?;
 
-        let rows = stmt
-            .query_map([max_results], |row| row.get(0))
-            .map_err(|e| e.to_string())?;
+        let rows = stmt.query_map([max_results], |row| row.get(0))?;
 
-        rows.collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())
+        let filenames = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(filenames)
     }
 }
 
-pub fn search_notes_hybrid(query: &str, max_results: usize) -> Result<Vec<String>, String> {
-    let mut searcher = HybridSearcher::new().map_err(|e| e.to_string())?;
+pub fn search_notes_hybrid(query: &str, max_results: usize) -> AppResult<Vec<String>> {
+    let mut searcher =
+        HybridSearcher::new().map_err(|e| AppError::DatabaseConnection(e.to_string()))?;
     searcher.search(query, max_results)
 }

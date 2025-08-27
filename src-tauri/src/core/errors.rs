@@ -79,24 +79,28 @@ impl std::error::Error for AppError {}
 // Conversion from common error types
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
-        match err.kind() {
+        let error = match err.kind() {
             std::io::ErrorKind::NotFound => AppError::FileNotFound(err.to_string()),
             std::io::ErrorKind::PermissionDenied => AppError::FilePermission(err.to_string()),
             _ => AppError::FileWrite(err.to_string()),
-        }
+        };
+        crate::logging::log("ERROR", &error.to_string(), Some("From std::io::Error"));
+        error
     }
 }
 
 impl From<rusqlite::Error> for AppError {
     fn from(err: rusqlite::Error) -> Self {
-        AppError::DatabaseQuery(err.to_string())
+        let error = AppError::DatabaseQuery(err.to_string());
+        crate::logging::log("ERROR", &error.to_string(), Some("From rusqlite::Error"));
+        error
     }
 }
 
 impl From<String> for AppError {
     fn from(err: String) -> Self {
         // Try to categorize common error patterns
-        if err.contains("permission") || err.contains("Permission") {
+        let error = if err.contains("permission") || err.contains("Permission") {
             AppError::FilePermission(err)
         } else if err.contains("not found") || err.contains("No such file") {
             AppError::FileNotFound(err)
@@ -104,7 +108,9 @@ impl From<String> for AppError {
             AppError::FileWrite(err)
         } else {
             AppError::FileWrite(err)
-        }
+        };
+        crate::logging::log("ERROR", &error.to_string(), Some("From String"));
+        error
     }
 }
 
@@ -124,7 +130,9 @@ impl From<AppError> for String {
 // Helper functions for common error scenarios
 impl AppError {
     pub fn validation_error(field: &str, message: &str) -> Self {
-        AppError::InvalidNoteName(format!("{}: {}", field, message))
+        let error = AppError::InvalidNoteName(format!("{}: {}", field, message));
+        crate::logging::log("ERROR", &error.to_string(), None);
+        error
     }
 
     pub fn database_recovery_failed(
@@ -132,10 +140,12 @@ impl AppError {
         original_error: &str,
         rebuild_error: &str,
     ) -> Self {
-        AppError::DatabaseRebuild(format!(
+        let error = AppError::DatabaseRebuild(format!(
             "Operation '{}' failed ({}), and database rebuild also failed: {}",
             operation, original_error, rebuild_error
-        ))
+        ));
+        crate::logging::log("ERROR", &error.to_string(), None);
+        error
     }
 }
 

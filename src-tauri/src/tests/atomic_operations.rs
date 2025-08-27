@@ -170,7 +170,9 @@ fn test_safe_backup_path_validation() {
     assert!(backup_path.is_err(), "Invalid note path should fail");
 
     if let Err(e) = backup_path {
-        assert!(e.contains("not within configured notes directory"));
+        assert!(e
+            .to_string()
+            .contains("not within configured notes directory"));
     }
 }
 

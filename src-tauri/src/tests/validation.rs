@@ -90,5 +90,5 @@ fn test_security_critical_functions_integration() {
     assert!(validate_note_name("../../../secret.txt").is_err());
 
     let error_msg = validate_note_name("../../../secret.txt").unwrap_err();
-    assert!(error_msg.contains("Path traversal not allowed"));
+    assert!(error_msg.to_string().contains("Path traversal not allowed"));
 }

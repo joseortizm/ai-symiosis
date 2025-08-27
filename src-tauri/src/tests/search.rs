@@ -39,9 +39,9 @@ fn test_fts_injection_attempts() {
             Ok(_) => {}
             Err(error_msg) => {
                 assert!(
-                    !error_msg.contains("SQL"),
+                    !error_msg.to_string().contains("SQL"),
                     "Error message leaked SQL details: {}",
-                    error_msg
+                    error_msg.to_string()
                 );
             }
         }
@@ -65,7 +65,7 @@ fn test_fts_query_sanitization() {
             Ok(_) => {}
             Err(error) => {
                 assert!(
-                    !error.to_lowercase().contains("syntax error"),
+                    !error.to_string().to_lowercase().contains("syntax error"),
                     "Query resulted in SQL syntax error: {} for input: {}",
                     error,
                     query
@@ -90,7 +90,7 @@ fn test_fts_parameter_safety() {
         match result {
             Ok(_) => {}
             Err(error) => {
-                let error_lower = error.to_lowercase();
+                let error_lower = error.to_string().to_lowercase();
                 assert!(
                     !error_lower.contains("table") || error_lower.contains("fts"),
                     "Unexpected error type: {}",
@@ -197,7 +197,7 @@ fn test_search_performance_stress_queries() {
             }
             Err(e) => {
                 // Errors should be controlled and not indicate crashes
-                let error_msg = e.to_lowercase();
+                let error_msg = e.to_string().to_lowercase();
                 assert!(
                     !error_msg.contains("panic") && !error_msg.contains("crash"),
                     "Search error for '{}' indicates system failure: {}",

@@ -1,5 +1,6 @@
 use crate::{
     config::get_config_notes_dir,
+    core::AppError,
     database::with_db,
     search::search_notes_hybrid,
     services::{
@@ -39,13 +40,8 @@ where
 #[tauri::command]
 pub fn list_all_notes() -> Result<Vec<String>, String> {
     with_db(|conn| {
-        let mut stmt = conn
-            .prepare("SELECT filename FROM notes ORDER BY modified DESC")
-            .map_err(|e| e.to_string())?;
-
-        let rows = stmt
-            .query_map([], |row| row.get(0))
-            .map_err(|e| e.to_string())?;
+        let mut stmt = conn.prepare("SELECT filename FROM notes ORDER BY modified DESC")?;
+        let rows = stmt.query_map([], |row| row.get(0))?;
 
         let mut results = Vec::new();
         for r in rows {
@@ -56,56 +52,50 @@ pub fn list_all_notes() -> Result<Vec<String>, String> {
 
         Ok(results)
     })
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn search_notes(query: &str) -> Result<Vec<String>, String> {
     let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    search_notes_hybrid(query, config.preferences.max_search_results)
+    search_notes_hybrid(query, config.preferences.max_search_results).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_note_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)?;
+    validate_note_name(note_name).map_err(|e| e.to_string())?;
 
     with_db(|conn| {
-        let mut stmt = conn
-            .prepare("SELECT content FROM notes WHERE filename = ?1")
-            .map_err(|e| e.to_string())?;
-
+        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
         let content = stmt
             .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-            .map_err(|_| format!("Note not found: {}", note_name))?;
-
+            .map_err(|_| AppError::FileNotFound(format!("Note not found: {}", note_name)))?;
         Ok(content)
     })
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_note_raw_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)?;
+    validate_note_name(note_name).map_err(|e| e.to_string())?;
 
     with_db(|conn| {
-        let mut stmt = conn
-            .prepare("SELECT content FROM notes WHERE filename = ?1")
-            .map_err(|e| e.to_string())?;
-
+        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
         let content = stmt
             .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-            .map_err(|_| format!("Note not found: {}", note_name))?;
-
+            .map_err(|_| AppError::FileNotFound(format!("Note not found: {}", note_name)))?;
         Ok(content)
     })
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)?;
+    validate_note_name(note_name).map_err(|e| e.to_string())?;
 
     with_db(|conn| {
-        let mut stmt = conn
-            .prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")
-            .map_err(|e| e.to_string())?;
+        let mut stmt =
+            conn.prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")?;
 
         let (html_content, is_indexed, content): (String, bool, String) = stmt
             .query_row(params![note_name], |row| {
@@ -115,7 +105,7 @@ pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
                     row.get::<_, String>(2)?,
                 ))
             })
-            .map_err(|_| format!("Note not found: {}", note_name))?;
+            .map_err(|_| AppError::FileNotFound(format!("Note not found: {}", note_name)))?;
 
         if is_indexed {
             Ok(html_content)
@@ -132,6 +122,7 @@ pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
             Ok(html_render)
         }
     })
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -148,7 +139,7 @@ pub fn create_new_note(note_name: &str) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    with_programmatic_flag(|| safe_write_note(&note_path, ""))?;
+    with_programmatic_flag(|| safe_write_note(&note_path, "").map_err(|e| e.to_string()))?;
 
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -160,8 +151,9 @@ pub fn create_new_note(note_name: &str) -> Result<(), String> {
         conn.execute(
             "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![note_name, "", html_render, modified, true],
-        ).map_err(|e| format!("Database insert failed: {}", e))
-    }) {
+        )?;
+        Ok(())
+    }).map_err(|e| e.to_string()) {
         Ok(_) => Ok(()),
         Err(e) => {
             eprintln!(
@@ -195,7 +187,7 @@ pub fn save_note(note_name: &str, content: &str) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    with_programmatic_flag(|| safe_write_note(&note_path, content))?;
+    with_programmatic_flag(|| safe_write_note(&note_path, content).map_err(|e| e.to_string()))?;
 
     let modified = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -240,9 +232,11 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                 conn.execute(
                     "UPDATE notes SET filename = ?1 WHERE filename = ?2",
                     params![new_name, old_name],
-                )
-                .map_err(|e| e.to_string())
-            }) {
+                )?;
+                Ok(())
+            })
+            .map_err(|e| e.to_string())
+            {
                 Ok(_) => {}
                 Err(_) => {
                     let _ = recreate_database();
@@ -310,12 +304,12 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         conn.execute(
             "UPDATE notes SET filename = ?1 WHERE filename = ?2",
             params![new_name, old_name],
-        )
-        .map(|_| {
-            let _ = fs::remove_file(&backup_path);
-        })
-        .map_err(|e| format!("Database update failed: {}", e))
-    }) {
+        )?;
+        let _ = fs::remove_file(&backup_path);
+        Ok(())
+    })
+    .map_err(|e| e.to_string())
+    {
         Ok(_) => Ok(()),
         Err(e) => {
             eprintln!(
@@ -348,9 +342,11 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
 
     if !note_path.exists() {
         match with_db(|conn| {
-            conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
-                .map_err(|e| e.to_string())
-        }) {
+            conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
+            Ok(())
+        })
+        .map_err(|e| e.to_string())
+        {
             Ok(_) => {}
             Err(_) => {
                 let _ = recreate_database();
@@ -399,9 +395,11 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
     );
 
     match with_db(|conn| {
-        conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])
-            .map_err(|e| format!("Database delete failed: {}", e))
-    }) {
+        conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
+        Ok(())
+    })
+    .map_err(|e| e.to_string())
+    {
         Ok(_) => Ok(()),
         Err(e) => {
             eprintln!(

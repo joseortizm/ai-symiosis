@@ -1,6 +1,7 @@
 // Configuration module for Symiosis
 // Contains essential configuration structures, validation, and management logic
 
+use crate::core::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -357,7 +358,7 @@ pub fn get_config_notes_dir() -> PathBuf {
 // VALIDATION FUNCTIONS
 // ============================================================================
 
-pub fn validate_config(config: &AppConfig) -> Result<(), String> {
+pub fn validate_config(config: &AppConfig) -> AppResult<()> {
     validate_notes_directory(&config.notes_directory)?;
     validate_shortcut_format(&config.global_shortcut)?;
     validate_general_config(&config.general)?;
@@ -368,19 +369,19 @@ pub fn validate_config(config: &AppConfig) -> Result<(), String> {
     Ok(())
 }
 
-pub fn validate_general_config(_general: &GeneralConfig) -> Result<(), String> {
+pub fn validate_general_config(_general: &GeneralConfig) -> AppResult<()> {
     // Future validation for general settings
     Ok(())
 }
 
-pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), String> {
+pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
     let valid_themes = get_available_ui_themes();
     if !valid_themes.contains(&interface.ui_theme) {
-        return Err(format!(
+        return Err(AppError::ConfigLoad(format!(
             "Invalid UI theme '{}'. Valid themes: {}",
             interface.ui_theme,
             valid_themes.join(", ")
-        ));
+        )));
     }
 
     validate_font_size(interface.font_size, "UI font size")?;
@@ -388,11 +389,11 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
 
     let valid_markdown_render_themes = get_available_markdown_themes();
     if !valid_markdown_render_themes.contains(&interface.markdown_render_theme) {
-        return Err(format!(
+        return Err(AppError::ConfigLoad(format!(
             "Invalid markdown render theme '{}'. Valid themes: {}",
             interface.markdown_render_theme,
             valid_markdown_render_themes.join(", ")
-        ));
+        )));
     }
 
     // Modern highlight.js themes (curated selection)
@@ -427,32 +428,39 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> Result<(), Stri
         "base16-dracula",
     ];
     if !valid_md_code_themes.contains(&interface.md_render_code_theme.as_str()) {
-        return Err(format!(
+        return Err(AppError::ConfigLoad(format!(
             "Invalid markdown code theme '{}'. Valid themes: {}",
             interface.md_render_code_theme,
             valid_md_code_themes.join(", ")
-        ));
+        )));
     }
 
     // Validate window settings
     if interface.default_width < 400 || interface.default_width > 10000 {
-        return Err("Window width must be between 400 and 10000 pixels".to_string());
+        return Err(AppError::ConfigLoad(
+            "Window width must be between 400 and 10000 pixels".to_string(),
+        ));
     }
     if interface.default_height < 300 || interface.default_height > 8000 {
-        return Err("Window height must be between 300 and 8000 pixels".to_string());
+        return Err(AppError::ConfigLoad(
+            "Window height must be between 300 and 8000 pixels".to_string(),
+        ));
     }
 
     Ok(())
 }
 
-pub fn validate_font_size(size: u16, context: &str) -> Result<(), String> {
+pub fn validate_font_size(size: u16, context: &str) -> AppResult<()> {
     if size < 8 || size > 72 {
-        return Err(format!("{} must be between 8 and 72 pixels", context));
+        return Err(AppError::ConfigLoad(format!(
+            "{} must be between 8 and 72 pixels",
+            context
+        )));
     }
     Ok(())
 }
 
-pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> Result<(), String> {
+pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> AppResult<()> {
     // Note: These shortcuts are used by frontend JavaScript, not Tauri global shortcuts
     // So we only need basic validation, not Tauri shortcut parsing
 
@@ -474,14 +482,14 @@ pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> Result<(), Stri
     Ok(())
 }
 
-pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
+pub fn validate_editor_config(editor: &EditorConfig) -> AppResult<()> {
     let valid_modes = ["basic", "vim", "emacs"];
     if !valid_modes.contains(&editor.mode.as_str()) {
-        return Err(format!(
+        return Err(AppError::ConfigLoad(format!(
             "Invalid editor mode '{}'. Valid modes: {}",
             editor.mode,
             valid_modes.join(", ")
-        ));
+        )));
     }
 
     let valid_themes = [
@@ -510,66 +518,77 @@ pub fn validate_editor_config(editor: &EditorConfig) -> Result<(), String> {
         "vscode-light",
     ];
     if !valid_themes.contains(&editor.theme.as_str()) {
-        return Err(format!(
+        return Err(AppError::ConfigLoad(format!(
             "Invalid editor theme '{}'. Valid themes: {}",
             editor.theme,
             valid_themes.join(", ")
-        ));
+        )));
     }
 
     if editor.tab_size == 0 || editor.tab_size > 16 {
-        return Err("Tab size must be between 1 and 16".to_string());
+        return Err(AppError::ConfigLoad(
+            "Tab size must be between 1 and 16".to_string(),
+        ));
     }
 
     Ok(())
 }
 
-pub fn validate_preferences_config(preferences: &PreferencesConfig) -> Result<(), String> {
+pub fn validate_preferences_config(preferences: &PreferencesConfig) -> AppResult<()> {
     if preferences.max_search_results == 0 {
-        return Err("Max search results must be greater than 0".to_string());
+        return Err(AppError::ConfigLoad(
+            "Max search results must be greater than 0".to_string(),
+        ));
     }
     if preferences.max_search_results > 10000 {
-        return Err("Max search results too large (max: 10000)".to_string());
+        return Err(AppError::ConfigLoad(
+            "Max search results too large (max: 10000)".to_string(),
+        ));
     }
     Ok(())
 }
 
-pub fn validate_shortcut_format(shortcut: &str) -> Result<(), String> {
+pub fn validate_shortcut_format(shortcut: &str) -> AppResult<()> {
     // This is for global shortcuts that need to be parsed by Tauri
     if shortcut.trim().is_empty() {
-        return Err("Shortcut cannot be empty".to_string());
+        return Err(AppError::ConfigLoad("Shortcut cannot be empty".to_string()));
     }
 
     // Pre-validate shortcut format before calling parse_shortcut
     if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
-        return Err("Invalid shortcut format".to_string());
+        return Err(AppError::ConfigLoad("Invalid shortcut format".to_string()));
     }
 
     // Test that it can be parsed by Tauri's global shortcut system
     match parse_shortcut(shortcut) {
         Some(_) => Ok(()),
-        None => Err(format!("Invalid global shortcut format: '{}'", shortcut)),
+        None => Err(AppError::ConfigLoad(format!(
+            "Invalid global shortcut format: '{}'",
+            shortcut
+        ))),
     }
 }
 
-pub fn validate_basic_shortcut_format(shortcut: &str) -> Result<(), String> {
+pub fn validate_basic_shortcut_format(shortcut: &str) -> AppResult<()> {
     // This is for frontend shortcuts that are only used by JavaScript
     // We just need basic validation since they're not parsed by Tauri
     if shortcut.trim().is_empty() {
-        return Err("Shortcut cannot be empty".to_string());
+        return Err(AppError::ConfigLoad("Shortcut cannot be empty".to_string()));
     }
 
     // Basic format checks
     if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
-        return Err("Invalid shortcut format".to_string());
+        return Err(AppError::ConfigLoad("Invalid shortcut format".to_string()));
     }
 
     Ok(())
 }
 
-pub fn validate_notes_directory(dir: &str) -> Result<(), String> {
+pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
     if dir.trim().is_empty() {
-        return Err("Notes directory cannot be empty".to_string());
+        return Err(AppError::ConfigLoad(
+            "Notes directory cannot be empty".to_string(),
+        ));
     }
 
     let path = std::path::Path::new(dir);
@@ -589,7 +608,10 @@ pub fn validate_notes_directory(dir: &str) -> Result<(), String> {
 
     for dangerous in &dangerous_paths {
         if dir.starts_with(dangerous) {
-            return Err(format!("Cannot use system directory: {}", dir));
+            return Err(AppError::ConfigLoad(format!(
+                "Cannot use system directory: {}",
+                dir
+            )));
         }
     }
 
@@ -1000,20 +1022,17 @@ fn extract_preferences_config(value: &toml::Value) -> PreferencesConfig {
     config
 }
 
-pub fn save_config(config: &AppConfig) -> Result<(), String> {
+pub fn save_config(config: &AppConfig) -> AppResult<()> {
     let config_path = get_config_path();
 
     if let Some(parent) = config_path.parent() {
-        if let Err(e) = fs::create_dir_all(parent) {
-            return Err(format!("Failed to create config directory: {}", e));
-        }
+        fs::create_dir_all(parent)?;
     }
 
-    let toml_content =
-        toml::to_string_pretty(config).map_err(|e| format!("Failed to serialize config: {}", e))?;
+    let toml_content = toml::to_string_pretty(config)
+        .map_err(|e| AppError::ConfigSave(format!("Failed to serialize config: {}", e)))?;
 
-    fs::write(&config_path, toml_content)
-        .map_err(|e| format!("Failed to write config file: {}", e))?;
+    fs::write(&config_path, toml_content)?;
 
     println!("Config saved to: {}", config_path.display());
     Ok(())
@@ -1052,9 +1071,8 @@ pub fn save_config_content(content: &str) -> Result<(), String> {
 
     // Create directory if it doesn't exist
     if let Some(parent) = config_path.parent() {
-        if let Err(e) = std::fs::create_dir_all(parent) {
-            return Err(format!("Failed to create config directory: {}", e));
-        }
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create config directory: {}", e))?;
     }
 
     // Write the content to file

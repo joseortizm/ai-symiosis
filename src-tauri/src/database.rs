@@ -1,4 +1,5 @@
 // External crates
+use crate::core::{AppError, AppResult};
 use rusqlite::Connection;
 use std::path::PathBuf;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -9,24 +10,25 @@ pub struct DatabaseManager {
 }
 
 impl DatabaseManager {
-    pub fn new() -> Result<Self, String> {
+    pub fn new() -> AppResult<Self> {
         let db_path = get_database_path()?;
         if let Some(parent) = db_path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Failed to create database directory: {}", e))?;
+            std::fs::create_dir_all(parent).map_err(|e| {
+                AppError::DatabaseConnection(format!("Failed to create database directory: {}", e))
+            })?;
         }
 
-        let conn =
-            Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+        let conn = Connection::open(&db_path)
+            .map_err(|e| AppError::DatabaseConnection(format!("Failed to open database: {}", e)))?;
 
         Ok(Self {
             connection: Arc::new(Mutex::new(conn)),
         })
     }
 
-    pub fn with_connection<T, F>(&self, f: F) -> Result<T, String>
+    pub fn with_connection<T, F>(&self, f: F) -> AppResult<T>
     where
-        F: FnOnce(&Connection) -> Result<T, String>,
+        F: FnOnce(&Connection) -> AppResult<T>,
     {
         let conn = self.connection.lock().unwrap();
         f(&*conn)
@@ -37,9 +39,9 @@ impl DatabaseManager {
 static DB_MANAGER: LazyLock<DatabaseManager> =
     LazyLock::new(|| DatabaseManager::new().expect("Failed to initialize database manager"));
 
-pub fn with_db<T, F>(f: F) -> Result<T, String>
+pub fn with_db<T, F>(f: F) -> AppResult<T>
 where
-    F: FnOnce(&Connection) -> Result<T, String>,
+    F: FnOnce(&Connection) -> AppResult<T>,
 {
     DB_MANAGER.with_connection(f)
 }
@@ -47,19 +49,21 @@ where
 // Legacy function for cases requiring mutable database access
 // Use with_db() for read operations and simple writes
 // Use get_db_connection() only for schema changes, bulk operations, or when mutable access is required
-pub fn get_db_connection() -> Result<Connection, String> {
+pub fn get_db_connection() -> AppResult<Connection> {
     let db_path = get_database_path()?;
     if let Some(parent) = db_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create database directory: {}", e))?;
+        std::fs::create_dir_all(parent).map_err(|e| {
+            AppError::DatabaseConnection(format!("Failed to create database directory: {}", e))
+        })?;
     }
 
-    Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))
+    Connection::open(&db_path)
+        .map_err(|e| AppError::DatabaseConnection(format!("Failed to open database: {}", e)))
 }
 
-pub fn get_database_path() -> Result<PathBuf, String> {
+pub fn get_database_path() -> AppResult<PathBuf> {
     get_data_dir()
-        .ok_or_else(|| "Failed to get data directory".to_string())
+        .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
         .map(|path| path.join("symiosis").join("notes.sqlite"))
 }
 
@@ -75,16 +79,16 @@ fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
         .replace(|c: char| !c.is_alphanumeric() && c != '_', "_") // Replace other special chars
 }
 
-pub fn get_backup_dir_for_notes_path(notes_dir: &std::path::Path) -> Result<PathBuf, String> {
+pub fn get_backup_dir_for_notes_path(notes_dir: &std::path::Path) -> AppResult<PathBuf> {
     let encoded_path = encode_path_for_backup(notes_dir);
     get_data_dir()
-        .ok_or_else(|| "Failed to get data directory".to_string())
+        .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
         .map(|path| path.join("symiosis").join("backups").join(encoded_path))
 }
 
-pub fn get_temp_dir() -> Result<PathBuf, String> {
+pub fn get_temp_dir() -> AppResult<PathBuf> {
     get_data_dir()
-        .ok_or_else(|| "Failed to get data directory".to_string())
+        .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
         .map(|path| path.join("symiosis").join("temp"))
 }
 

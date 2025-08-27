@@ -109,7 +109,6 @@ pub fn log_api(command: &str, message: &str, details: Option<&str>) {
     log(&format!("API_{}", command), message, details);
 }
 
-
 /// System/lifecycle logging
 pub fn log_system(event: &str, message: &str, details: Option<&str>) {
     log(&format!("SYS_{}", event), message, details);
