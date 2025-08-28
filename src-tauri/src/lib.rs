@@ -208,6 +208,12 @@ pub fn run() {
             // Setup the system tray
             setup_tray(app.handle())?;
 
+            // Apply always_on_top setting to main window
+            if let Some(window) = app.get_webview_window("main") {
+                let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+                let _ = window.set_always_on_top(config.interface.always_on_top);
+            }
+
             // Setup file system watcher for notes directory
             setup_notes_watcher(app.handle().clone())?;
 

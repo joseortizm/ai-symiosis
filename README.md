@@ -95,12 +95,7 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 `base16-tomorrow-night`, `base16-ocean`, `base16-solarized-dark`, `base16-solarized-light`, `base16-monokai`, `base16-dracula`
 
 **Window Settings:**
-- `default_width` - Default window width (default: `1200`)
-- `default_height` - Default window height (default: `800`)
-- `center_on_startup` - Center window on startup (default: `true`)
-- `remember_size` - Remember window size between sessions (default: `true`)
-- `remember_position` - Remember window position between sessions (default: `true`)
-- `always_on_top` - Keep window always on top (default: `false`)
+- `always_on_top` - Keep window always on top (default: `false`) *(requires restart)*
 
 #### Editor Configuration (`[editor]`)
 
@@ -150,11 +145,6 @@ editor_font_family = "JetBrains Mono, Consolas, monospace"
 editor_font_size = 14
 markdown_render_theme = "dark_dimmed"
 md_render_code_theme = "gruvbox-dark-medium"
-default_width = 1200
-default_height = 800
-center_on_startup = true
-remember_size = true
-remember_position = true
 always_on_top = false
 
 [editor]
