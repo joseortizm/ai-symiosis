@@ -28,6 +28,7 @@ export interface EditorConfig {
   theme: string
   word_wrap: boolean
   tab_size: number
+  expand_tabs: boolean
   show_line_numbers: boolean
 }
 
@@ -219,6 +220,7 @@ export function createConfigService(): ConfigService {
         theme: 'gruvbox-dark',
         word_wrap: true,
         tab_size: 2,
+        expand_tabs: true,
         show_line_numbers: true,
       }
     }

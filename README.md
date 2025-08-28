@@ -103,6 +103,7 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 - `theme` - Editor color theme (default: `"gruvbox-dark"`)
 - `word_wrap` - Enable word wrapping (default: `true`)
 - `tab_size` - Tab size in spaces (default: `2`)
+- `expand_tabs` - Convert tabs to spaces (default: `true`)
 - `show_line_numbers` - Show line numbers in editor (default: `true`)
 
 #### Keyboard Shortcuts (`[shortcuts]`)
@@ -152,6 +153,7 @@ mode = "basic"
 theme = "gruvbox-dark"
 word_wrap = true
 tab_size = 2
+expand_tabs = true
 show_line_numbers = true
 
 [shortcuts]

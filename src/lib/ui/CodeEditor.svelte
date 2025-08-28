@@ -10,6 +10,8 @@ Focused component handling CodeMirror initialization and content editing.
   import type { Extension } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
   import { indentWithTab } from '@codemirror/commands'
+  import { indentUnit } from '@codemirror/language'
+  import { EditorState } from '@codemirror/state'
   import {
     codeFolding,
     foldState,
@@ -314,6 +316,12 @@ Focused component handling CodeMirror initialization and content editing.
       createFontExtension(editorFontFamily, editorFontSize),
       ...keymaps,
       ...(configStateManager.editor.word_wrap ? [EditorView.lineWrapping] : []),
+      indentUnit.of(
+        configStateManager.editor.expand_tabs
+          ? ' '.repeat(configStateManager.editor.tab_size || 2)
+          : '\t'
+      ),
+      EditorState.tabSize.of(configStateManager.editor.tab_size || 2),
       updateListener,
     ].filter((ext): ext is Extension => Boolean(ext))
 
@@ -321,8 +329,23 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function createKeymaps(): Extension[] {
+    const insertSpaces = (view: EditorView): boolean => {
+      const tabSize = configStateManager.editor.tab_size || 2
+      const spaces = ' '.repeat(tabSize)
+      const { from, to } = view.state.selection.main
+      view.dispatch({
+        changes: { from, to, insert: spaces },
+        selection: { anchor: from + spaces.length },
+      })
+      return true
+    }
+
+    const tabBinding = configStateManager.editor.expand_tabs
+      ? { key: 'Tab', run: insertSpaces }
+      : indentWithTab
+
     const customKeymap = keymap.of([
-      indentWithTab,
+      tabBinding,
       {
         key: 'Ctrl-s',
         run: (): boolean => {

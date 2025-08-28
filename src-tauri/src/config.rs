@@ -106,6 +106,7 @@ pub struct EditorConfig {
     pub theme: String,
     pub word_wrap: bool,
     pub tab_size: u16,
+    pub expand_tabs: bool,
     pub show_line_numbers: bool,
 }
 
@@ -201,6 +202,7 @@ impl Default for EditorConfig {
             theme: "gruvbox-dark".to_string(),
             word_wrap: true,
             tab_size: 2,
+            expand_tabs: true,
             show_line_numbers: true,
         }
     }
@@ -892,6 +894,11 @@ fn extract_editor_config(value: &toml::Value) -> EditorConfig {
                     size, config.tab_size
                 );
             }
+        }
+
+        // Extract expand tabs
+        if let Some(expand) = section.get("expand_tabs").and_then(|v| v.as_bool()) {
+            config.expand_tabs = expand;
         }
 
         // Extract show line numbers

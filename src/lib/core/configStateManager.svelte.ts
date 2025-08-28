@@ -82,6 +82,7 @@ export function createConfigStateManager(): ConfigStateManager {
       theme: 'gruvbox-dark',
       word_wrap: true,
       tab_size: 2,
+      expand_tabs: true,
       show_line_numbers: true,
     },
     shortcuts: {
