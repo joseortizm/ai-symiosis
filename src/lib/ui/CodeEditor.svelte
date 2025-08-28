@@ -307,15 +307,34 @@ Focused component handling CodeMirror initialization and content editing.
       }
     })
 
+    // Create custom setup based on basicSetup but with configurable line numbers
+    const customSetup = (() => {
+      if (configStateManager.editor.show_line_numbers) {
+        return basicSetup
+      } else {
+        // Use basicSetup but remove line numbers by adding empty array
+        // LineNumbers will be overridden by our conditional extension
+        return basicSetup
+      }
+    })()
+
     const extensions: Extension[] = [
       getKeyMappingsMode(keyBindingMode),
-      basicSetup,
+      customSetup,
       getLanguageExtension(filename),
       codeFolding(),
       currentTheme,
       createFontExtension(editorFontFamily, editorFontSize),
       ...keymaps,
       ...(configStateManager.editor.word_wrap ? [EditorView.lineWrapping] : []),
+      // Only add line numbers if not already in basicSetup and if enabled
+      ...(!configStateManager.editor.show_line_numbers
+        ? [
+            EditorView.theme({
+              '.cm-gutters': { display: 'none' },
+            }),
+          ]
+        : []),
       indentUnit.of(
         configStateManager.editor.expand_tabs
           ? ' '.repeat(configStateManager.editor.tab_size || 2)
