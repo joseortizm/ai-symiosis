@@ -58,11 +58,6 @@ pub struct InterfaceConfig {
     pub editor_font_size: u16,
     pub markdown_render_theme: String,
     pub md_render_code_theme: String,
-    pub default_width: u32,
-    pub default_height: u32,
-    pub center_on_startup: bool,
-    pub remember_size: bool,
-    pub remember_position: bool,
     pub always_on_top: bool,
 }
 
@@ -162,11 +157,6 @@ impl Default for InterfaceConfig {
             editor_font_size: 14,
             markdown_render_theme: "dark_dimmed".to_string(),
             md_render_code_theme: "gruvbox-dark-medium".to_string(),
-            default_width: 1200,
-            default_height: 800,
-            center_on_startup: true,
-            remember_size: true,
-            remember_position: true,
             always_on_top: false,
         }
     }
@@ -439,18 +429,6 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
             interface.md_render_code_theme,
             valid_md_code_themes.join(", ")
         )));
-    }
-
-    // Validate window settings
-    if interface.default_width < 400 || interface.default_width > 10000 {
-        return Err(AppError::ConfigLoad(
-            "Window width must be between 400 and 10000 pixels".to_string(),
-        ));
-    }
-    if interface.default_height < 300 || interface.default_height > 8000 {
-        return Err(AppError::ConfigLoad(
-            "Window height must be between 300 and 8000 pixels".to_string(),
-        ));
     }
 
     Ok(())
@@ -833,44 +811,6 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
                     theme, config.md_render_code_theme
                 );
             }
-        }
-
-        // Extract window dimensions
-        if let Some(width) = section.get("default_width").and_then(|v| v.as_integer()) {
-            let width = width as u32;
-            if width >= 400 && width <= 10000 {
-                config.default_width = width;
-            } else {
-                eprintln!(
-                    "Warning: Invalid default_width {}. Using default {}.",
-                    width, config.default_width
-                );
-            }
-        }
-
-        if let Some(height) = section.get("default_height").and_then(|v| v.as_integer()) {
-            let height = height as u32;
-            if height >= 300 && height <= 8000 {
-                config.default_height = height;
-            } else {
-                eprintln!(
-                    "Warning: Invalid default_height {}. Using default {}.",
-                    height, config.default_height
-                );
-            }
-        }
-
-        // Extract boolean flags
-        if let Some(center) = section.get("center_on_startup").and_then(|v| v.as_bool()) {
-            config.center_on_startup = center;
-        }
-
-        if let Some(remember_size) = section.get("remember_size").and_then(|v| v.as_bool()) {
-            config.remember_size = remember_size;
-        }
-
-        if let Some(remember_pos) = section.get("remember_position").and_then(|v| v.as_bool()) {
-            config.remember_position = remember_pos;
         }
 
         if let Some(always_top) = section.get("always_on_top").and_then(|v| v.as_bool()) {

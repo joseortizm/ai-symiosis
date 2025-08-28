@@ -264,9 +264,7 @@ default_height = 20000
 
     let config = load_config_from_content(invalid_dimensions_toml);
 
-    // Invalid dimensions should fall back to defaults
-    assert_eq!(config.interface.default_width, 1200); // default
-    assert_eq!(config.interface.default_height, 800); // default
+    // Test passes - removed window dimension settings
 }
 
 #[test]
@@ -401,11 +399,6 @@ editor_font_family = "JetBrains Mono"
 editor_font_size = 15
 markdown_render_theme = "dark"
 md_render_code_theme = "base16-ocean.dark"
-default_width = 1400
-default_height = 900
-center_on_startup = false
-remember_size = true
-remember_position = true
 always_on_top = false
 
 [editor]
@@ -444,9 +437,6 @@ max_search_results = 250
     assert_eq!(config.interface.font_size, 16);
     assert_eq!(config.interface.editor_font_size, 15);
     assert_eq!(config.interface.markdown_render_theme, "dark");
-    assert_eq!(config.interface.default_width, 1400);
-    assert_eq!(config.interface.default_height, 900);
-    assert_eq!(config.interface.center_on_startup, false);
     assert_eq!(config.editor.mode, "vim");
     assert_eq!(config.editor.theme, "nord");
     assert_eq!(config.editor.word_wrap, false);

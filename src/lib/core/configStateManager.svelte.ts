@@ -75,11 +75,6 @@ export function createConfigStateManager(): ConfigStateManager {
       editor_font_size: 14,
       markdown_render_theme: 'dark_dimmed',
       md_render_code_theme: 'gruvbox-dark-medium',
-      default_width: 1200,
-      default_height: 800,
-      center_on_startup: true,
-      remember_size: true,
-      remember_position: true,
       always_on_top: false,
     },
     editor: {

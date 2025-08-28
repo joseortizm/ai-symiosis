@@ -61,11 +61,6 @@ describe('configStateManager', () => {
           editor_font_size: 14,
           markdown_render_theme: 'dark_dimmed',
           md_render_code_theme: 'gruvbox-dark-medium',
-          default_width: 1200,
-          default_height: 800,
-          center_on_startup: true,
-          remember_size: true,
-          remember_position: true,
           always_on_top: false,
         }) // getInterfaceConfig
         .mockResolvedValueOnce({
@@ -158,11 +153,6 @@ describe('configStateManager', () => {
           editor_font_size: 12,
           markdown_render_theme: 'light',
           md_render_code_theme: 'atom-one-dark',
-          default_width: 1200,
-          default_height: 800,
-          center_on_startup: true,
-          remember_size: true,
-          remember_position: true,
           always_on_top: false,
         },
         editor: {
@@ -246,11 +236,6 @@ describe('configStateManager', () => {
           font_size: 14,
           editor_font_family: 'JetBrains Mono, Consolas, monospace',
           editor_font_size: 14,
-          default_width: 1200,
-          default_height: 800,
-          center_on_startup: true,
-          remember_size: true,
-          remember_position: true,
           always_on_top: false,
         }) // getInterfaceConfig
         .mockResolvedValueOnce({}) // getEditorConfig
@@ -276,11 +261,6 @@ describe('configStateManager', () => {
           font_size: 14,
           editor_font_family: 'JetBrains Mono, Consolas, monospace',
           editor_font_size: 14,
-          default_width: 1200,
-          default_height: 800,
-          center_on_startup: true,
-          remember_size: true,
-          remember_position: true,
           always_on_top: false,
         }) // getInterfaceConfig succeeds
         .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig succeeds
