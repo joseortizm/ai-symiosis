@@ -1009,9 +1009,8 @@ pub fn reload_config(
 pub fn save_config_content(content: &str) -> Result<(), String> {
     let config_path = get_config_path();
 
-    // Parse and validate the content before saving
-    let config: AppConfig =
-        toml::from_str(content).map_err(|e| format!("Failed to parse TOML: {}", e))?;
+    // Parse using the same lenient approach as load_config
+    let config = load_config_from_content(content);
 
     validate_config(&config).map_err(|e| format!("Configuration validation failed: {}", e))?;
 

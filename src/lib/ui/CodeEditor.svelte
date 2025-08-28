@@ -313,7 +313,7 @@ Focused component handling CodeMirror initialization and content editing.
       currentTheme,
       createFontExtension(editorFontFamily, editorFontSize),
       ...keymaps,
-      EditorView.lineWrapping,
+      ...(configStateManager.editor.word_wrap ? [EditorView.lineWrapping] : []),
       updateListener,
     ].filter((ext): ext is Extension => Boolean(ext))
 
