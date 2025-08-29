@@ -278,6 +278,7 @@ pub fn run() {
             delete_note,
             rename_note,
             save_note,
+            save_note_with_content_check,
             initialize_notes_with_progress,
             refresh_cache,
             open_note_in_editor,

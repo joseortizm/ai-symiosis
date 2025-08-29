@@ -12,6 +12,7 @@ let editorManager: EditorManager
 let mockNoteService: {
   getRawContent: ReturnType<typeof vi.fn>
   save: ReturnType<typeof vi.fn>
+  saveWithContentCheck: ReturnType<typeof vi.fn>
 }
 
 describe('editorManager', () => {
@@ -21,6 +22,7 @@ describe('editorManager', () => {
     mockNoteService = {
       getRawContent: vi.fn(),
       save: vi.fn(),
+      saveWithContentCheck: vi.fn(),
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editorManager = createEditorManager({ noteService: mockNoteService as any })
@@ -143,13 +145,14 @@ describe('editorManager', () => {
       editorManager.updateContent('modified content')
 
       // Test: save the note
-      mockNoteService.save.mockResolvedValue(undefined)
+      mockNoteService.saveWithContentCheck.mockResolvedValue(undefined)
 
       const result = await editorManager.saveNote(mockNoteName)
 
-      expect(mockNoteService.save).toHaveBeenCalledWith(
+      expect(mockNoteService.saveWithContentCheck).toHaveBeenCalledWith(
         mockNoteName,
-        'modified content'
+        'modified content',
+        'original content'
       )
       expect(result.success).toBe(true)
       expect(editorManager.isDirty).toBe(false)
@@ -163,7 +166,7 @@ describe('editorManager', () => {
 
       // Test: simulate save failure
       const error = new Error('Save failed')
-      mockNoteService.save.mockRejectedValue(error)
+      mockNoteService.saveWithContentCheck.mockRejectedValue(error)
 
       const result = await editorManager.saveNote(mockNoteName)
 
@@ -177,7 +180,7 @@ describe('editorManager', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('No note selected')
-      expect(mockNoteService.save).not.toHaveBeenCalled()
+      expect(mockNoteService.saveWithContentCheck).not.toHaveBeenCalled()
     })
 
     it('should handle empty content', async () => {
@@ -187,10 +190,10 @@ describe('editorManager', () => {
       editorManager.updateContent('')
 
       // Test: save with empty content
-      mockNoteService.save.mockResolvedValue(undefined)
+      mockNoteService.saveWithContentCheck.mockResolvedValue(undefined)
       const result = await editorManager.saveNote(mockNoteName)
 
-      expect(mockNoteService.save).toHaveBeenCalledWith(mockNoteName, '')
+      expect(mockNoteService.saveWithContentCheck).toHaveBeenCalledWith(mockNoteName, '', 'original content')
       expect(result.success).toBe(true)
     })
   })

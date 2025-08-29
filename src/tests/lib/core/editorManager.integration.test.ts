@@ -24,7 +24,7 @@ describe('editorManager integration', () => {
   })
 
   describe('real API compatibility', () => {
-    it('should call correct save_note API endpoint (not save_note_content)', async () => {
+    it('should call correct save_note_with_content_check API endpoint', async () => {
       // Setup: enter edit mode with a note
       mockInvoke.mockResolvedValue('test content')
       await editorManager.enterEditMode('test.md')
@@ -34,10 +34,11 @@ describe('editorManager integration', () => {
       mockInvoke.mockResolvedValue(undefined)
       const result = await editorManager.saveNote('test.md')
 
-      // Assert: should call 'save_note' not 'save_note_content'
-      expect(mockInvoke).toHaveBeenCalledWith('save_note', {
+      // Assert: should call 'save_note_with_content_check' with original content validation
+      expect(mockInvoke).toHaveBeenCalledWith('save_note_with_content_check', {
         noteName: 'test.md',
         content: 'modified content',
+        originalContent: 'test content',
       })
       expect(result.success).toBe(true)
     })
@@ -59,7 +60,7 @@ describe('editorManager integration', () => {
 
       // Call both save methods
       await editorManager.saveNote('test.md')
-      await noteService.save('test.md', 'modified content')
+      await noteService.saveWithContentCheck('test.md', 'modified content', 'test content')
 
       // Both should call the same API with same parameters
       const editorCall = mockInvoke.mock.calls[0]
@@ -78,9 +79,10 @@ describe('editorManager integration', () => {
       mockInvoke.mockResolvedValue(undefined)
       const result = await editorManager.saveNote('empty.md')
 
-      expect(mockInvoke).toHaveBeenCalledWith('save_note', {
+      expect(mockInvoke).toHaveBeenCalledWith('save_note_with_content_check', {
         noteName: 'empty.md',
         content: '',
+        originalContent: '',
       })
       expect(result.success).toBe(true)
     })

@@ -6,6 +6,7 @@
 pub mod atomic_operations;
 pub mod concurrency;
 pub mod config;
+pub mod content_synchronization;
 pub mod database;
 pub mod database_consistency;
 pub mod directory_paths;

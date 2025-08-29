@@ -139,18 +139,30 @@ pub fn create_new_note(note_name: &str) -> Result<(), String> {
 
         let note_path = get_config_notes_dir().join(note_name);
 
-        if note_path.exists() {
-            return Err(AppError::InvalidNoteName(format!(
-                "Note '{}' already exists",
-                note_name
-            )));
-        }
-
         if let Some(parent) = note_path.parent() {
             fs::create_dir_all(parent)?;
         }
 
-        with_programmatic_flag(|| safe_write_note(&note_path, ""))?;
+        // Atomic file creation - this eliminates TOCTOU by using create_new flag
+        with_programmatic_flag(|| -> AppResult<()> {
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true) // This will fail if file already exists
+                .open(&note_path)
+            {
+                Ok(mut file) => {
+                    // File was created successfully, write empty content
+                    use std::io::Write;
+                    file.write_all(b"")
+                        .map_err(|e| AppError::FileWrite(e.to_string()))?;
+                    Ok(())
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(
+                    AppError::InvalidNoteName(format!("Note '{}' already exists", note_name)),
+                ),
+                Err(e) => Err(AppError::FileWrite(format!("Failed to create note: {}", e))),
+            }
+        })?;
 
         let modified = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -194,6 +206,72 @@ pub fn create_new_note(note_name: &str) -> Result<(), String> {
     result.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn save_note_with_content_check(
+    note_name: &str,
+    content: &str,
+    original_content: &str,
+) -> Result<(), String> {
+    let result = || -> AppResult<()> {
+        validate_note_name(note_name)?;
+        let note_path = get_config_notes_dir().join(note_name);
+
+        // CRITICAL: Validate that destination file hasn't changed since editing began
+        // This prevents catastrophic data loss when UI state becomes desynchronized
+        let current_content = if note_path.exists() {
+            fs::read_to_string(&note_path)?
+        } else {
+            String::new()
+        };
+
+        if current_content != original_content {
+            return Err(AppError::InvalidPath(format!(
+                "Cannot save '{}': file has been modified since editing began. \
+                This safety check prevents accidental data loss.",
+                note_name
+            )));
+        }
+
+        // Content validation passed - proceed with save
+        if let Some(parent) = note_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        with_programmatic_flag(|| safe_write_note(&note_path, content))?;
+
+        let modified = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        match update_note_in_database(note_name, content, modified) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                eprintln!(
+                    "Database update failed for '{}': {}. Rebuilding database...",
+                    note_name, e
+                );
+
+                match recreate_database() {
+                    Ok(()) => {
+                        eprintln!("Database successfully rebuilt from files.");
+                        Ok(())
+                    }
+                    Err(rebuild_error) => {
+                        eprintln!("Critical error: {}", rebuild_error);
+                        Err(AppError::DatabaseRebuild(format!(
+                            "Note saved but database rebuild failed: {}",
+                            rebuild_error
+                        )))
+                    }
+                }
+            }
+        }
+    }();
+    result.map_err(|e| e.to_string())
+}
+
+// Legacy save command - kept for backward compatibility but deprecated
 #[tauri::command]
 pub fn save_note(note_name: &str, content: &str) -> Result<(), String> {
     let result = || -> AppResult<()> {
@@ -248,87 +326,107 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         let old_path = notes_dir.join(&old_name);
         let new_path = notes_dir.join(&new_name);
 
-        // Pre-flight checks
-        if !old_path.exists() {
-            if new_path.exists() {
-                match with_db(|conn| {
-                    conn.execute(
-                        "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                        params![new_name, old_name],
-                    )?;
-                    Ok(())
-                }) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        let _ = recreate_database();
-                    }
-                }
-                return Ok(());
-            } else {
-                return Err(AppError::FileNotFound(format!(
-                    "Note '{}' not found",
-                    old_name
-                )));
-            }
-        }
-
-        if new_path.exists() {
-            return Err(AppError::InvalidNoteName(format!(
-                "Note '{}' already exists",
-                new_name
-            )));
-        }
-
-        // Additional pre-flight checks
-        if let Ok(metadata) = old_path.metadata() {
-            if metadata.permissions().readonly() {
-                return Err(AppError::FilePermission(format!(
-                    "Source file '{}' is read-only",
-                    old_name
-                )));
-            }
-        } else {
-            return Err(AppError::FileNotFound(format!(
-                "Cannot access source file '{}'",
-                old_name
-            )));
-        }
-
+        // Create backup path first (this doesn't change filesystem state)
         let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
 
+        // Atomic operation: attempt to create backup, which will fail if source doesn't exist
+        // This eliminates TOCTOU by doing the check and action atomically
         if let Some(backup_parent) = backup_path.parent() {
             fs::create_dir_all(backup_parent)?;
         }
 
-        fs::copy(&old_path, &backup_path)?;
+        // Try to copy the file - this will fail atomically if source doesn't exist
+        let backup_result = fs::copy(&old_path, &backup_path);
 
-        with_programmatic_flag(|| fs::rename(&old_path, &new_path).map_err(AppError::from))?;
+        match backup_result {
+            Ok(_) => {
+                // Source file exists and backup was created
+                // Now attempt the atomic rename operation
+                let rename_result = with_programmatic_flag(|| {
+                    fs::rename(&old_path, &new_path).map_err(AppError::from)
+                });
 
-        // Post-operation verification
-        if !new_path.exists() {
-            return Err(AppError::FileWrite(format!(
-                "Rename operation failed - destination file '{}' not found",
-                new_name
-            )));
+                match rename_result {
+                    Ok(()) => {
+                        // Rename succeeded - clean up backup and log success
+                        let _ = fs::remove_file(&backup_path);
+
+                        // Log successful rename operation
+                        eprintln!(
+                            "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
+                            SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_secs(),
+                            old_name,
+                            new_name
+                        );
+                    }
+                    Err(e) => {
+                        // Rename failed - restore from backup and return error
+                        if let Err(restore_err) = fs::rename(&backup_path, &old_path) {
+                            eprintln!(
+                                "CRITICAL: Failed to restore backup after failed rename: {}",
+                                restore_err
+                            );
+                        }
+
+                        // Determine error type from the rename failure
+                        if new_path.exists() {
+                            return Err(AppError::InvalidNoteName(format!(
+                                "Note '{}' already exists",
+                                new_name
+                            )));
+                        } else {
+                            return Err(AppError::FileWrite(format!(
+                                "Failed to rename note: {}",
+                                e
+                            )));
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                // Source file doesn't exist or is not accessible
+                match e.kind() {
+                    std::io::ErrorKind::NotFound => {
+                        // Handle case where file exists only in database
+                        if new_path.exists() {
+                            match with_db(|conn| {
+                                conn.execute(
+                                    "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                                    params![new_name, old_name],
+                                )?;
+                                Ok(())
+                            }) {
+                                Ok(_) => return Ok(()),
+                                Err(_) => {
+                                    let _ = recreate_database();
+                                    return Ok(());
+                                }
+                            }
+                        } else {
+                            return Err(AppError::FileNotFound(format!(
+                                "Note '{}' not found",
+                                old_name
+                            )));
+                        }
+                    }
+                    std::io::ErrorKind::PermissionDenied => {
+                        return Err(AppError::FilePermission(format!(
+                            "Cannot access source file '{}': permission denied",
+                            old_name
+                        )));
+                    }
+                    _ => {
+                        return Err(AppError::FileRead(format!(
+                            "Cannot access source file '{}': {}",
+                            old_name, e
+                        )));
+                    }
+                }
+            }
         }
-
-        if old_path.exists() {
-            return Err(AppError::FileWrite(format!(
-                "Rename operation failed - source file '{}' still exists",
-                old_name
-            )));
-        }
-
-        // Log successful rename operation
-        eprintln!(
-            "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
-            old_name,
-            new_name
-        );
 
         match with_db(|conn| {
             conn.execute(
@@ -374,54 +472,54 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
         validate_note_name(note_name)?;
         let note_path = get_config_notes_dir().join(note_name);
 
-        if !note_path.exists() {
-            match with_db(|conn| {
-                conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
-                Ok(())
-            }) {
-                Ok(_) => {}
-                Err(_) => {
-                    let _ = recreate_database();
-                }
-            }
-            return Ok(());
-        }
-
+        // Create backup path first
         let backup_path = safe_backup_path(&note_path)?.with_extension("md.bak.deleted");
 
+        // Atomic operation: attempt to copy the file, which will fail if source doesn't exist
         if let Some(backup_parent) = backup_path.parent() {
             fs::create_dir_all(backup_parent)?;
         }
 
-        fs::copy(&note_path, &backup_path)?;
+        let copy_result = fs::copy(&note_path, &backup_path);
 
-        with_programmatic_flag(|| fs::remove_file(&note_path).map_err(AppError::from))?;
-
-        // Post-operation verification
-        if note_path.exists() {
-            return Err(AppError::FileWrite(format!(
-                "Delete operation failed - file '{}' still exists",
-                note_name
-            )));
+        match copy_result {
+            Ok(_) => {
+                // File exists and backup was created, now delete the original
+                match with_programmatic_flag(|| fs::remove_file(&note_path).map_err(AppError::from))
+                {
+                    Ok(()) => {
+                        // Delete succeeded - log success but keep backup
+                        eprintln!(
+                            "[{}] File Operation: DELETE | File: {} | Backup: {} | Result: SUCCESS",
+                            SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_secs(),
+                            note_name,
+                            backup_path.display()
+                        );
+                    }
+                    Err(e) => {
+                        // Delete failed - clean up backup and return error
+                        let _ = fs::remove_file(&backup_path);
+                        return Err(AppError::FileWrite(format!("Failed to delete note: {}", e)));
+                    }
+                }
+            }
+            Err(_) => {
+                // File doesn't exist - handle database-only deletion
+                match with_db(|conn| {
+                    conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
+                    Ok(())
+                }) {
+                    Ok(_) => return Ok(()),
+                    Err(_) => {
+                        let _ = recreate_database();
+                        return Ok(());
+                    }
+                }
+            }
         }
-
-        if !backup_path.exists() {
-            return Err(AppError::FileWrite(format!(
-                "Delete operation completed but backup was not created for '{}'",
-                note_name
-            )));
-        }
-
-        // Log successful delete operation
-        eprintln!(
-            "[{}] File Operation: DELETE | File: {} | Backup: {} | Result: SUCCESS",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
-            note_name,
-            backup_path.display()
-        );
 
         match with_db(|conn| {
             conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;

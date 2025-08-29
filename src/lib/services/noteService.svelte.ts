@@ -118,6 +118,15 @@ export function createNoteService() {
     }
   }
 
+  async function saveWithContentCheck(noteName: string, content: string, originalContent: string): Promise<void> {
+    try {
+      await invoke<void>('save_note_with_content_check', { noteName, content, originalContent })
+    } catch (e) {
+      console.error('Failed to save note with content check:', e)
+      throw e
+    }
+  }
+
   // System integration operations
   async function openInEditor(noteName: string): Promise<void> {
     try {
@@ -178,6 +187,7 @@ export function createNoteService() {
     getContent,
     getRawContent,
     save,
+    saveWithContentCheck,
 
     // Search operations
     search,
