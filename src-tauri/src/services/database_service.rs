@@ -57,7 +57,12 @@ pub fn load_all_notes_into_sqlite_with_progress(
     app_handle: Option<&AppHandle>,
 ) -> rusqlite::Result<()> {
     // Prevent concurrent database operations to avoid FTS5 race conditions
-    let _lock = DB_LOCK.lock().unwrap();
+    let _lock = DB_LOCK.lock().map_err(|e| {
+        rusqlite::Error::SqliteFailure(
+            rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY),
+            Some(format!("Operation lock poisoned: {}", e)),
+        )
+    })?;
 
     let notes_dir = get_config_notes_dir();
 

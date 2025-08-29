@@ -29,7 +29,13 @@ impl DebouncedWatcher {
 
     fn should_process_event(&self, path: &PathBuf) -> bool {
         let now = Instant::now();
-        let mut pending = self.pending_events.lock().unwrap();
+        let mut pending = match self.pending_events.lock() {
+            Ok(pending) => pending,
+            Err(e) => {
+                eprintln!("Watcher lock poisoned, recovering: {}", e);
+                e.into_inner()
+            }
+        };
 
         // Check if enough time has passed since last event for this file
         if let Some(last_event) = pending.get(path) {
@@ -45,7 +51,13 @@ impl DebouncedWatcher {
 
     fn cleanup_old_events(&self) {
         let now = Instant::now();
-        let mut pending = self.pending_events.lock().unwrap();
+        let mut pending = match self.pending_events.lock() {
+            Ok(pending) => pending,
+            Err(e) => {
+                eprintln!("Watcher cleanup lock poisoned, recovering: {}", e);
+                e.into_inner()
+            }
+        };
 
         // Remove events older than 10x debounce duration to prevent memory leak
         let cleanup_threshold = self.debounce_duration * 10;

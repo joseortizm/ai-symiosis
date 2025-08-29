@@ -30,7 +30,10 @@ impl DatabaseManager {
     where
         F: FnOnce(&Connection) -> AppResult<T>,
     {
-        let conn = self.connection.lock().unwrap();
+        let conn = self
+            .connection
+            .lock()
+            .map_err(|e| AppError::DatabaseConnection(format!("Database lock poisoned: {}", e)))?;
         f(&*conn)
     }
 }
