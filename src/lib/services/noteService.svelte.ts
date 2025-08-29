@@ -109,16 +109,7 @@ export function createNoteService() {
     }
   }
 
-  async function save(noteName: string, content: string): Promise<void> {
-    try {
-      await invoke<void>('save_note', { noteName, content })
-    } catch (e) {
-      console.error('Failed to save note:', e)
-      throw e
-    }
-  }
-
-  async function saveWithContentCheck(noteName: string, content: string, originalContent: string): Promise<void> {
+  async function save(noteName: string, content: string, originalContent: string): Promise<void> {
     try {
       await invoke<void>('save_note_with_content_check', { noteName, content, originalContent })
     } catch (e) {
@@ -187,7 +178,6 @@ export function createNoteService() {
     getContent,
     getRawContent,
     save,
-    saveWithContentCheck,
 
     // Search operations
     search,

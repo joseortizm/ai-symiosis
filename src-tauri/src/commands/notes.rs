@@ -271,51 +271,6 @@ pub fn save_note_with_content_check(
     result.map_err(|e| e.to_string())
 }
 
-// Legacy save command - kept for backward compatibility but deprecated
-#[tauri::command]
-pub fn save_note(note_name: &str, content: &str) -> Result<(), String> {
-    let result = || -> AppResult<()> {
-        validate_note_name(note_name)?;
-        let note_path = get_config_notes_dir().join(note_name);
-
-        if let Some(parent) = note_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        with_programmatic_flag(|| safe_write_note(&note_path, content))?;
-
-        let modified = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
-
-        match update_note_in_database(note_name, content, modified) {
-            Ok(()) => Ok(()),
-            Err(e) => {
-                eprintln!(
-                    "Database update failed for '{}': {}. Rebuilding database...",
-                    note_name, e
-                );
-
-                match recreate_database() {
-                    Ok(()) => {
-                        eprintln!("Database successfully rebuilt from files.");
-                        Ok(())
-                    }
-                    Err(rebuild_error) => {
-                        eprintln!("Database rebuild failed: {}. Note was saved to file but may not be searchable.", rebuild_error);
-                        Err(AppError::DatabaseRebuild(format!(
-                            "Note saved but database rebuild failed: {}",
-                            rebuild_error
-                        )))
-                    }
-                }
-            }
-        }
-    }();
-    result.map_err(|e| e.to_string())
-}
-
 #[tauri::command]
 pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
     let result = || -> AppResult<()> {

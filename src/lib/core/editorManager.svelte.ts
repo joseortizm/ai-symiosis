@@ -172,7 +172,7 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     }
 
     try {
-      await deps.noteService.saveWithContentCheck(noteName, state.editContent, state.originalContent)
+      await deps.noteService.save(noteName, state.editContent, state.originalContent)
 
       // Update original content to new saved content
       state.originalContent = state.editContent

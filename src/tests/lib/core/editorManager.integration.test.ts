@@ -60,7 +60,7 @@ describe('editorManager integration', () => {
 
       // Call both save methods
       await editorManager.saveNote('test.md')
-      await noteService.saveWithContentCheck('test.md', 'modified content', 'test content')
+      await noteService.save('test.md', 'modified content', 'test content')
 
       // Both should call the same API with same parameters
       const editorCall = mockInvoke.mock.calls[0]

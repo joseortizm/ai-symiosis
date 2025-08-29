@@ -168,13 +168,15 @@ describe('noteService', () => {
 
     it('should save note content', async () => {
       const content = 'Updated content'
+      const originalContent = 'Original content'
       mockInvoke.mockResolvedValueOnce(undefined)
 
-      await noteService.save('test.md', content)
+      await noteService.save('test.md', content, originalContent)
 
-      expect(mockInvoke).toHaveBeenCalledWith('save_note', {
+      expect(mockInvoke).toHaveBeenCalledWith('save_note_with_content_check', {
         noteName: 'test.md',
         content,
+        originalContent,
       })
     })
   })
