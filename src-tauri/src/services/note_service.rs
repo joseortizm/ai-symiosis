@@ -74,8 +74,8 @@ pub fn render_note(filename: &str, content: &str) -> String {
 const MAX_BACKUPS: usize = 20;
 
 pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
-    // 1. Create backup if file exists
-    if note_path.exists() {
+    // 1. Create backup if file exists (for rollback protection)
+    let rollback_backup_path = if note_path.exists() {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -99,7 +99,10 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
         fs::copy(note_path, &backup_path)?;
 
         prune_old_backups(&backup_path, MAX_BACKUPS)?;
-    }
+        Some(backup_path)
+    } else {
+        None
+    };
 
     // 2. Create temp file in app data directory
     let temp_dir = get_temp_dir()?;
@@ -122,13 +125,77 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
         )));
     }
 
-    // 4. Atomic rename to final location
+    // 4. Atomic rename to final location with rollback protection
     if let Err(e) = fs::rename(&temp_path, note_path) {
-        // Failed to rename - create backup and clean up temp file
-        create_save_failure_backup(note_path, content);
-        let _ = fs::remove_file(&temp_path);
+        // CRITICAL: Rename failed - attempt rollback to preserve original file
+        log(
+            "ATOMIC_WRITE_FAILURE",
+            &format!(
+                "Rename operation failed: {:?} -> {:?}",
+                temp_path, note_path
+            ),
+            Some(&e.to_string()),
+        );
+
+        if let Some(backup_path) = &rollback_backup_path {
+            // Original file existed - restore from backup
+            match fs::copy(backup_path, note_path) {
+                Ok(_bytes_copied) => {
+                    log(
+                        "ROLLBACK_SUCCESS",
+                        &format!(
+                            "Successfully restored original file from backup: {:?}",
+                            note_path
+                        ),
+                        None,
+                    );
+                }
+                Err(rollback_err) => {
+                    log(
+                        "ROLLBACK_CRITICAL_FAILURE",
+                        &format!(
+                            "CRITICAL: Failed to restore backup after rename failure: {:?} -> {:?}",
+                            backup_path, note_path
+                        ),
+                        Some(&rollback_err.to_string()),
+                    );
+                    // Original file may be lost - create failure backup with new content for manual recovery
+                    create_save_failure_backup(note_path, content);
+
+                    // Clean up temp file
+                    if let Err(cleanup_err) = fs::remove_file(&temp_path) {
+                        log(
+                            "TEMP_CLEANUP",
+                            &format!(
+                                "Failed to remove temp file after critical failure: {:?}",
+                                temp_path
+                            ),
+                            Some(&cleanup_err.to_string()),
+                        );
+                    }
+
+                    return Err(AppError::FileWrite(format!(
+                        "Critical failure: rename failed and rollback failed - original file may be lost: {}",
+                        e
+                    )));
+                }
+            }
+        } else {
+            // No original file to restore - just create failure backup with new content
+            create_save_failure_backup(note_path, content);
+        }
+
+        // Clean up temp file after rollback
+        if let Err(cleanup_err) = fs::remove_file(&temp_path) {
+            log(
+                "TEMP_CLEANUP",
+                &format!("Failed to remove temp file after rollback: {:?}", temp_path),
+                Some(&cleanup_err.to_string()),
+            );
+        }
+
         return Err(AppError::FileWrite(format!(
-            "Failed to rename temp file: {}",
+            "Failed to rename temp file (rollback completed): {}",
             e
         )));
     }
