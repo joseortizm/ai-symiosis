@@ -30,7 +30,7 @@ interface NoteActions {
   deleteNote(selectedNote: string | null): Promise<void>
   renameNote(selectedNote: string | null, newNameParam?: string): Promise<void>
   enterEditMode(noteName: string): Promise<void>
-  saveNote(selectedNote: string | null): Promise<void>
+  saveNote(): Promise<void>
 }
 
 export function createNoteActions(deps: NoteActionDeps): NoteActions {
@@ -111,23 +111,28 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     )
   }
 
-  async function saveNote(selectedNote: string | null): Promise<void> {
-    if (!selectedNote) return
-
-    const result = await editorManager.saveNote(selectedNote)
-
-    if (result.success) {
-      try {
-        const refreshResult = await contentManager.refreshAfterSave(
-          selectedNote,
-          searchManager.searchInput
-        )
-        searchManager.setFilteredNotes(refreshResult.searchResults)
-      } catch (e) {
-        console.error('Failed to refresh after save:', e)
-      }
-    } else {
+  async function saveNote(): Promise<void> {
+    const result = await editorManager.saveNote()
+    if (!result.success) {
       console.error('Failed to save note:', result.error)
+      return
+    }
+
+    await refreshSearchAfterSave()
+  }
+
+  async function refreshSearchAfterSave(): Promise<void> {
+    const noteToRefresh = editorManager.editingNoteName
+    if (!noteToRefresh) return
+
+    try {
+      const refreshResult = await contentManager.refreshAfterSave(
+        noteToRefresh,
+        searchManager.searchInput
+      )
+      searchManager.setFilteredNotes(refreshResult.searchResults)
+    } catch (e) {
+      console.error('Failed to refresh after save:', e)
     }
   }
 

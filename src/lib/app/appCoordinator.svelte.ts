@@ -205,7 +205,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   }
 
   async function saveAndExitNote(): Promise<void> {
-    await noteActions.saveNote(selectedNote)
+    await noteActions.saveNote()
     exitEditMode()
     // An empty search shows notes in order
     // of most recent and we just saved it.
@@ -342,7 +342,7 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
         createNote: noteActions.createNote,
         renameNote: (newName?: string) =>
           noteActions.renameNote(selectedNote, newName),
-        saveNote: () => noteActions.saveNote(selectedNote),
+        saveNote: () => noteActions.saveNote(),
         saveAndExitNote,
         enterEditMode: () => noteActions.enterEditMode(selectedNote!),
         exitEditMode,

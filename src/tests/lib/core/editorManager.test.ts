@@ -145,7 +145,7 @@ describe('editorManager', () => {
       // Test: save the note
       mockNoteService.save.mockResolvedValue(undefined)
 
-      const result = await editorManager.saveNote(mockNoteName)
+      const result = await editorManager.saveNote()
 
       expect(mockNoteService.save).toHaveBeenCalledWith(
         mockNoteName,
@@ -166,18 +166,18 @@ describe('editorManager', () => {
       const error = new Error('Save failed')
       mockNoteService.save.mockRejectedValue(error)
 
-      const result = await editorManager.saveNote(mockNoteName)
+      const result = await editorManager.saveNote()
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Save failed')
       expect(editorManager.isDirty).toBe(true) // Should remain dirty on failure
     })
 
-    it('should handle empty note name', async () => {
-      const result = await editorManager.saveNote('')
+    it('should handle no note being edited', async () => {
+      const result = await editorManager.saveNote()
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('No note selected')
+      expect(result.error).toBe('No note being edited')
       expect(mockNoteService.save).not.toHaveBeenCalled()
     })
 
@@ -189,9 +189,13 @@ describe('editorManager', () => {
 
       // Test: save with empty content
       mockNoteService.save.mockResolvedValue(undefined)
-      const result = await editorManager.saveNote(mockNoteName)
+      const result = await editorManager.saveNote()
 
-      expect(mockNoteService.save).toHaveBeenCalledWith(mockNoteName, '', 'original content')
+      expect(mockNoteService.save).toHaveBeenCalledWith(
+        mockNoteName,
+        '',
+        'original content'
+      )
       expect(result.success).toBe(true)
     })
   })

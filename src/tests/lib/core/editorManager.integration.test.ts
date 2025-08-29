@@ -32,7 +32,7 @@ describe('editorManager integration', () => {
 
       // Test: save should call the correct API
       mockInvoke.mockResolvedValue(undefined)
-      const result = await editorManager.saveNote('test.md')
+      const result = await editorManager.saveNote()
 
       // Assert: should call 'save_note_with_content_check' with original content validation
       expect(mockInvoke).toHaveBeenCalledWith('save_note_with_content_check', {
@@ -59,7 +59,7 @@ describe('editorManager integration', () => {
       mockInvoke.mockResolvedValue(undefined)
 
       // Call both save methods
-      await editorManager.saveNote('test.md')
+      await editorManager.saveNote()
       await noteService.save('test.md', 'modified content', 'test content')
 
       // Both should call the same API with same parameters
@@ -77,7 +77,7 @@ describe('editorManager integration', () => {
       // editorManager.updateContent(''); // Keep empty
 
       mockInvoke.mockResolvedValue(undefined)
-      const result = await editorManager.saveNote('empty.md')
+      const result = await editorManager.saveNote()
 
       expect(mockInvoke).toHaveBeenCalledWith('save_note_with_content_check', {
         noteName: 'empty.md',
@@ -100,7 +100,7 @@ describe('editorManager integration', () => {
 
       // Test: save should complete but NOT exit edit mode
       mockInvoke.mockResolvedValue(undefined)
-      const result = await editorManager.saveNote('test.md')
+      const result = await editorManager.saveNote()
 
       expect(result.success).toBe(true)
       expect(editorManager.isDirty).toBe(false)
@@ -118,7 +118,7 @@ describe('editorManager integration', () => {
       // Test: save should work without exiting edit mode
       mockInvoke.mockResolvedValue(undefined)
 
-      const result = await editorManager.saveNote('test.md')
+      const result = await editorManager.saveNote()
 
       expect(result.success).toBe(true)
       expect(editorManager.isEditMode).toBe(true) // Still in edit mode after save

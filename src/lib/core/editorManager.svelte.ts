@@ -11,6 +11,7 @@ interface EditorState {
   editContent: string
   originalContent: string
   nearestHeaderText: string
+  editingNoteName: string | null
 }
 
 interface SaveResult {
@@ -27,6 +28,7 @@ export interface EditorManager {
   readonly editContent: string
   readonly isDirty: boolean
   readonly nearestHeaderText: string
+  readonly editingNoteName: string | null
   enterEditMode(
     noteName: string,
     fallbackHtmlContent?: string,
@@ -34,7 +36,7 @@ export interface EditorManager {
   ): Promise<void>
   exitEditMode(): void
   updateContent(newContent: string): void
-  saveNote(noteName: string): Promise<SaveResult>
+  saveNote(): Promise<SaveResult>
 }
 
 export function createEditorManager(deps: EditorManagerDeps): EditorManager {
@@ -43,6 +45,7 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     editContent: '',
     originalContent: '',
     nearestHeaderText: '',
+    editingNoteName: null,
   })
 
   async function enterEditMode(
@@ -103,13 +106,13 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
   ): Promise<void> {
     try {
       const rawContent = await deps.noteService.getRawContent(noteName)
-      setEditState(rawContent)
+      setEditState(rawContent, noteName)
     } catch (e) {
       console.error('Failed to load raw note content:', e)
 
       if (fallbackHtmlContent) {
         const extractedContent = convertHtmlToText(fallbackHtmlContent)
-        setEditState(extractedContent)
+        setEditState(extractedContent, noteName)
       }
     }
   }
@@ -146,10 +149,11 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     return extractedContent.replace(/\n\n+/g, '\n\n').trim()
   }
 
-  function setEditState(content: string): void {
+  function setEditState(content: string, noteName: string): void {
     state.isEditMode = true
     state.editContent = content
     state.originalContent = content
+    state.editingNoteName = noteName
   }
 
   function exitEditMode(): void {
@@ -157,24 +161,28 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     state.editContent = ''
     state.originalContent = ''
     state.nearestHeaderText = ''
+    state.editingNoteName = null
   }
 
   function updateContent(newContent: string): void {
     state.editContent = newContent
   }
 
-  async function saveNote(noteName: string): Promise<SaveResult> {
-    if (!noteName) {
+  async function saveNote(): Promise<SaveResult> {
+    if (!state.editingNoteName) {
       return {
         success: false,
-        error: 'No note selected',
+        error: 'No note being edited',
       }
     }
 
     try {
-      await deps.noteService.save(noteName, state.editContent, state.originalContent)
+      await deps.noteService.save(
+        state.editingNoteName,
+        state.editContent,
+        state.originalContent
+      )
 
-      // Update original content to new saved content
       state.originalContent = state.editContent
 
       return { success: true }
@@ -205,6 +213,10 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
 
     get nearestHeaderText() {
       return state.nearestHeaderText
+    },
+
+    get editingNoteName() {
+      return state.editingNoteName
     },
 
     // Actions
