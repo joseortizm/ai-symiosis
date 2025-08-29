@@ -112,10 +112,25 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
     let temp_path = temp_dir.join(format!("write_temp_{}.md", timestamp));
 
     // 3. Write content to temp file
-    fs::write(&temp_path, content)?;
+    if let Err(e) = fs::write(&temp_path, content) {
+        // Failed to write to temp file - create backup
+        create_save_failure_backup(note_path, content);
+        return Err(AppError::FileWrite(format!(
+            "Failed to write temp file: {}",
+            e
+        )));
+    }
 
     // 4. Atomic rename to final location
-    fs::rename(&temp_path, note_path)?;
+    if let Err(e) = fs::rename(&temp_path, note_path) {
+        // Failed to rename - create backup and clean up temp file
+        create_save_failure_backup(note_path, content);
+        let _ = fs::remove_file(&temp_path);
+        return Err(AppError::FileWrite(format!(
+            "Failed to rename temp file: {}",
+            e
+        )));
+    }
 
     // Log successful operation
     eprintln!(
@@ -202,6 +217,38 @@ pub fn safe_backup_path(note_path: &PathBuf) -> AppResult<PathBuf> {
     })?;
 
     Ok(backup_dir.join(relative_path))
+}
+
+fn create_save_failure_backup(note_path: &PathBuf, content: &str) {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    if let Some(filename) = note_path.file_name().and_then(|f| f.to_str()) {
+        let backup_filename = format!("{}.{}.bak.save_failure", filename, timestamp);
+
+        if let Some(app_data_dir) = get_backup_dir_for_notes_path(&get_config_notes_dir()).ok() {
+            let backup_path = app_data_dir.join(&backup_filename);
+
+            if let Some(backup_parent) = backup_path.parent() {
+                let _ = fs::create_dir_all(backup_parent);
+            }
+
+            match fs::write(&backup_path, content) {
+                Ok(()) => {
+                    eprintln!("Created save failure backup: {}", backup_path.display());
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Failed to create save failure backup '{}': {}",
+                        backup_path.display(),
+                        e
+                    );
+                }
+            }
+        }
+    }
 }
 
 pub fn cleanup_temp_files() -> AppResult<()> {

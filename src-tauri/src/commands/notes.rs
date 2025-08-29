@@ -225,6 +225,39 @@ pub fn save_note_with_content_check(
         };
 
         if current_content != original_content {
+            // Content validation failed - create backup of the content that would have been saved
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+
+            let backup_filename = format!("{}.{}.bak.save_failure", note_name, timestamp);
+            if let Ok(backup_dir) =
+                crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())
+            {
+                let backup_path = backup_dir.join(&backup_filename);
+
+                if let Some(backup_parent) = backup_path.parent() {
+                    let _ = fs::create_dir_all(backup_parent);
+                }
+
+                match fs::write(&backup_path, content) {
+                    Ok(()) => {
+                        eprintln!(
+                            "Created save failure backup due to external modification: {}",
+                            backup_path.display()
+                        );
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Failed to create save failure backup '{}': {}",
+                            backup_path.display(),
+                            e
+                        );
+                    }
+                }
+            }
+
             return Err(AppError::InvalidPath(format!(
                 "Cannot save '{}': file has been modified since editing began. \
                 This safety check prevents accidental data loss.",
