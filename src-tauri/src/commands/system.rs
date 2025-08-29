@@ -1,6 +1,6 @@
 use crate::{
     config::reload_config,
-    database::get_db_connection,
+    database::with_db_mut,
     services::database_service::{
         init_db, load_all_notes_into_sqlite, load_all_notes_into_sqlite_with_progress,
         recreate_database_with_progress,
@@ -23,20 +23,14 @@ pub async fn initialize_notes_with_progress(app: AppHandle) -> Result<(), String
 
         let _ = app.emit("db-loading-progress", "Setting up notes database...");
 
-        let mut conn = match get_db_connection() {
-            Ok(conn) => conn,
-            Err(e) => {
-                let error_msg = format!("Database connection error: {}", e);
-                let _ = app.emit("db-loading-error", &error_msg);
-                return Err(e);
-            }
-        };
-
         let _ = app.emit("db-loading-progress", "Loading notes from filesystem...");
 
         let app_clone = app.clone();
         let result = tokio::task::spawn_blocking(move || {
-            load_all_notes_into_sqlite_with_progress(&mut conn, Some(&app_clone))
+            with_db_mut(|conn| {
+                load_all_notes_into_sqlite_with_progress(conn, Some(&app_clone))
+                    .map_err(|e| e.into())
+            })
         })
         .await
         .map_err(|e| {
@@ -56,7 +50,7 @@ pub async fn initialize_notes_with_progress(app: AppHandle) -> Result<(), String
         }
     }
     .await;
-    result.map_err(|e| e.to_string())
+    result.map_err(|e: crate::core::AppError| e.to_string())
 }
 
 #[tauri::command]
@@ -74,33 +68,21 @@ pub async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         }
 
         let _ = app.emit("db-loading-progress", "Preparing notes database...");
-        let mut conn = match get_db_connection() {
-            Ok(conn) => conn,
-            Err(e) => {
-                let _ = app.emit(
-                    "db-loading-error",
-                    format!("Database connection error: {}", e),
-                );
-                return Err(e);
-            }
-        };
 
         let _ = app.emit("db-loading-progress", "Setting up notes database...");
-        if let Err(e) = init_db(&conn) {
-            let _ = app.emit(
-                "db-loading-error",
-                format!("Database initialization error: {}", e),
-            );
-            return Err(e.into());
-        }
 
         let _ = app.emit("db-loading-progress", "Loading notes...");
 
-        let result = tokio::task::spawn_blocking(move || load_all_notes_into_sqlite(&mut conn))
-            .await
-            .map_err(|e| {
-                crate::core::AppError::DatabaseConnection(format!("Task join error: {}", e))
-            })?;
+        let result = tokio::task::spawn_blocking(move || {
+            with_db_mut(|conn| {
+                init_db(conn)?;
+                load_all_notes_into_sqlite(conn).map_err(|e| e.into())
+            })
+        })
+        .await
+        .map_err(|e| {
+            crate::core::AppError::DatabaseConnection(format!("Task join error: {}", e))
+        })?;
 
         match result {
             Ok(()) => {
@@ -139,5 +121,5 @@ pub async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         }
     }
     .await;
-    result.map_err(|e| e.to_string())
+    result.map_err(|e: crate::core::AppError| e.to_string())
 }

@@ -1,7 +1,7 @@
 use crate::{
     config::get_config_notes_dir,
     core::{AppError, AppResult},
-    database::{get_db_connection, with_db},
+    database::{with_db, with_db_mut},
     services::note_service,
 };
 use rusqlite::{params, Connection};
@@ -183,20 +183,20 @@ pub fn load_all_notes_into_sqlite_with_progress(
 pub fn recreate_database() -> AppResult<()> {
     eprintln!("Database discrepancy detected. Recreating database tables...");
 
-    let mut conn = get_db_connection()?;
+    with_db_mut(|conn| {
+        // Drop the existing table and recreate it
+        conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
-    // Drop the existing table and recreate it
-    conn.execute("DROP TABLE IF EXISTS notes", [])?;
+        init_db(conn)?;
 
-    init_db(&conn)?;
+        eprintln!("Fresh database table created. Performing full sync from filesystem...");
 
-    eprintln!("Fresh database table created. Performing full sync from filesystem...");
+        // Perform a complete sync from filesystem
+        load_all_notes_into_sqlite(conn)?;
 
-    // Perform a complete sync from filesystem
-    load_all_notes_into_sqlite(&mut conn)?;
-
-    eprintln!("Database recovery completed successfully.");
-    Ok(())
+        eprintln!("Database recovery completed successfully.");
+        Ok(())
+    })
 }
 
 pub async fn recreate_database_with_progress(
@@ -206,22 +206,18 @@ pub async fn recreate_database_with_progress(
     let _ = app_handle.emit("db-loading-progress", "Rebuilding notes database...");
     eprintln!("{}", reason);
 
-    let mut conn = get_db_connection()?;
+    with_db_mut(|conn| {
+        // Drop the existing table and recreate it
+        conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
-    // Drop the existing table and recreate it
-    conn.execute("DROP TABLE IF EXISTS notes", [])?;
+        init_db(conn)?;
 
-    init_db(&conn)?;
+        let _ = app_handle.emit("db-loading-progress", "Rendering notes...");
+        eprintln!("Fresh database table created. Performing full sync from filesystem...");
 
-    let _ = app_handle.emit("db-loading-progress", "Rendering notes...");
-    eprintln!("Fresh database table created. Performing full sync from filesystem...");
-
-    // Perform a complete sync from filesystem
-    let result = tokio::task::spawn_blocking(move || load_all_notes_into_sqlite(&mut conn))
-        .await
-        .map_err(|e| AppError::DatabaseQuery(format!("Task join error: {}", e)))?;
-
-    result?;
+        // Perform a complete sync from filesystem
+        load_all_notes_into_sqlite(conn).map_err(|e| e.into())
+    })?;
 
     let _ = app_handle.emit("db-loading-progress", "Notes database ready.");
     eprintln!("Database rebuild completed successfully.");

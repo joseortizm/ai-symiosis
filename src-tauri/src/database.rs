@@ -36,6 +36,17 @@ impl DatabaseManager {
             .map_err(|e| AppError::DatabaseConnection(format!("Database lock poisoned: {}", e)))?;
         f(&*conn)
     }
+
+    pub fn with_connection_mut<T, F>(&self, f: F) -> AppResult<T>
+    where
+        F: FnOnce(&mut Connection) -> AppResult<T>,
+    {
+        let mut conn = self
+            .connection
+            .lock()
+            .map_err(|e| AppError::DatabaseConnection(format!("Database lock poisoned: {}", e)))?;
+        f(&mut *conn)
+    }
 }
 
 // Global database manager instance
@@ -49,19 +60,11 @@ where
     DB_MANAGER.with_connection(f)
 }
 
-// Legacy function for cases requiring mutable database access
-// Use with_db() for read operations and simple writes
-// Use get_db_connection() only for schema changes, bulk operations, or when mutable access is required
-pub fn get_db_connection() -> AppResult<Connection> {
-    let db_path = get_database_path()?;
-    if let Some(parent) = db_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| {
-            AppError::DatabaseConnection(format!("Failed to create database directory: {}", e))
-        })?;
-    }
-
-    Connection::open(&db_path)
-        .map_err(|e| AppError::DatabaseConnection(format!("Failed to open database: {}", e)))
+pub fn with_db_mut<T, F>(f: F) -> AppResult<T>
+where
+    F: FnOnce(&mut Connection) -> AppResult<T>,
+{
+    DB_MANAGER.with_connection_mut(f)
 }
 
 pub fn get_database_path() -> AppResult<PathBuf> {

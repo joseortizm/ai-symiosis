@@ -1,6 +1,6 @@
 use crate::core::{AppError, AppResult};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
-use rusqlite::{params, Connection};
+use rusqlite::params;
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone)]
@@ -29,15 +29,13 @@ struct SearchCandidate {
 }
 
 pub struct HybridSearcher {
-    conn: Connection,
     matcher: Matcher,
 }
 
 impl HybridSearcher {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let conn = crate::database::get_db_connection()?;
         let matcher = Matcher::new(Config::DEFAULT);
-        Ok(Self { conn, matcher })
+        Ok(Self { matcher })
     }
 
     fn extract_title_from_filename(filename: &str) -> String {
@@ -129,31 +127,33 @@ impl HybridSearcher {
             format!("{}*", sanitized_query)
         };
 
-        let mut stmt = self.conn.prepare(
-            "SELECT filename, content, modified FROM notes
-                 WHERE notes MATCH ?
-                 ORDER BY rank
-                 LIMIT 500",
-        )?;
+        crate::database::with_db(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT filename, content, modified FROM notes
+                     WHERE notes MATCH ?
+                     ORDER BY rank
+                     LIMIT 500",
+            )?;
 
-        let rows = stmt.query_map(params![fts_pattern], |row| {
-            let filename: String = row.get(0)?;
-            let content: String = row.get(1)?;
-            let modified: i64 = row.get(2)?;
+            let rows = stmt.query_map(params![fts_pattern], |row| {
+                let filename: String = row.get(0)?;
+                let content: String = row.get(1)?;
+                let modified: i64 = row.get(2)?;
 
-            let title = Self::extract_title_from_content(&content)
-                .unwrap_or_else(|| Self::extract_title_from_filename(&filename));
+                let title = Self::extract_title_from_content(&content)
+                    .unwrap_or_else(|| Self::extract_title_from_filename(&filename));
 
-            Ok(SearchCandidate {
-                filename,
-                title,
-                content,
-                modified,
-            })
-        })?;
+                Ok(SearchCandidate {
+                    filename,
+                    title,
+                    content,
+                    modified,
+                })
+            })?;
 
-        let candidates = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(candidates)
+            let candidates = rows.collect::<Result<Vec<_>, _>>()?;
+            Ok(candidates)
+        })
     }
 
     fn score_candidate(
@@ -251,14 +251,15 @@ impl HybridSearcher {
     }
 
     fn get_recent_notes(&self, max_results: usize) -> AppResult<Vec<String>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")?;
+        crate::database::with_db(|conn| {
+            let mut stmt =
+                conn.prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")?;
 
-        let rows = stmt.query_map([max_results], |row| row.get(0))?;
+            let rows = stmt.query_map([max_results], |row| row.get(0))?;
 
-        let filenames = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(filenames)
+            let filenames = rows.collect::<Result<Vec<_>, _>>()?;
+            Ok(filenames)
+        })
     }
 }
 

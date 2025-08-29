@@ -17,7 +17,7 @@ use config::{
     get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
     parse_shortcut, save_config_content, AppConfig,
 };
-use database::{get_database_path as get_db_path, get_db_connection, with_db};
+use database::{get_database_path as get_db_path, with_db};
 use services::{database_service, note_service};
 use std::fs;
 use std::sync::{atomic::AtomicBool, LazyLock, RwLock};
@@ -142,15 +142,9 @@ pub fn initialize_notes() {
     // Clean up any leftover temp files from previous runs
     let _ = note_service::cleanup_temp_files();
 
-    let conn = match get_db_connection() {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Failed to open database: {}. Application will continue with limited functionality.", e);
-            return;
-        }
-    };
+    let init_result = with_db(|conn| database_service::init_db(conn).map_err(|e| e.into()));
 
-    if let Err(e) = database_service::init_db(&conn) {
+    if let Err(e) = init_result {
         eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
         eprintln!("🔄 Attempting automatic database recovery...");
 
@@ -186,7 +180,8 @@ pub fn initialize_notes() {
     }
 
     if !get_config_path().exists() {
-        if let Err(e) = conn.execute("DELETE FROM notes", []) {
+        if let Err(e) = with_db(|conn| conn.execute("DELETE FROM notes", []).map_err(|e| e.into()))
+        {
             eprintln!("Failed to purge database: {}. Continuing anyway.", e);
         }
     }
