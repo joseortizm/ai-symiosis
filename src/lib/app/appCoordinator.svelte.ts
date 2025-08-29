@@ -115,6 +115,10 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const progressManager = createProgressManager()
 
+  // State for managing content request cancellation and race conditions
+  let contentRequestController: AbortController | null = null
+  let contentRequestSequence = 0
+
   const isLoading = $derived(searchManager.isLoading)
   const filteredNotes = $derived(searchManager.filteredNotes)
   const query = $derived(searchManager.searchInput)
@@ -133,8 +137,6 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
     return notes[index] || null
   })
-
-  let contentRequestController: AbortController | null = null
 
   const noteActions = createNoteActions({
     noteService,
@@ -169,10 +171,16 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
       contentRequestController.abort()
     }
 
+    // Increment sequence to track this request
+    const currentSequence = ++contentRequestSequence
+
     contentNavigationManager.resetNavigation()
 
     if (!note) {
-      contentManager.setNoteContent('')
+      // Only update if this is still the latest request
+      if (currentSequence === contentRequestSequence) {
+        contentManager.setNoteContent('')
+      }
       return
     }
 
@@ -180,15 +188,28 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     contentRequestController = controller
 
     try {
-      const content = await noteService.getContent(note)
-      if (!controller.signal.aborted) {
-        contentManager.setNoteContent(content)
+      // Delegate to content manager - this handles both service call and state update
+      await contentManager.refreshContent(note)
+
+      // CRITICAL: Check both abort signal AND sequence to prevent race conditions
+      if (
+        !controller.signal.aborted &&
+        currentSequence === contentRequestSequence
+      ) {
+        // Trigger navigation after content is loaded - only if this is still the latest request
         requestAnimationFrame(() => {
-          contentManager.scrollToFirstMatch()
+          // Double-check sequence in requestAnimationFrame since it's async
+          if (currentSequence === contentRequestSequence) {
+            contentManager.scrollToFirstMatch()
+          }
         })
       }
     } catch (e) {
-      if (!controller.signal.aborted) {
+      // Only handle error if this is still the latest request and not aborted
+      if (
+        !controller.signal.aborted &&
+        currentSequence === contentRequestSequence
+      ) {
         console.error('Failed to load note content:', e)
         const errorMessage = String(e)
         contentManager.setNoteContent(`Error loading note: ${errorMessage}`)
@@ -218,9 +239,11 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
   }
 
   async function refreshUI(): Promise<void> {
-    const updatedNotes = await searchManager.searchImmediate('')
-    searchManager.setFilteredNotes(updatedNotes)
+    // Delegate to search manager to refresh and update results
+    await searchManager.refreshSearch('')
+    // Clear content through content manager
     contentManager.setNoteContent('')
+    // Reset focus through focus manager
     focusManager.setSelectedIndex(0)
   }
 
@@ -231,8 +254,8 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
     const result = await configService.save()
 
     if (result.success) {
-      const notes = await searchManager.searchImmediate('')
-      searchActions.updateFilteredNotes(notes)
+      // Delegate search refresh to search manager instead of direct operations
+      await searchManager.refreshSearch('')
       focusManager.focusSearch()
     }
 

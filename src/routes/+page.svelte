@@ -20,11 +20,16 @@ Composes all UI components and provides keyboard event handling for the entire a
   import { createSearchManager } from '../lib/core/searchManager.svelte'
   import { createEditorManager } from '../lib/core/editorManager.svelte'
   import { createFocusManager } from '../lib/core/focusManager.svelte'
+  import { createProgressManager } from '../lib/core/progressManager.svelte'
   import { configService } from '../lib/services/configService.svelte'
   import { noteService } from '../lib/services/noteService.svelte'
 
   // Create all managers using factories
-  const searchManager = createSearchManager({ noteService })
+  const sharedProgressManager = createProgressManager()
+  const searchManager = createSearchManager({
+    noteService,
+    progressManager: sharedProgressManager,
+  })
   const editorManager = createEditorManager({ noteService })
   const focusManager = createFocusManager()
 

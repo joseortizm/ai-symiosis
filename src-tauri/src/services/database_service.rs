@@ -18,6 +18,24 @@ use walkdir::WalkDir;
 // Global database lock to prevent concurrent database operations
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
+// Critical database rebuild lock - prevents ALL database operations during rebuild
+static DATABASE_REBUILD_LOCK: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
+
+/// Check if database is currently being rebuilt
+pub fn is_database_rebuilding() -> bool {
+    DATABASE_REBUILD_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+}
+
+/// Set database rebuild lock status
+fn set_database_rebuilding(rebuilding: bool) {
+    *DATABASE_REBUILD_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = rebuilding;
+}
+
 // Number of most recent notes to get immediate HTML rendering during startup
 // Remaining notes get metadata-only and are processed on demand
 const IMMEDIATE_RENDER_COUNT: usize = 2000;
@@ -210,6 +228,26 @@ pub async fn recreate_database_with_progress(
     app_handle: &AppHandle,
     reason: &str,
 ) -> AppResult<()> {
+    // CRITICAL: Check if rebuild is already in progress
+    if is_database_rebuilding() {
+        log(
+            "DATABASE_REBUILD_COLLISION",
+            "Database rebuild already in progress - skipping duplicate rebuild",
+            None,
+        );
+        return Err(AppError::DatabaseRebuild(
+            "Database rebuild already in progress - please wait for completion".to_string(),
+        ));
+    }
+
+    // Set rebuild lock to prevent concurrent operations
+    set_database_rebuilding(true);
+    log(
+        "DATABASE_REBUILD_START",
+        "Database rebuild started - all database operations blocked",
+        None,
+    );
+
     if let Err(e) = app_handle.emit("db-loading-progress", "Rebuilding notes database...") {
         log(
             "UI_UPDATE",
@@ -219,7 +257,7 @@ pub async fn recreate_database_with_progress(
     }
     eprintln!("{}", reason);
 
-    with_db_mut(|conn| {
+    let rebuild_result = with_db_mut(|conn| {
         // Drop the existing table and recreate it
         conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
@@ -236,8 +274,29 @@ pub async fn recreate_database_with_progress(
 
         // Perform a complete sync from filesystem
         load_all_notes_into_sqlite(conn).map_err(|e| e.into())
-    })?;
+    });
 
+    // CRITICAL: Always release rebuild lock, even if operation fails
+    set_database_rebuilding(false);
+
+    match rebuild_result {
+        Ok(()) => {
+            log(
+                "DATABASE_REBUILD_SUCCESS",
+                "Database rebuild completed successfully - database operations resumed",
+                None,
+            );
+        }
+        Err(ref e) => {
+            log(
+                "DATABASE_REBUILD_FAILURE",
+                "Database rebuild failed - database operations resumed but may be inconsistent",
+                Some(&e.to_string()),
+            );
+        }
+    }
+
+    // Send completion notification regardless of result
     if let Err(e) = app_handle.emit("db-loading-progress", "Notes database ready.") {
         log(
             "UI_UPDATE",
@@ -245,8 +304,13 @@ pub async fn recreate_database_with_progress(
             Some(&e.to_string()),
         );
     }
-    eprintln!("Database rebuild completed successfully.");
-    Ok(())
+
+    match &rebuild_result {
+        Ok(()) => eprintln!("Database rebuild completed successfully."),
+        Err(e) => eprintln!("Database rebuild failed: {}", e),
+    }
+
+    rebuild_result
 }
 
 pub fn quick_filesystem_sync_check() -> AppResult<bool> {

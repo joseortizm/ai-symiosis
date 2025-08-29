@@ -9,7 +9,6 @@ import type { createNoteService } from '../services/noteService.svelte'
 interface SearchState {
   searchInput: string
   query: string
-  isLoading: boolean
   searchTimeout: ReturnType<typeof setTimeout> | undefined
   requestController: AbortController | null
   filteredNotes: string[]
@@ -17,6 +16,12 @@ interface SearchState {
 
 interface SearchManagerDeps {
   noteService: ReturnType<typeof createNoteService>
+  progressManager: {
+    readonly isLoading: boolean
+    start(message: string): void
+    complete(): void
+    setError(errorMessage: string): void
+  }
 }
 
 interface SearchManager {
@@ -38,7 +43,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
   const state = $state<SearchState>({
     searchInput: '',
     query: '',
-    isLoading: false,
     searchTimeout: undefined,
     requestController: null,
     filteredNotes: [],
@@ -57,7 +61,7 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     const currentController = state.requestController
 
     try {
-      state.isLoading = true
+      deps.progressManager.start('Searching notes...')
       const notes = await deps.noteService.search(query)
 
       if (currentController.signal.aborted) {
@@ -66,15 +70,13 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
       state.filteredNotes = notes
       onSearchCompleteCallback?.(notes)
+      deps.progressManager.complete()
     } catch (e) {
       if (!currentController.signal.aborted) {
         console.error('❌ Failed to load notes:', e)
+        deps.progressManager.setError('Failed to search notes')
         state.filteredNotes = []
         onSearchCompleteCallback?.([])
-      }
-    } finally {
-      if (!currentController.signal.aborted) {
-        state.isLoading = false
       }
     }
   }
@@ -120,7 +122,7 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
     // State getters/setters
     get isLoading(): boolean {
-      return state.isLoading
+      return deps.progressManager.isLoading
     },
     get filteredNotes(): string[] {
       return state.filteredNotes
@@ -162,7 +164,7 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
         state.requestController = null
       }
 
-      state.isLoading = false
+      deps.progressManager.complete()
     },
   }
 }

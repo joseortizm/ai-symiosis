@@ -81,23 +81,6 @@ pub fn get_note_content(note_name: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn get_note_raw_content(note_name: &str) -> Result<String, String> {
-    validate_note_name(note_name)
-        .and_then(|_| {
-            with_db(|conn| {
-                let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
-                let content = stmt
-                    .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
-                    .map_err(|_| {
-                        AppError::FileNotFound(format!("Note not found: {}", note_name))
-                    })?;
-                Ok(content)
-            })
-        })
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
     validate_note_name(note_name).map_err(|e| e.to_string())?;
 

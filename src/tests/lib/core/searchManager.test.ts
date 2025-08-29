@@ -9,6 +9,12 @@ vi.mock('@tauri-apps/api/core', () => ({
 // Create a fresh instance for each test
 let searchManager: ReturnType<typeof createSearchManager>
 let mockNoteService: { search: ReturnType<typeof vi.fn> }
+let mockProgressManager: {
+  readonly isLoading: boolean
+  start: ReturnType<typeof vi.fn>
+  complete: ReturnType<typeof vi.fn>
+  setError: ReturnType<typeof vi.fn>
+}
 
 describe('searchManager', () => {
   beforeEach(() => {
@@ -17,8 +23,16 @@ describe('searchManager', () => {
     mockNoteService = {
       search: vi.fn(),
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    searchManager = createSearchManager({ noteService: mockNoteService as any })
+    mockProgressManager = {
+      isLoading: false,
+      start: vi.fn(),
+      complete: vi.fn(),
+      setError: vi.fn(),
+    }
+    searchManager = createSearchManager({
+      noteService: mockNoteService as never,
+      progressManager: mockProgressManager,
+    })
   })
 
   describe('existing functionality', () => {

@@ -102,7 +102,7 @@ export function createNoteService() {
 
   async function getRawContent(noteName: string): Promise<string> {
     try {
-      return await invoke<string>('get_note_raw_content', { noteName })
+      return await invoke<string>('get_note_content', { noteName })
     } catch (e) {
       console.error('Failed to get raw note content:', e)
       throw e

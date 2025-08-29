@@ -36,9 +36,16 @@ const mockNoteService = {
   save: vi.fn(),
   search: vi.fn(),
 }
+const mockProgressManager = {
+  isLoading: false,
+  start: vi.fn(),
+  complete: vi.fn(),
+  setError: vi.fn(),
+}
 const searchManager = createSearchManager({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   noteService: mockNoteService as any,
+  progressManager: mockProgressManager,
 })
 const editorManager = createEditorManager({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -28,7 +28,11 @@ describe('Highlight Clear Integration', () => {
     const { noteService } = await import(
       '../../../lib/services/noteService.svelte'
     )
-    const searchManager = createSearchManager({ noteService })
+    const { createProgressManager } = await import(
+      '../../../lib/core/progressManager.svelte'
+    )
+    const progressManager = createProgressManager()
+    const searchManager = createSearchManager({ noteService, progressManager })
     const editorManager = createEditorManager({ noteService })
     const focusManager = createFocusManager()
     const appCoordinator = createAppCoordinator({
