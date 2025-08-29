@@ -18,6 +18,7 @@ use config::{
     parse_shortcut, save_config_content, AppConfig,
 };
 use database::{get_database_path as get_db_path, with_db};
+use logging::log;
 use services::{database_service, note_service};
 use std::fs;
 use std::sync::{atomic::AtomicBool, LazyLock, RwLock};
@@ -135,12 +136,24 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 pub fn initialize_notes() {
     if let Ok(db_path) = get_db_path() {
         if let Some(parent) = db_path.parent() {
-            let _ = fs::create_dir_all(parent);
+            if let Err(e) = fs::create_dir_all(parent) {
+                log(
+                    "INIT_ERROR",
+                    &format!("Failed to create database directory: {:?}", parent),
+                    Some(&e.to_string()),
+                );
+            }
         }
     }
 
     // Clean up any leftover temp files from previous runs
-    let _ = note_service::cleanup_temp_files();
+    if let Err(e) = note_service::cleanup_temp_files() {
+        log(
+            "INIT_CLEANUP",
+            "Failed to clean up temp files during initialization",
+            Some(&e.to_string()),
+        );
+    }
 
     let init_result = with_db(|conn| database_service::init_db(conn).map_err(|e| e.into()));
 

@@ -2,6 +2,7 @@ use crate::{
     config::get_config_notes_dir,
     core::{AppError, AppResult},
     database::{with_db, with_db_mut},
+    logging::log,
     services::note_service,
 };
 use rusqlite::{params, Connection};
@@ -142,7 +143,13 @@ pub fn load_all_notes_into_sqlite_with_progress(
         if let Some(app) = app_handle {
             if index == 0 || (index + 1) % 10 == 0 || index == total_files - 1 {
                 let progress_msg = format!("Loading {} of {} notes...", index + 1, total_files);
-                let _ = app.emit("db-loading-progress", progress_msg);
+                if let Err(e) = app.emit("db-loading-progress", progress_msg) {
+                    log(
+                        "UI_UPDATE",
+                        "Failed to emit db-loading-progress event",
+                        Some(&e.to_string()),
+                    );
+                }
             }
         }
 
@@ -203,7 +210,13 @@ pub async fn recreate_database_with_progress(
     app_handle: &AppHandle,
     reason: &str,
 ) -> AppResult<()> {
-    let _ = app_handle.emit("db-loading-progress", "Rebuilding notes database...");
+    if let Err(e) = app_handle.emit("db-loading-progress", "Rebuilding notes database...") {
+        log(
+            "UI_UPDATE",
+            "Failed to emit rebuild progress",
+            Some(&e.to_string()),
+        );
+    }
     eprintln!("{}", reason);
 
     with_db_mut(|conn| {
@@ -212,14 +225,26 @@ pub async fn recreate_database_with_progress(
 
         init_db(conn)?;
 
-        let _ = app_handle.emit("db-loading-progress", "Rendering notes...");
+        if let Err(e) = app_handle.emit("db-loading-progress", "Rendering notes...") {
+            log(
+                "UI_UPDATE",
+                "Failed to emit rendering progress",
+                Some(&e.to_string()),
+            );
+        }
         eprintln!("Fresh database table created. Performing full sync from filesystem...");
 
         // Perform a complete sync from filesystem
         load_all_notes_into_sqlite(conn).map_err(|e| e.into())
     })?;
 
-    let _ = app_handle.emit("db-loading-progress", "Notes database ready.");
+    if let Err(e) = app_handle.emit("db-loading-progress", "Notes database ready.") {
+        log(
+            "UI_UPDATE",
+            "Failed to emit completion progress",
+            Some(&e.to_string()),
+        );
+    }
     eprintln!("Database rebuild completed successfully.");
     Ok(())
 }

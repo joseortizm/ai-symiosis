@@ -2,6 +2,7 @@ use crate::{
     config::get_config_notes_dir,
     core::{AppError, AppResult},
     database::{get_backup_dir_for_notes_path, get_temp_dir, with_db},
+    logging::log,
 };
 use html_escape;
 use pulldown_cmark::{html, Options, Parser};
@@ -196,7 +197,13 @@ fn prune_old_backups(latest_backup: &PathBuf, max_backups: usize) -> AppResult<(
 
     if backups.len() > max_backups {
         for old in &backups[..backups.len() - max_backups] {
-            let _ = fs::remove_file(old.path());
+            if let Err(e) = fs::remove_file(old.path()) {
+                log(
+                    "BACKUP_CLEANUP",
+                    &format!("Failed to remove old backup: {:?}", old.path()),
+                    Some(&e.to_string()),
+                );
+            }
         }
     }
 
@@ -232,7 +239,14 @@ fn create_save_failure_backup(note_path: &PathBuf, content: &str) {
             let backup_path = app_data_dir.join(&backup_filename);
 
             if let Some(backup_parent) = backup_path.parent() {
-                let _ = fs::create_dir_all(backup_parent);
+                if let Err(e) = fs::create_dir_all(backup_parent) {
+                    log(
+                        "BACKUP_DIR_CREATE",
+                        &format!("Failed to create backup directory: {:?}", backup_parent),
+                        Some(&e.to_string()),
+                    );
+                    return;
+                }
             }
 
             match fs::write(&backup_path, content) {
@@ -261,7 +275,13 @@ pub fn cleanup_temp_files() -> AppResult<()> {
                     .to_string_lossy()
                     .starts_with("write_temp_")
                 {
-                    let _ = fs::remove_file(entry.path());
+                    if let Err(e) = fs::remove_file(entry.path()) {
+                        log(
+                            "TEMP_CLEANUP",
+                            &format!("Failed to remove temp file: {:?}", entry.path()),
+                            Some(&e.to_string()),
+                        );
+                    }
                 }
             }
         }

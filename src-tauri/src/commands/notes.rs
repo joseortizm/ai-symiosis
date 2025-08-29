@@ -2,6 +2,7 @@ use crate::{
     config::get_config_notes_dir,
     core::{AppError, AppResult},
     database::with_db,
+    logging::log,
     search::search_notes_hybrid,
     services::{
         database_service::recreate_database,
@@ -238,7 +239,17 @@ pub fn save_note_with_content_check(
                 let backup_path = backup_dir.join(&backup_filename);
 
                 if let Some(backup_parent) = backup_path.parent() {
-                    let _ = fs::create_dir_all(backup_parent);
+                    if let Err(e) = fs::create_dir_all(backup_parent) {
+                        log(
+                            "BACKUP_DIR_CREATE",
+                            &format!("Failed to create backup directory: {:?}", backup_parent),
+                            Some(&e.to_string()),
+                        );
+                        return Err(AppError::FileWrite(format!(
+                            "Failed to create backup directory: {}",
+                            e
+                        )));
+                    }
                 }
 
                 match fs::write(&backup_path, content) {
@@ -337,7 +348,13 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                 match rename_result {
                     Ok(()) => {
                         // Rename succeeded - clean up backup and log success
-                        let _ = fs::remove_file(&backup_path);
+                        if let Err(e) = fs::remove_file(&backup_path) {
+                            log(
+                                "BACKUP_CLEANUP",
+                                &format!("Failed to remove backup file: {:?}", backup_path),
+                                Some(&e.to_string()),
+                            );
+                        }
 
                         // Log successful rename operation
                         eprintln!(
@@ -389,7 +406,13 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                             }) {
                                 Ok(_) => return Ok(()),
                                 Err(_) => {
-                                    let _ = recreate_database();
+                                    if let Err(e) = recreate_database() {
+                                        log(
+                                            "DATABASE_RECOVERY",
+                                            "Failed to recreate database during error recovery",
+                                            Some(&e.to_string()),
+                                        );
+                                    }
                                     return Ok(());
                                 }
                             }
@@ -421,7 +444,13 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                 "UPDATE notes SET filename = ?1 WHERE filename = ?2",
                 params![new_name, old_name],
             )?;
-            let _ = fs::remove_file(&backup_path);
+            if let Err(e) = fs::remove_file(&backup_path) {
+                log(
+                    "BACKUP_CLEANUP",
+                    &format!("Failed to remove backup file: {:?}", backup_path),
+                    Some(&e.to_string()),
+                );
+            }
             Ok(())
         }) {
             Ok(_) => Ok(()),
@@ -434,7 +463,13 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                 match recreate_database() {
                     Ok(()) => {
                         eprintln!("Database successfully rebuilt from files.");
-                        let _ = fs::remove_file(&backup_path);
+                        if let Err(e) = fs::remove_file(&backup_path) {
+                            log(
+                                "BACKUP_CLEANUP",
+                                &format!("Failed to remove backup file: {:?}", backup_path),
+                                Some(&e.to_string()),
+                            );
+                        }
                         Ok(())
                     }
                     Err(rebuild_error) => {
@@ -489,7 +524,13 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
                     }
                     Err(e) => {
                         // Delete failed - clean up backup and return error
-                        let _ = fs::remove_file(&backup_path);
+                        if let Err(e) = fs::remove_file(&backup_path) {
+                            log(
+                                "BACKUP_CLEANUP",
+                                &format!("Failed to remove backup file: {:?}", backup_path),
+                                Some(&e.to_string()),
+                            );
+                        }
                         return Err(AppError::FileWrite(format!("Failed to delete note: {}", e)));
                     }
                 }
@@ -502,7 +543,13 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
                 }) {
                     Ok(_) => return Ok(()),
                     Err(_) => {
-                        let _ = recreate_database();
+                        if let Err(e) = recreate_database() {
+                            log(
+                                "DATABASE_RECOVERY",
+                                "Failed to recreate database during error recovery",
+                                Some(&e.to_string()),
+                            );
+                        }
                         return Ok(());
                     }
                 }
