@@ -158,6 +158,7 @@ mode = "vim"
 theme = "gruvbox-dark"
 word_wrap = true
 tab_size = 2
+expand_tabs = false
 show_line_numbers = true
 "#;
     let parse_result = toml::from_str::<AppConfig>(valid_toml);
@@ -252,19 +253,6 @@ editor_font_size = 2
     // Invalid font sizes should fall back to defaults
     assert_eq!(config.interface.font_size, 14); // default
     assert_eq!(config.interface.editor_font_size, 14); // default
-}
-
-#[test]
-fn test_load_config_invalid_window_dimensions() {
-    let invalid_dimensions_toml = r#"
-[interface]
-default_width = 50
-default_height = 20000
-"#;
-
-    let config = load_config_from_content(invalid_dimensions_toml);
-
-    // Test passes - removed window dimension settings
 }
 
 #[test]
