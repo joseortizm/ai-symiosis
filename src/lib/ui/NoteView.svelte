@@ -42,7 +42,7 @@ Shows highlighted content or renders the CodeMirror editor.
         filename={appState.selectedNote}
         nearestHeaderText={editorManager.nearestHeaderText}
         onContentChange={editorManager.updateContent}
-        onSave={actions.saveNote}
+        onSave={actions.saveAndExitNote}
         onExit={actions.exitEditMode}
         onRequestExit={dialogManager.showExitEditDialog}
       />

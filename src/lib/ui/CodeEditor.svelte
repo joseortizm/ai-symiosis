@@ -365,14 +365,6 @@ Focused component handling CodeMirror initialization and content editing.
 
     const customKeymap = keymap.of([
       tabBinding,
-      {
-        key: 'Ctrl-s',
-        run: (): boolean => {
-          onSave()
-          resetDirtyFlag()
-          return true
-        },
-      },
       // Folding shortcuts for all modes
       { key: 'Ctrl-Shift-[', run: foldCode },
       { key: 'Ctrl-Shift-]', run: unfoldCode },
