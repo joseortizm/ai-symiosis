@@ -323,6 +323,28 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         match backup_result {
             Ok(_) => {
                 // Source file exists and backup was created
+
+                // Check if target already exists before rename
+                if new_path.exists() {
+                    // Clean up backup since we're not proceeding
+                    if let Err(e) = fs::remove_file(&backup_path) {
+                        log(
+                            "BACKUP_CLEANUP",
+                            &format!("Failed to remove backup file: {:?}", backup_path),
+                            Some(&e.to_string()),
+                        );
+                    }
+                    return Err(AppError::InvalidNoteName(format!(
+                        "Note '{}' already exists",
+                        new_name
+                    )));
+                }
+
+                // Create target directory if needed
+                if let Some(parent) = new_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+
                 // Now attempt the atomic rename operation
                 let rename_result = with_programmatic_flag(|| {
                     fs::rename(&old_path, &new_path).map_err(AppError::from)

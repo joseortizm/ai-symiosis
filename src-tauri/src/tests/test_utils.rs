@@ -4,8 +4,7 @@
 //! but are not part of the production codebase.
 
 use crate::config::AppConfig;
-use crate::database::with_db;
-use crate::services::database_service::init_db;
+use crate::services::database_service::recreate_database;
 use crate::APP_CONFIG;
 use std::sync::Mutex;
 use tempfile::TempDir;
@@ -33,9 +32,15 @@ impl TestConfigOverride {
     /// Create a new test config override with an isolated temporary directory
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         // Acquire lock to prevent race conditions between parallel tests
-        let lock = CONFIG_TEST_LOCK
-            .lock()
-            .map_err(|e| format!("Failed to acquire test lock: {}", e))?;
+        // Handle poisoned lock by taking ownership of the guard
+        let lock = match CONFIG_TEST_LOCK.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                // Clear the poison and take the guard
+                eprintln!("Warning: Test lock was poisoned, clearing and continuing");
+                poisoned.into_inner()
+            }
+        };
 
         let temp_dir = TempDir::new()?;
         let test_notes_path = temp_dir.path().to_string_lossy().to_string();
@@ -60,9 +65,9 @@ impl TestConfigOverride {
             *config_guard = test_config;
         }
 
-        // Initialize the database for the test directory
-        with_db(|conn| init_db(conn).map_err(crate::core::AppError::from))
-            .map_err(|e| format!("Failed to initialize test database: {}", e))?;
+        // Initialize a clean database for the test directory
+        // Use recreate_database to ensure we start with a fresh database state
+        recreate_database().map_err(|e| format!("Failed to recreate test database: {}", e))?;
 
         Ok(Self {
             _temp_dir: temp_dir,
