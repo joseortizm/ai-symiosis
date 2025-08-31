@@ -68,9 +68,20 @@ where
 }
 
 pub fn get_database_path() -> AppResult<PathBuf> {
+    let notes_dir = crate::config::get_config_notes_dir();
+    get_database_path_for_notes_dir(&notes_dir)
+}
+
+pub fn get_database_path_for_notes_dir(notes_dir: &std::path::Path) -> AppResult<PathBuf> {
+    let encoded_path = encode_path_for_backup(notes_dir);
     get_data_dir()
         .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
-        .map(|path| path.join("symiosis").join("notes.sqlite"))
+        .map(|path| {
+            path.join("symiosis")
+                .join("databases")
+                .join(encoded_path)
+                .join("notes.sqlite")
+        })
 }
 
 fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
