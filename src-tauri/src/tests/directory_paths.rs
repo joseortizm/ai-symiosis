@@ -139,15 +139,18 @@ fn test_database_path_uses_data_dir() {
     // Verify it uses the same data directory structure as get_data_dir
     if let Some(data_dir) = get_data_dir() {
         let expected_prefix = data_dir.join("symiosis");
-        let db_parent = db_path
-            .parent()
-            .expect("Database path should have a parent directory");
-        assert_eq!(
-            db_parent, expected_prefix,
-            "Database path should be in data directory"
+        // Database is now in symiosis/databases/ subdirectory with separate databases per notes dir
+        assert!(
+            db_path.starts_with(&expected_prefix),
+            "Database path should be under data directory. Expected to start with: {}, got: {}",
+            expected_prefix.display(),
+            db_path.display()
         );
 
         // Test that the database directory can be created (real filesystem test)
+        let db_parent = db_path
+            .parent()
+            .expect("Database path should have a parent directory");
         if let Err(e) = std::fs::create_dir_all(db_parent) {
             if e.kind() != std::io::ErrorKind::PermissionDenied {
                 panic!("Should be able to create database directory: {}", e);

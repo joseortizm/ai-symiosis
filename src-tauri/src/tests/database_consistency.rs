@@ -699,16 +699,16 @@ mod real_database_function_tests {
     #[test]
     fn test_two_phase_commit_file_database_synchronization() {
         use crate::commands::notes::save_note_with_content_check;
+        use crate::tests::test_utils::TestConfigOverride;
         use std::fs;
-        use tempfile::TempDir;
 
-        let temp_dir = TempDir::new().expect("Should create temp directory");
+        let _test_config = TestConfigOverride::new().expect("Should create test config");
         let note_name = "sync_test.md";
         let original_content = "Original synchronized content";
         let new_content = "Updated content for synchronization test";
 
-        // Create a note file in the temp directory to simulate existing note
-        let note_path = temp_dir.path().join(note_name);
+        // Create a note file in the test directory to simulate existing note
+        let note_path = _test_config.notes_dir().join(note_name);
         fs::write(&note_path, original_content).expect("Should create original file");
 
         // Test normal two-phase commit (should succeed)

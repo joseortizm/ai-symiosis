@@ -1,5 +1,5 @@
 use crate::commands::notes::save_note_with_content_check;
-use crate::config::get_config_notes_dir;
+use crate::tests::test_utils::TestConfigOverride;
 use std::fs;
 
 /// CRITICAL TEST: Editor/Content Synchronization Validation
@@ -18,7 +18,8 @@ use std::fs;
 /// Any changes to content validation, file reading, or save validation MUST pass this test.
 #[test]
 fn test_content_synchronization_prevents_data_loss() {
-    let notes_dir = get_config_notes_dir();
+    let _test_config = TestConfigOverride::new().expect("Should create test config");
+    let notes_dir = _test_config.notes_dir();
 
     // Create two test files with different content
     let file_a = "test_file_a.md";
@@ -89,7 +90,8 @@ fn test_content_synchronization_prevents_data_loss() {
 
 #[test]
 fn test_content_consistency_across_operations() {
-    let notes_dir = get_config_notes_dir();
+    let _test_config = TestConfigOverride::new().expect("Should create test config");
+    let notes_dir = _test_config.notes_dir();
 
     let file_name = "consistency_test.md";
     let content = "Test content for consistency check";
@@ -115,7 +117,7 @@ fn test_content_consistency_across_operations() {
 
 #[test]
 fn test_nonexistent_file_content_handling() {
-    let notes_dir = get_config_notes_dir();
+    let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     let file_name = "nonexistent.md";
 
@@ -131,9 +133,12 @@ fn test_nonexistent_file_content_handling() {
         "Save to nonexistent file should succeed"
     );
 
-    // Verify file was created
-    let file_path = notes_dir.join(file_name);
-    assert!(file_path.exists());
+    // Verify file was created (use config path since that's where production function writes)
+    let file_path = crate::config::get_config_notes_dir().join(file_name);
+    assert!(
+        file_path.exists(),
+        "File should exist at config notes directory"
+    );
     assert_eq!(fs::read_to_string(&file_path).unwrap(), new_content);
 
     // Cleanup
@@ -142,7 +147,8 @@ fn test_nonexistent_file_content_handling() {
 
 #[test]
 fn test_content_validation_with_external_changes() {
-    let notes_dir = get_config_notes_dir();
+    let _test_config = TestConfigOverride::new().expect("Should create test config");
+    let notes_dir = _test_config.notes_dir();
 
     let file_name = "external_change_test.md";
     let original_content = "Original content";
