@@ -16,6 +16,33 @@ static CONFIG_TEST_LOCK: Mutex<()> = Mutex::new(());
 #[cfg(test)]
 pub mod database_testing;
 
+/// Test utilities - provides isolated database connections for testing
+pub struct DbTestHarness {
+    _temp_dir: TempDir, // Keep alive for cleanup
+    db_path: std::path::PathBuf,
+}
+
+impl DbTestHarness {
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
+        let db_path = temp_dir.path().join("test.sqlite");
+
+        Ok(Self {
+            _temp_dir: temp_dir,
+            db_path,
+        })
+    }
+
+    pub fn get_test_connection(&self) -> Result<rusqlite::Connection, String> {
+        rusqlite::Connection::open(&self.db_path)
+            .map_err(|e| format!("Failed to open test database: {}", e))
+    }
+
+    pub fn db_path(&self) -> &std::path::Path {
+        &self.db_path
+    }
+}
+
 /// Test configuration override utility
 ///
 /// This struct temporarily overrides the global APP_CONFIG to use a test directory,

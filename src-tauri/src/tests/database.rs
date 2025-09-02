@@ -4,15 +4,26 @@
 
 use crate::config::get_config_notes_dir;
 use crate::database::{
-    encode_path_for_backup, get_backup_dir_for_notes_path, get_database_path, get_temp_dir,
+    encode_path_for_backup, get_backup_dir_for_notes_path, get_database_path_for_notes_dir,
+    get_temp_dir,
 };
+use std::path::PathBuf;
 
 #[test]
-fn test_database_path_creation() {
-    let db_path = get_database_path().expect("Should get database path");
+fn test_database_path_creation_logic() {
+    // Test the path generation logic without creating actual directories
+    let test_notes_dir = PathBuf::from("/test/notes/directory");
+    let db_path =
+        get_database_path_for_notes_dir(&test_notes_dir).expect("Should generate database path");
+
     assert!(db_path.is_absolute());
     assert!(db_path.to_string_lossy().contains("symiosis"));
+    assert!(db_path.to_string_lossy().contains("databases"));
     assert!(db_path.to_string_lossy().contains("notes.sqlite"));
+
+    // Should contain encoded version of the test path
+    let encoded_part = encode_path_for_backup(&test_notes_dir);
+    assert!(db_path.to_string_lossy().contains(&encoded_part));
 }
 
 #[test]
@@ -23,34 +34,42 @@ fn test_notes_directory_validation() {
 }
 
 #[test]
-fn test_backup_directory_creation() {
-    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
-        .expect("Should get backup directory");
+fn test_backup_directory_creation_logic() {
+    // Test backup directory path generation without creating actual directories
+    let test_notes_dir = PathBuf::from("/test/notes/directory");
+    let backup_dir = get_backup_dir_for_notes_path(&test_notes_dir)
+        .expect("Should generate backup directory path");
+
     assert!(backup_dir.is_absolute());
     assert!(backup_dir.to_string_lossy().contains("symiosis"));
     assert!(backup_dir.to_string_lossy().contains("backups"));
 
+    // Should contain encoded version of the test path
+    let encoded_part = encode_path_for_backup(&test_notes_dir);
+    assert!(backup_dir.to_string_lossy().contains(&encoded_part));
+
     // Backup directory should be separate from notes directory
-    let notes_dir = get_config_notes_dir();
     assert_ne!(
-        backup_dir, notes_dir,
+        backup_dir, test_notes_dir,
         "Backup directory should not be the same as notes directory"
     );
 }
 
 #[test]
-fn test_temp_directory_creation() {
-    let temp_dir = get_temp_dir().expect("Should get temp directory");
+fn test_temp_directory_creation_logic() {
+    // Test temp directory path generation logic
+    let temp_dir = get_temp_dir().expect("Should generate temp directory path");
     assert!(temp_dir.is_absolute());
     assert!(temp_dir.to_string_lossy().contains("symiosis"));
     assert!(temp_dir.to_string_lossy().contains("temp"));
 
-    // Temp directory should be separate from notes and backup directories
-    let notes_dir = get_config_notes_dir();
-    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
-        .expect("Should get backup directory");
+    // Test that different directory types generate different paths
+    let test_notes_dir = PathBuf::from("/test/notes/directory");
+    let backup_dir = get_backup_dir_for_notes_path(&test_notes_dir)
+        .expect("Should generate backup directory path");
+
     assert_ne!(
-        temp_dir, notes_dir,
+        temp_dir, test_notes_dir,
         "Temp directory should not be the same as notes directory"
     );
     assert_ne!(
@@ -60,10 +79,12 @@ fn test_temp_directory_creation() {
 }
 
 #[test]
-fn test_directory_hierarchy() {
-    let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())
-        .expect("Should get backup directory");
-    let temp_dir = get_temp_dir().expect("Should get temp directory");
+fn test_directory_hierarchy_logic() {
+    // Test directory hierarchy without creating real directories
+    let test_notes_dir = PathBuf::from("/test/notes/directory");
+    let backup_dir = get_backup_dir_for_notes_path(&test_notes_dir)
+        .expect("Should generate backup directory path");
+    let temp_dir = get_temp_dir().expect("Should generate temp directory path");
 
     // Both should be under the same symiosis directory
     let backup_parent = backup_dir

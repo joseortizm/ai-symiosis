@@ -6,33 +6,10 @@
 use super::test_utils::database_testing::{
     check_database_integrity, quick_health_check, verify_sync_consistency,
 };
+use super::test_utils::DbTestHarness;
 use crate::services::database_service::init_db;
-use rusqlite::{params, Connection};
+use rusqlite::params;
 use std::collections::HashMap;
-use std::path::PathBuf;
-use tempfile::TempDir;
-
-/// Test utilities - only provides isolated database connections for testing
-struct DbTestHarness {
-    _temp_dir: TempDir, // Keep alive for cleanup
-    db_path: PathBuf,
-}
-
-impl DbTestHarness {
-    fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let temp_dir = TempDir::new()?;
-        let db_path = temp_dir.path().join("test.sqlite");
-
-        Ok(Self {
-            _temp_dir: temp_dir,
-            db_path,
-        })
-    }
-
-    fn get_test_connection(&self) -> Result<Connection, String> {
-        Connection::open(&self.db_path).map_err(|e| format!("Failed to open test database: {}", e))
-    }
-}
 
 #[cfg(test)]
 mod real_database_function_tests {
