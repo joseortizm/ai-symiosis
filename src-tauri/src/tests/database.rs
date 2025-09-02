@@ -3,7 +3,9 @@
 //! Tests for database integration functionality and backup systems.
 
 use crate::config::get_config_notes_dir;
-use crate::database::{get_backup_dir_for_notes_path, get_database_path, get_temp_dir};
+use crate::database::{
+    encode_path_for_backup, get_backup_dir_for_notes_path, get_database_path, get_temp_dir,
+};
 
 #[test]
 fn test_database_path_creation() {
@@ -173,13 +175,94 @@ fn test_path_encoding_for_backup_safety() {
         assert!(!encoded_part.contains(":"), "Should not contain colons");
         assert!(!encoded_part.contains(" "), "Should not contain spaces");
 
-        // Should only contain safe characters
+        // Should only contain safe characters (alphanumeric, underscore, dash)
         for c in encoded_part.chars() {
             assert!(
-                c.is_alphanumeric() || c == '_',
-                "Encoded path should only contain alphanumeric chars and underscores, found: '{}'",
+                c.is_alphanumeric() || c == '_' || c == '-',
+                "Encoded path should only contain alphanumeric chars, underscores, and dashes, found: '{}'",
                 c
             );
         }
+    }
+}
+
+#[test]
+fn test_path_encoding_with_friendly_names_and_uniqueness() {
+    use std::path::Path;
+
+    // Test that different paths produce different encoded strings
+    let path1 = Path::new("/home/user/notes");
+    let path2 = Path::new("/home:user:notes");
+    let path3 = Path::new("/home user notes");
+    let path4 = Path::new("/Documents/_notes");
+    let path5 = Path::new("/Users/alice/Documents/_notes");
+
+    let encoded1 = encode_path_for_backup(path1);
+    let encoded2 = encode_path_for_backup(path2);
+    let encoded3 = encode_path_for_backup(path3);
+    let encoded4 = encode_path_for_backup(path4);
+    let encoded5 = encode_path_for_backup(path5);
+
+    println!("EXPECTED BEHAVIOR:");
+    println!("Path 1: {:?} -> {}", path1, encoded1);
+    println!("Path 2: {:?} -> {}", path2, encoded2);
+    println!("Path 3: {:?} -> {}", path3, encoded3);
+    println!("Path 4: {:?} -> {}", path4, encoded4);
+    println!("Path 5: {:?} -> {}", path5, encoded5);
+
+    // All encoded strings should be different (no collisions)
+    let encodings = vec![&encoded1, &encoded2, &encoded3, &encoded4, &encoded5];
+    for i in 0..encodings.len() {
+        for j in i + 1..encodings.len() {
+            assert_ne!(
+                encodings[i], encodings[j],
+                "Encoded paths should be unique: {} vs {}",
+                encodings[i], encodings[j]
+            );
+        }
+    }
+
+    // Should contain friendly name from the path
+    assert!(
+        encoded1.starts_with("notes-"),
+        "Should start with 'notes-': {}",
+        encoded1
+    );
+    assert!(
+        encoded4.starts_with("_notes-"),
+        "Should start with '_notes-': {}",
+        encoded4
+    );
+    assert!(
+        encoded5.starts_with("_notes-"),
+        "Should start with '_notes-': {}",
+        encoded5
+    );
+
+    // Should have hash suffix (6 hex chars)
+    for encoding in &encodings {
+        assert!(
+            encoding.contains('-'),
+            "Should contain dash separator: {}",
+            encoding
+        );
+        let parts: Vec<&str> = encoding.split('-').collect();
+        assert_eq!(
+            parts.len(),
+            2,
+            "Should have exactly one dash separator: {}",
+            encoding
+        );
+        assert_eq!(
+            parts[1].len(),
+            6,
+            "Hash part should be 6 characters: {}",
+            encoding
+        );
+        assert!(
+            parts[1].chars().all(|c| c.is_ascii_hexdigit()),
+            "Hash part should be hex digits: {}",
+            encoding
+        );
     }
 }

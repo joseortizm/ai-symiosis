@@ -84,16 +84,35 @@ pub fn get_database_path_for_notes_dir(notes_dir: &std::path::Path) -> AppResult
         })
 }
 
-fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
-    notes_dir
+pub(crate) fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    // Get the last component of the path for a friendly name
+    let friendly_name = notes_dir
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("notes"))
         .to_string_lossy()
-        .trim_start_matches('/') // Remove leading slash
-        .trim_start_matches('\\') // Remove leading backslash (Windows)
-        .replace('/', "_") // Replace slashes with underscores
-        .replace('\\', "_") // Handle Windows backslashes
-        .replace(':', "_") // Handle Windows drive letters (C:)
-        .replace(' ', "_") // Replace spaces with underscores
-        .replace(|c: char| !c.is_alphanumeric() && c != '_', "_") // Replace other special chars
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+
+    // Hash the full absolute path to guarantee uniqueness
+    let mut hasher = DefaultHasher::new();
+    notes_dir.to_string_lossy().hash(&mut hasher);
+    let hash = hasher.finish();
+
+    // Create short hash (6 hex chars should be enough for uniqueness)
+    let short_hash = format!("{:06x}", hash & 0xFFFFFF);
+
+    // Combine friendly name with hash: "notes-3f8c9a"
+    format!("{}-{}", friendly_name, short_hash)
 }
 
 pub fn get_backup_dir_for_notes_path(notes_dir: &std::path::Path) -> AppResult<PathBuf> {
