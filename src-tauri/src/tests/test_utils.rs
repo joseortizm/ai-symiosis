@@ -6,7 +6,6 @@
 use crate::config::AppConfig;
 use crate::services::database_service::recreate_database;
 use crate::APP_CONFIG;
-use std::path::PathBuf;
 use std::sync::Mutex;
 use tempfile::TempDir;
 
@@ -89,9 +88,6 @@ impl DbTestHarness {
             .map_err(|e| format!("Failed to open test database: {}", e))
     }
 
-    pub fn db_path(&self) -> &std::path::Path {
-        &self.db_path
-    }
 }
 
 /// Test configuration override utility
@@ -104,8 +100,6 @@ pub struct TestConfigOverride {
     _temp_dir: TempDir,
     original_config: AppConfig,
     _lock: std::sync::MutexGuard<'static, ()>,
-    // Track directories that this test instance will create
-    tracked_directories: Vec<PathBuf>,
 }
 
 #[cfg(test)]
@@ -150,27 +144,11 @@ impl TestConfigOverride {
         // Use recreate_database to ensure we start with a fresh database state
         recreate_database().map_err(|e| format!("Failed to recreate test database: {}", e))?;
 
-        // Track the database and backup directories that will be created for this test
-        let notes_dir = temp_dir.path().to_path_buf();
-        let mut tracked_directories = Vec::new();
-
-        // Track database directory
-        if let Ok(db_path) = crate::database::get_database_path_for_notes_dir(&notes_dir) {
-            if let Some(db_parent) = db_path.parent() {
-                tracked_directories.push(db_parent.to_path_buf());
-            }
-        }
-
-        // Track backup directory
-        if let Ok(backup_dir) = crate::database::get_backup_dir_for_notes_path(&notes_dir) {
-            tracked_directories.push(backup_dir);
-        }
 
         Ok(Self {
             _temp_dir: temp_dir,
             original_config,
             _lock: lock,
-            tracked_directories,
         })
     }
 

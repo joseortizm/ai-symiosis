@@ -17,26 +17,43 @@ vi.mock('../../../lib/app/effects/app.svelte', () => ({
   setupAppEffects: vi.fn(() => vi.fn()), // Returns a mock cleanup function
 }))
 
-const { createAppCoordinator } = await import(
-  '../../../lib/app/appCoordinator.svelte'
-)
-
-// Create manager instances for testing
 const mockNoteService = {
   getRawContent: vi.fn(),
   save: vi.fn(),
   search: vi.fn(),
+  initializeDatabase: vi.fn(),
 }
+
+vi.mock('../../../lib/services/noteService.svelte', () => ({
+  noteService: mockNoteService,
+}))
+
+const mockConfigService = {
+  exists: vi.fn(),
+  openPane: vi.fn(),
+}
+
+vi.mock('../../../lib/services/configService.svelte', () => ({
+  configService: mockConfigService,
+}))
+
+const { createAppCoordinator } = await import(
+  '../../../lib/app/appCoordinator.svelte'
+)
 const appCoordinator = createAppCoordinator({})
 
 describe('appCoordinator', () => {
   beforeEach(() => {
     resetAllMocks()
-    // Reset mock note service
+    // Reset mock services
     vi.clearAllMocks()
     mockNoteService.getRawContent.mockReset()
     mockNoteService.save.mockReset()
     mockNoteService.search.mockReset()
+    mockNoteService.initializeDatabase.mockReset()
+    mockConfigService.exists.mockReset()
+    mockConfigService.openPane.mockReset()
+
     // Reset the appCoordinator state between tests using new pattern
     appCoordinator.managers.searchManager.searchInput = ''
     appCoordinator.managers.focusManager.setSelectedIndex(-1)
@@ -223,15 +240,11 @@ describe('appCoordinator', () => {
     it('should populate filteredNotes on initialization when config exists', async () => {
       const mockNotes = ['note1.md', 'note2.md', 'note3.md']
 
-      // Mock config exists and note search
-      mockInvoke.mockImplementation((command) => {
-        if (command === 'config_exists') {
-          return Promise.resolve(true)
-        }
-        return Promise.resolve()
-      })
+      // Mock config service to return true (config exists)
+      mockConfigService.exists.mockResolvedValue(true)
 
-      // Mock the note service search method
+      // Mock note service methods
+      mockNoteService.initializeDatabase.mockResolvedValue({ success: true })
       mockNoteService.search.mockResolvedValue(mockNotes)
 
       // Before initialization, filteredNotes should be empty
@@ -243,7 +256,8 @@ describe('appCoordinator', () => {
       // After initialization, filteredNotes should be populated
       // This should come from searchManager.filteredNotes via reactive effects
       expect(appCoordinator.filteredNotes).toEqual(mockNotes)
-      expect(mockInvoke).toHaveBeenCalledWith('config_exists')
+      expect(mockConfigService.exists).toHaveBeenCalled()
+      expect(mockNoteService.initializeDatabase).toHaveBeenCalled()
       expect(mockNoteService.search).toHaveBeenCalledWith('')
 
       cleanup()
@@ -263,13 +277,9 @@ describe('appCoordinator', () => {
     })
 
     it('should not populate filteredNotes when config does not exist', async () => {
-      // Mock config does not exist
-      mockInvoke.mockImplementation((command) => {
-        if (command === 'config_exists') {
-          return Promise.resolve(false)
-        }
-        return Promise.resolve()
-      })
+      // Mock config service to return false (config does not exist)
+      mockConfigService.exists.mockResolvedValue(false)
+      mockConfigService.openPane.mockResolvedValue(undefined)
 
       // Before initialization, filteredNotes should be empty
       expect(appCoordinator.filteredNotes).toEqual([])
@@ -279,8 +289,9 @@ describe('appCoordinator', () => {
 
       // After initialization, filteredNotes should still be empty since no config exists
       expect(appCoordinator.filteredNotes).toEqual([])
-      expect(mockInvoke).toHaveBeenCalledWith('config_exists')
-      expect(mockInvoke).not.toHaveBeenCalledWith('search_notes', { query: '' })
+      expect(mockConfigService.exists).toHaveBeenCalled()
+      expect(mockConfigService.openPane).toHaveBeenCalled()
+      expect(mockNoteService.search).not.toHaveBeenCalled()
 
       cleanup()
     })
