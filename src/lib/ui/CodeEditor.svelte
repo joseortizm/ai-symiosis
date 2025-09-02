@@ -89,12 +89,6 @@ Focused component handling CodeMirror initialization and content editing.
     }
   })
 
-  function resetDirtyFlag(): void {
-    initialValue = value
-    lastPropsValue = value
-    handleDirtyChange(false)
-  }
-
   function createFontExtension(
     fontFamily: string,
     fontSize: number
