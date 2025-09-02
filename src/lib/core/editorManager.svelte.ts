@@ -71,7 +71,9 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
       const headers = noteContentElement.querySelectorAll(
         'h1, h2, h3, h4, h5, h6'
       )
-      let bestHeader: Element | null = null
+
+      let firstVisibleHeader: Element | null = null
+      let lastPassedHeader: Element | null = null
 
       for (const header of headers) {
         const headerRect = header.getBoundingClientRect()
@@ -82,15 +84,18 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
           headerRect.top <= rect.top + (rect.height || 600)
 
         if (isInViewport) {
-          // If header is visible, use it (prefer the first visible header)
-          if (!bestHeader) {
-            bestHeader = header
+          // Collect first visible header
+          if (!firstVisibleHeader) {
+            firstVisibleHeader = header
           }
         } else if (headerRect.top < rect.top) {
-          // If header is above viewport, keep track of it as the "last passed" header
-          bestHeader = header
+          // Keep track of last header above viewport
+          lastPassedHeader = header
         }
       }
+
+      // Priority: visible header first, then last passed header
+      const bestHeader = firstVisibleHeader || lastPassedHeader
 
       if (bestHeader) {
         state.nearestHeaderText = bestHeader.textContent?.trim() || ''
