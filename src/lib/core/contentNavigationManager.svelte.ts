@@ -47,6 +47,7 @@ export interface ContentNavigationManager {
   handleEscape(): EscapeAction
   copyCurrentSection(): Promise<boolean>
   getCurrentHeaderText(): string
+  navigateToHeader(headerText: string): boolean
   readonly isActivelyNavigating: boolean
   readonly hideHighlights: boolean
 }
@@ -601,6 +602,49 @@ export function createContentNavigationManager(
     return header ? toMarkdown(header) : ''
   }
 
+  function markdownToHtml(text: string): string {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/~~(.*?)~~/g, '<del>$1</del>')
+      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
+  }
+
+  function navigateToHeader(headerText: string): boolean {
+    if (!headerText.trim()) return false
+
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return false
+
+    const headers = Array.from(
+      contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    )
+
+    // Extract content from markdown header and convert to HTML
+    const cleanHeaderText = headerText.replace(/^#+\s*/, '').trim()
+    const expectedHtml = markdownToHtml(cleanHeaderText)
+
+    const targetHeader = headers.find((header) => {
+      // Get innerHTML content from HTML header
+      const headerHtmlContent = header.innerHTML?.trim() || ''
+      return headerHtmlContent === expectedHtml
+    })
+
+    if (targetHeader) {
+      const headerElements = getHeaderElements()
+      const headerIndex = headerElements.indexOf(targetHeader)
+      if (headerIndex >= 0) {
+        state.currentIndex = headerIndex
+        state.navigationMode = 'headers'
+        scrollToElement(targetHeader)
+        return true
+      }
+    }
+
+    return false
+  }
+
   return {
     navigateNext,
     navigatePrevious,
@@ -614,6 +658,7 @@ export function createContentNavigationManager(
     handleEscape,
     copyCurrentSection,
     getCurrentHeaderText,
+    navigateToHeader,
 
     get isActivelyNavigating(): boolean {
       return state.navigationMode !== 'inactive'

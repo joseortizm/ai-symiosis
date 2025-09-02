@@ -169,7 +169,12 @@ export function createAppCoordinator(
   })
 
   function exitEditMode(): void {
-    editorManager.exitEditMode()
+    const exitHeaderText = editorManager.exitEditMode()
+    if (exitHeaderText) {
+      setTimeout(() => {
+        contentNavigationManager.navigateToHeader(exitHeaderText)
+      }, 100)
+    }
     focusManager.focusSearch()
   }
 

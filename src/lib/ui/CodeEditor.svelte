@@ -41,6 +41,7 @@ Focused component handling CodeMirror initialization and content editing.
     onDirtyChange?: (isDirty: boolean) => void
     onExit?: (() => void) | null | undefined
     onRequestExit?: (() => void) | null | undefined
+    onExitHeaderCapture?: ((headerText: string) => void) | null
     isDirty?: boolean
   }
 
@@ -52,6 +53,7 @@ Focused component handling CodeMirror initialization and content editing.
     onContentChange,
     onExit = null,
     onRequestExit = null,
+    onExitHeaderCapture = null,
     isDirty = $bindable(false),
   }: Props = $props()
 
@@ -372,6 +374,9 @@ Focused component handling CodeMirror initialization and content editing.
             {
               key: 'Escape',
               run: (): boolean => {
+                // Always capture position first, regardless of vim mode
+                captureExitPosition()
+
                 setTimeout(() => {
                   try {
                     if (keyBindingMode === 'vim') {
@@ -400,6 +405,44 @@ Focused component handling CodeMirror initialization and content editing.
   function handleCreationFailure(error: unknown): void {
     console.error('Failed to create CodeMirror editor:', error)
     createFallbackEditor()
+  }
+
+  function findNearestHeaderAtCursor(): string {
+    if (!editorView) return ''
+
+    const doc = editorView.state.doc
+    const cursorPos = editorView.state.selection.main.head
+    const fullText = doc.toString()
+
+    const lines = fullText.split('\n')
+    let cursorLine = 0
+    let charCount = 0
+
+    for (let i = 0; i < lines.length; i++) {
+      if (charCount + lines[i].length >= cursorPos) {
+        cursorLine = i
+        break
+      }
+      charCount += lines[i].length + 1
+    }
+
+    let nearestHeader = ''
+    for (let i = cursorLine; i >= 0; i--) {
+      const line = lines[i].trim()
+      if (line.match(/^#{1,6}\s+/)) {
+        nearestHeader = line
+        break
+      }
+    }
+
+    return nearestHeader
+  }
+
+  function captureExitPosition(): void {
+    if (onExitHeaderCapture && editorView) {
+      const headerText = findNearestHeaderAtCursor()
+      onExitHeaderCapture(headerText)
+    }
   }
 
   function scrollToHeader(): void {
@@ -498,7 +541,13 @@ Focused component handling CodeMirror initialization and content editing.
     <h3>Editing: {filename}</h3>
     <div class="edit-controls">
       <button onclick={onSave} class="save-btn">Save (Ctrl+S)</button>
-      <button onclick={onExit} class="cancel-btn">Cancel (Esc)</button>
+      <button
+        onclick={() => {
+          captureExitPosition()
+          onExit?.()
+        }}
+        class="cancel-btn">Cancel (Esc)</button
+      >
     </div>
   </div>
 </div>

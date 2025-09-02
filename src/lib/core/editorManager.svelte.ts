@@ -12,6 +12,7 @@ interface EditorState {
   originalContent: string
   nearestHeaderText: string
   editingNoteName: string | null
+  exitHeaderText: string
 }
 
 interface SaveResult {
@@ -37,9 +38,10 @@ export interface EditorManager {
     fallbackHtmlContent?: string,
     noteContentElement?: HTMLElement
   ): Promise<void>
-  exitEditMode(): void
+  exitEditMode(): string
   updateContent(newContent: string): void
   saveNote(): Promise<SaveResult>
+  setExitHeaderText(headerText: string): void
 }
 
 export function createEditorManager(deps: EditorManagerDeps): EditorManager {
@@ -49,6 +51,7 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     originalContent: '',
     nearestHeaderText: '',
     editingNoteName: null,
+    exitHeaderText: '',
   })
 
   async function enterEditMode(
@@ -121,12 +124,19 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     state.editingNoteName = noteName
   }
 
-  function exitEditMode(): void {
+  function exitEditMode(): string {
+    const exitHeader = state.exitHeaderText
     state.isEditMode = false
     state.editContent = ''
     state.originalContent = ''
     state.nearestHeaderText = ''
     state.editingNoteName = null
+    state.exitHeaderText = ''
+    return exitHeader
+  }
+
+  function setExitHeaderText(headerText: string): void {
+    state.exitHeaderText = headerText
   }
 
   function updateContent(newContent: string): void {
@@ -189,5 +199,6 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     exitEditMode,
     updateContent,
     saveNote,
+    setExitHeaderText,
   }
 }

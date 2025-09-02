@@ -45,6 +45,7 @@ Shows highlighted content or renders the CodeMirror editor.
         onSave={actions.saveAndExitNote}
         onExit={actions.exitEditMode}
         onRequestExit={dialogManager.showExitEditDialog}
+        onExitHeaderCapture={editorManager.setExitHeaderText}
       />
     {:else}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
