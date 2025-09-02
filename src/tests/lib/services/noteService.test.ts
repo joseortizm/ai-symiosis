@@ -160,7 +160,7 @@ describe('noteService', () => {
 
       const result = await noteService.getRawContent('test.md')
 
-      expect(mockInvoke).toHaveBeenCalledWith('get_note_raw_content', {
+      expect(mockInvoke).toHaveBeenCalledWith('get_note_content', {
         noteName: 'test.md',
       })
       expect(result).toBe(content)
