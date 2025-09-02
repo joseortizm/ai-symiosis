@@ -520,9 +520,40 @@ export function createContentNavigationManager(
   }
 
   function getCurrentHeaderText(): string {
-    // If we're actively navigating and have a current element, use it
+    // If we're actively navigating headers and have a current element, use it
     if (state.navigationMode === 'headers' && state.currentElement) {
       return state.currentElement.textContent?.trim() || ''
+    }
+
+    // If we're actively navigating highlights, find the nearest header to current highlight
+    if (state.navigationMode === 'highlights' && state.currentElement) {
+      const contentElement = deps.focusManager.noteContentElement
+      if (contentElement) {
+        const headers = Array.from(
+          contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+        )
+
+        // Find the last header that appears before the current highlight
+        let nearestHeader: Element | null = null
+
+        for (const header of headers) {
+          const headerPosition = header.compareDocumentPosition(
+            state.currentElement
+          )
+
+          // If header comes before the highlight in document order
+          if (headerPosition & Node.DOCUMENT_POSITION_FOLLOWING) {
+            nearestHeader = header
+          } else {
+            // Once we find a header that comes after, we can stop
+            break
+          }
+        }
+
+        if (nearestHeader) {
+          return nearestHeader.textContent?.trim() || ''
+        }
+      }
     }
 
     // Otherwise, detect the nearest header based on viewport position
