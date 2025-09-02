@@ -4,6 +4,7 @@
 //! These tests can access private functions and are part of the same crate.
 
 pub mod atomic_operations;
+pub mod cleanup_test;
 pub mod concurrency;
 pub mod config;
 pub mod content_synchronization;

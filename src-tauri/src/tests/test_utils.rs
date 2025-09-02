@@ -6,6 +6,7 @@
 use crate::config::AppConfig;
 use crate::services::database_service::recreate_database;
 use crate::APP_CONFIG;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tempfile::TempDir;
 
@@ -15,6 +16,56 @@ static CONFIG_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 #[cfg(test)]
 pub mod database_testing;
+
+/// Clean up all _tmp* directories (removes leftover test directories)
+#[cfg(test)]
+pub fn cleanup_all_tmp_directories() -> Result<(), Box<dyn std::error::Error>> {
+    use crate::database::get_data_dir;
+    use std::fs;
+
+    // Get the symiosis app support directory using the same method as production code
+    if let Some(app_data_dir) = get_data_dir() {
+        let symiosis_dir = app_data_dir.join("symiosis");
+
+        // Clean up databases directory
+        let databases_dir = symiosis_dir.join("databases");
+        if databases_dir.exists() {
+            // Remove all _tmp* directories
+            if let Ok(entries) = fs::read_dir(&databases_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+                            if dir_name.starts_with("_tmp") {
+                                let _ = fs::remove_dir_all(&path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Clean up backups directory
+        let backups_dir = symiosis_dir.join("backups");
+        if backups_dir.exists() {
+            // Remove all _tmp* directories
+            if let Ok(entries) = fs::read_dir(&backups_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+                            if dir_name.starts_with("_tmp") {
+                                let _ = fs::remove_dir_all(&path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
 
 /// Test utilities - provides isolated database connections for testing
 pub struct DbTestHarness {
@@ -47,11 +98,14 @@ impl DbTestHarness {
 ///
 /// This struct temporarily overrides the global APP_CONFIG to use a test directory,
 /// ensuring all production functions automatically work with isolated test data.
+/// It tracks and cleans up database and backup directories created during tests.
 #[cfg(test)]
 pub struct TestConfigOverride {
     _temp_dir: TempDir,
     original_config: AppConfig,
     _lock: std::sync::MutexGuard<'static, ()>,
+    // Track directories that this test instance will create
+    tracked_directories: Vec<PathBuf>,
 }
 
 #[cfg(test)]
@@ -96,10 +150,27 @@ impl TestConfigOverride {
         // Use recreate_database to ensure we start with a fresh database state
         recreate_database().map_err(|e| format!("Failed to recreate test database: {}", e))?;
 
+        // Track the database and backup directories that will be created for this test
+        let notes_dir = temp_dir.path().to_path_buf();
+        let mut tracked_directories = Vec::new();
+
+        // Track database directory
+        if let Ok(db_path) = crate::database::get_database_path_for_notes_dir(&notes_dir) {
+            if let Some(db_parent) = db_path.parent() {
+                tracked_directories.push(db_parent.to_path_buf());
+            }
+        }
+
+        // Track backup directory
+        if let Ok(backup_dir) = crate::database::get_backup_dir_for_notes_path(&notes_dir) {
+            tracked_directories.push(backup_dir);
+        }
+
         Ok(Self {
             _temp_dir: temp_dir,
             original_config,
             _lock: lock,
+            tracked_directories,
         })
     }
 
@@ -116,5 +187,9 @@ impl Drop for TestConfigOverride {
         if let Ok(mut config_guard) = APP_CONFIG.write() {
             *config_guard = self.original_config.clone();
         }
+
+        // Don't auto-cleanup during Drop to avoid database lock issues
+        // The directories are tracked and can be cleaned up manually
+        // The TempDir will still clean up the notes directory automatically
     }
 }

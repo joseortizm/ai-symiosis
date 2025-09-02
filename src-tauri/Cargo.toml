@@ -38,6 +38,10 @@ tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
 [dev-dependencies]
 tempfile = "3.20.0"
 
+[[test]]
+name = "cleanup_integration"
+harness = false
+
 # Faster builds in debug mode
 # [profile.dev]
 # opt-level = 1
