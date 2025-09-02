@@ -311,13 +311,22 @@ export function createConfigService(): ConfigService {
         const result = await invoke<{
           ui_themes: string[]
           markdown_themes: string[]
-        }>('get_available_themes')
+        }>('scan_available_themes')
         return result
       } catch (error) {
-        console.error('Failed to get available themes:', error)
+        console.error('Failed to scan available themes:', error)
         return {
           ui_themes: ['gruvbox-dark', 'one-dark'],
-          markdown_themes: ['light', 'dark', 'dark_dimmed', 'auto'],
+          markdown_themes: [
+            'light',
+            'dark',
+            'dark_dimmed',
+            'auto',
+            'modern_dark',
+            'article',
+            'gruvbox',
+            'dark_high_contrast',
+          ],
         }
       }
     },

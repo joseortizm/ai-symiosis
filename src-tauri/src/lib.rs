@@ -13,9 +13,9 @@ mod watcher;
 // External crates
 use commands::*;
 use config::{
-    get_available_themes, get_config_path, get_editor_config, get_general_config,
+    get_config_path, get_editor_config, get_general_config,
     get_interface_config, get_preferences_config, get_shortcuts_config, load_config,
-    parse_shortcut, save_config_content, AppConfig,
+    parse_shortcut, save_config_content, scan_available_themes, AppConfig,
 };
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
@@ -305,7 +305,7 @@ pub fn run() {
             get_editor_config,
             get_shortcuts_config,
             get_preferences_config,
-            get_available_themes
+            scan_available_themes
         ])
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {

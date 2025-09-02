@@ -39,6 +39,10 @@
       "icons/icon.icns",
       "icons/icon.ico",
       "icons/tray.png"
+    ],
+    "resources": [
+      "../static/css/md_render_themes/*",
+      "../static/css/ui-themes/*"
     ]
   }
 }
