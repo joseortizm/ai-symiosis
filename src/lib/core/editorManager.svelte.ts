@@ -21,6 +21,9 @@ interface SaveResult {
 
 interface EditorManagerDeps {
   noteService: ReturnType<typeof createNoteService>
+  contentNavigationManager: {
+    getCurrentHeaderText(): string
+  }
 }
 
 export interface EditorManager {
@@ -51,58 +54,15 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
   async function enterEditMode(
     noteName: string,
     fallbackHtmlContent?: string,
-    noteContentElement?: HTMLElement
+    _noteContentElement?: HTMLElement
   ): Promise<void> {
     if (!noteName) {
       return
     }
 
-    detectAndSetNearestHeader(noteContentElement)
+    state.nearestHeaderText =
+      deps.contentNavigationManager.getCurrentHeaderText()
     await loadEditContent(noteName, fallbackHtmlContent)
-  }
-
-  function detectAndSetNearestHeader(noteContentElement?: HTMLElement): void {
-    if (!noteContentElement) {
-      return
-    }
-
-    try {
-      const rect = noteContentElement.getBoundingClientRect()
-      const headers = noteContentElement.querySelectorAll(
-        'h1, h2, h3, h4, h5, h6'
-      )
-
-      let firstVisibleHeader: Element | null = null
-      let lastPassedHeader: Element | null = null
-
-      for (const header of headers) {
-        const headerRect = header.getBoundingClientRect()
-
-        // Check if header is in the viewport
-        const isInViewport =
-          headerRect.top >= rect.top &&
-          headerRect.top <= rect.top + (rect.height || 600)
-
-        if (isInViewport) {
-          // Collect first visible header
-          if (!firstVisibleHeader) {
-            firstVisibleHeader = header
-          }
-        } else if (headerRect.top < rect.top) {
-          // Keep track of last header above viewport
-          lastPassedHeader = header
-        }
-      }
-
-      // Priority: visible header first, then last passed header
-      const bestHeader = firstVisibleHeader || lastPassedHeader
-
-      if (bestHeader) {
-        state.nearestHeaderText = bestHeader.textContent?.trim() || ''
-      }
-    } catch (e) {
-      console.warn('Failed to detect nearest header:', e)
-    }
   }
 
   async function loadEditContent(

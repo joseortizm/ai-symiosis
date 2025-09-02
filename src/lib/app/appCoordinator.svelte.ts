@@ -11,6 +11,9 @@ import { createContentManager } from '../core/contentManager.svelte'
 import { createConfigStateManager } from '../core/configStateManager.svelte'
 import { createContentNavigationManager } from '../core/contentNavigationManager.svelte'
 import { createProgressManager } from '../core/progressManager.svelte'
+import { createSearchManager } from '../core/searchManager.svelte'
+import { createEditorManager } from '../core/editorManager.svelte'
+import { createFocusManager } from '../core/focusManager.svelte'
 import { noteService } from '../services/noteService.svelte'
 import { configService } from '../services/configService.svelte'
 import { createNoteActions } from './actions/note.svelte'
@@ -19,16 +22,9 @@ import { createSettingsActions } from './actions/settings.svelte'
 import { createKeyboardActions } from './actions/keyboard.svelte'
 import { setupAppEffects } from './effects/app.svelte'
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AppCoordinatorDeps {
-  searchManager: ReturnType<
-    typeof import('../core/searchManager.svelte').createSearchManager
-  >
-  editorManager: ReturnType<
-    typeof import('../core/editorManager.svelte').createEditorManager
-  >
-  focusManager: ReturnType<
-    typeof import('../core/focusManager.svelte').createFocusManager
-  >
+  // No external dependencies - all managers created internally
 }
 
 export interface AppState {
@@ -92,8 +88,27 @@ export interface AppCoordinator {
   initialize(): Promise<() => void>
 }
 
-export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
-  const { searchManager, editorManager, focusManager } = deps
+export function createAppCoordinator(
+  _deps: AppCoordinatorDeps
+): AppCoordinator {
+  const progressManager = createProgressManager()
+
+  const searchManager = createSearchManager({
+    noteService,
+    progressManager,
+  })
+
+  const focusManager = createFocusManager()
+
+  const contentNavigationManager = createContentNavigationManager({
+    focusManager,
+    searchManager,
+  })
+
+  const editorManager = createEditorManager({
+    noteService,
+    contentNavigationManager,
+  })
 
   const dialogManager = createDialogManager({
     focusSearch: () => focusManager.focusSearch(),
@@ -101,19 +116,12 @@ export function createAppCoordinator(deps: AppCoordinatorDeps): AppCoordinator {
 
   const configStateManager = createConfigStateManager()
 
-  const contentNavigationManager = createContentNavigationManager({
-    focusManager,
-    searchManager,
-  })
-
   const contentManager = createContentManager({
     noteService,
     searchManager,
     focusManager,
     contentNavigationManager,
   })
-
-  const progressManager = createProgressManager()
 
   // State for managing content request cancellation and race conditions
   let contentRequestController: AbortController | null = null

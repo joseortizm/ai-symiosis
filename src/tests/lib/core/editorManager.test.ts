@@ -15,15 +15,27 @@ let mockNoteService: {
 }
 
 describe('editorManager', () => {
+  let mockContentNavigationManager: {
+    getCurrentHeaderText: ReturnType<typeof vi.fn>
+  }
+
   beforeEach(() => {
     resetAllMocks()
-    // Create fresh editor manager instance with mock noteService
+    // Create fresh editor manager instance with mock dependencies
     mockNoteService = {
       getRawContent: vi.fn(),
       save: vi.fn(),
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    editorManager = createEditorManager({ noteService: mockNoteService as any })
+
+    mockContentNavigationManager = {
+      getCurrentHeaderText: vi.fn().mockReturnValue(''),
+    }
+
+    editorManager = createEditorManager({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      noteService: mockNoteService as any,
+      contentNavigationManager: mockContentNavigationManager,
+    })
   })
 
   describe('state getters', () => {
@@ -64,27 +76,15 @@ describe('editorManager', () => {
       const mockRawContent =
         '# Header 1\n\nSome content\n\n## Header 2\n\nMore content'
       mockNoteService.getRawContent.mockResolvedValue(mockRawContent)
-
-      // Mock DOM element with getBoundingClientRect and querySelectorAll
-      const mockElement: Partial<HTMLElement> = {
-        getBoundingClientRect: vi
-          .fn()
-          .mockReturnValue({ top: 100, height: 600 }),
-        querySelectorAll: vi.fn().mockReturnValue([
-          {
-            getBoundingClientRect: vi.fn().mockReturnValue({ top: 120 }),
-            textContent: 'Header 2',
-          },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ] as any),
-      }
-
-      await editorManager.enterEditMode(
-        'test-note.md',
-        '',
-        mockElement as HTMLElement
+      mockContentNavigationManager.getCurrentHeaderText.mockReturnValue(
+        'Header 2'
       )
 
+      await editorManager.enterEditMode('test-note.md')
+
+      expect(
+        mockContentNavigationManager.getCurrentHeaderText
+      ).toHaveBeenCalled()
       expect(editorManager.nearestHeaderText).toBe('Header 2')
     })
 

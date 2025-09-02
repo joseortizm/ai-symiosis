@@ -141,32 +141,7 @@ describe('appCoordinator Integration Tests', () => {
     const { createAppCoordinator } = await import(
       '../../../lib/app/appCoordinator.svelte'
     )
-    const { createSearchManager } = await import(
-      '../../../lib/core/searchManager.svelte'
-    )
-    const { createEditorManager } = await import(
-      '../../../lib/core/editorManager.svelte'
-    )
-    const { createFocusManager } = await import(
-      '../../../lib/core/focusManager.svelte'
-    )
-
-    // Create manager instances for testing
-    const { noteService } = await import(
-      '../../../lib/services/noteService.svelte'
-    )
-    const { createProgressManager } = await import(
-      '../../../lib/core/progressManager.svelte'
-    )
-    const progressManager = createProgressManager()
-    const searchManager = createSearchManager({ noteService, progressManager })
-    const editorManager = createEditorManager({ noteService })
-    const focusManager = createFocusManager()
-    appCoordinator = createAppCoordinator({
-      searchManager,
-      editorManager,
-      focusManager,
-    })
+    appCoordinator = createAppCoordinator({})
   })
 
   describe('Note Creation End-to-End Flow', () => {

@@ -20,7 +20,15 @@ describe('editorManager integration', () => {
     const { noteService } = await import(
       '../../../lib/services/noteService.svelte'
     )
-    editorManager = createEditorManager({ noteService })
+
+    const mockContentNavigationManager = {
+      getCurrentHeaderText: vi.fn().mockReturnValue(''),
+    }
+
+    editorManager = createEditorManager({
+      noteService,
+      contentNavigationManager: mockContentNavigationManager,
+    })
   })
 
   describe('real API compatibility', () => {

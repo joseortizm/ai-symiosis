@@ -20,15 +20,6 @@ vi.mock('../../../lib/app/effects/app.svelte', () => ({
 const { createAppCoordinator } = await import(
   '../../../lib/app/appCoordinator.svelte'
 )
-const { createSearchManager } = await import(
-  '../../../lib/core/searchManager.svelte'
-)
-const { createEditorManager } = await import(
-  '../../../lib/core/editorManager.svelte'
-)
-const { createFocusManager } = await import(
-  '../../../lib/core/focusManager.svelte'
-)
 
 // Create manager instances for testing
 const mockNoteService = {
@@ -36,27 +27,7 @@ const mockNoteService = {
   save: vi.fn(),
   search: vi.fn(),
 }
-const mockProgressManager = {
-  isLoading: false,
-  start: vi.fn(),
-  complete: vi.fn(),
-  setError: vi.fn(),
-}
-const searchManager = createSearchManager({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  noteService: mockNoteService as any,
-  progressManager: mockProgressManager,
-})
-const editorManager = createEditorManager({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  noteService: mockNoteService as any,
-})
-const focusManager = createFocusManager()
-const appCoordinator = createAppCoordinator({
-  searchManager,
-  editorManager,
-  focusManager,
-})
+const appCoordinator = createAppCoordinator({})
 
 describe('appCoordinator', () => {
   beforeEach(() => {
@@ -110,7 +81,11 @@ describe('appCoordinator', () => {
       expect(appCoordinator.managers.focusManager.selectedIndex).toBe(-1)
 
       // Simulate notes being loaded via searchManager
-      searchManager.setFilteredNotes(['note1.md', 'note2.md', 'note3.md'])
+      appCoordinator.managers.searchManager.setFilteredNotes([
+        'note1.md',
+        'note2.md',
+        'note3.md',
+      ])
 
       // The derived selectedNote should return the first note
       expect(appCoordinator.selectedNote).toBe('note1.md')
@@ -128,7 +103,7 @@ describe('appCoordinator', () => {
       // areHighlightsCleared moved to contentNavigationManager
 
       // Ensure no notes
-      searchManager.setFilteredNotes([])
+      appCoordinator.managers.searchManager.setFilteredNotes([])
 
       // selectedNote should be null (not a function)
       expect(appCoordinator.selectedNote).toBe(null)
@@ -138,12 +113,15 @@ describe('appCoordinator', () => {
 
     it('should reset selection when notes become empty', () => {
       // Start with notes
-      searchManager.setFilteredNotes(['note1.md', 'note2.md'])
+      appCoordinator.managers.searchManager.setFilteredNotes([
+        'note1.md',
+        'note2.md',
+      ])
       appCoordinator.managers.focusManager.setSelectedIndex(1)
       expect(appCoordinator.selectedNote).toBe('note2.md')
 
       // Clear notes
-      searchManager.setFilteredNotes([])
+      appCoordinator.managers.searchManager.setFilteredNotes([])
 
       // Should reset selection (selectedNote should be null with empty notes)
       expect(appCoordinator.selectedNote).toBe(null)

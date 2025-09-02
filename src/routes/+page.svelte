@@ -17,28 +17,9 @@ Composes all UI components and provides keyboard event handling for the entire a
   import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
   import DebugPanel from '../lib/ui/DebugPanel.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
-  import { createSearchManager } from '../lib/core/searchManager.svelte'
-  import { createEditorManager } from '../lib/core/editorManager.svelte'
-  import { createFocusManager } from '../lib/core/focusManager.svelte'
-  import { createProgressManager } from '../lib/core/progressManager.svelte'
   import { configService } from '../lib/services/configService.svelte'
-  import { noteService } from '../lib/services/noteService.svelte'
 
-  // Create all managers using factories
-  const sharedProgressManager = createProgressManager()
-  const searchManager = createSearchManager({
-    noteService,
-    progressManager: sharedProgressManager,
-  })
-  const editorManager = createEditorManager({ noteService })
-  const focusManager = createFocusManager()
-
-  // Create the coordinator with dependencies
-  const appCoordinator = createAppCoordinator({
-    searchManager,
-    editorManager,
-    focusManager,
-  })
+  const appCoordinator = createAppCoordinator({})
 
   // Set context for child components
   setContext('managers', {
@@ -79,7 +60,7 @@ Composes all UI components and provides keyboard event handling for the entire a
       show={configService.isVisible}
       onClose={() => {
         configService.closePane()
-        focusManager.focusSearch()
+        appCoordinator.managers.focusManager.focusSearch()
       }}
     />
 
