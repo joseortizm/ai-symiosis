@@ -414,7 +414,7 @@ Focused component handling CodeMirror initialization and content editing.
           }
 
           const headerRegex = new RegExp(
-            `^#+\\s*${escapeRegex(nearestHeaderText)}\\s*$`,
+            `^${escapeRegex(nearestHeaderText)}\\s*$`,
             'm'
           )
           const match = fullText.match(headerRegex)

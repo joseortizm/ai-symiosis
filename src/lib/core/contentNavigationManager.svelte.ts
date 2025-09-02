@@ -519,86 +519,86 @@ export function createContentNavigationManager(
     return 'focus_search'
   }
 
-  function getCurrentHeaderText(): string {
-    // If we're actively navigating headers and have a current element, use it
-    if (state.navigationMode === 'headers' && state.currentElement) {
-      return state.currentElement.textContent?.trim() || ''
+  function htmlToMarkdown(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent || ''
     }
 
-    // If we're actively navigating highlights, find the nearest header to current highlight
-    if (state.navigationMode === 'highlights' && state.currentElement) {
+    if (node.nodeType !== Node.ELEMENT_NODE) return ''
+
+    const el = node as HTMLElement
+    const tag = el.tagName.toLowerCase()
+    const children = Array.from(el.childNodes).map(htmlToMarkdown).join('')
+
+    switch (tag) {
+      case 'strong':
+      case 'b':
+        return `**${children}**`
+      case 'em':
+      case 'i':
+        return `*${children}*`
+      case 'code':
+        return `\`${children}\``
+      case 'a':
+        return `[${children}](${el.getAttribute('href') || ''})`
+      case 'del':
+      case 's':
+        return `~~${children}~~`
+      default:
+        return children
+    }
+  }
+
+  function getCurrentHeaderText(): string {
+    function toMarkdown(header: Element): string {
+      const level = parseInt(header.tagName[1], 10)
+      const content = htmlToMarkdown(header)
+      return `${'#'.repeat(level)} ${content}`
+    }
+
+    // Your previous logic for finding the header:
+    let header: Element | null = null
+
+    if (state.navigationMode === 'headers' && state.currentElement) {
+      header = state.currentElement
+    } else if (state.navigationMode === 'highlights' && state.currentElement) {
       const contentElement = deps.focusManager.noteContentElement
       if (contentElement) {
         const headers = Array.from(
           contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
         )
-
-        // Find the last header that appears before the current highlight
-        let nearestHeader: Element | null = null
-
-        for (const header of headers) {
-          const headerPosition = header.compareDocumentPosition(
-            state.currentElement
-          )
-
-          // If header comes before the highlight in document order
-          if (headerPosition & Node.DOCUMENT_POSITION_FOLLOWING) {
-            nearestHeader = header
+        for (const h of headers) {
+          const pos = h.compareDocumentPosition(state.currentElement)
+          if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+            header = h
           } else {
-            // Once we find a header that comes after, we can stop
             break
           }
-        }
-
-        if (nearestHeader) {
-          return nearestHeader.textContent?.trim() || ''
         }
       }
     }
 
-    // Otherwise, detect the nearest header based on viewport position
-    const contentElement = deps.focusManager.noteContentElement
-    if (!contentElement) {
-      return ''
-    }
-
-    try {
+    if (!header) {
+      const contentElement = deps.focusManager.noteContentElement
+      if (!contentElement) return ''
       const rect = contentElement.getBoundingClientRect()
       const headers = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
 
       let firstVisibleHeader: Element | null = null
       let lastPassedHeader: Element | null = null
 
-      for (const header of headers) {
-        const headerRect = header.getBoundingClientRect()
-
-        // Check if header is in the viewport
-        const isInViewport =
-          headerRect.top >= rect.top &&
-          headerRect.top <= rect.top + (rect.height || 600)
-
-        if (isInViewport) {
-          // Collect first visible header
-          if (!firstVisibleHeader) {
-            firstVisibleHeader = header
-          }
-        } else if (headerRect.top < rect.top) {
-          // Keep track of last header above viewport
-          lastPassedHeader = header
-        }
+      for (const h of headers) {
+        const r = h.getBoundingClientRect()
+        const isVisible =
+          r.top >= rect.top && r.top <= rect.top + (rect.height || 600)
+        if (isVisible && !firstVisibleHeader) firstVisibleHeader = h
+        else if (r.top < rect.top) lastPassedHeader = h
       }
 
-      // Priority: visible header first, then last passed header
-      const bestHeader = firstVisibleHeader || lastPassedHeader
-
-      if (bestHeader) {
-        return bestHeader.textContent?.trim() || ''
-      }
-    } catch (e) {
-      console.warn('Failed to detect nearest header:', e)
+      header = firstVisibleHeader || lastPassedHeader
     }
 
-    return ''
+    return header ? toMarkdown(header) : ''
   }
 
   return {
