@@ -16,62 +16,42 @@ Symiosis is a desktop note-taking application inspired by Notational Velocity.
 ## Features
 
 *   **Instant Search:** Search title and contents with fuzzy matching.
-*   **Markdown Support:** Write notes using Markdown for rich formatting.
-*   **Syntax Highlighting:** Beautiful syntax highlighting for code blocks in your Markdown notes.
-*   **Quick Editing:** Seamlessly switch between viewing and editing modes.
+*   **Markdown Render in Place:** Notes are explored and read as beautiful rendered markdown.
+*   **Code Editor:** Seamlessly switch between viewing and editing modes.
 *   **Keyboard-Driven Workflow:** Navigate and manage notes entirely with keyboard shortcuts.
-
 
 ## Usage
 
-Symiosis is designed for a keyboard-driven workflow.
-
-### General Navigation
-
-*   **Type to Search:** Start typing to filter notes (automatically focuses search bar).
-*   **`↓` / `↑` or `Ctrl + J` / `Ctrl + K`:** Navigate through the search results (notes list).
-*   **`Enter`:** When a note is selected, enter edit mode for that note.
-*   **`Escape`:** Return focus to the search bar.
-
-### Note Management
-
-*   **`Ctrl + N` or `Ctrl + Enter`:** Create a new note.
-*   **`Ctrl + M`:** Rename the currently selected note.
-*   **`Ctrl + O`:** Open the currently selected note in the system default editor.
-*   **`Ctrl + X`:** Delete the currently selected note (requires confirmation).
-
-### Editing Notes
-
-*   **`Ctrl + S`:** Save changes to the current note while in edit mode.
-*   **`Escape`:** Exit edit mode without saving changes and return to search bar.
-
-### Scrolling Note Content
-
-When viewing a note (not in edit mode):
-*   **`Ctrl + D`:** Scroll down half a page.
-*   **`Ctrl + U`:** Scroll up half a page.
-
-### Search Highlights
-
-*   **`Escape`:** Clear search highlights in the current note, or clear search input if highlights are already cleared.
-
-### Content Navigation
-
-*   **`Ctrl + P`:** Navigate to previous note in history.
-*   **`Ctrl + N`:** Navigate to next note in history.
-*   **`Ctrl + H`:** Navigate to previous code block in current note.
-*   **`Ctrl + L`:** Navigate to next code block in current note.
-*   **`Ctrl + Y`:** Copy current section to clipboard.
-
-### Advanced Features
-
-*   **`Ctrl + /`:** Open version explorer for the currently selected note.
-*   **`Ctrl + .`:** Open recently deleted notes dialog to restore deleted notes.
-*   **`Meta + ,` (Cmd + , on Mac):** Open settings panel.
+Symiosis is designed for a keyboard-driven workflow. Defaults are Vim-centric but you can customize to taste.
+Usual keys like arrows etc. will also work.
 
 ### Global Shortcuts
 
 *   **`Ctrl + Shift + N`:** Toggle Symiosis window visibility (works system-wide).
+
+### General Navigation
+
+*   **Type to Search:** Start typing to filter notes.
+*   **`Ctrl + J` / `Ctrl + K`:** Navigate through the search results (notes list).
+*   **`Enter`:** When a note is selected, enter edit mode for that note.
+*   **`Ctrl + U` / `Ctrl + D`:** Scroll up or down currently selected note
+*   **`Ctrl + P` / `Ctrl + N`:** Navigate search term highlights (if active) or Markdown headers in currently selected note. Other headers will collapse creating an outline for easy navigation.
+*   **`Ctrl + H` / `Ctrl + L`:** Navigate code blocks in currently selected note.
+*   **`Escape`:** Clear search highlights in the current note, or get out of markdown header navigation mode if currently in it. If neither highlights or headers are in use, clear current search text.
+*   **`Ctrl + Y`:** Copy currently selected markdown section or code block to clipboard.
+
+### Note Management
+
+*   **`Ctrl + Enter`:** Create a new note.
+*   **`Ctrl + M`:** Rename the currently selected note.
+*   **`Ctrl + O`:** Open the currently selected note in the system default editor.
+*   **`Ctrl + X`:** Delete the currently selected note (requires confirmation).
+
+### Special Panels
+
+*   **`Meta + ,` (Cmd + , on Mac):** Open settings panel.
+*   **`Ctrl + /`:** Open version explorer for the currently selected note.
+*   **`Ctrl + .`:** Open recently deleted notes dialog to restore deleted notes.
 
 ## Configuration
 
@@ -207,7 +187,3 @@ max_search_results = 100
 Simply edit the configuration file to customize Symiosis to your preferences.
 
 Have fun 🙂
-
----
-
-<sub>Markdown themes based on GitHub's markdown CSS (modified and optimized)</sub>
