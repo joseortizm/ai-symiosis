@@ -1,7 +1,7 @@
 <!--
 UI Layer - Version Explorer
 Modal dialog for exploring and recovering note version history.
-Features color-coded version list, content preview, and keyboard navigation.
+Content preview, and keyboard navigation.
 -->
 
 <script lang="ts">
@@ -292,11 +292,14 @@ Features color-coded version list, content preview, and keyboard navigation.
     border-radius: 6px;
     background-color: var(--theme-bg-primary);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .version-list {
-    height: 100%;
+    flex: 1;
     overflow-y: auto;
+    min-height: 0;
   }
 
   .version-item {
@@ -396,18 +399,10 @@ Features color-coded version list, content preview, and keyboard navigation.
     min-height: 0;
   }
 
-  .preview-loading,
-  .preview-empty {
-    padding: 20px;
-    text-align: center;
-    color: var(--theme-text-muted);
-    font-style: italic;
-  }
-
   .markdown-preview {
     padding: 16px;
-    height: 100%;
-    overflow: auto;
+    height: auto;
+    overflow: visible; /* prevent double scrollbars */
   }
 
   .markdown-preview pre {
@@ -421,6 +416,32 @@ Features color-coded version list, content preview, and keyboard navigation.
     color: var(--theme-text-primary);
     white-space: pre-wrap;
     word-wrap: break-word;
+  }
+
+  /* scroll bars */
+  .version-list::-webkit-scrollbar,
+  .preview-content::-webkit-scrollbar,
+  .markdown-preview::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .version-list::-webkit-scrollbar-track,
+  .preview-content::-webkit-scrollbar-track,
+  .markdown-preview::-webkit-scrollbar-track {
+    background: var(--theme-bg-secondary);
+  }
+
+  .version-list::-webkit-scrollbar-thumb,
+  .preview-content::-webkit-scrollbar-thumb,
+  .markdown-preview::-webkit-scrollbar-thumb {
+    background: var(--theme-bg-tertiary);
+    border-radius: 5px;
+  }
+
+  .version-list::-webkit-scrollbar-thumb:hover,
+  .preview-content::-webkit-scrollbar-thumb:hover,
+  .markdown-preview::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-bg-tertiary);
   }
 
   /* Empty State */
