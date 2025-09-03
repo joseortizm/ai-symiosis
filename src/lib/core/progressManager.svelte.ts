@@ -8,6 +8,7 @@ interface ProgressState {
   isLoading: boolean
   message: string
   error: string | null
+  type: 'subtle' | 'modal'
 }
 
 interface ProgressManager {
@@ -15,7 +16,10 @@ interface ProgressManager {
   readonly message: string
   readonly error: string | null
   readonly hasError: boolean
-  start(message: string): void
+  readonly type: 'subtle' | 'modal'
+  readonly showModal: boolean
+  readonly showSubtle: boolean
+  start(message: string, type?: 'subtle' | 'modal'): void
   updateProgress(message: string): void
   complete(): void
   setError(errorMessage: string): void
@@ -28,6 +32,7 @@ export function createProgressManager(): ProgressManager {
     isLoading: false,
     message: '',
     error: null,
+    type: 'modal', // Default to modal for backward compatibility
   })
 
   return {
@@ -44,12 +49,22 @@ export function createProgressManager(): ProgressManager {
     get hasError() {
       return state.error !== null
     },
+    get type() {
+      return state.type
+    },
+    get showModal() {
+      return state.isLoading && state.type === 'modal'
+    },
+    get showSubtle() {
+      return state.isLoading && state.type === 'subtle'
+    },
 
     // State updates (called by event listeners in app coordinator)
-    start(message: string) {
+    start(message: string, type: 'subtle' | 'modal' = 'modal') {
       state.isLoading = true
       state.message = message
       state.error = null
+      state.type = type
     },
 
     updateProgress(message: string) {
@@ -62,12 +77,14 @@ export function createProgressManager(): ProgressManager {
       state.isLoading = false
       state.message = ''
       state.error = null
+      state.type = 'modal' // Reset to default
     },
 
     setError(errorMessage: string) {
       state.isLoading = false
       state.message = ''
       state.error = errorMessage
+      state.type = 'modal' // Errors always use modal for visibility
     },
 
     // Clear error manually

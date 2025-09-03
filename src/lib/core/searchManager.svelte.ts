@@ -18,7 +18,7 @@ interface SearchManagerDeps {
   noteService: ReturnType<typeof createNoteService>
   progressManager: {
     readonly isLoading: boolean
-    start(message: string): void
+    start(message: string, type?: 'subtle' | 'modal'): void
     complete(): void
     setError(errorMessage: string): void
   }
@@ -61,7 +61,7 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     const currentController = state.requestController
 
     try {
-      deps.progressManager.start('Searching notes...')
+      deps.progressManager.start('Searching notes...', 'subtle')
       const notes = await deps.noteService.search(query)
 
       if (currentController.signal.aborted) {

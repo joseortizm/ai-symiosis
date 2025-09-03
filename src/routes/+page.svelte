@@ -17,6 +17,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   import VersionExplorer from '../lib/ui/VersionExplorer.svelte'
   import RecentlyDeleted from '../lib/ui/RecentlyDeleted.svelte'
   import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
+  import SubtleProgressIndicator from '../lib/ui/SubtleProgressIndicator.svelte'
   import HintsPanel from '../lib/ui/HintsPanel.svelte'
   import ErrorNotification from '../lib/ui/ErrorNotification.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
@@ -132,12 +133,17 @@ Composes all UI components and provides keyboard event handling for the entire a
     />
 
     <ProgressOverlay
-      show={progressManager.isLoading}
+      show={progressManager.showModal}
       message={progressManager.message}
       error={progressManager.error}
     />
   </div>
 </AppLayout>
+
+<SubtleProgressIndicator
+  show={progressManager.showSubtle}
+  message={progressManager.message}
+/>
 
 <HintsPanel />
 <ErrorNotification />
