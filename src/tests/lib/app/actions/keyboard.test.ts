@@ -34,6 +34,7 @@ describe('keyboard actions', () => {
       } as any,
       configStateManager: {
         shortcuts: {
+          edit_note: 'Enter',
           create_note: 'Ctrl+Enter',
           rename_note: 'Ctrl+m',
           delete_note: 'Ctrl+x',
@@ -43,12 +44,16 @@ describe('keyboard actions', () => {
           refresh_cache: 'Ctrl+r',
           scroll_up: 'Ctrl+u',
           scroll_down: 'Ctrl+d',
-          vim_up: 'Ctrl+k',
-          vim_down: 'Ctrl+j',
+          up: 'Ctrl+k',
+          down: 'Ctrl+j',
           navigate_previous: 'Ctrl+p',
           navigate_next: 'Ctrl+n',
+          navigate_code_previous: 'Ctrl+Shift+p',
+          navigate_code_next: 'Ctrl+Shift+n',
+          copy_current_section: 'Ctrl+Shift+c',
           open_settings: 'Meta+,',
           version_explorer: 'Ctrl+/',
+          recently_deleted: 'Ctrl+Shift+d',
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,

@@ -119,8 +119,8 @@ All keyboard shortcuts are configurable:
 - `refresh_cache` - Refresh syntax highlighting cache (default: `"Ctrl+r"`)
 - `scroll_up` - Scroll up in note view (default: `"Ctrl+u"`)
 - `scroll_down` - Scroll down in note view (default: `"Ctrl+d"`)
-- `vim_up` - Navigate up (vim-style) (default: `"Ctrl+k"`)
-- `vim_down` - Navigate down (vim-style) (default: `"Ctrl+j"`)
+- `up` - Navigate up (vim-style) (default: `"Ctrl+k"`)
+- `down` - Navigate down (vim-style) (default: `"Ctrl+j"`)
 - `navigate_previous` - Navigate to previous note (default: `"Ctrl+p"`)
 - `navigate_next` - Navigate to next note (default: `"Ctrl+n"`)
 - `open_settings` - Open settings panel (default: `"Meta+,"`)
@@ -168,8 +168,8 @@ open_folder = "Ctrl+f"
 refresh_cache = "Ctrl+r"
 scroll_up = "Ctrl+u"
 scroll_down = "Ctrl+d"
-vim_up = "Ctrl+k"
-vim_down = "Ctrl+j"
+up = "Ctrl+k"
+down = "Ctrl+j"
 navigate_previous = "Ctrl+p"
 navigate_next = "Ctrl+n"
 open_settings = "Meta+,"

@@ -66,13 +66,10 @@ Features simple file list, keyboard navigation, and recovery.
 
     const shortcuts = configStateManager?.shortcuts
     if (shortcuts) {
-      if (keyString === shortcuts.vim_up || event.key === 'ArrowUp') {
+      if (keyString === shortcuts.up || event.key === 'ArrowUp') {
         event.preventDefault()
         onNavigateUp()
-      } else if (
-        keyString === shortcuts.vim_down ||
-        event.key === 'ArrowDown'
-      ) {
+      } else if (keyString === shortcuts.down || event.key === 'ArrowDown') {
         event.preventDefault()
         onNavigateDown()
       }
@@ -144,8 +141,8 @@ Features simple file list, keyboard navigation, and recovery.
       <div class="keyboard-hint">
         <p>
           {#if configStateManager?.shortcuts}
-            <kbd>{configStateManager.shortcuts.vim_up}</kbd><kbd
-              >{configStateManager.shortcuts.vim_down}</kbd
+            <kbd>{configStateManager.shortcuts.up}</kbd><kbd
+              >{configStateManager.shortcuts.down}</kbd
             > Navigate •
           {:else}
             <kbd>↑</kbd><kbd>↓</kbd> Navigate •

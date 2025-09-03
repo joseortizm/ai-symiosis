@@ -79,8 +79,8 @@ pub struct ShortcutsConfig {
     pub refresh_cache: String,
     pub scroll_up: String,
     pub scroll_down: String,
-    pub vim_up: String,
-    pub vim_down: String,
+    pub up: String,
+    pub down: String,
     pub navigate_previous: String,
     pub navigate_next: String,
     pub navigate_code_previous: String,
@@ -186,8 +186,8 @@ impl Default for ShortcutsConfig {
             refresh_cache: "Ctrl+r".to_string(),
             scroll_up: "Ctrl+u".to_string(),
             scroll_down: "Ctrl+d".to_string(),
-            vim_up: "Ctrl+k".to_string(),
-            vim_down: "Ctrl+j".to_string(),
+            up: "Ctrl+k".to_string(),
+            down: "Ctrl+j".to_string(),
             navigate_previous: "Ctrl+p".to_string(),
             navigate_next: "Ctrl+n".to_string(),
             navigate_code_previous: "Ctrl+h".to_string(),
@@ -393,8 +393,8 @@ pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> AppResult<()> {
     validate_basic_shortcut_format(&shortcuts.refresh_cache)?;
     validate_basic_shortcut_format(&shortcuts.scroll_up)?;
     validate_basic_shortcut_format(&shortcuts.scroll_down)?;
-    validate_basic_shortcut_format(&shortcuts.vim_up)?;
-    validate_basic_shortcut_format(&shortcuts.vim_down)?;
+    validate_basic_shortcut_format(&shortcuts.up)?;
+    validate_basic_shortcut_format(&shortcuts.down)?;
     validate_basic_shortcut_format(&shortcuts.navigate_previous)?;
     validate_basic_shortcut_format(&shortcuts.navigate_next)?;
     validate_basic_shortcut_format(&shortcuts.open_settings)?;
@@ -881,8 +881,8 @@ fn extract_shortcuts_config(value: &toml::Value) -> ShortcutsConfig {
         extract_shortcut!(refresh_cache, "refresh_cache");
         extract_shortcut!(scroll_up, "scroll_up");
         extract_shortcut!(scroll_down, "scroll_down");
-        extract_shortcut!(vim_up, "vim_up");
-        extract_shortcut!(vim_down, "vim_down");
+        extract_shortcut!(up, "up");
+        extract_shortcut!(down, "down");
         extract_shortcut!(navigate_previous, "navigate_previous");
         extract_shortcut!(navigate_next, "navigate_next");
         extract_shortcut!(open_settings, "open_settings");

@@ -43,8 +43,8 @@ export interface ShortcutsConfig {
   refresh_cache: string
   scroll_up: string
   scroll_down: string
-  vim_up: string
-  vim_down: string
+  up: string
+  down: string
   navigate_previous: string
   navigate_next: string
   navigate_code_previous: string
@@ -246,8 +246,8 @@ export function createConfigService(): ConfigService {
         refresh_cache: 'Ctrl+r',
         scroll_up: 'Ctrl+u',
         scroll_down: 'Ctrl+d',
-        vim_up: 'Ctrl+k',
-        vim_down: 'Ctrl+j',
+        up: 'Ctrl+k',
+        down: 'Ctrl+j',
         navigate_previous: 'Ctrl+p',
         navigate_next: 'Ctrl+n',
         navigate_code_previous: 'Ctrl+h',

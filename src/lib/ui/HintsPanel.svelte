@@ -80,11 +80,11 @@ Shows configured shortcuts with proper theming and overlay styling.
       title: 'Navigation',
       shortcuts: [
         {
-          key: configStateManager.shortcuts.vim_up,
+          key: configStateManager.shortcuts.up,
           description: 'Previous note',
         },
         {
-          key: configStateManager.shortcuts.vim_down,
+          key: configStateManager.shortcuts.down,
           description: 'Next note',
         },
         {
