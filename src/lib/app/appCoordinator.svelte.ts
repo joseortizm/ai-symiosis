@@ -14,8 +14,10 @@ import { createProgressManager } from '../core/progressManager.svelte'
 import { createSearchManager } from '../core/searchManager.svelte'
 import { createEditorManager } from '../core/editorManager.svelte'
 import { createFocusManager } from '../core/focusManager.svelte'
+import { createVersionExplorerManager } from '../core/versionExplorerManager.svelte'
 import { noteService } from '../services/noteService.svelte'
 import { configService } from '../services/configService.svelte'
+import { versionService } from '../services/versionService.svelte'
 import { createNoteActions } from './actions/note.svelte'
 import { createSearchActions } from './actions/search.svelte'
 import { createSettingsActions } from './actions/settings.svelte'
@@ -72,6 +74,9 @@ export interface AppManagers {
   progressManager: ReturnType<
     typeof import('../core/progressManager.svelte').createProgressManager
   >
+  versionExplorerManager: ReturnType<
+    typeof import('../core/versionExplorerManager.svelte').createVersionExplorerManager
+  >
 }
 
 export interface AppCoordinator {
@@ -121,6 +126,11 @@ export function createAppCoordinator(
     searchManager,
     focusManager,
     contentNavigationManager,
+  })
+
+  const versionExplorerManager = createVersionExplorerManager({
+    focusSearch: () => focusManager.focusSearch(),
+    versionService,
   })
 
   // State for managing content request cancellation and race conditions
@@ -282,6 +292,7 @@ export function createAppCoordinator(
     searchManager,
     contentManager,
     dialogManager,
+    versionExplorerManager,
     noteActions,
     settingsActions,
     noteService,
@@ -337,7 +348,8 @@ export function createAppCoordinator(
           dialogManager.showCreateDialog ||
           dialogManager.showRenameDialog ||
           dialogManager.showDeleteDialog ||
-          dialogManager.showUnsavedChangesDialog,
+          dialogManager.showUnsavedChangesDialog ||
+          versionExplorerManager.isVisible,
       }))
     },
 
@@ -351,6 +363,7 @@ export function createAppCoordinator(
         configStateManager,
         contentNavigationManager,
         progressManager,
+        versionExplorerManager,
       }
     },
 

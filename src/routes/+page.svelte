@@ -14,6 +14,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   import InputDialog from '../lib/ui/InputDialog.svelte'
   import DeleteDialog from '../lib/ui/DeleteDialog.svelte'
   import SettingsPane from '../lib/ui/SettingsPane.svelte'
+  import VersionExplorer from '../lib/ui/VersionExplorer.svelte'
   import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
   import DebugPanel from '../lib/ui/DebugPanel.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
@@ -31,7 +32,8 @@ Composes all UI components and provides keyboard event handling for the entire a
   setContext('actions', appCoordinator.actions)
 
   // Access properties directly since this is the root component
-  const { dialogManager, progressManager } = appCoordinator.managers
+  const { dialogManager, progressManager, versionExplorerManager } =
+    appCoordinator.managers
   const appState = appCoordinator.state
   const actions = appCoordinator.actions
 
@@ -62,6 +64,11 @@ Composes all UI components and provides keyboard event handling for the entire a
         configService.closePane()
         appCoordinator.managers.focusManager.focusSearch()
       }}
+    />
+
+    <VersionExplorer
+      show={versionExplorerManager.isVisible}
+      onClose={() => versionExplorerManager.closeVersionExplorer()}
     />
 
     <DeleteDialog

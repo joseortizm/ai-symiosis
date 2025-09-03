@@ -605,3 +605,137 @@ pub fn open_note_folder(note_name: &str) -> Result<(), String> {
     }();
     result.map_err(|e| e.to_string())
 }
+
+#[derive(serde::Serialize)]
+pub struct NoteVersion {
+    pub filename: String,
+    pub backup_type: String,
+    pub timestamp: u64,
+    pub size: u64,
+    pub formatted_time: String,
+}
+
+#[tauri::command]
+pub fn get_note_versions(note_name: &str) -> Result<Vec<NoteVersion>, String> {
+    let result = || -> AppResult<Vec<NoteVersion>> {
+        validate_note_name(note_name)?;
+
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        if !backup_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let base_name = if let Some(stem) = std::path::Path::new(note_name).file_stem() {
+            stem.to_string_lossy()
+        } else {
+            std::borrow::Cow::from(note_name)
+        };
+
+        let mut versions = Vec::new();
+
+        if let Ok(entries) = fs::read_dir(&backup_dir) {
+            for entry in entries.flatten() {
+                let filename = entry.file_name().to_string_lossy().to_string();
+
+                // Parse backup filename format: {base_name}.{suffix}.{timestamp}.md
+                let parts: Vec<&str> = filename.splitn(4, '.').collect();
+                if parts.len() == 4 && parts[0] == base_name && parts[3] == "md" {
+                    let backup_type = parts[1].to_string();
+                    if let Ok(timestamp) = parts[2].parse::<u64>() {
+                        if let Ok(metadata) = entry.metadata() {
+                            let size = metadata.len();
+
+                            // Format timestamp for display
+                            let formatted_time = format_timestamp(timestamp);
+
+                            versions.push(NoteVersion {
+                                filename: filename.clone(),
+                                backup_type,
+                                timestamp,
+                                size,
+                                formatted_time,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort by timestamp (newest first)
+        versions.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+        Ok(versions)
+    }();
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_version_content(version_filename: &str) -> Result<String, String> {
+    let result = || -> AppResult<String> {
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let version_path = backup_dir.join(version_filename);
+
+        if !version_path.exists() {
+            return Err(AppError::FileNotFound(format!(
+                "Version file not found: {}",
+                version_filename
+            )));
+        }
+
+        let content = fs::read_to_string(&version_path)?;
+        Ok(content)
+    }();
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn recover_note_version(note_name: &str, version_filename: &str) -> Result<(), String> {
+    let result = || -> AppResult<()> {
+        validate_note_name(note_name)?;
+
+        let note_path = get_config_notes_dir().join(note_name);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let version_path = backup_dir.join(version_filename);
+
+        if !version_path.exists() {
+            return Err(AppError::FileNotFound(format!(
+                "Version file not found: {}",
+                version_filename
+            )));
+        }
+
+        // Read the version content
+        let version_content = fs::read_to_string(&version_path)?;
+
+        // Use the same programmatic flag and safe write as normal saves
+        with_programmatic_flag(|| safe_write_note(&note_path, &version_content))?;
+
+        let modified = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        // Update database with recovered content
+        update_note_in_database(note_name, &version_content, modified)?;
+
+        Ok(())
+    }();
+    result.map_err(|e| e.to_string())
+}
+
+fn format_timestamp(timestamp: u64) -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    let diff = now.saturating_sub(timestamp);
+
+    match diff {
+        0..=59 => "Just now".to_string(),
+        60..=3599 => format!("{}m ago", diff / 60),
+        3600..=86399 => format!("{}h ago", diff / 3600),
+        86400..=2591999 => format!("{}d ago", diff / 86400),
+        _ => format!("{}w ago", diff / 604800),
+    }
+}

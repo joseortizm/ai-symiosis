@@ -24,6 +24,9 @@ export interface KeyboardActionDeps {
   dialogManager: ReturnType<
     typeof import('../../core/dialogManager.svelte').createDialogManager
   >
+  versionExplorerManager: ReturnType<
+    typeof import('../../core/versionExplorerManager.svelte').createVersionExplorerManager
+  >
   noteActions: ReturnType<typeof import('./note.svelte').createNoteActions>
   settingsActions: ReturnType<
     typeof import('./settings.svelte').createSettingsActions
@@ -212,6 +215,13 @@ export function createKeyboardActions(
       openSettings: async ({ actions }: ActionContext) => {
         await actions.settingsActions.openSettingsPane()
       },
+      openVersionExplorer: async ({ state, actions }: ActionContext) => {
+        if (state.selectedNote) {
+          await actions.versionExplorerManager.openVersionExplorer(
+            state.selectedNote
+          )
+        }
+      },
     },
   }
 
@@ -240,12 +250,14 @@ export function createKeyboardActions(
         [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
         Escape: 'search.handleEscape',
         [shortcuts.open_settings]: 'settings.openSettings',
+        'Control+/': 'settings.openVersionExplorer',
       },
 
       editMode: {
         Escape: 'editing.smartExitEdit',
         [shortcuts.save_and_exit]: 'editing.saveAndExit',
         [shortcuts.open_settings]: 'settings.openSettings',
+        'Control+/': 'settings.openVersionExplorer',
       },
 
       noteContent: {
@@ -255,6 +267,7 @@ export function createKeyboardActions(
         [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
         [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
         [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
+        'Control+/': 'settings.openVersionExplorer',
       },
 
       default: {
@@ -311,6 +324,17 @@ export function createKeyboardActions(
     return async function handleKeydown(event: KeyboardEvent): Promise<void> {
       const state = getState()
       const context: ActionContext = { state, actions: deps }
+      // Allow Ctrl+/ to open version explorer from any state (except when version explorer is already open)
+      if (event.ctrlKey && event.key === '/') {
+        if (!deps.versionExplorerManager.isVisible && state.selectedNote) {
+          event.preventDefault()
+          await deps.versionExplorerManager.openVersionExplorer(
+            state.selectedNote
+          )
+          return
+        }
+      }
+
       if (state.isSettingsOpen || state.isAnyDialogOpen) {
         if (event.key === 'Escape') {
           return
