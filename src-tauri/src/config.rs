@@ -72,6 +72,7 @@ pub struct ShortcutsConfig {
     pub create_note: String,
     pub rename_note: String,
     pub delete_note: String,
+    pub edit_note: String,
     pub save_and_exit: String,
     pub open_external: String,
     pub open_folder: String,
@@ -178,6 +179,7 @@ impl Default for ShortcutsConfig {
             create_note: "Ctrl+Enter".to_string(),
             rename_note: "Ctrl+m".to_string(),
             delete_note: "Ctrl+x".to_string(),
+            edit_note: "Enter".to_string(),
             save_and_exit: "Ctrl+s".to_string(),
             open_external: "Ctrl+o".to_string(),
             open_folder: "Ctrl+f".to_string(),
@@ -384,6 +386,7 @@ pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> AppResult<()> {
     validate_basic_shortcut_format(&shortcuts.create_note)?;
     validate_basic_shortcut_format(&shortcuts.rename_note)?;
     validate_basic_shortcut_format(&shortcuts.delete_note)?;
+    validate_basic_shortcut_format(&shortcuts.edit_note)?;
     validate_basic_shortcut_format(&shortcuts.save_and_exit)?;
     validate_basic_shortcut_format(&shortcuts.open_external)?;
     validate_basic_shortcut_format(&shortcuts.open_folder)?;
@@ -871,6 +874,7 @@ fn extract_shortcuts_config(value: &toml::Value) -> ShortcutsConfig {
         extract_shortcut!(create_note, "create_note");
         extract_shortcut!(rename_note, "rename_note");
         extract_shortcut!(delete_note, "delete_note");
+        extract_shortcut!(edit_note, "edit_note");
         extract_shortcut!(save_and_exit, "save_and_exit");
         extract_shortcut!(open_external, "open_external");
         extract_shortcut!(open_folder, "open_folder");

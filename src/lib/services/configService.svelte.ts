@@ -36,6 +36,7 @@ export interface ShortcutsConfig {
   create_note: string
   rename_note: string
   delete_note: string
+  edit_note: string
   save_and_exit: string
   open_external: string
   open_folder: string
@@ -238,6 +239,7 @@ export function createConfigService(): ConfigService {
         create_note: 'Ctrl+Enter',
         rename_note: 'Ctrl+m',
         delete_note: 'Ctrl+x',
+        edit_note: 'Enter',
         save_and_exit: 'Ctrl+s',
         open_external: 'Ctrl+o',
         open_folder: 'Ctrl+f',

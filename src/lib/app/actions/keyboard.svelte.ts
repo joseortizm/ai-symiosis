@@ -236,7 +236,7 @@ export function createKeyboardActions(
 
     return {
       searchInput: {
-        Enter: 'editing.enterEdit',
+        [shortcuts.edit_note]: 'editing.enterEdit',
         [shortcuts.create_note]: 'notes.createNote',
         [shortcuts.rename_note]: 'notes.renameNote',
         [shortcuts.open_external]: 'notes.openExternal',

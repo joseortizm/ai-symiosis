@@ -89,7 +89,8 @@ Shows configured shortcuts with proper theming and overlay styling.
         },
         {
           key: configStateManager.shortcuts.navigate_previous,
-          description: 'Previous Markdown header or search term',        },
+          description: 'Previous Markdown header or search term',
+        },
         {
           key: configStateManager.shortcuts.navigate_next,
           description: 'Next Markdown header or search term',
@@ -160,7 +161,9 @@ Shows configured shortcuts with proper theming and overlay styling.
           ⌨️ Keyboard Shortcuts
           <span class="note">(basic keys like arrows etc. also work)</span>
         </h2>
-        <button class="close-button" onclick={() => (isVisible = false)}>×</button>
+        <button class="close-button" onclick={() => (isVisible = false)}
+          >×</button
+        >
       </div>
 
       <div class="hints-content">

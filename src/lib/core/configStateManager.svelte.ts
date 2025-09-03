@@ -89,6 +89,7 @@ export function createConfigStateManager(): ConfigStateManager {
       create_note: 'Ctrl+Enter',
       rename_note: 'Ctrl+m',
       delete_note: 'Ctrl+x',
+      edit_note: 'Enter',
       save_and_exit: 'Ctrl+s',
       open_external: 'Ctrl+o',
       open_folder: 'Ctrl+f',
