@@ -73,33 +73,115 @@ pub fn render_note(filename: &str, content: &str) -> String {
 // How many backup versions we keep
 const MAX_BACKUPS: usize = 20;
 
+#[derive(Debug, Clone)]
+pub enum BackupType {
+    Rollback,       // For safe_write_note rollback protection
+    SaveFailure,    // For failed save operations
+    Rename,         // For rename operation safety
+    Delete,         // For delete operation recovery
+    ExternalChange, // For watcher-detected external modifications
+}
+
+impl BackupType {
+    fn extension(&self) -> &'static str {
+        match self {
+            BackupType::Rollback => "bak",
+            BackupType::SaveFailure => "bak.save_failure",
+            BackupType::Rename => "bak.rename",
+            BackupType::Delete => "bak.deleted",
+            BackupType::ExternalChange => "bak.external",
+        }
+    }
+}
+
+pub fn create_versioned_backup(
+    note_path: &PathBuf,
+    backup_type: BackupType,
+    content_override: Option<&str>,
+) -> AppResult<PathBuf> {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let backup_path = match backup_type {
+        BackupType::Rollback => {
+            // For rollback backups, use the existing path structure
+            let mut path = safe_backup_path(note_path)?;
+            let backup_filename = format!(
+                "{}.{}.{}",
+                path.file_name()
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| AppError::InvalidPath("Invalid filename".to_string()))?,
+                timestamp,
+                backup_type.extension()
+            );
+            path.set_file_name(backup_filename);
+            path
+        }
+        _ => {
+            // For other backup types, use backup directory structure
+            let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+            let note_filename = note_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .ok_or_else(|| AppError::InvalidPath("Invalid filename".to_string()))?;
+            let backup_filename = format!(
+                "{}.{}.{}",
+                note_filename,
+                timestamp,
+                backup_type.extension()
+            );
+            backup_dir.join(backup_filename)
+        }
+    };
+
+    // Ensure backup directory exists
+    if let Some(backup_parent) = backup_path.parent() {
+        fs::create_dir_all(backup_parent)?;
+    }
+
+    // Create backup based on content source
+    match content_override {
+        Some(content) => {
+            // Use provided content
+            fs::write(&backup_path, content)?;
+        }
+        None => {
+            // Copy from existing file - fs::copy is atomic and will fail if source doesn't exist
+            // This maintains TOCTOU protection by doing check and action atomically
+            fs::copy(note_path, &backup_path).map_err(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => AppError::FileNotFound(format!(
+                    "Cannot create backup: source file '{}' does not exist",
+                    note_path.display()
+                )),
+                std::io::ErrorKind::PermissionDenied => AppError::FilePermission(format!(
+                    "Cannot create backup of '{}': permission denied",
+                    note_path.display()
+                )),
+                _ => AppError::FileRead(format!(
+                    "Failed to create backup of '{}': {}",
+                    note_path.display(),
+                    e
+                )),
+            })?;
+        }
+    }
+
+    // Prune old backups for this file
+    prune_old_backups(&backup_path, MAX_BACKUPS)?;
+
+    Ok(backup_path)
+}
+
 pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
     // 1. Create backup if file exists (for rollback protection)
     let rollback_backup_path = if note_path.exists() {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-
-        let mut backup_path = safe_backup_path(note_path)?;
-        let backup_filename = format!(
-            "{}.{}.bak",
-            backup_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| AppError::InvalidPath("Invalid filename".to_string()))?,
-            timestamp
-        );
-        backup_path.set_file_name(backup_filename);
-
-        if let Some(backup_parent) = backup_path.parent() {
-            fs::create_dir_all(backup_parent)?;
-        }
-
-        fs::copy(note_path, &backup_path)?;
-
-        prune_old_backups(&backup_path, MAX_BACKUPS)?;
-        Some(backup_path)
+        Some(create_versioned_backup(
+            note_path,
+            BackupType::Rollback,
+            None,
+        )?)
     } else {
         None
     };
@@ -294,40 +376,16 @@ pub fn safe_backup_path(note_path: &PathBuf) -> AppResult<PathBuf> {
 }
 
 fn create_save_failure_backup(note_path: &PathBuf, content: &str) {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-
-    if let Some(filename) = note_path.file_name().and_then(|f| f.to_str()) {
-        let backup_filename = format!("{}.{}.bak.save_failure", filename, timestamp);
-
-        if let Some(app_data_dir) = get_backup_dir_for_notes_path(&get_config_notes_dir()).ok() {
-            let backup_path = app_data_dir.join(&backup_filename);
-
-            if let Some(backup_parent) = backup_path.parent() {
-                if let Err(e) = fs::create_dir_all(backup_parent) {
-                    log(
-                        "BACKUP_DIR_CREATE",
-                        &format!("Failed to create backup directory: {:?}", backup_parent),
-                        Some(&e.to_string()),
-                    );
-                    return;
-                }
-            }
-
-            match fs::write(&backup_path, content) {
-                Ok(()) => {
-                    eprintln!("Created save failure backup: {}", backup_path.display());
-                }
-                Err(e) => {
-                    eprintln!(
-                        "Failed to create save failure backup '{}': {}",
-                        backup_path.display(),
-                        e
-                    );
-                }
-            }
+    match create_versioned_backup(note_path, BackupType::SaveFailure, Some(content)) {
+        Ok(backup_path) => {
+            eprintln!("Created save failure backup: {}", backup_path.display());
+        }
+        Err(e) => {
+            eprintln!(
+                "Failed to create save failure backup for '{}': {}",
+                note_path.display(),
+                e
+            );
         }
     }
 }

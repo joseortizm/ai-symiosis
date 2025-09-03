@@ -7,8 +7,8 @@ use crate::{
     services::{
         database_service::recreate_database,
         note_service::{
-            render_note, safe_backup_path, safe_write_note, update_note_in_database,
-            validate_note_name,
+            create_versioned_backup, render_note, safe_write_note, update_note_in_database,
+            validate_note_name, BackupType,
         },
     },
     APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
@@ -210,45 +210,19 @@ pub fn save_note_with_content_check(
 
         if current_content != original_content {
             // Content validation failed - create backup of the content that would have been saved
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
-
-            let backup_filename = format!("{}.{}.bak.save_failure", note_name, timestamp);
-            if let Ok(backup_dir) =
-                crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())
-            {
-                let backup_path = backup_dir.join(&backup_filename);
-
-                if let Some(backup_parent) = backup_path.parent() {
-                    if let Err(e) = fs::create_dir_all(backup_parent) {
-                        log(
-                            "BACKUP_DIR_CREATE",
-                            &format!("Failed to create backup directory: {:?}", backup_parent),
-                            Some(&e.to_string()),
-                        );
-                        return Err(AppError::FileWrite(format!(
-                            "Failed to create backup directory: {}",
-                            e
-                        )));
-                    }
+            match create_versioned_backup(&note_path, BackupType::SaveFailure, Some(content)) {
+                Ok(backup_path) => {
+                    eprintln!(
+                        "Created save failure backup due to external modification: {}",
+                        backup_path.display()
+                    );
                 }
-
-                match fs::write(&backup_path, content) {
-                    Ok(()) => {
-                        eprintln!(
-                            "Created save failure backup due to external modification: {}",
-                            backup_path.display()
-                        );
-                    }
-                    Err(e) => {
-                        eprintln!(
-                            "Failed to create save failure backup '{}': {}",
-                            backup_path.display(),
-                            e
-                        );
-                    }
+                Err(e) => {
+                    eprintln!(
+                        "Failed to create save failure backup for '{}': {}",
+                        note_path.display(),
+                        e
+                    );
                 }
             }
 
@@ -308,20 +282,11 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
         let old_path = notes_dir.join(&old_name);
         let new_path = notes_dir.join(&new_name);
 
-        // Create backup path first (this doesn't change filesystem state)
-        let backup_path = safe_backup_path(&old_path)?.with_extension("md.bak");
-
-        // Atomic operation: attempt to create backup, which will fail if source doesn't exist
-        // This eliminates TOCTOU by doing the check and action atomically
-        if let Some(backup_parent) = backup_path.parent() {
-            fs::create_dir_all(backup_parent)?;
-        }
-
-        // Try to copy the file - this will fail atomically if source doesn't exist
-        let backup_result = fs::copy(&old_path, &backup_path);
+        // Create backup using unified API - maintains TOCTOU protection through atomic fs::copy
+        let backup_result = create_versioned_backup(&old_path, BackupType::Rename, None);
 
         match backup_result {
-            Ok(_) => {
+            Ok(backup_path) => {
                 // Source file exists and backup was created
 
                 // Check if target already exists before rename
@@ -352,25 +317,68 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
 
                 match rename_result {
                     Ok(()) => {
-                        // Rename succeeded - clean up backup and log success
-                        if let Err(e) = fs::remove_file(&backup_path) {
-                            log(
-                                "BACKUP_CLEANUP",
-                                &format!("Failed to remove backup file: {:?}", backup_path),
-                                Some(&e.to_string()),
-                            );
-                        }
+                        // Rename succeeded - update database and clean up backup
+                        match with_db(|conn| {
+                            conn.execute(
+                                "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+                                params![new_name, old_name],
+                            )?;
+                            Ok(())
+                        }) {
+                            Ok(_) => {
+                                // Database updated successfully - clean up backup
+                                if let Err(e) = fs::remove_file(&backup_path) {
+                                    log(
+                                        "BACKUP_CLEANUP",
+                                        &format!("Failed to remove backup file: {:?}", backup_path),
+                                        Some(&e.to_string()),
+                                    );
+                                }
 
-                        // Log successful rename operation
-                        eprintln!(
-                            "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
-                            SystemTime::now()
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap_or_default()
-                                .as_secs(),
-                            old_name,
-                            new_name
-                        );
+                                // Log successful rename operation
+                                eprintln!(
+                                    "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
+                                    SystemTime::now()
+                                        .duration_since(UNIX_EPOCH)
+                                        .unwrap_or_default()
+                                        .as_secs(),
+                                    old_name,
+                                    new_name
+                                );
+                            }
+                            Err(e) => {
+                                eprintln!(
+                                    "Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...",
+                                    old_name, new_name, e
+                                );
+
+                                match recreate_database() {
+                                    Ok(()) => {
+                                        eprintln!("Database successfully rebuilt from files.");
+                                        if let Err(e) = fs::remove_file(&backup_path) {
+                                            log(
+                                                "BACKUP_CLEANUP",
+                                                &format!(
+                                                    "Failed to remove backup file: {:?}",
+                                                    backup_path
+                                                ),
+                                                Some(&e.to_string()),
+                                            );
+                                        }
+                                    }
+                                    Err(rebuild_error) => {
+                                        eprintln!(
+                                            "Database rebuild failed: {}. Note was renamed but may not be searchable.",
+                                            rebuild_error
+                                        );
+                                        return Err(AppError::DatabaseRebuild(format!(
+                                            "Note renamed but database rebuild failed: {}",
+                                            rebuild_error
+                                        )));
+                                    }
+                                }
+                            }
+                        }
                     }
                     Err(e) => {
                         // Rename failed - restore from backup and return error
@@ -397,9 +405,9 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                 }
             }
             Err(e) => {
-                // Source file doesn't exist or is not accessible
-                match e.kind() {
-                    std::io::ErrorKind::NotFound => {
+                // Source file doesn't exist or is not accessible - handle based on error type
+                match &e {
+                    AppError::FileNotFound(_) => {
                         // Handle case where file exists only in database
                         if new_path.exists() {
                             match with_db(|conn| {
@@ -428,68 +436,14 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
                             )));
                         }
                     }
-                    std::io::ErrorKind::PermissionDenied => {
-                        return Err(AppError::FilePermission(format!(
-                            "Cannot access source file '{}': permission denied",
-                            old_name
-                        )));
-                    }
                     _ => {
-                        return Err(AppError::FileRead(format!(
-                            "Cannot access source file '{}': {}",
-                            old_name, e
-                        )));
+                        return Err(e);
                     }
                 }
             }
         }
 
-        match with_db(|conn| {
-            conn.execute(
-                "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                params![new_name, old_name],
-            )?;
-            if let Err(e) = fs::remove_file(&backup_path) {
-                log(
-                    "BACKUP_CLEANUP",
-                    &format!("Failed to remove backup file: {:?}", backup_path),
-                    Some(&e.to_string()),
-                );
-            }
-            Ok(())
-        }) {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                eprintln!(
-                    "Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...",
-                    old_name, new_name, e
-                );
-
-                match recreate_database() {
-                    Ok(()) => {
-                        eprintln!("Database successfully rebuilt from files.");
-                        if let Err(e) = fs::remove_file(&backup_path) {
-                            log(
-                                "BACKUP_CLEANUP",
-                                &format!("Failed to remove backup file: {:?}", backup_path),
-                                Some(&e.to_string()),
-                            );
-                        }
-                        Ok(())
-                    }
-                    Err(rebuild_error) => {
-                        eprintln!(
-                            "Database rebuild failed: {}. Note was renamed but may not be searchable.",
-                            rebuild_error
-                        );
-                        Err(AppError::DatabaseRebuild(format!(
-                            "Note renamed but database rebuild failed: {}",
-                            rebuild_error
-                        )))
-                    }
-                }
-            }
-        }
+        Ok(())
     }();
     result.map_err(|e| e.to_string())
 }
@@ -500,18 +454,11 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
         validate_note_name(note_name)?;
         let note_path = get_config_notes_dir().join(note_name);
 
-        // Create backup path first
-        let backup_path = safe_backup_path(&note_path)?.with_extension("md.bak.deleted");
-
-        // Atomic operation: attempt to copy the file, which will fail if source doesn't exist
-        if let Some(backup_parent) = backup_path.parent() {
-            fs::create_dir_all(backup_parent)?;
-        }
-
-        let copy_result = fs::copy(&note_path, &backup_path);
+        // Create backup using unified API - maintains atomic copy operation for TOCTOU protection
+        let copy_result = create_versioned_backup(&note_path, BackupType::Delete, None);
 
         match copy_result {
-            Ok(_) => {
+            Ok(backup_path) => {
                 // File exists and backup was created, now delete the original
                 match with_programmatic_flag(|| fs::remove_file(&note_path).map_err(AppError::from))
                 {

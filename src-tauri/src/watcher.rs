@@ -7,7 +7,9 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 use crate::{
-    config::get_config_notes_dir, services::note_service::update_note_in_database,
+    config::get_config_notes_dir,
+    database::with_db,
+    services::note_service::{create_versioned_backup, update_note_in_database, BackupType},
     PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -151,6 +153,41 @@ pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::err
                                                     .unwrap_or(0);
 
                                                 if let Ok(content) = std::fs::read_to_string(path) {
+                                                    // Create backup of previous content before updating database
+                                                    // This ensures external edits have the same backup protection as internal edits
+                                                    let _ = with_db(|conn| {
+                                                        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
+                                                        match stmt.query_row(rusqlite::params![filename], |row| {
+                                                            Ok(row.get::<_, String>(0)?)
+                                                        }) {
+                                                            Ok(old_content) => {
+                                                                // Only create backup if content actually changed
+                                                                if old_content != content {
+                                                                    match create_versioned_backup(path, BackupType::ExternalChange, Some(&old_content)) {
+                                                                        Ok(backup_path) => {
+                                                                            eprintln!(
+                                                                                "Created external change backup: {}",
+                                                                                backup_path.display()
+                                                                            );
+                                                                        }
+                                                                        Err(e) => {
+                                                                            eprintln!(
+                                                                                "Failed to create external change backup for {}: {}",
+                                                                                filename, e
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            Err(_) => {
+                                                                // Note doesn't exist in database yet - no backup needed
+                                                            }
+                                                        }
+                                                        Ok(())
+                                                    }).unwrap_or_else(|e| {
+                                                        eprintln!("Failed to check for existing content before external change backup: {}", e);
+                                                    });
+
                                                     if let Err(e) = update_note_in_database(
                                                         &filename, &content, modified,
                                                     ) {
