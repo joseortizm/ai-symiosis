@@ -41,6 +41,7 @@ describe('Keyboard Shortcut Isolation', () => {
           navigate_previous: 'Ctrl+p',
           navigate_next: 'Ctrl+n',
           open_settings: 'Meta+,',
+          version_explorer: 'Ctrl+/',
         },
       } as ConfigStateManager,
       searchManager: {

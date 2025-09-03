@@ -86,6 +86,7 @@ pub struct ShortcutsConfig {
     pub navigate_code_next: String,
     pub copy_current_section: String,
     pub open_settings: String,
+    pub version_explorer: String,
 }
 
 // ============================================================================
@@ -190,6 +191,7 @@ impl Default for ShortcutsConfig {
             navigate_code_next: "Ctrl+l".to_string(),
             copy_current_section: "Ctrl+y".to_string(),
             open_settings: "Meta+,".to_string(),
+            version_explorer: "Ctrl+/".to_string(),
         }
     }
 }
@@ -391,6 +393,7 @@ pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> AppResult<()> {
     validate_basic_shortcut_format(&shortcuts.navigate_previous)?;
     validate_basic_shortcut_format(&shortcuts.navigate_next)?;
     validate_basic_shortcut_format(&shortcuts.open_settings)?;
+    validate_basic_shortcut_format(&shortcuts.version_explorer)?;
 
     Ok(())
 }
@@ -876,6 +879,7 @@ fn extract_shortcuts_config(value: &toml::Value) -> ShortcutsConfig {
         extract_shortcut!(navigate_previous, "navigate_previous");
         extract_shortcut!(navigate_next, "navigate_next");
         extract_shortcut!(open_settings, "open_settings");
+        extract_shortcut!(version_explorer, "version_explorer");
     }
 
     config

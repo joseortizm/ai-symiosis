@@ -50,6 +50,7 @@ export interface ShortcutsConfig {
   navigate_code_next: string
   copy_current_section: string
   open_settings: string
+  version_explorer: string
 }
 
 export interface PreferencesConfig {
@@ -250,6 +251,7 @@ export function createConfigService(): ConfigService {
         navigate_code_next: 'Ctrl+l',
         copy_current_section: 'Ctrl+y',
         open_settings: 'Meta+,',
+        version_explorer: 'Ctrl+/',
       }
     }
   }

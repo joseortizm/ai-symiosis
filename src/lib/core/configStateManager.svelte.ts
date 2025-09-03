@@ -103,6 +103,7 @@ export function createConfigStateManager(): ConfigStateManager {
       navigate_code_next: 'Ctrl+l',
       copy_current_section: 'Ctrl+y',
       open_settings: 'Meta+,',
+      version_explorer: 'Ctrl+/',
     },
     preferences: {
       max_search_results: 100,
