@@ -59,6 +59,10 @@ Shows configured shortcuts with proper theming and overlay styling.
           description: 'Create new note',
         },
         {
+          key: configStateManager.shortcuts.edit_note,
+          description: 'Edit note',
+        },
+        {
           key: configStateManager.shortcuts.rename_note,
           description: 'Rename current note',
         },
@@ -77,27 +81,26 @@ Shows configured shortcuts with proper theming and overlay styling.
       shortcuts: [
         {
           key: configStateManager.shortcuts.vim_up,
-          description: 'Move up in list',
-        },
-        {
-          key: configStateManager.shortcuts.vim_down,
-          description: 'Move down in list',
-        },
-        {
-          key: configStateManager.shortcuts.navigate_previous,
           description: 'Previous note',
         },
         {
-          key: configStateManager.shortcuts.navigate_next,
+          key: configStateManager.shortcuts.vim_down,
           description: 'Next note',
         },
         {
+          key: configStateManager.shortcuts.navigate_previous,
+          description: 'Previous Markdown header or search term',        },
+        {
+          key: configStateManager.shortcuts.navigate_next,
+          description: 'Next Markdown header or search term',
+        },
+        {
           key: configStateManager.shortcuts.scroll_up,
-          description: 'Scroll up in content',
+          description: 'Scroll up content',
         },
         {
           key: configStateManager.shortcuts.scroll_down,
-          description: 'Scroll down in content',
+          description: 'Scroll down content',
         },
       ],
     },
@@ -119,10 +122,18 @@ Shows configured shortcuts with proper theming and overlay styling.
       ],
     },
     {
-      title: 'Help',
+      title: 'Misc',
       shortcuts: [
-        { key: 'Ctrl+?', description: 'Show this help panel' },
         { key: 'Esc', description: 'Close dialogs/panels' },
+        { key: 'Ctrl+?', description: 'Show this help panel' },
+        {
+          key: configStateManager.shortcuts.version_explorer,
+          description: 'Explore versions of note',
+        },
+        {
+          key: configStateManager.shortcuts.recently_deleted,
+          description: 'Recover recently deleted files',
+        },
       ],
     },
   ])
