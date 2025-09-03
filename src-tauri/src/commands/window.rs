@@ -19,7 +19,8 @@ pub fn show_main_window(app: AppHandle) -> Result<(), String> {
                         .title("Symiosis Notes")
                         .inner_size(1200.0, 800.0)
                         .center()
-                        .visible(false);
+                        .visible(false)
+                        .decorations(interface_config.window_decorations);
 
                 if interface_config.always_on_top {
                     window_builder = window_builder.always_on_top(true);

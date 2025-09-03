@@ -59,6 +59,8 @@ pub struct InterfaceConfig {
     pub markdown_render_theme: String,
     pub md_render_code_theme: String,
     pub always_on_top: bool,
+    #[serde(default = "default_window_decorations")]
+    pub window_decorations: bool,
 }
 
 // ============================================================================
@@ -122,6 +124,10 @@ fn default_global_shortcut() -> String {
     "Ctrl+Shift+N".to_string()
 }
 
+fn default_window_decorations() -> bool {
+    true
+}
+
 // ============================================================================
 // DEFAULT IMPLEMENTATIONS
 // ============================================================================
@@ -159,6 +165,7 @@ impl Default for InterfaceConfig {
             markdown_render_theme: "dark_dimmed".to_string(),
             md_render_code_theme: "gruvbox-dark-medium".to_string(),
             always_on_top: false,
+            window_decorations: default_window_decorations(),
         }
     }
 }
@@ -737,6 +744,10 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
 
         if let Some(always_top) = section.get("always_on_top").and_then(|v| v.as_bool()) {
             config.always_on_top = always_top;
+        }
+
+        if let Some(decorations) = section.get("window_decorations").and_then(|v| v.as_bool()) {
+            config.window_decorations = decorations;
         }
     }
 

@@ -96,6 +96,7 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 
 **Window Settings:**
 - `always_on_top` - Keep window always on top (default: `false`) *(requires restart)*
+- `window_decorations` - Show window title bar and borders (default: `true`) *(requires restart)* **[Linux only - not yet implemented on macOS/Windows]**
 
 #### Editor Configuration (`[editor]`)
 
@@ -147,6 +148,7 @@ editor_font_size = 14
 markdown_render_theme = "dark_dimmed"
 md_render_code_theme = "gruvbox-dark-medium"
 always_on_top = false
+window_decorations = true
 
 [editor]
 mode = "basic"
