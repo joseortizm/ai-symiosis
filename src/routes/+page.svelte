@@ -18,6 +18,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   import RecentlyDeleted from '../lib/ui/RecentlyDeleted.svelte'
   import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
   import HintsPanel from '../lib/ui/HintsPanel.svelte'
+  import ErrorNotification from '../lib/ui/ErrorNotification.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
   import { configService } from '../lib/services/configService.svelte'
 
@@ -139,3 +140,4 @@ Composes all UI components and provides keyboard event handling for the entire a
 </AppLayout>
 
 <HintsPanel />
+<ErrorNotification />

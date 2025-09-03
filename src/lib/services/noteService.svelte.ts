@@ -5,6 +5,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core'
+import { errorNotification } from '../utils/errorNotification'
 
 // Service factory function
 export function createNoteService() {
@@ -38,6 +39,7 @@ export function createNoteService() {
       const error = `Failed to create note: ${e}`
       state.error = error
       console.error('Failed to create note:', e)
+      errorNotification.trigger(`Create failed: ${e}`)
       return { success: false, error }
     } finally {
       state.isLoading = false
@@ -60,6 +62,7 @@ export function createNoteService() {
       const error = `Failed to delete note: ${e}`
       state.error = error
       console.error('Failed to delete note:', e)
+      errorNotification.trigger(`Delete failed: ${e}`)
       return { success: false, error }
     } finally {
       state.isLoading = false
@@ -85,6 +88,7 @@ export function createNoteService() {
       const error = `Failed to rename note: ${e}`
       state.error = error
       console.error('Failed to rename note:', e)
+      errorNotification.trigger(`Rename failed: ${e}`)
       return { success: false, error }
     } finally {
       state.isLoading = false
