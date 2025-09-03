@@ -17,7 +17,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   import VersionExplorer from '../lib/ui/VersionExplorer.svelte'
   import RecentlyDeleted from '../lib/ui/RecentlyDeleted.svelte'
   import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
-  import DebugPanel from '../lib/ui/DebugPanel.svelte'
+  import HintsPanel from '../lib/ui/HintsPanel.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
   import { configService } from '../lib/services/configService.svelte'
 
@@ -141,4 +141,4 @@ Composes all UI components and provides keyboard event handling for the entire a
   </div>
 </AppLayout>
 
-<DebugPanel />
+<HintsPanel />
