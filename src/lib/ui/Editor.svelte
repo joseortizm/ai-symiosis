@@ -42,6 +42,8 @@ Focused component handling CodeMirror initialization and content editing.
     onExit?: (() => void) | null | undefined
     onRequestExit?: (() => void) | null | undefined
     onExitHeaderCapture?: ((headerText: string) => void) | null
+    onExitCursorCapture?: ((line: number, column: number) => void) | null
+    initialCursor?: [number, number] | null
     isDirty?: boolean
   }
 
@@ -54,6 +56,8 @@ Focused component handling CodeMirror initialization and content editing.
     onExit = null,
     onRequestExit = null,
     onExitHeaderCapture = null,
+    onExitCursorCapture = null,
+    initialCursor = null,
     isDirty = $bindable(false),
   }: Props = $props()
 
@@ -64,6 +68,7 @@ Focused component handling CodeMirror initialization and content editing.
   let editorView: EditorView | null = null
   let initialValue = $state(value)
   let lastPropsValue = $state(value)
+  let exitCaptured = $state(false)
 
   // Reactive config values
   const keyBindingMode = $derived(configManager.editor.mode || 'basic')
@@ -439,9 +444,28 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function captureExitPosition(): void {
-    if (onExitHeaderCapture && editorView) {
-      const headerText = findNearestHeaderAtCursor()
-      onExitHeaderCapture(headerText)
+    if (editorView && !exitCaptured) {
+      exitCaptured = true
+      if (onExitHeaderCapture) {
+        try {
+          const headerText = findNearestHeaderAtCursor()
+          onExitHeaderCapture(headerText)
+        } catch (error) {
+          console.warn('Error in onExitHeaderCapture callback:', error)
+        }
+      }
+
+      if (onExitCursorCapture) {
+        try {
+          const pos = editorView.state.selection.main.head
+          const line = editorView.state.doc.lineAt(pos)
+          const lineNumber = line.number
+          const column = pos - line.from + 1
+          onExitCursorCapture(lineNumber, column)
+        } catch (error) {
+          console.warn('Error in onExitCursorCapture callback:', error)
+        }
+      }
     }
   }
 
@@ -478,6 +502,23 @@ Focused component handling CodeMirror initialization and content editing.
     } else {
       setTimeout(() => {
         if (editorView) {
+          if (initialCursor) {
+            try {
+              const [line, column] = initialCursor
+              const doc = editorView.state.doc
+              const targetLine = Math.min(line, doc.lines)
+              const lineObj = doc.line(targetLine)
+              const targetColumn = Math.min(column - 1, lineObj.length)
+              const pos = lineObj.from + targetColumn
+
+              editorView.dispatch({
+                selection: { anchor: pos, head: pos },
+                effects: EditorView.scrollIntoView(pos, { y: 'center' }),
+              })
+            } catch (error) {
+              console.warn('Failed to set initial cursor position:', error)
+            }
+          }
           editorView.focus()
         }
       }, 100)
@@ -519,6 +560,9 @@ Focused component handling CodeMirror initialization and content editing.
     init()
 
     return () => {
+      // Capture cursor position before destroying (if not already captured)
+      captureExitPosition()
+
       if (editorView) {
         editorView.destroy()
         editorView = null

@@ -19,6 +19,7 @@ Uses Editor component for syntax highlighting of configuration files.
   const actions = getContext<AppActions>('actions')
 
   let dialogElement = $state<HTMLElement | undefined>(undefined)
+  let savedCursorPosition = $state<[number, number] | null>(null)
 
   async function handleSave(): Promise<void> {
     await actions.saveConfigAndRefresh()
@@ -76,6 +77,9 @@ Uses Editor component for syntax highlighting of configuration files.
           filename="config.toml"
           onSave={handleSave}
           onContentChange={(newValue) => (configService.content = newValue)}
+          onExitCursorCapture={(line, column) =>
+            (savedCursorPosition = [line, column])}
+          initialCursor={savedCursorPosition}
         />
       </div>
       <div class="keyboard-hint">
