@@ -80,6 +80,11 @@ describe('keyboard actions', () => {
         openFolder: vi.fn(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
+      versionExplorerManager: {
+        openVersionExplorer: vi.fn(),
+        isVisible: false,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       appCoordinator: {
         loadNoteContent: vi.fn(),
         exitEditMode: vi.fn(),

@@ -106,8 +106,8 @@ Uses CodeEditor component for syntax highlighting of configuration files.
   }
 
   .dialog {
-    background-color: #3c3836;
-    border: 1px solid #504945;
+    background-color: var(--theme-bg-secondary);
+    border: 1px solid var(--theme-border);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     overflow: hidden;
@@ -116,7 +116,7 @@ Uses CodeEditor component for syntax highlighting of configuration files.
 
   .dialog h3 {
     margin: 0 0 8px 0;
-    color: #ebdbb2;
+    color: var(--theme-text-primary);
     font-size: 1.1em;
     font-weight: 600;
   }
@@ -131,10 +131,10 @@ Uses CodeEditor component for syntax highlighting of configuration files.
   .settings-editor-container {
     width: 100%;
     margin: 8px 0;
-    border: 1px solid #504945;
+    border: 1px solid var(--theme-border);
     border-radius: 6px;
     overflow: hidden;
-    background-color: #282828;
+    background-color: var(--theme-bg-primary);
     flex: 1;
     min-height: 0;
   }
@@ -149,25 +149,25 @@ Uses CodeEditor component for syntax highlighting of configuration files.
   .keyboard-hint {
     margin: 6px 0;
     padding: 6px 8px;
-    background-color: #32302f;
+    background-color: var(--theme-bg-primary);
     border-radius: 4px;
-    border-left: 2px solid #83a598;
+    border-left: 2px solid var(--theme-accent);
   }
 
   .keyboard-hint p {
     margin: 2px 0;
     font-size: 11px;
-    color: #a89984;
+    color: var(--theme-text-secondary);
   }
 
   kbd {
-    background-color: #504945;
-    color: #ebdbb2;
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-primary);
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 12px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    border: 1px solid #665c54;
+    border: 1px solid var(--theme-border);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
@@ -181,26 +181,26 @@ Uses CodeEditor component for syntax highlighting of configuration files.
   }
 
   .btn-cancel {
-    background-color: #504945;
-    color: #ebdbb2;
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-primary);
   }
 
   .btn-cancel:hover {
-    background-color: #665c54;
+    background-color: var(--theme-border);
   }
 
   .btn-primary {
-    background-color: #b8bb26;
-    color: #282828;
+    background-color: var(--theme-success);
+    color: var(--theme-bg-primary);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: #98971a;
+    background-color: var(--theme-accent-hover);
   }
 
   .btn-primary:disabled {
-    background-color: #504945;
-    color: #7c6f64;
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-muted);
     cursor: not-allowed;
   }
 </style>
