@@ -24,6 +24,7 @@ interface NavigationDeps {
   }
   searchManager: {
     readonly query: string
+    readonly searchInput: string
     clearSearch(): void
   }
 }
@@ -502,7 +503,9 @@ export function createContentNavigationManager(
 
     // Priority 3: Clear highlights if they exist and query exists
     const query = deps.searchManager.query
+    const searchInput = deps.searchManager.searchInput
     const hasQuery = query.trim() !== ''
+    const hasSearchInput = searchInput.trim() !== ''
 
     if (hasQuery && state.highlightVisibility === 'visible') {
       clearHighlights()
@@ -516,7 +519,14 @@ export function createContentNavigationManager(
       return 'search_cleared'
     }
 
-    // Priority 5: Focus search (default case)
+    // Priority 5: Clear search if searchInput has less than 3 characters (typed but not committed)
+    if (hasSearchInput && searchInput.length < 3) {
+      deps.searchManager.clearSearch()
+      showHighlights() // Reset highlights for next search
+      return 'search_cleared'
+    }
+
+    // Priority 6: Focus search (default case)
     return 'focus_search'
   }
 

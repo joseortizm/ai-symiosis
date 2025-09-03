@@ -14,6 +14,7 @@ describe('ContentNavigationManager', () => {
     }
     searchManager: {
       query: string
+      searchInput: string
       clearSearch(): void
     }
   }
@@ -69,6 +70,7 @@ describe('ContentNavigationManager', () => {
       },
       searchManager: {
         query: '',
+        searchInput: '',
         clearSearch: vi.fn(),
       },
     }
@@ -247,6 +249,49 @@ describe('ContentNavigationManager', () => {
 
       navigationManager.showHighlights()
       expect(navigationManager.hideHighlights).toBe(false)
+    })
+  })
+
+  describe('handleEscape functionality', () => {
+    it('should clear search when search input has less than 3 characters but query is empty', () => {
+      mockDeps.searchManager.searchInput = 'ab'
+      mockDeps.searchManager.query = ''
+
+      const result = navigationManager.handleEscape()
+
+      expect(result).toBe('search_cleared')
+      expect(mockDeps.searchManager.clearSearch).toHaveBeenCalled()
+    })
+
+    it('should focus search when no search input and no query', () => {
+      mockDeps.searchManager.searchInput = ''
+      mockDeps.searchManager.query = ''
+
+      const result = navigationManager.handleEscape()
+
+      expect(result).toBe('focus_search')
+      expect(mockDeps.searchManager.clearSearch).not.toHaveBeenCalled()
+    })
+
+    it('should focus search when search input is 3 or more characters (committed query)', () => {
+      mockDeps.searchManager.searchInput = 'abcd'
+      mockDeps.searchManager.query = 'abcd'
+
+      const result = navigationManager.handleEscape()
+
+      expect(result).toBe('highlights_cleared')
+      expect(mockDeps.searchManager.clearSearch).not.toHaveBeenCalled()
+    })
+
+    it('should not clear search when searchInput is 3 or more characters but query is empty (edge case)', () => {
+      // This shouldn't happen in normal flow, but test the edge case
+      mockDeps.searchManager.searchInput = 'abcd'
+      mockDeps.searchManager.query = ''
+
+      const result = navigationManager.handleEscape()
+
+      expect(result).toBe('focus_search')
+      expect(mockDeps.searchManager.clearSearch).not.toHaveBeenCalled()
     })
   })
 })
