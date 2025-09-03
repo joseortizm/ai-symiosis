@@ -145,10 +145,11 @@ Shows configured shortcuts with proper theming and overlay styling.
       onclick={(e) => e.stopPropagation()}
     >
       <div class="hints-header">
-        <h2>⌨️ Keyboard Shortcuts</h2>
-        <button class="close-button" onclick={() => (isVisible = false)}
-          >×</button
-        >
+        <h2>
+          ⌨️ Keyboard Shortcuts
+          <span class="note">(basic keys like arrows etc. also work)</span>
+        </h2>
+        <button class="close-button" onclick={() => (isVisible = false)}>×</button>
       </div>
 
       <div class="hints-content">
@@ -223,6 +224,14 @@ Shows configured shortcuts with proper theming and overlay styling.
     color: var(--theme-text-primary);
     font-size: 1.2em;
     font-weight: 600;
+  }
+
+  .hints-header .note {
+    font-weight: 400;
+    font-size: 0.8em;
+    color: var(--theme-text-secondary);
+    margin-left: 0.5em;
+    font-style: italic;
   }
 
   .close-button {
