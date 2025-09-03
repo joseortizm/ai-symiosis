@@ -86,6 +86,11 @@ describe('keyboard actions', () => {
         isVisible: false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
+      recentlyDeletedManager: {
+        openDialog: vi.fn(),
+        isVisible: false,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       appCoordinator: {
         loadNoteContent: vi.fn(),
         exitEditMode: vi.fn(),

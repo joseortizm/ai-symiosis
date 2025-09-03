@@ -15,6 +15,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   import DeleteDialog from '../lib/ui/DeleteDialog.svelte'
   import SettingsPane from '../lib/ui/SettingsPane.svelte'
   import VersionExplorer from '../lib/ui/VersionExplorer.svelte'
+  import RecentlyDeleted from '../lib/ui/RecentlyDeleted.svelte'
   import ProgressOverlay from '../lib/ui/ProgressOverlay.svelte'
   import DebugPanel from '../lib/ui/DebugPanel.svelte'
   import { createAppCoordinator } from '../lib/app/appCoordinator.svelte'
@@ -32,8 +33,12 @@ Composes all UI components and provides keyboard event handling for the entire a
   setContext('actions', appCoordinator.actions)
 
   // Access properties directly since this is the root component
-  const { dialogManager, progressManager, versionExplorerManager } =
-    appCoordinator.managers
+  const {
+    dialogManager,
+    progressManager,
+    versionExplorerManager,
+    recentlyDeletedManager,
+  } = appCoordinator.managers
   const appState = appCoordinator.state
   const actions = appCoordinator.actions
 
@@ -69,6 +74,17 @@ Composes all UI components and provides keyboard event handling for the entire a
     <VersionExplorer
       show={versionExplorerManager.isVisible}
       onClose={() => versionExplorerManager.closeVersionExplorer()}
+    />
+
+    <RecentlyDeleted
+      show={recentlyDeletedManager.isVisible}
+      files={recentlyDeletedManager.files}
+      selectedIndex={recentlyDeletedManager.selectedIndex}
+      onClose={() => recentlyDeletedManager.closeDialog()}
+      onRecover={(filename) => recentlyDeletedManager.recoverFile(filename)}
+      onSelectFile={(index) => recentlyDeletedManager.selectFile(index)}
+      onNavigateUp={() => recentlyDeletedManager.navigateUp()}
+      onNavigateDown={() => recentlyDeletedManager.navigateDown()}
     />
 
     <DeleteDialog

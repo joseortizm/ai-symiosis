@@ -104,6 +104,7 @@ export function createConfigStateManager(): ConfigStateManager {
       copy_current_section: 'Ctrl+y',
       open_settings: 'Meta+,',
       version_explorer: 'Ctrl+/',
+      recently_deleted: 'Ctrl+.',
     },
     preferences: {
       max_search_results: 100,

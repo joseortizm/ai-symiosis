@@ -15,6 +15,7 @@ import { createSearchManager } from '../core/searchManager.svelte'
 import { createEditorManager } from '../core/editorManager.svelte'
 import { createFocusManager } from '../core/focusManager.svelte'
 import { createVersionExplorerManager } from '../core/versionExplorerManager.svelte'
+import { createRecentlyDeletedManager } from '../core/recentlyDeletedManager.svelte'
 import { noteService } from '../services/noteService.svelte'
 import { configService } from '../services/configService.svelte'
 import { versionService } from '../services/versionService.svelte'
@@ -76,6 +77,9 @@ export interface AppManagers {
   >
   versionExplorerManager: ReturnType<
     typeof import('../core/versionExplorerManager.svelte').createVersionExplorerManager
+  >
+  recentlyDeletedManager: ReturnType<
+    typeof import('../core/recentlyDeletedManager.svelte').createRecentlyDeletedManager
   >
 }
 
@@ -261,6 +265,11 @@ export function createAppCoordinator(
     await refreshUI()
   }
 
+  const recentlyDeletedManager = createRecentlyDeletedManager({
+    focusSearch: () => focusManager.focusSearch(),
+    refreshCacheAndUI,
+  })
+
   async function refreshUI(): Promise<void> {
     // Delegate to search manager to refresh and update results
     await searchManager.refreshSearch('')
@@ -293,6 +302,7 @@ export function createAppCoordinator(
     contentManager,
     dialogManager,
     versionExplorerManager,
+    recentlyDeletedManager,
     noteActions,
     settingsActions,
     noteService,
@@ -349,7 +359,8 @@ export function createAppCoordinator(
           dialogManager.showRenameDialog ||
           dialogManager.showDeleteDialog ||
           dialogManager.showUnsavedChangesDialog ||
-          versionExplorerManager.isVisible,
+          versionExplorerManager.isVisible ||
+          recentlyDeletedManager.isVisible,
       }))
     },
 
@@ -364,6 +375,7 @@ export function createAppCoordinator(
         contentNavigationManager,
         progressManager,
         versionExplorerManager,
+        recentlyDeletedManager,
       }
     },
 

@@ -15,6 +15,13 @@ export interface NoteVersion {
   formatted_time: string
 }
 
+export interface DeletedFile {
+  filename: string
+  backup_filename: string
+  deleted_at: string
+  timestamp: number
+}
+
 // Service factory function
 export function createVersionService() {
   const state = $state({
@@ -96,12 +103,70 @@ export function createVersionService() {
     }
   }
 
+  // Deleted files operations
+  async function getDeletedFiles(): Promise<{
+    success: boolean
+    files?: DeletedFile[]
+    error?: string
+  }> {
+    state.isLoading = true
+    state.error = null
+    state.lastOperation = 'list'
+
+    try {
+      const files = await invoke<DeletedFile[]>('get_deleted_files')
+      return { success: true, files: files || [] }
+    } catch (e) {
+      const error = `Failed to load deleted files: ${e}`
+      state.error = error
+      console.error('Failed to load deleted files:', e)
+      return { success: false, error }
+    } finally {
+      state.isLoading = false
+    }
+  }
+
+  async function recoverDeletedFile(
+    originalFilename: string,
+    backupFilename: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!originalFilename.trim() || !backupFilename.trim()) {
+      return {
+        success: false,
+        error: 'Original filename and backup filename are required',
+      }
+    }
+
+    state.isLoading = true
+    state.error = null
+    state.lastOperation = 'recover'
+
+    try {
+      await invoke<void>('recover_deleted_file', {
+        originalFilename,
+        backupFilename,
+      })
+      return { success: true }
+    } catch (e) {
+      const error = `Failed to recover deleted file: ${e}`
+      state.error = error
+      console.error('Failed to recover deleted file:', e)
+      return { success: false, error }
+    } finally {
+      state.isLoading = false
+    }
+  }
+
   // Public API
   return {
     // Version operations
     getVersions,
     getVersionContent,
     recoverVersion,
+
+    // Deleted files operations
+    getDeletedFiles,
+    recoverDeletedFile,
 
     // Utility functions
     clearError,

@@ -298,6 +298,8 @@ pub fn run() {
             get_note_versions,
             get_version_content,
             recover_note_version,
+            get_deleted_files,
+            recover_deleted_file,
             show_main_window,
             hide_main_window,
             get_config_content,

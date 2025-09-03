@@ -27,6 +27,9 @@ export interface KeyboardActionDeps {
   versionExplorerManager: ReturnType<
     typeof import('../../core/versionExplorerManager.svelte').createVersionExplorerManager
   >
+  recentlyDeletedManager: ReturnType<
+    typeof import('../../core/recentlyDeletedManager.svelte').createRecentlyDeletedManager
+  >
   noteActions: ReturnType<typeof import('./note.svelte').createNoteActions>
   settingsActions: ReturnType<
     typeof import('./settings.svelte').createSettingsActions
@@ -222,6 +225,9 @@ export function createKeyboardActions(
           )
         }
       },
+      openRecentlyDeleted: async ({ actions }: ActionContext) => {
+        await actions.recentlyDeletedManager.openDialog()
+      },
     },
   }
 
@@ -251,6 +257,7 @@ export function createKeyboardActions(
         Escape: 'search.handleEscape',
         [shortcuts.open_settings]: 'settings.openSettings',
         [shortcuts.version_explorer]: 'settings.openVersionExplorer',
+        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
       },
 
       editMode: {
@@ -258,6 +265,7 @@ export function createKeyboardActions(
         [shortcuts.save_and_exit]: 'editing.saveAndExit',
         [shortcuts.open_settings]: 'settings.openSettings',
         [shortcuts.version_explorer]: 'settings.openVersionExplorer',
+        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
       },
 
       noteContent: {
@@ -268,6 +276,7 @@ export function createKeyboardActions(
         [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
         [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
         [shortcuts.version_explorer]: 'settings.openVersionExplorer',
+        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
       },
 
       default: {
@@ -278,6 +287,7 @@ export function createKeyboardActions(
         [shortcuts.delete_note]: 'notes.deleteNote',
         Escape: 'navigation.focusSearch',
         [shortcuts.open_settings]: 'settings.openSettings',
+        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
       },
     }
   }

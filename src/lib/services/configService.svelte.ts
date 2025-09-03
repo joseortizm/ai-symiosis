@@ -51,6 +51,7 @@ export interface ShortcutsConfig {
   copy_current_section: string
   open_settings: string
   version_explorer: string
+  recently_deleted: string
 }
 
 export interface PreferencesConfig {
@@ -252,6 +253,7 @@ export function createConfigService(): ConfigService {
         copy_current_section: 'Ctrl+y',
         open_settings: 'Meta+,',
         version_explorer: 'Ctrl+/',
+        recently_deleted: 'Ctrl+.',
       }
     }
   }

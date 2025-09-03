@@ -739,3 +739,97 @@ fn format_timestamp(timestamp: u64) -> String {
         _ => format!("{}w ago", diff / 604800),
     }
 }
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct DeletedFile {
+    pub filename: String,
+    pub backup_filename: String,
+    pub deleted_at: String,
+    pub timestamp: u64,
+}
+
+#[tauri::command]
+pub fn get_deleted_files() -> Result<Vec<DeletedFile>, String> {
+    let result = || -> AppResult<Vec<DeletedFile>> {
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        if !backup_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut deleted_files = Vec::new();
+
+        if let Ok(entries) = fs::read_dir(&backup_dir) {
+            for entry in entries.flatten() {
+                let filename = entry.file_name().to_string_lossy().to_string();
+
+                // Parse backup filename format: {base_name}.delete_backup.{timestamp}.md
+                let parts: Vec<&str> = filename.splitn(4, '.').collect();
+                if parts.len() == 4 && parts[1] == "delete_backup" && parts[3] == "md" {
+                    if let Ok(timestamp) = parts[2].parse::<u64>() {
+                        let original_filename = format!("{}.md", parts[0]);
+                        let formatted_time = format_timestamp(timestamp);
+
+                        deleted_files.push(DeletedFile {
+                            filename: original_filename,
+                            backup_filename: filename,
+                            deleted_at: formatted_time,
+                            timestamp,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Sort by timestamp (newest first)
+        deleted_files.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+        Ok(deleted_files)
+    }();
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn recover_deleted_file(original_filename: &str, backup_filename: &str) -> Result<(), String> {
+    let result = || -> AppResult<()> {
+        validate_note_name(original_filename)?;
+
+        let note_path = get_config_notes_dir().join(original_filename);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let backup_path = backup_dir.join(backup_filename);
+
+        if !backup_path.exists() {
+            return Err(AppError::FileNotFound(format!(
+                "Deleted file backup not found: {}",
+                backup_filename
+            )));
+        }
+
+        // Check if target file already exists
+        if note_path.exists() {
+            return Err(AppError::FileWrite(format!(
+                "Cannot recover '{}': file already exists",
+                original_filename
+            )));
+        }
+
+        // Read the backup content
+        let backup_content = fs::read_to_string(&backup_path)?;
+
+        // Write to the original location
+        with_programmatic_flag(|| safe_write_note(&note_path, &backup_content))?;
+
+        let modified = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        // Update database with recovered content
+        update_note_in_database(original_filename, &backup_content, modified)?;
+
+        // Remove the backup file after successful recovery
+        fs::remove_file(&backup_path)?;
+
+        Ok(())
+    }();
+    result.map_err(|e| e.to_string())
+}
