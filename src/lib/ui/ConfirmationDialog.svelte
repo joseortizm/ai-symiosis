@@ -104,86 +104,73 @@ Used for exit-edit-with-unsaved-changes confirmations.
   }
 
   .dialog {
-    background-color: #32302f;
-    border: 1px solid #504945;
-    border-radius: 6px;
-    padding: 24px;
+    background-color: var(--theme-bg-secondary);
+    border: 1px solid var(--theme-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    padding: 12px;
     min-width: 400px;
     max-width: 500px;
-    color: #fbf1c7;
+    color: var(--theme-text-primary);
     outline: none;
   }
 
   .dialog h3 {
-    margin: 0 0 16px 0;
-    color: #fbf1c7;
-    font-size: 18px;
+    margin: 0 0 12px 0;
+    color: var(--theme-text-primary);
+    font-size: 1.3em;
     font-weight: 600;
   }
 
   .dialog-message {
-    margin: 0 0 24px 0;
-    color: #ebdbb2;
+    margin: 0 0 12px 0;
+    color: var(--theme-text-secondary);
     line-height: 1.5;
   }
 
   .dialog-buttons {
     display: flex;
-    gap: 12px;
-    justify-content: center;
+    gap: 6px;
+    justify-content: flex-end;
+    margin-top: 8px;
   }
 
   .cancel-btn,
   .confirm-btn {
-    padding: 8px 16px;
+    padding: 6px 12px;
+    border: none;
     border-radius: 4px;
+    font-size: 12px;
     cursor: pointer;
-    font-family: inherit;
-    font-size: 14px;
-    min-width: 140px;
-    text-align: center;
-  }
-
-  .cancel-btn {
-    border: 1px solid #665c54;
-    background-color: #3c3836;
-    color: #fbf1c7;
-  }
-
-  .cancel-btn:hover {
-    background-color: #504945;
-    border-color: #7c6f64;
-  }
-
-  .cancel-btn:focus {
-    outline: 2px solid #83a598;
-    outline-offset: 2px;
-  }
-
-  .confirm-btn {
-    border: 1px solid #83a598;
-    background-color: #458588;
-    color: #fbf1c7;
     font-weight: 500;
   }
 
+  .cancel-btn {
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-primary);
+  }
+
+  .cancel-btn:hover {
+    background-color: var(--theme-border);
+  }
+
+  .confirm-btn {
+    background-color: var(--theme-success);
+    color: var(--theme-bg-primary);
+  }
+
   .confirm-btn:hover {
-    background-color: #689d6a;
-    border-color: #8ec07c;
+    background-color: var(--theme-accent-hover);
   }
 
   .confirm-btn.danger {
-    background-color: #cc241d;
-    border-color: #fb4934;
+    background-color: var(--theme-warning);
+    color: var(--theme-bg-primary);
   }
 
   .confirm-btn.danger:hover {
-    background-color: #fb4934;
-    border-color: #fe8019;
-  }
-
-  .confirm-btn:focus {
-    outline: 2px solid #83a598;
-    outline-offset: 2px;
+    background-color: var(--theme-warning);
+    filter: brightness(1.1);
   }
 </style>

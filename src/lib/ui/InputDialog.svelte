@@ -135,33 +135,35 @@ Used for note creation and renaming operations throughout the application.
   }
 
   .dialog {
-    background-color: #32302f;
-    border: 1px solid #504945;
-    border-radius: 6px;
-    padding: 24px;
+    background-color: var(--theme-bg-secondary);
+    border: 1px solid var(--theme-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    padding: 12px;
     min-width: 400px;
     max-width: 500px;
-    color: #fbf1c7;
+    color: var(--theme-text-primary);
     outline: none;
   }
 
   .dialog h3 {
-    margin: 0 0 16px 0;
-    color: #fbf1c7;
-    font-size: 18px;
+    margin: 0 0 12px 0;
+    color: var(--theme-text-primary);
+    font-size: 1.3em;
     font-weight: 600;
   }
 
   .dialog-input {
     width: 100%;
     padding: 12px;
-    border: 1px solid #504945;
+    border: 1px solid var(--theme-border);
     border-radius: 6px;
-    background-color: #282828;
-    color: #ebdbb2;
+    background-color: var(--theme-bg-primary);
+    color: var(--theme-text-primary);
     font-family: inherit;
     font-size: 14px;
-    margin: 16px 0 24px 0;
+    margin: 8px 0;
     box-sizing: border-box;
     outline: none;
     transition:
@@ -171,66 +173,52 @@ Used for note creation and renaming operations throughout the application.
 
   .dialog-input:focus {
     outline: none;
-    border-color: #83a598;
+    border-color: var(--theme-accent);
     box-shadow: 0 0 0 2px rgba(131, 165, 152, 0.2);
   }
 
   .dialog-input::placeholder {
-    color: #928374;
+    color: var(--theme-text-muted);
   }
 
   .dialog-buttons {
     display: flex;
-    gap: 12px;
-    justify-content: center;
+    gap: 6px;
+    justify-content: flex-end;
+    margin-top: 8px;
   }
 
   .cancel-btn,
   .confirm-btn {
-    padding: 8px 16px;
+    padding: 6px 12px;
+    border: none;
     border-radius: 4px;
+    font-size: 12px;
     cursor: pointer;
-    font-family: inherit;
-    font-size: 14px;
-    min-width: 140px;
-    text-align: center;
-  }
-
-  .cancel-btn {
-    border: 1px solid #665c54;
-    background-color: #3c3836;
-    color: #fbf1c7;
-  }
-
-  .cancel-btn:hover {
-    background-color: #504945;
-    border-color: #7c6f64;
-  }
-
-  .cancel-btn:focus {
-    outline: 2px solid #83a598;
-    outline-offset: 2px;
-  }
-
-  .confirm-btn {
-    border: 1px solid #83a598;
-    background-color: #458588;
-    color: #fbf1c7;
     font-weight: 500;
   }
 
+  .cancel-btn {
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-primary);
+  }
+
+  .cancel-btn:hover {
+    background-color: var(--theme-border);
+  }
+
+  .confirm-btn {
+    background-color: var(--theme-success);
+    color: var(--theme-bg-primary);
+  }
+
   .confirm-btn:hover:not(:disabled) {
-    background-color: #689d6a;
-    border-color: #8ec07c;
+    background-color: var(--theme-accent-hover);
   }
 
   .confirm-btn:disabled {
-    opacity: 0.5;
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-muted);
     cursor: not-allowed;
-  }
-
-  .confirm-btn:focus {
-    outline: 2px solid #83a598;
-    outline-offset: 2px;
   }
 </style>

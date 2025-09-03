@@ -106,111 +106,100 @@ Requires multiple key presses to confirm destructive actions.
   }
 
   .dialog {
-    background-color: #32302f;
-    border: 1px solid #504945;
-    border-radius: 6px;
-    padding: 24px;
+    background-color: var(--theme-bg-secondary);
+    border: 1px solid var(--theme-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    padding: 12px;
     min-width: 400px;
     max-width: 500px;
-    color: #fbf1c7;
+    color: var(--theme-text-primary);
     outline: none;
   }
 
   .dialog h3 {
-    margin: 0 0 16px 0;
-    color: #fbf1c7;
-    font-size: 18px;
+    margin: 0 0 12px 0;
+    color: var(--theme-text-primary);
+    font-size: 1.3em;
     font-weight: 600;
   }
 
   .dialog p {
     margin: 0 0 12px 0;
-    color: #d5c4a1;
+    color: var(--theme-text-secondary);
     line-height: 1.5;
   }
 
   .warning {
-    color: #fb4934 !important;
+    color: var(--theme-warning) !important;
     font-size: 14px;
     font-style: italic;
   }
 
   .keyboard-hint {
-    margin: 16px 0;
-    padding: 12px;
-    background-color: #32302f;
+    margin: 6px 0;
+    padding: 6px 8px;
+    background-color: var(--theme-bg-primary);
     border-radius: 4px;
-    border-left: 3px solid #83a598;
+    border-left: 2px solid var(--theme-accent);
   }
 
   .keyboard-hint p {
-    margin: 4px 0;
-    color: #ebdbb2;
-    font-size: 14px;
+    margin: 2px 0;
+    font-size: 11px;
+    color: var(--theme-text-secondary);
   }
 
   .delete-progress {
-    color: #fe8019 !important;
+    color: var(--theme-highlight) !important;
     font-weight: 500;
   }
 
   kbd {
-    background-color: #504945;
-    color: #ebdbb2;
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-primary);
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 12px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    border: 1px solid #665c54;
+    border: 1px solid var(--theme-border);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    margin: 0 2px;
   }
 
   .dialog-buttons {
     display: flex;
-    gap: 12px;
+    gap: 6px;
     justify-content: flex-end;
-    margin-top: 24px;
+    margin-top: 8px;
   }
 
   .dialog-buttons button {
-    padding: 8px 16px;
-    border-radius: 4px;
+    padding: 6px 12px;
     border: none;
-    font-size: 14px;
-    font-weight: 500;
+    border-radius: 4px;
+    font-size: 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-weight: 500;
   }
 
   .btn-cancel {
-    background-color: #504945;
-    color: #ebdbb2;
-    border: 1px solid #665c54;
+    background-color: var(--theme-bg-tertiary);
+    color: var(--theme-text-primary);
   }
 
   .btn-cancel:hover {
-    background-color: #665c54;
-    border-color: #7c6f64;
-  }
-
-  .btn-cancel:focus {
-    outline: 2px solid #83a598;
-    outline-offset: 2px;
+    background-color: var(--theme-border);
   }
 
   .btn-delete {
-    background-color: #cc241d;
-    color: #fbf1c7;
-    border: 1px solid #fb4934;
+    background-color: var(--theme-warning);
+    color: var(--theme-bg-primary);
   }
 
   .btn-delete:hover {
-    background-color: #fb4934;
-    border-color: #fe8019;
-  }
-
-  .btn-delete:focus {
-    outline: 2px solid #83a598;
-    outline-offset: 2px;
+    background-color: var(--theme-warning);
+    filter: brightness(1.1);
   }
 </style>
