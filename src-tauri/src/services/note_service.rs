@@ -83,15 +83,31 @@ pub enum BackupType {
 }
 
 impl BackupType {
-    fn extension(&self) -> &'static str {
+    fn suffix(&self) -> &'static str {
         match self {
-            BackupType::Rollback => "bak",
-            BackupType::SaveFailure => "bak.save_failure",
-            BackupType::Rename => "bak.rename",
-            BackupType::Delete => "bak.deleted",
-            BackupType::ExternalChange => "bak.external",
+            BackupType::Rollback => "rollback",
+            BackupType::SaveFailure => "save_failure",
+            BackupType::Rename => "rename_backup",
+            BackupType::Delete => "delete_backup",
+            BackupType::ExternalChange => "external_change",
         }
     }
+}
+
+fn generate_backup_filename(
+    note_filename: &str,
+    backup_type: &BackupType,
+    timestamp: u64,
+) -> String {
+    // Extract the base name without extension
+    let base_name = if let Some(stem) = std::path::Path::new(note_filename).file_stem() {
+        stem.to_string_lossy()
+    } else {
+        std::borrow::Cow::from(note_filename)
+    };
+
+    // Format: {base_name}.{suffix}.{timestamp}.md
+    format!("{}.{}.{}.md", base_name, backup_type.suffix(), timestamp)
 }
 
 pub fn create_versioned_backup(
@@ -104,34 +120,23 @@ pub fn create_versioned_backup(
         .unwrap_or_default()
         .as_secs();
 
+    let note_filename = note_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| AppError::InvalidPath("Invalid filename".to_string()))?;
+
+    let backup_filename = generate_backup_filename(note_filename, &backup_type, timestamp);
+
     let backup_path = match backup_type {
         BackupType::Rollback => {
             // For rollback backups, use the existing path structure
             let mut path = safe_backup_path(note_path)?;
-            let backup_filename = format!(
-                "{}.{}.{}",
-                path.file_name()
-                    .and_then(|s| s.to_str())
-                    .ok_or_else(|| AppError::InvalidPath("Invalid filename".to_string()))?,
-                timestamp,
-                backup_type.extension()
-            );
             path.set_file_name(backup_filename);
             path
         }
         _ => {
             // For other backup types, use backup directory structure
             let backup_dir = get_backup_dir_for_notes_path(&get_config_notes_dir())?;
-            let note_filename = note_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| AppError::InvalidPath("Invalid filename".to_string()))?;
-            let backup_filename = format!(
-                "{}.{}.{}",
-                note_filename,
-                timestamp,
-                backup_type.extension()
-            );
             backup_dir.join(backup_filename)
         }
     };
@@ -323,13 +328,21 @@ fn prune_old_backups(latest_backup: &PathBuf, max_backups: usize) -> AppResult<(
         AppError::InvalidPath("Failed to get backup parent directory".to_string())
     })?;
 
-    let stem = latest_backup
-        .file_stem()
+    let filename = latest_backup
+        .file_name()
         .and_then(|s| s.to_str())
-        .ok_or_else(|| AppError::InvalidPath("Invalid backup stem".to_string()))?;
+        .ok_or_else(|| AppError::InvalidPath("Invalid backup filename".to_string()))?;
 
-    // Strip trailing ".<timestamp>" from stem
-    let base_name = stem.rsplitn(2, '.').last().unwrap_or(stem);
+    // Extract the base pattern: {base_name}.{suffix}.{timestamp}.md
+    // We want to match all files with the same base_name and suffix but different timestamps
+    let parts: Vec<&str> = filename.splitn(4, '.').collect();
+    if parts.len() < 4 {
+        return Ok(()); // Invalid backup filename format, skip pruning
+    }
+
+    let base_name = parts[0];
+    let suffix = parts[1];
+    let pattern_prefix = format!("{}.{}", base_name, suffix);
 
     let mut backups: Vec<_> = fs::read_dir(parent)?
         .filter_map(|entry| entry.ok())
@@ -337,7 +350,7 @@ fn prune_old_backups(latest_backup: &PathBuf, max_backups: usize) -> AppResult<(
             entry
                 .file_name()
                 .to_str()
-                .map(|f| f.starts_with(base_name) && f.ends_with(".bak"))
+                .map(|f| f.starts_with(&pattern_prefix) && f.ends_with(".md"))
                 .unwrap_or(false)
         })
         .collect();
