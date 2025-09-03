@@ -95,6 +95,7 @@ export interface AppCoordinator {
   setupReactiveEffects(): () => void
   updateFilteredNotes(notes: string[]): void
   initialize(): Promise<() => void>
+  handleSettingsClose(): void
 }
 
 export function createAppCoordinator(
@@ -140,6 +141,9 @@ export function createAppCoordinator(
   // State for managing content request cancellation and race conditions
   let contentRequestController: AbortController | null = null
   let contentRequestSequence = 0
+
+  // Track if this is first run to show hints after settings close
+  let isFirstRun = false
 
   const isLoading = $derived(searchManager.isLoading)
   const filteredNotes = $derived(searchManager.filteredNotes)
@@ -190,6 +194,25 @@ export function createAppCoordinator(
       }, 100)
     }
     focusManager.focusSearch()
+  }
+
+  function handleSettingsClose(): void {
+    configService.closePane()
+    focusManager.focusSearch()
+
+    if (isFirstRun) {
+      // Delay to ensure settings dialog is fully closed
+      setTimeout(() => {
+        // Simulate Ctrl+? to show hints
+        const event = new KeyboardEvent('keydown', {
+          key: '?',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+        document.dispatchEvent(event)
+      }, 300)
+    }
   }
 
   async function loadNoteContent(note: string): Promise<void> {
@@ -326,6 +349,7 @@ export function createAppCoordinator(
 
   return {
     setupReactiveEffects,
+    handleSettingsClose,
 
     get query(): string {
       return query
@@ -433,6 +457,10 @@ export function createAppCoordinator(
         await refreshUI()
       })
 
+      const unlistenFirstRun = await listen('first-run-detected', () => {
+        isFirstRun = true
+      })
+
       // Database loading progress event listeners - MUST be set up before initialization
       const unlistenDbLoadingStart = await listen<string>(
         'db-loading-start',
@@ -491,6 +519,7 @@ export function createAppCoordinator(
         cleanupEffects()
         unlisten()
         unlistenCacheRefresh()
+        unlistenFirstRun()
         unlistenDbLoadingStart()
         unlistenDbLoadingProgress()
         unlistenDbLoadingComplete()

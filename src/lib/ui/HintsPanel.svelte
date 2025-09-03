@@ -172,6 +172,7 @@ Shows configured shortcuts with proper theming and overlay styling.
       <div class="hints-footer">
         <p>
           Press <kbd>Ctrl+?</kbd> to toggle this panel • Press <kbd>Esc</kbd> to
+          close
         </p>
       </div>
     </div>

@@ -65,10 +65,7 @@ Composes all UI components and provides keyboard event handling for the entire a
   <div slot="modals">
     <SettingsPane
       show={configService.isVisible}
-      onClose={() => {
-        configService.closePane()
-        appCoordinator.managers.focusManager.focusSearch()
-      }}
+      onClose={() => appCoordinator.handleSettingsClose()}
     />
 
     <VersionExplorer

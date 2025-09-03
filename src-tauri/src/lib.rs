@@ -225,6 +225,15 @@ pub fn run() {
             // Setup file system watcher for notes directory
             setup_notes_watcher(app.handle().clone())?;
 
+            // Emit first-run event if this is the first time the app is launched
+            if WAS_FIRST_RUN.load(std::sync::atomic::Ordering::Relaxed) {
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                    let _ = app_handle.emit("first-run-detected", ());
+                });
+            }
+
             // Setup global shortcuts
             #[cfg(desktop)]
             {
