@@ -4,7 +4,7 @@
  * Coordinates between content fetching, highlighting service, and UI updates.
  */
 
-import { getHighlightedContent } from './contentHighlighting.svelte'
+import { getHighlightedContent } from '../utils/contentHighlighting.svelte'
 
 export interface ContentManagerDeps {
   noteService: {

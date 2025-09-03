@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import {
   getHighlightedContent,
   clearHighlightCache,
-} from '$lib/core/contentHighlighting.svelte'
+} from '$lib/utils/contentHighlighting.svelte'
 
 describe('contentHighlighting', () => {
   beforeEach(() => {

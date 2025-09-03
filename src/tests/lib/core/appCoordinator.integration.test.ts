@@ -115,7 +115,7 @@ vi.mock('../../../lib/core/contentManager.svelte', () => ({
   createContentManager: vi.fn(() => mockContentManager),
 }))
 
-vi.mock('../../../lib/core/contentHighlighting.svelte', () => ({
+vi.mock('../../../lib/utils/contentHighlighting.svelte', () => ({
   getHighlightedContent: vi.fn(() => 'mocked highlighted content'),
   clearHighlightCache: vi.fn(),
 }))
