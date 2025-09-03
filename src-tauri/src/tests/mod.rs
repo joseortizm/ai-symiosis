@@ -18,3 +18,4 @@ pub mod search;
 pub mod security;
 pub mod test_utils;
 pub mod validation;
+pub mod watcher;

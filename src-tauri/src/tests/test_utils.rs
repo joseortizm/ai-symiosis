@@ -87,7 +87,6 @@ impl DbTestHarness {
         rusqlite::Connection::open(&self.db_path)
             .map_err(|e| format!("Failed to open test database: {}", e))
     }
-
 }
 
 /// Test configuration override utility
@@ -143,7 +142,6 @@ impl TestConfigOverride {
         // Initialize a clean database for the test directory
         // Use recreate_database to ensure we start with a fresh database state
         recreate_database().map_err(|e| format!("Failed to recreate test database: {}", e))?;
-
 
         Ok(Self {
             _temp_dir: temp_dir,

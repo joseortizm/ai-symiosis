@@ -233,7 +233,6 @@ pub fn get_available_markdown_themes() -> Vec<String> {
     ]
 }
 
-
 /// Generate a simple configuration template (deprecated - returns empty string)
 /// The app now creates a clean default config automatically via AppConfig::default()
 pub fn generate_config_template() -> String {
@@ -955,7 +954,6 @@ pub fn save_config_content(content: &str) -> Result<(), String> {
     println!("Config content saved to: {}", config_path.display());
     Ok(())
 }
-
 
 #[tauri::command]
 pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, String> {

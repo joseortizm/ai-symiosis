@@ -68,6 +68,9 @@ impl DebouncedWatcher {
 pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let notes_dir = get_config_notes_dir();
 
+    // Ensure the notes directory exists before attempting to watch it
+    std::fs::create_dir_all(&notes_dir)?;
+
     // Create debounced watcher with 500ms debounce period
     let debounced_watcher = Arc::new(DebouncedWatcher::new(500));
 
