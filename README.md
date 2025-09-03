@@ -55,6 +55,20 @@ When viewing a note (not in edit mode):
 
 *   **`Escape`:** Clear search highlights in the current note, or clear search input if highlights are already cleared.
 
+### Content Navigation
+
+*   **`Ctrl + P`:** Navigate to previous note in history.
+*   **`Ctrl + N`:** Navigate to next note in history.
+*   **`Ctrl + H`:** Navigate to previous code block in current note.
+*   **`Ctrl + L`:** Navigate to next code block in current note.
+*   **`Ctrl + Y`:** Copy current section to clipboard.
+
+### Advanced Features
+
+*   **`Ctrl + /`:** Open version explorer for the currently selected note.
+*   **`Ctrl + .`:** Open recently deleted notes dialog to restore deleted notes.
+*   **`Meta + ,` (Cmd + , on Mac):** Open settings panel.
+
 ### Global Shortcuts
 
 *   **`Ctrl + Shift + N`:** Toggle Symiosis window visibility (works system-wide).
@@ -113,6 +127,7 @@ All keyboard shortcuts are configurable:
 - `create_note` - Create new note (default: `"Ctrl+Enter"`)
 - `rename_note` - Rename selected note (default: `"Ctrl+m"`)
 - `delete_note` - Delete selected note (default: `"Ctrl+x"`)
+- `edit_note` - Enter edit mode for selected note (default: `"Enter"`)
 - `save_and_exit` - Save and exit edit mode (default: `"Ctrl+s"`)
 - `open_external` - Open note in external editor (default: `"Ctrl+o"`)
 - `open_folder` - Open notes folder (default: `"Ctrl+f"`)
@@ -123,7 +138,12 @@ All keyboard shortcuts are configurable:
 - `down` - Navigate down (vim-style) (default: `"Ctrl+j"`)
 - `navigate_previous` - Navigate to previous note (default: `"Ctrl+p"`)
 - `navigate_next` - Navigate to next note (default: `"Ctrl+n"`)
+- `navigate_code_previous` - Navigate to previous code block (default: `"Ctrl+h"`)
+- `navigate_code_next` - Navigate to next code block (default: `"Ctrl+l"`)
+- `copy_current_section` - Copy current section to clipboard (default: `"Ctrl+y"`)
 - `open_settings` - Open settings panel (default: `"Meta+,"`)
+- `version_explorer` - Open version explorer for selected note (default: `"Ctrl+/"`)
+- `recently_deleted` - Open recently deleted notes dialog (default: `"Ctrl+."`)
 
 #### Preferences (`[preferences]`)
 
@@ -162,6 +182,7 @@ show_line_numbers = true
 create_note = "Ctrl+Enter"
 rename_note = "Ctrl+m"
 delete_note = "Ctrl+x"
+edit_note = "Enter"
 save_and_exit = "Ctrl+s"
 open_external = "Ctrl+o"
 open_folder = "Ctrl+f"
@@ -172,7 +193,12 @@ up = "Ctrl+k"
 down = "Ctrl+j"
 navigate_previous = "Ctrl+p"
 navigate_next = "Ctrl+n"
+navigate_code_previous = "Ctrl+h"
+navigate_code_next = "Ctrl+l"
+copy_current_section = "Ctrl+y"
 open_settings = "Meta+,"
+version_explorer = "Ctrl+/"
+recently_deleted = "Ctrl+."
 
 [preferences]
 max_search_results = 100
