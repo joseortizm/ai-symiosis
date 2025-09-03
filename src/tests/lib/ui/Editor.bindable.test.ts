@@ -5,14 +5,14 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }))
 
-describe('CodeEditor Bindable Property Issue Documentation', () => {
+describe('Editor Bindable Property Issue Documentation', () => {
   beforeEach(() => {
     resetAllMocks()
   })
 
   describe('The problem that was fixed', () => {
     it('should document why direct bindable property assignment fails in Svelte 5', () => {
-      // This test documents the core issue that was happening in CodeEditor.svelte
+      // This test documents the core issue that was happening in Editor.svelte
       // When the component had these problematic lines:
       //
       // Line 163: value = newValue;           (in EditorView.updateListener)
@@ -131,7 +131,7 @@ describe('CodeEditor Bindable Property Issue Documentation', () => {
       const { readFileSync } = await import('fs')
       const { join } = await import('path')
 
-      const componentPath = join(process.cwd(), 'src/lib/ui/CodeEditor.svelte')
+      const componentPath = join(process.cwd(), 'src/lib/ui/Editor.svelte')
 
       const componentContent = readFileSync(componentPath, 'utf-8')
 

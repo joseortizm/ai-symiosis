@@ -12,8 +12,8 @@ export interface KeyboardActionDeps {
   contentNavigationManager: ReturnType<
     typeof import('../../core/contentNavigationManager.svelte').createContentNavigationManager
   >
-  configStateManager: ReturnType<
-    typeof import('../../core/configStateManager.svelte').createConfigStateManager
+  configManager: ReturnType<
+    typeof import('../../core/configManager.svelte').createConfigManager
   >
   searchManager: ReturnType<
     typeof import('../../core/searchManager.svelte').createSearchManager
@@ -232,7 +232,7 @@ export function createKeyboardActions(
   }
 
   function getKeyMappings(): Record<string, KeyMappings> {
-    const shortcuts = deps.configStateManager.shortcuts
+    const shortcuts = deps.configManager.shortcuts
 
     return {
       searchInput: {

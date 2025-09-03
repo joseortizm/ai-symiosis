@@ -8,7 +8,7 @@ import { tick } from 'svelte'
 import { listen } from '@tauri-apps/api/event'
 import { createDialogManager } from '../core/dialogManager.svelte'
 import { createContentManager } from '../core/contentManager.svelte'
-import { createConfigStateManager } from '../core/configStateManager.svelte'
+import { createConfigManager as createConfigManager } from '../core/configManager.svelte'
 import { createContentNavigationManager } from '../core/contentNavigationManager.svelte'
 import { createProgressManager } from '../core/progressManager.svelte'
 import { createSearchManager } from '../core/searchManager.svelte'
@@ -66,8 +66,8 @@ export interface AppManagers {
   dialogManager: ReturnType<
     typeof import('../core/dialogManager.svelte').createDialogManager
   >
-  configStateManager: ReturnType<
-    typeof import('../core/configStateManager.svelte').createConfigStateManager
+  configManager: ReturnType<
+    typeof import('../core/configManager.svelte').createConfigManager
   >
   contentNavigationManager: ReturnType<
     typeof import('../core/contentNavigationManager.svelte').createContentNavigationManager
@@ -124,7 +124,7 @@ export function createAppCoordinator(
     focusSearch: () => focusManager.focusSearch(),
   })
 
-  const configStateManager = createConfigStateManager()
+  const configManager = createConfigManager()
 
   const contentManager = createContentManager({
     noteService,
@@ -320,7 +320,7 @@ export function createAppCoordinator(
   const keyboardActions = createKeyboardActions({
     focusManager,
     contentNavigationManager,
-    configStateManager,
+    configManager,
     searchManager,
     contentManager,
     dialogManager,
@@ -395,7 +395,7 @@ export function createAppCoordinator(
         focusManager,
         contentManager,
         dialogManager,
-        configStateManager,
+        configManager,
         contentNavigationManager,
         progressManager,
         versionExplorerManager,
@@ -439,7 +439,7 @@ export function createAppCoordinator(
     async initialize(): Promise<() => void> {
       await tick()
 
-      await configStateManager.initialize()
+      await configManager.initialize()
 
       // Set up search complete callback to load first note content
       searchManager.setSearchCompleteCallback(async (notes: string[]) => {
@@ -524,7 +524,7 @@ export function createAppCoordinator(
         unlistenDbLoadingProgress()
         unlistenDbLoadingComplete()
         unlistenDbLoadingError()
-        configStateManager.cleanup()
+        configManager.cleanup()
       }
     },
   }

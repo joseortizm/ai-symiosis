@@ -39,7 +39,7 @@ interface ConfigChanged {
   preferences: PreferencesConfig
 }
 
-export interface ConfigStateManager {
+export interface ConfigManager {
   readonly notesDirectory: string
   readonly globalShortcut: string
   readonly general: GeneralConfig
@@ -62,7 +62,7 @@ export interface ConfigStateManager {
   loadHighlightJSTheme(theme: string): Promise<void>
 }
 
-export function createConfigStateManager(): ConfigStateManager {
+export function createConfigManager(): ConfigManager {
   const state = $state<ConfigState>({
     notesDirectory: '',
     globalShortcut: 'Ctrl+Shift+N',

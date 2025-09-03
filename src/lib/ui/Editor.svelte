@@ -58,7 +58,7 @@ Focused component handling CodeMirror initialization and content editing.
   }: Props = $props()
 
   // Get reactive config state
-  const { configStateManager } = getContext<AppManagers>('managers')
+  const { configManager } = getContext<AppManagers>('managers')
 
   let editorContainer: HTMLElement
   let editorView: EditorView | null = null
@@ -66,16 +66,16 @@ Focused component handling CodeMirror initialization and content editing.
   let lastPropsValue = $state(value)
 
   // Reactive config values
-  const keyBindingMode = $derived(configStateManager.editor.mode || 'basic')
+  const keyBindingMode = $derived(configManager.editor.mode || 'basic')
   const currentTheme = $derived(
-    getTheme(configStateManager.editor.theme || 'gruvbox-dark')
+    getTheme(configManager.editor.theme || 'gruvbox-dark')
   )
   const editorFontFamily = $derived(
-    configStateManager.interface.editor_font_family ||
+    configManager.interface.editor_font_family ||
       'JetBrains Mono, Consolas, monospace'
   )
   const editorFontSize = $derived(
-    configStateManager.interface.editor_font_size || 14
+    configManager.interface.editor_font_size || 14
   )
 
   const propsChanged = $derived(value !== lastPropsValue)
@@ -305,7 +305,7 @@ Focused component handling CodeMirror initialization and content editing.
 
     // Create custom setup based on basicSetup but with configurable line numbers
     const customSetup = (() => {
-      if (configStateManager.editor.show_line_numbers) {
+      if (configManager.editor.show_line_numbers) {
         return basicSetup
       } else {
         // Use basicSetup but remove line numbers by adding empty array
@@ -322,9 +322,9 @@ Focused component handling CodeMirror initialization and content editing.
       currentTheme,
       createFontExtension(editorFontFamily, editorFontSize),
       ...keymaps,
-      ...(configStateManager.editor.word_wrap ? [EditorView.lineWrapping] : []),
+      ...(configManager.editor.word_wrap ? [EditorView.lineWrapping] : []),
       // Only add line numbers if not already in basicSetup and if enabled
-      ...(!configStateManager.editor.show_line_numbers
+      ...(!configManager.editor.show_line_numbers
         ? [
             EditorView.theme({
               '.cm-gutters': { display: 'none' },
@@ -332,11 +332,11 @@ Focused component handling CodeMirror initialization and content editing.
           ]
         : []),
       indentUnit.of(
-        configStateManager.editor.expand_tabs
-          ? ' '.repeat(configStateManager.editor.tab_size || 2)
+        configManager.editor.expand_tabs
+          ? ' '.repeat(configManager.editor.tab_size || 2)
           : '\t'
       ),
-      EditorState.tabSize.of(configStateManager.editor.tab_size || 2),
+      EditorState.tabSize.of(configManager.editor.tab_size || 2),
       updateListener,
     ].filter((ext): ext is Extension => Boolean(ext))
 
@@ -345,7 +345,7 @@ Focused component handling CodeMirror initialization and content editing.
 
   function createKeymaps(): Extension[] {
     const insertSpaces = (view: EditorView): boolean => {
-      const tabSize = configStateManager.editor.tab_size || 2
+      const tabSize = configManager.editor.tab_size || 2
       const spaces = ' '.repeat(tabSize)
       const { from, to } = view.state.selection.main
       view.dispatch({
@@ -355,7 +355,7 @@ Focused component handling CodeMirror initialization and content editing.
       return true
     }
 
-    const tabBinding = configStateManager.editor.expand_tabs
+    const tabBinding = configManager.editor.expand_tabs
       ? { key: 'Tab', run: insertSpaces }
       : indentWithTab
 

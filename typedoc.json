@@ -6,7 +6,7 @@
     "src/lib/app/actions/search.svelte.ts",
     "src/lib/app/actions/settings.svelte.ts",
     "src/lib/app/effects/app.svelte.ts",
-    "src/lib/core/configStateManager.svelte.ts",
+    "src/lib/core/configManager.svelte.ts",
     "src/lib/core/contentHighlighting.svelte.ts",
     "src/lib/core/contentManager.svelte.ts",
     "src/lib/core/dialogManager.svelte.ts",

@@ -72,7 +72,7 @@ export default [
     }
   },
   {
-    files: ['**/CodeEditor.svelte'],
+    files: ['**/Editor.svelte'],
     rules: {
       'svelte/no-dom-manipulating': 'off'
     }

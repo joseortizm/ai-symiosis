@@ -32,7 +32,7 @@ describe('keyboard actions', () => {
         isActivelyNavigating: false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
-      configStateManager: {
+      configManager: {
         shortcuts: {
           edit_note: 'Enter',
           create_note: 'Ctrl+Enter',
@@ -578,31 +578,27 @@ describe('keyboard actions', () => {
       expect(mappings.default['Meta+,']).toBe('settings.openSettings')
     })
 
-    it('should use shortcuts from configStateManager', () => {
+    it('should use shortcuts from configManager', () => {
       const mappings = keyboardActions.keyMappings()
 
       // Verify that the mappings use the configured shortcuts
       expect(
-        mappings.searchInput[mockDeps.configStateManager.shortcuts.create_note]
+        mappings.searchInput[mockDeps.configManager.shortcuts.create_note]
       ).toBe('notes.createNote')
       expect(
-        mappings.searchInput[mockDeps.configStateManager.shortcuts.rename_note]
+        mappings.searchInput[mockDeps.configManager.shortcuts.rename_note]
       ).toBe('notes.renameNote')
       expect(
-        mappings.searchInput[mockDeps.configStateManager.shortcuts.delete_note]
+        mappings.searchInput[mockDeps.configManager.shortcuts.delete_note]
       ).toBe('notes.deleteNote')
       expect(
-        mappings.searchInput[
-          mockDeps.configStateManager.shortcuts.open_external
-        ]
+        mappings.searchInput[mockDeps.configManager.shortcuts.open_external]
       ).toBe('notes.openExternal')
       expect(
-        mappings.searchInput[mockDeps.configStateManager.shortcuts.open_folder]
+        mappings.searchInput[mockDeps.configManager.shortcuts.open_folder]
       ).toBe('notes.openFolder')
       expect(
-        mappings.searchInput[
-          mockDeps.configStateManager.shortcuts.refresh_cache
-        ]
+        mappings.searchInput[mockDeps.configManager.shortcuts.refresh_cache]
       ).toBe('notes.refreshCache')
     })
   })

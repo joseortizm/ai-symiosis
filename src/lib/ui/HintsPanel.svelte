@@ -12,7 +12,7 @@ Shows configured shortcuts with proper theming and overlay styling.
     appCoordinator: ReturnType<typeof createAppCoordinator>
   }>('managers')
 
-  const { configStateManager } = appCoordinator.managers
+  const { configManager } = appCoordinator.managers
 
   let isVisible = $state(false)
   let isEnabled = $state(true)
@@ -55,23 +55,23 @@ Shows configured shortcuts with proper theming and overlay styling.
       title: 'Notes',
       shortcuts: [
         {
-          key: configStateManager.shortcuts.create_note,
+          key: configManager.shortcuts.create_note,
           description: 'Create new note',
         },
         {
-          key: configStateManager.shortcuts.edit_note,
+          key: configManager.shortcuts.edit_note,
           description: 'Edit note',
         },
         {
-          key: configStateManager.shortcuts.rename_note,
+          key: configManager.shortcuts.rename_note,
           description: 'Rename current note',
         },
         {
-          key: configStateManager.shortcuts.delete_note,
+          key: configManager.shortcuts.delete_note,
           description: 'Delete current note',
         },
         {
-          key: configStateManager.shortcuts.save_and_exit,
+          key: configManager.shortcuts.save_and_exit,
           description: 'Save and exit edit mode',
         },
       ],
@@ -80,27 +80,27 @@ Shows configured shortcuts with proper theming and overlay styling.
       title: 'Navigation',
       shortcuts: [
         {
-          key: configStateManager.shortcuts.up,
+          key: configManager.shortcuts.up,
           description: 'Previous note',
         },
         {
-          key: configStateManager.shortcuts.down,
+          key: configManager.shortcuts.down,
           description: 'Next note',
         },
         {
-          key: configStateManager.shortcuts.navigate_previous,
+          key: configManager.shortcuts.navigate_previous,
           description: 'Previous Markdown header or search term',
         },
         {
-          key: configStateManager.shortcuts.navigate_next,
+          key: configManager.shortcuts.navigate_next,
           description: 'Next Markdown header or search term',
         },
         {
-          key: configStateManager.shortcuts.scroll_up,
+          key: configManager.shortcuts.scroll_up,
           description: 'Scroll up content',
         },
         {
-          key: configStateManager.shortcuts.scroll_down,
+          key: configManager.shortcuts.scroll_down,
           description: 'Scroll down content',
         },
       ],
@@ -109,15 +109,15 @@ Shows configured shortcuts with proper theming and overlay styling.
       title: 'System',
       shortcuts: [
         {
-          key: configStateManager.shortcuts.open_external,
+          key: configManager.shortcuts.open_external,
           description: 'Open in external editor',
         },
         {
-          key: configStateManager.shortcuts.open_folder,
+          key: configManager.shortcuts.open_folder,
           description: 'Show in notes folder',
         },
         {
-          key: configStateManager.shortcuts.refresh_cache,
+          key: configManager.shortcuts.refresh_cache,
           description: 'Refresh note cache',
         },
       ],
@@ -128,11 +128,11 @@ Shows configured shortcuts with proper theming and overlay styling.
         { key: 'Esc', description: 'Close dialogs/panels' },
         { key: 'Ctrl+?', description: 'Show this help panel' },
         {
-          key: configStateManager.shortcuts.version_explorer,
+          key: configManager.shortcuts.version_explorer,
           description: 'Explore versions of note',
         },
         {
-          key: configStateManager.shortcuts.recently_deleted,
+          key: configManager.shortcuts.recently_deleted,
           description: 'Recover recently deleted files',
         },
       ],

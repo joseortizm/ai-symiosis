@@ -14,7 +14,7 @@ Processes content after it's rendered to avoid blocking initial load.
   }
 
   let { content }: Props = $props()
-  const { configStateManager } = getContext<AppManagers>('managers')
+  const { configManager } = getContext<AppManagers>('managers')
   let containerElement: HTMLDivElement | undefined = $state()
 
   // Configure highlight.js for automatic language detection
@@ -50,10 +50,8 @@ Processes content after it's rendered to avoid blocking initial load.
 
   // Load theme reactively when it changes
   $effect(() => {
-    if (configStateManager.isThemeInitialized) {
-      configStateManager.loadHighlightJSTheme(
-        configStateManager.currentCodeTheme
-      )
+    if (configManager.isThemeInitialized) {
+      configManager.loadHighlightJSTheme(configManager.currentCodeTheme)
     }
   })
 
@@ -69,13 +67,8 @@ Processes content after it's rendered to avoid blocking initial load.
   // Also highlight on mount and ensure theme is loaded
   onMount(async () => {
     // Force theme loading if needed
-    if (
-      configStateManager.isThemeInitialized &&
-      configStateManager.currentCodeTheme
-    ) {
-      await configStateManager.loadHighlightJSTheme(
-        configStateManager.currentCodeTheme
-      )
+    if (configManager.isThemeInitialized && configManager.currentCodeTheme) {
+      await configManager.loadHighlightJSTheme(configManager.currentCodeTheme)
     }
 
     if (containerElement) {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { createConfigStateManager } from '$lib/core/configStateManager.svelte'
+import { createConfigManager } from '$lib/core/configManager.svelte'
 
 // Mock Tauri APIs
 vi.mock('@tauri-apps/api/core', () => ({
@@ -10,8 +10,8 @@ vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(),
 }))
 
-describe('configStateManager', () => {
-  let manager: ReturnType<typeof createConfigStateManager>
+describe('configManager', () => {
+  let manager: ReturnType<typeof createConfigManager>
   let mockUnlisten: ReturnType<typeof vi.fn>
   let mockInvoke: ReturnType<typeof vi.fn>
   let mockListen: ReturnType<typeof vi.fn>
@@ -27,7 +27,7 @@ describe('configStateManager', () => {
 
     mockUnlisten = vi.fn()
     mockListen.mockResolvedValue(mockUnlisten)
-    manager = createConfigStateManager()
+    manager = createConfigManager()
   })
 
   afterEach(() => {

@@ -6,7 +6,7 @@ Features simple file list, keyboard navigation, and recovery.
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import type { ConfigStateManager } from '../core/configStateManager.svelte'
+  import type { ConfigManager } from '../core/configManager.svelte'
 
   interface DeletedFile {
     filename: string
@@ -38,9 +38,9 @@ Features simple file list, keyboard navigation, and recovery.
   }: Props = $props()
 
   const managers = getContext<{
-    configStateManager: ConfigStateManager
+    configManager: ConfigManager
   }>('managers')
-  const configStateManager = managers.configStateManager
+  const configManager = managers.configManager
 
   let dialogElement = $state<HTMLElement | undefined>(undefined)
 
@@ -64,7 +64,7 @@ Features simple file list, keyboard navigation, and recovery.
       .filter(Boolean)
       .join('+')
 
-    const shortcuts = configStateManager?.shortcuts
+    const shortcuts = configManager?.shortcuts
     if (shortcuts) {
       if (keyString === shortcuts.up || event.key === 'ArrowUp') {
         event.preventDefault()
@@ -140,9 +140,9 @@ Features simple file list, keyboard navigation, and recovery.
 
       <div class="keyboard-hint">
         <p>
-          {#if configStateManager?.shortcuts}
-            <kbd>{configStateManager.shortcuts.up}</kbd><kbd
-              >{configStateManager.shortcuts.down}</kbd
+          {#if configManager?.shortcuts}
+            <kbd>{configManager.shortcuts.up}</kbd><kbd
+              >{configManager.shortcuts.down}</kbd
             > Navigate •
           {:else}
             <kbd>↑</kbd><kbd>↓</kbd> Navigate •

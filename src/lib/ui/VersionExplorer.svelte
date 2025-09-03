@@ -7,7 +7,7 @@ Content preview, and keyboard navigation.
 <script lang="ts">
   import { getContext } from 'svelte'
   import type { VersionExplorerManager } from '../core/versionExplorerManager.svelte'
-  import type { ConfigStateManager } from '../core/configStateManager.svelte'
+  import type { ConfigManager } from '../core/configManager.svelte'
 
   interface Props {
     show: boolean
@@ -18,20 +18,20 @@ Content preview, and keyboard navigation.
 
   const managers = getContext<{
     versionExplorerManager: VersionExplorerManager
-    configStateManager: ConfigStateManager
+    configManager: ConfigManager
   }>('managers')
   const versionExplorer = managers.versionExplorerManager
-  const configStateManager = managers.configStateManager
+  const configManager = managers.configManager
 
   let dialogElement = $state<HTMLElement | undefined>(undefined)
 
   // Get configured font settings
   const editorFontFamily = $derived(
-    configStateManager?.interface?.editor_font_family ||
+    configManager?.interface?.editor_font_family ||
       'JetBrains Mono, SF Mono, Monaco, Cascadia Code, Roboto Mono, Consolas, Courier New, monospace'
   )
   const editorFontSize = $derived(
-    configStateManager?.interface?.editor_font_size || 13
+    configManager?.interface?.editor_font_size || 13
   )
 
   // Backup type color and display configuration
@@ -88,7 +88,7 @@ Content preview, and keyboard navigation.
       .filter(Boolean)
       .join('+')
 
-    const shortcuts = configStateManager?.shortcuts
+    const shortcuts = configManager?.shortcuts
     if (shortcuts) {
       if (keyString === shortcuts.up || event.key === 'ArrowUp') {
         event.preventDefault()
@@ -212,9 +212,9 @@ Content preview, and keyboard navigation.
 
       <div class="keyboard-hint">
         <p>
-          {#if configStateManager?.shortcuts}
-            <kbd>{configStateManager.shortcuts.up}</kbd><kbd
-              >{configStateManager.shortcuts.down}</kbd
+          {#if configManager?.shortcuts}
+            <kbd>{configManager.shortcuts.up}</kbd><kbd
+              >{configManager.shortcuts.down}</kbd
             > Navigate •
           {:else}
             <kbd>↑</kbd><kbd>↓</kbd> Navigate •

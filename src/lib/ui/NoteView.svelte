@@ -5,7 +5,7 @@ Shows highlighted content or renders the CodeMirror editor.
 -->
 
 <script lang="ts">
-  import CodeEditor from './CodeEditor.svelte'
+  import Editor from './Editor.svelte'
   import SyntaxHighlighter from './SyntaxHighlighter.svelte'
   import { getContext } from 'svelte'
 
@@ -20,7 +20,7 @@ Shows highlighted content or renders the CodeMirror editor.
   const appState = getContext<AppState>('state')
   const actions = getContext<AppActions>('actions')
 
-  // Theme initialization is now handled by configStateManager
+  // Theme initialization is now handled by configManager
   let noteContentElement = $state<HTMLElement | undefined>(undefined)
 
   function registerNoteContentElement(element: HTMLElement) {
@@ -36,7 +36,7 @@ Shows highlighted content or renders the CodeMirror editor.
 <div class="note-preview">
   {#if appState.selectedNote}
     {#if editorManager.isEditMode}
-      <CodeEditor
+      <Editor
         bind:value={editorManager.editContent}
         bind:isDirty={editorManager.isDirty}
         filename={appState.selectedNote}

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { ConfigStateManager } from '../../../lib/core/configStateManager.svelte'
+import type { ConfigManager } from '../../../lib/core/configManager.svelte'
 
 // Mock all the services and managers
 const mockNoteService = {
@@ -223,7 +223,7 @@ describe('Content Loading Integration', () => {
           resetNavigation: vi.fn(),
           clearCurrentStyles: vi.fn(),
         },
-        configStateManager: {
+        configManager: {
           shortcuts: {
             create_note: 'Ctrl+Enter',
             rename_note: 'Ctrl+m',
@@ -241,7 +241,7 @@ describe('Content Loading Integration', () => {
             open_settings: 'Meta+,',
             version_explorer: 'Ctrl+/',
           },
-        } as ConfigStateManager,
+        } as ConfigManager,
         searchManager: mockSearchManager,
         contentManager: mockContentManager,
         dialogManager: mockDialogManager,
@@ -391,7 +391,7 @@ describe('Content Loading Integration', () => {
           resetNavigation: vi.fn(),
           clearCurrentStyles: vi.fn(),
         },
-        configStateManager: {
+        configManager: {
           shortcuts: {
             create_note: 'Ctrl+Enter',
             rename_note: 'Ctrl+m',
@@ -409,7 +409,7 @@ describe('Content Loading Integration', () => {
             open_settings: 'Meta+,',
             version_explorer: 'Ctrl+/',
           },
-        } as ConfigStateManager,
+        } as ConfigManager,
         searchManager: mockSearchManager,
         contentManager: mockContentManager,
         dialogManager: mockDialogManager,
