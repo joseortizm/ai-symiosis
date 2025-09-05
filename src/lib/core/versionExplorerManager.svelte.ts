@@ -22,6 +22,7 @@ interface VersionExplorerState {
 export interface VersionExplorerManagerDeps {
   focusSearch: () => void
   versionService: ReturnType<typeof createVersionService>
+  loadNoteContent: (noteName: string) => Promise<void>
 }
 
 export interface VersionExplorerManager {
@@ -175,7 +176,7 @@ export function createVersionExplorerManager(
       )
 
       if (result.success) {
-        // Close the version explorer after successful recovery
+        await deps.loadNoteContent(state.selectedNote)
         closeVersionExplorer()
       } else {
         state.error = result.error || 'Failed to recover version'

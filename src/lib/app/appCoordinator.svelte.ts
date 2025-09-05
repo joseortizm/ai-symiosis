@@ -136,6 +136,7 @@ export function createAppCoordinator(
   const versionExplorerManager = createVersionExplorerManager({
     focusSearch: () => focusManager.focusSearch(),
     versionService,
+    loadNoteContent,
   })
 
   // State for managing content request cancellation and race conditions
