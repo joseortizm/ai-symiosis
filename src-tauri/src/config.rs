@@ -8,6 +8,12 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::Shortcut;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfigReloadResult {
+    Unchanged,
+    NotesDirChanged,
+}
+
 // ============================================================================
 // MAIN CONFIGURATION STRUCTURE
 // ============================================================================
@@ -282,6 +288,10 @@ pub fn get_config_path() -> PathBuf {
 
 pub fn get_config_notes_dir() -> PathBuf {
     let config = crate::APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
+    PathBuf::from(&config.notes_directory)
+}
+
+pub fn get_config_notes_dir_from_config(config: &AppConfig) -> PathBuf {
     PathBuf::from(&config.notes_directory)
 }
 
@@ -937,8 +947,23 @@ pub fn save_config(config: &AppConfig) -> AppResult<()> {
 pub fn reload_config(
     app_config: &std::sync::RwLock<AppConfig>,
     app_handle: Option<AppHandle>,
-) -> Result<(), String> {
+) -> Result<ConfigReloadResult, String> {
     let new_config = load_config();
+
+    // Check if notes directory changed
+    let result = {
+        let old_config = app_config
+            .read()
+            .map_err(|_| "Failed to acquire read lock on config".to_string())?;
+
+        if get_config_notes_dir_from_config(&old_config)
+            != get_config_notes_dir_from_config(&new_config)
+        {
+            ConfigReloadResult::NotesDirChanged
+        } else {
+            ConfigReloadResult::Unchanged
+        }
+    };
 
     let mut config = app_config
         .write()
@@ -952,7 +977,7 @@ pub fn reload_config(
             eprintln!("Failed to emit config-updated event: {}", e);
         }
     }
-    Ok(())
+    Ok(result)
 }
 
 #[tauri::command]

@@ -2,69 +2,97 @@
 use crate::core::{AppError, AppResult};
 use rusqlite::Connection;
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{LazyLock, Mutex};
 
 // Shared database connection manager
 pub struct DatabaseManager {
-    connection: Arc<Mutex<Connection>>,
+    connection: Connection,
+    current_db_path: PathBuf,
 }
 
 impl DatabaseManager {
     pub fn new() -> AppResult<Self> {
         let db_path = get_database_path()?;
+        let conn = Self::create_connection(&db_path)?;
+
+        Ok(Self {
+            connection: conn,
+            current_db_path: db_path,
+        })
+    }
+
+    fn create_connection(db_path: &PathBuf) -> AppResult<Connection> {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 AppError::DatabaseConnection(format!("Failed to create database directory: {}", e))
             })?;
         }
 
-        let conn = Connection::open(&db_path)
-            .map_err(|e| AppError::DatabaseConnection(format!("Failed to open database: {}", e)))?;
+        Connection::open(db_path)
+            .map_err(|e| AppError::DatabaseConnection(format!("Failed to open database: {}", e)))
+    }
 
-        Ok(Self {
-            connection: Arc::new(Mutex::new(conn)),
-        })
+    pub fn ensure_current_connection(&mut self) -> AppResult<bool> {
+        let expected_db_path = get_database_path()?;
+
+        if self.current_db_path != expected_db_path {
+            // Create new connection for the new notes directory
+            let new_conn = Self::create_connection(&expected_db_path)?;
+
+            // Atomically replace both connection and path
+            self.connection = new_conn;
+            self.current_db_path = expected_db_path;
+            Ok(true) // Connection was reinitialized
+        } else {
+            Ok(false) // No reinitialization needed
+        }
     }
 
     pub fn with_connection<T, F>(&self, f: F) -> AppResult<T>
     where
         F: FnOnce(&Connection) -> AppResult<T>,
     {
-        let conn = self
-            .connection
-            .lock()
-            .map_err(|e| AppError::DatabaseConnection(format!("Database lock poisoned: {}", e)))?;
-        f(&*conn)
+        f(&self.connection)
     }
 
-    pub fn with_connection_mut<T, F>(&self, f: F) -> AppResult<T>
+    pub fn with_connection_mut<T, F>(&mut self, f: F) -> AppResult<T>
     where
         F: FnOnce(&mut Connection) -> AppResult<T>,
     {
-        let mut conn = self
-            .connection
-            .lock()
-            .map_err(|e| AppError::DatabaseConnection(format!("Database lock poisoned: {}", e)))?;
-        f(&mut *conn)
+        f(&mut self.connection)
     }
 }
 
 // Global database manager instance
-static DB_MANAGER: LazyLock<DatabaseManager> =
-    LazyLock::new(|| DatabaseManager::new().expect("Failed to initialize database manager"));
+static DB_MANAGER: LazyLock<Mutex<DatabaseManager>> = LazyLock::new(|| {
+    Mutex::new(DatabaseManager::new().expect("Failed to initialize database manager"))
+});
 
 pub fn with_db<T, F>(f: F) -> AppResult<T>
 where
     F: FnOnce(&Connection) -> AppResult<T>,
 {
-    DB_MANAGER.with_connection(f)
+    let manager = DB_MANAGER.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Global database manager lock poisoned: {}", e))
+    })?;
+    manager.with_connection(f)
 }
 
 pub fn with_db_mut<T, F>(f: F) -> AppResult<T>
 where
     F: FnOnce(&mut Connection) -> AppResult<T>,
 {
-    DB_MANAGER.with_connection_mut(f)
+    let mut manager = DB_MANAGER.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Global database manager lock poisoned: {}", e))
+    })?;
+    manager.with_connection_mut(f)
+}
+
+pub fn refresh_database_connection() -> AppResult<bool> {
+    let mut manager = DB_MANAGER.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Global database manager lock poisoned: {}", e))
+    })?;
+    manager.ensure_current_connection()
 }
 
 pub fn get_database_path() -> AppResult<PathBuf> {

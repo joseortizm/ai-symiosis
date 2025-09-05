@@ -1,6 +1,6 @@
 use crate::{
-    config::reload_config,
-    database::with_db_mut,
+    config::{reload_config, ConfigReloadResult},
+    database::{refresh_database_connection, with_db_mut},
     logging::log,
     services::database_service::{
         init_db, load_all_notes_into_sqlite, load_all_notes_into_sqlite_with_progress,
@@ -74,13 +74,44 @@ pub async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         emit_with_logging(&app, "db-loading-start", "Refreshing notes...");
         emit_with_logging(&app, "db-loading-progress", "Loading settings...");
 
-        if let Err(e) = reload_config(&APP_CONFIG, Some(app.clone())) {
-            emit_with_logging(
-                &app,
-                "db-loading-error",
-                format!("Failed to reload config: {}", e),
-            );
-            return Err(crate::core::AppError::ConfigLoad(e));
+        let reload_result = match reload_config(&APP_CONFIG, Some(app.clone())) {
+            Ok(result) => result,
+            Err(e) => {
+                emit_with_logging(
+                    &app,
+                    "db-loading-error",
+                    format!("Failed to reload config: {}", e),
+                );
+                return Err(crate::core::AppError::ConfigLoad(e));
+            }
+        };
+
+        if reload_result == ConfigReloadResult::NotesDirChanged {
+            match refresh_database_connection() {
+                Ok(true) => {
+                    emit_with_logging(
+                        &app,
+                        "db-loading-progress",
+                        "Notes directory changed, database connection refreshed",
+                    );
+                }
+                Ok(false) => {
+                    // This shouldn't happen since we detected a change, but handle gracefully
+                    emit_with_logging(
+                        &app,
+                        "db-loading-progress",
+                        "Notes directory unchanged, continuing with existing database",
+                    );
+                }
+                Err(e) => {
+                    emit_with_logging(
+                        &app,
+                        "db-loading-error",
+                        format!("Failed to refresh database connection: {}", e),
+                    );
+                    return Err(e);
+                }
+            }
         }
 
         emit_with_logging(&app, "db-loading-progress", "Preparing notes database...");
