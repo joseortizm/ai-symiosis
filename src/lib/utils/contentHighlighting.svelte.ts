@@ -93,6 +93,17 @@ export function getHighlightedContent(
   return highlightMatches(content, query)
 }
 
+export function getHighlightedTitle(
+  title: string,
+  query: string,
+  hideHighlights: boolean = false
+): string {
+  if (!query.trim() || query.length < 3 || hideHighlights) {
+    return title
+  }
+  return highlightMatches(title, query)
+}
+
 export function clearHighlightCache(): void {
   highlightCache.clear()
 }

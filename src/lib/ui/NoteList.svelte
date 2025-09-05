@@ -12,9 +12,11 @@ Handles note selection state and integrates with keyboard navigation.
     AppState,
     AppActions,
   } from '../app/appCoordinator.svelte'
+  import { getHighlightedTitle } from '../utils/contentHighlighting.svelte'
 
   // Context and state
-  const { focusManager } = getContext<AppManagers>('managers')
+  const { focusManager, contentNavigationManager } =
+    getContext<AppManagers>('managers')
   const appState = getContext<AppState>('state')
   const actions = getContext<AppActions>('actions')
 
@@ -46,7 +48,12 @@ Handles note selection state and integrates with keyboard navigation.
                 actions.loadNoteContent(note)
               }}
             >
-              {note}
+              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+              {@html getHighlightedTitle(
+                note,
+                appState.query,
+                contentNavigationManager.hideHighlights
+              )}
             </button>
           </li>
         {/each}
@@ -110,5 +117,13 @@ Handles note selection state and integrates with keyboard navigation.
   .notes-list::-webkit-scrollbar-thumb {
     background: var(--theme-border);
     border-radius: 4px;
+  }
+  :global(.notes-list .highlight) {
+    background-color: rgba(254, 145, 0, 0.75) !important;
+    border-radius: 3px !important;
+    padding: 0.1em 0.3em !important;
+    font-weight: 500 !important;
+    color: #f0f0f0 !important;
+    display: inline !important;
   }
 </style>
