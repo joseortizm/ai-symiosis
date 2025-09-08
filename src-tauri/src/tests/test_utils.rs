@@ -6,12 +6,82 @@
 use crate::config::AppConfig;
 use crate::services::database_service::recreate_database;
 use crate::APP_CONFIG;
+use std::path::Path;
 use std::sync::Mutex;
 use tempfile::TempDir;
 
 // Global mutex to prevent race conditions when multiple tests override config
 #[cfg(test)]
 static CONFIG_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+/// CRITICAL SAFETY: Validate that a directory path is safe for test usage
+/// This prevents accidental data loss by ensuring tests only use approved directories
+#[cfg(test)]
+fn validate_test_directory_safety(path: &Path) -> Result<(), String> {
+    let path_str = path.to_string_lossy();
+
+    // SAFETY: Only allow specific patterns that indicate test directories
+    let is_safe_test_dir =
+        // Temporary directories created by tempfile crate
+        path_str.contains("/tmp/") ||
+        path_str.contains("\\Temp\\") ||
+        // Explicit test markers in path
+        path_str.contains("_tmp") ||
+        path_str.contains("test") ||
+        path_str.contains("Test") ||
+        // System temp directories
+        path_str.starts_with("/var/folders/") ||  // macOS temp
+        path_str.starts_with("/tmp/") ||           // Unix temp
+        path_str.contains("/AppData/Local/Temp/") || // Windows temp
+        // CI/CD environments
+        std::env::var("CI").is_ok();
+
+    if !is_safe_test_dir {
+        return Err(format!(
+            "CRITICAL SAFETY ERROR: Directory '{}' is not recognized as a safe test directory. \
+             Tests can only use temporary directories or paths containing 'test'/'_tmp' markers. \
+             This prevents accidental deletion of production data.",
+            path_str
+        ));
+    }
+
+    // Additional safety: Check for common production directory patterns
+    let dangerous_patterns = [
+        "Documents",
+        "Desktop",
+        "Downloads",
+        "Pictures",
+        "Videos",
+        "Music",
+        "notes",
+        "Notes",
+        "notebook",
+        "Notebook",
+        ".git",
+        "src",
+        "home",
+        "Users",
+        "user",
+    ];
+
+    // Only flag as dangerous if it's NOT in a temp directory
+    if !path_str.contains("/tmp/")
+        && !path_str.contains("\\Temp\\")
+        && !path_str.starts_with("/var/folders/")
+    {
+        for pattern in &dangerous_patterns {
+            if path_str.contains(pattern) {
+                return Err(format!(
+                    "CRITICAL SAFETY ERROR: Directory '{}' contains suspicious pattern '{}' \
+                     and is not in a recognized temp location. This could indicate a production directory.",
+                    path_str, pattern
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
 
 #[cfg(test)]
 pub mod database_testing;
@@ -117,9 +187,13 @@ impl TestConfigOverride {
         };
 
         let temp_dir = TempDir::new()?;
+
+        // CRITICAL SAFETY: Validate the temporary directory is safe for testing
+        validate_test_directory_safety(temp_dir.path())
+            .map_err(|e| format!("Test safety validation failed: {}", e))?;
+
         let test_notes_path = temp_dir.path().to_string_lossy().to_string();
 
-        // Read the current config and store it for restoration
         let original_config = {
             let config_guard = APP_CONFIG
                 .read()
@@ -159,13 +233,8 @@ impl TestConfigOverride {
 #[cfg(test)]
 impl Drop for TestConfigOverride {
     fn drop(&mut self) {
-        // Restore the original configuration
         if let Ok(mut config_guard) = APP_CONFIG.write() {
             *config_guard = self.original_config.clone();
         }
-
-        // Don't auto-cleanup during Drop to avoid database lock issues
-        // The directories are tracked and can be cleaned up manually
-        // The TempDir will still clean up the notes directory automatically
     }
 }
