@@ -1,144 +1,149 @@
-use crate::core::state::with_config;
 use crate::tests::test_utils::TestConfigOverride;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use serial_test::serial;
 use std::fs;
-use std::path::PathBuf;
 use std::sync::mpsc;
 
-#[test]
-fn test_watcher_setup_with_missing_directory_should_fail() {
-    let _test_config = TestConfigOverride::new().expect("Should create test config");
+#[cfg(test)]
+#[serial]
+mod serial_tests {
+    use super::*;
 
-    // Remove the notes directory to simulate missing directory scenario
-    let notes_dir = crate::config::get_config_notes_dir();
-    if notes_dir.exists() {
-        fs::remove_dir_all(&notes_dir).expect("Should remove test directory");
+    #[test]
+    fn test_watcher_setup_with_missing_directory_should_fail() {
+        let _test_config = TestConfigOverride::new().expect("Should create test config");
+
+        // Remove the notes directory to simulate missing directory scenario
+        let notes_dir = crate::config::get_config_notes_dir();
+        if notes_dir.exists() {
+            fs::remove_dir_all(&notes_dir).expect("Should remove test directory");
+        }
+
+        // Verify directory doesn't exist
+        assert!(
+            !notes_dir.exists(),
+            "Notes directory should not exist for this test"
+        );
+
+        // Test the core watcher creation logic that causes the bug
+        let (tx, _rx) = mpsc::channel();
+        let mut watcher = RecommendedWatcher::new(
+            move |res: Result<notify::Event, notify::Error>| {
+                if let Ok(event) = res {
+                    let _ = tx.send(event);
+                }
+            },
+            Config::default(),
+        )
+        .expect("Should create watcher");
+
+        // This should fail - demonstrating the bug
+        let result = watcher.watch(&notes_dir, RecursiveMode::Recursive);
+
+        assert!(
+            result.is_err(),
+            "Watcher should fail when notes directory doesn't exist"
+        );
+
+        // Check that the error is related to path not found
+        let error_msg = format!("{}", result.unwrap_err());
+        assert!(
+            error_msg.contains("No such file or directory")
+                || error_msg.contains("path was not found")
+                || error_msg.contains("No path was found")
+                || error_msg.contains("entity not found")
+                || error_msg.contains("cannot find the file"),
+            "Error should indicate missing directory: {}",
+            error_msg
+        );
     }
 
-    // Verify directory doesn't exist
-    assert!(
-        !notes_dir.exists(),
-        "Notes directory should not exist for this test"
-    );
+    #[test]
+    fn test_watcher_setup_with_existing_directory_should_succeed() {
+        let _test_config = TestConfigOverride::new().expect("Should create test config");
 
-    // Test the core watcher creation logic that causes the bug
-    let (tx, _rx) = mpsc::channel();
-    let mut watcher = RecommendedWatcher::new(
-        move |res: Result<notify::Event, notify::Error>| {
-            if let Ok(event) = res {
-                let _ = tx.send(event);
-            }
-        },
-        Config::default(),
-    )
-    .expect("Should create watcher");
+        // Ensure the notes directory exists
+        let notes_dir = crate::config::get_config_notes_dir();
+        fs::create_dir_all(&notes_dir).expect("Should create notes directory");
 
-    // This should fail - demonstrating the bug
-    let result = watcher.watch(&notes_dir, RecursiveMode::Recursive);
+        // Verify directory exists
+        assert!(
+            notes_dir.exists(),
+            "Notes directory should exist for this test"
+        );
 
-    assert!(
-        result.is_err(),
-        "Watcher should fail when notes directory doesn't exist"
-    );
+        // Test the core watcher creation logic
+        let (tx, _rx) = mpsc::channel();
+        let mut watcher = RecommendedWatcher::new(
+            move |res: Result<notify::Event, notify::Error>| {
+                if let Ok(event) = res {
+                    let _ = tx.send(event);
+                }
+            },
+            Config::default(),
+        )
+        .expect("Should create watcher");
 
-    // Check that the error is related to path not found
-    let error_msg = format!("{}", result.unwrap_err());
-    assert!(
-        error_msg.contains("No such file or directory")
-            || error_msg.contains("path was not found")
-            || error_msg.contains("No path was found")
-            || error_msg.contains("entity not found")
-            || error_msg.contains("cannot find the file"),
-        "Error should indicate missing directory: {}",
-        error_msg
-    );
-}
+        // This should succeed
+        let result = watcher.watch(&notes_dir, RecursiveMode::Recursive);
 
-#[test]
-fn test_watcher_setup_with_existing_directory_should_succeed() {
-    let _test_config = TestConfigOverride::new().expect("Should create test config");
-
-    // Ensure the notes directory exists
-    let notes_dir = crate::config::get_config_notes_dir();
-    fs::create_dir_all(&notes_dir).expect("Should create notes directory");
-
-    // Verify directory exists
-    assert!(
-        notes_dir.exists(),
-        "Notes directory should exist for this test"
-    );
-
-    // Test the core watcher creation logic
-    let (tx, _rx) = mpsc::channel();
-    let mut watcher = RecommendedWatcher::new(
-        move |res: Result<notify::Event, notify::Error>| {
-            if let Ok(event) = res {
-                let _ = tx.send(event);
-            }
-        },
-        Config::default(),
-    )
-    .expect("Should create watcher");
-
-    // This should succeed
-    let result = watcher.watch(&notes_dir, RecursiveMode::Recursive);
-
-    assert!(
-        result.is_ok(),
-        "Watcher should succeed when notes directory exists: {:?}",
-        result
-    );
-}
-
-#[test]
-fn test_watcher_setup_creates_missing_directory_before_watching() {
-    let _test_config = TestConfigOverride::new().expect("Should create test config");
-
-    // Remove the notes directory to simulate missing directory scenario
-    let notes_dir = crate::config::get_config_notes_dir();
-    if notes_dir.exists() {
-        fs::remove_dir_all(&notes_dir).expect("Should remove test directory");
+        assert!(
+            result.is_ok(),
+            "Watcher should succeed when notes directory exists: {:?}",
+            result
+        );
     }
 
-    // Verify directory doesn't exist
-    assert!(
-        !notes_dir.exists(),
-        "Notes directory should not exist for this test"
-    );
+    #[test]
+    fn test_watcher_setup_creates_missing_directory_before_watching() {
+        let _test_config = TestConfigOverride::new().expect("Should create test config");
 
-    // Create the directory (simulating the fix)
-    fs::create_dir_all(&notes_dir).expect("Should create notes directory");
+        // Remove the notes directory to simulate missing directory scenario
+        let notes_dir = crate::config::get_config_notes_dir();
+        if notes_dir.exists() {
+            fs::remove_dir_all(&notes_dir).expect("Should remove test directory");
+        }
 
-    // Now watcher should succeed
-    let (tx, _rx) = mpsc::channel();
-    let mut watcher = RecommendedWatcher::new(
-        move |res: Result<notify::Event, notify::Error>| {
-            if let Ok(event) = res {
-                let _ = tx.send(event);
-            }
-        },
-        Config::default(),
-    )
-    .expect("Should create watcher");
+        // Verify directory doesn't exist
+        assert!(
+            !notes_dir.exists(),
+            "Notes directory should not exist for this test"
+        );
 
-    let result = watcher.watch(&notes_dir, RecursiveMode::Recursive);
+        // Create the directory (simulating the fix)
+        fs::create_dir_all(&notes_dir).expect("Should create notes directory");
 
-    assert!(
-        result.is_ok(),
-        "Watcher should succeed after creating missing directory: {:?}",
-        result
-    );
-}
+        // Now watcher should succeed
+        let (tx, _rx) = mpsc::channel();
+        let mut watcher = RecommendedWatcher::new(
+            move |res: Result<notify::Event, notify::Error>| {
+                if let Ok(event) = res {
+                    let _ = tx.send(event);
+                }
+            },
+            Config::default(),
+        )
+        .expect("Should create watcher");
 
-#[test]
-fn test_get_config_notes_dir_returns_configured_path() {
-    let _test_config = TestConfigOverride::new().expect("Should create test config");
+        let result = watcher.watch(&notes_dir, RecursiveMode::Recursive);
 
-    let notes_dir = crate::config::get_config_notes_dir();
-    let expected_path = with_config(|config| PathBuf::from(&config.notes_directory));
+        assert!(
+            result.is_ok(),
+            "Watcher should succeed after creating missing directory: {:?}",
+            result
+        );
+    }
 
-    assert_eq!(
-        notes_dir, expected_path,
-        "get_config_notes_dir should return configured path"
-    );
+    #[test]
+    fn test_get_config_notes_dir_returns_configured_path() {
+        let test_config = TestConfigOverride::new().expect("Should create test config");
+
+        let notes_dir = crate::config::get_config_notes_dir();
+        let expected_path = test_config.notes_dir();
+
+        assert_eq!(
+            notes_dir, expected_path,
+            "get_config_notes_dir should return configured path"
+        );
+    }
 }

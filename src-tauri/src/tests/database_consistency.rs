@@ -11,7 +11,10 @@ use crate::services::database_service::init_db;
 use rusqlite::params;
 use std::collections::HashMap;
 
+use serial_test::serial;
+
 #[cfg(test)]
+#[serial]
 mod real_database_function_tests {
     use super::*;
 

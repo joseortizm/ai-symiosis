@@ -1,5 +1,4 @@
 use crate::{
-    core::state::set_programmatic_operation_in_progress,
     core::{AppError, AppResult},
     database::with_db,
     logging::log,
@@ -14,23 +13,30 @@ use crate::{
 };
 use rusqlite::params;
 use std::fs;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Helper function to wrap file operations with programmatic operation flag
-fn with_programmatic_flag<T, F>(operation: F) -> AppResult<T>
+fn with_programmatic_flag<T, F>(
+    app_state: &crate::core::state::AppState,
+    operation: F,
+) -> AppResult<T>
 where
     F: FnOnce() -> AppResult<T>,
 {
     // Set flag immediately
-    set_programmatic_operation_in_progress(true);
+    app_state
+        .programmatic_operation_in_progress()
+        .store(true, std::sync::atomic::Ordering::Relaxed);
 
     // Execute operation (this is still synchronous and fast)
     let result = operation();
 
     // Spawn background thread to clear flag after delay - NON-BLOCKING
-    std::thread::spawn(|| {
+    let prog_flag = Arc::clone(&app_state.programmatic_operation_in_progress);
+    std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(5)); // Long enough for watcher to process
-        set_programmatic_operation_in_progress(false);
+        prog_flag.store(false, std::sync::atomic::Ordering::Relaxed);
     });
 
     result
@@ -132,7 +138,7 @@ pub fn create_new_note(
         }
 
         // Atomic file creation - this eliminates TOCTOU by using create_new flag
-        with_programmatic_flag(|| -> AppResult<()> {
+        with_programmatic_flag(&app_state, || -> AppResult<()> {
             match std::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true) // This will fail if file already exists
@@ -244,7 +250,7 @@ pub fn save_note_with_content_check(
             fs::create_dir_all(parent)?;
         }
 
-        with_programmatic_flag(|| safe_write_note(&note_path, content))?;
+        with_programmatic_flag(&app_state, || safe_write_note(&note_path, content))?;
 
         let modified = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -322,7 +328,7 @@ pub fn rename_note(
                 }
 
                 // Now attempt the atomic rename operation
-                let rename_result = with_programmatic_flag(|| {
+                let rename_result = with_programmatic_flag(&app_state, || {
                     fs::rename(&old_path, &new_path).map_err(AppError::from)
                 });
 
@@ -475,8 +481,9 @@ pub fn delete_note(
         match copy_result {
             Ok(backup_path) => {
                 // File exists and backup was created, now delete the original
-                match with_programmatic_flag(|| fs::remove_file(&note_path).map_err(AppError::from))
-                {
+                match with_programmatic_flag(&app_state, || {
+                    fs::remove_file(&note_path).map_err(AppError::from)
+                }) {
                     Ok(()) => {
                         // Delete succeeded - log success but keep backup
                         eprintln!(
@@ -747,7 +754,7 @@ pub fn recover_note_version(
         let version_content = fs::read_to_string(&version_path)?;
 
         // Use the same programmatic flag and safe write as normal saves
-        with_programmatic_flag(|| safe_write_note(&note_path, &version_content))?;
+        with_programmatic_flag(&app_state, || safe_write_note(&note_path, &version_content))?;
 
         let modified = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -865,7 +872,7 @@ pub fn recover_deleted_file(
         let backup_content = fs::read_to_string(&backup_path)?;
 
         // Write to the original location
-        with_programmatic_flag(|| safe_write_note(&note_path, &backup_content))?;
+        with_programmatic_flag(&app_state, || safe_write_note(&note_path, &backup_content))?;
 
         let modified = SystemTime::now()
             .duration_since(UNIX_EPOCH)

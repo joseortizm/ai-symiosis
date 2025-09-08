@@ -8,7 +8,6 @@ use tauri::{AppHandle, Emitter};
 
 use crate::{
     config::get_config_notes_dir,
-    core::state::get_programmatic_operation_in_progress,
     database::with_db,
     services::note_service::{create_versioned_backup, update_note_in_database, BackupType},
 };
@@ -67,7 +66,10 @@ impl DebouncedWatcher {
     }
 }
 
-pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup_notes_watcher(
+    app_handle: AppHandle,
+    app_state: Arc<crate::core::state::AppState>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let notes_dir = get_config_notes_dir();
 
     // Ensure the notes directory exists before attempting to watch it
@@ -96,6 +98,7 @@ pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::err
     // Spawn a thread to handle file system events
     let app_handle_clone = app_handle.clone();
     let debounced_watcher_clone = debounced_watcher.clone();
+    let app_state_clone = app_state.clone();
     thread::spawn(move || {
         // Keep the watcher alive
         let _watcher = watcher;
@@ -114,7 +117,10 @@ pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::err
 
                     if involves_notes {
                         // Only refresh cache if this is NOT a programmatic operation
-                        if !get_programmatic_operation_in_progress() {
+                        if !app_state_clone
+                            .programmatic_operation_in_progress()
+                            .load(Ordering::Relaxed)
+                        {
                             // Check if any of the paths should be processed (debounced)
                             let should_process = event
                                 .paths

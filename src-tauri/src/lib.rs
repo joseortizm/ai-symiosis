@@ -14,14 +14,15 @@ mod watcher;
 use commands::*;
 use config::{
     get_config_path, get_editor_config, get_general_config, get_interface_config,
-    get_preferences_config, get_shortcuts_config, load_config, parse_shortcut, save_config_content,
-    scan_available_themes,
+    get_preferences_config, get_shortcuts_config, load_config_with_first_run_info, parse_shortcut,
+    save_config_content, scan_available_themes,
 };
-use core::state::{get_was_first_run, set_global_state, with_config, AppState};
+use core::state::AppState;
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
 use services::{database_service, note_service};
 use std::fs;
+use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -84,7 +85,10 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                 }
             }
             "refresh" => {
-                let _ = refresh_cache(app.app_handle().clone());
+                let app_handle = app.app_handle().clone();
+                if let Some(app_state) = app_handle.try_state::<AppState>() {
+                    let _ = refresh_cache(app_handle.clone(), app_state);
+                }
             }
             "settings" => {
                 let app_handle = app.app_handle().clone();
@@ -211,10 +215,12 @@ pub fn initialize_notes() {
 // Main application entry point
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Early config load with proper state sharing
-    let config = load_config();
+    // Early config load with first run detection
+    let (config, was_first_run) = load_config_with_first_run_info();
     let app_state = AppState::new(config);
-    set_global_state(std::sync::Arc::new(app_state.clone()));
+    if was_first_run {
+        app_state.set_first_run(true);
+    }
 
     // Now initialize_notes() can access config through global state
     initialize_notes();
@@ -231,31 +237,46 @@ pub fn run() {
 
             // Apply always_on_top setting to main window
             if let Some(window) = app.get_webview_window("main") {
-                with_config(|config| {
+                if let Some(app_state) = app.try_state::<AppState>() {
+                    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
                     let _ = window.set_always_on_top(config.interface.always_on_top);
-                });
+                }
             }
 
             // Setup file system watcher for notes directory
-            setup_notes_watcher(app.handle().clone())?;
+            if let Some(app_state) = app.try_state::<AppState>() {
+                setup_notes_watcher(app.handle().clone(), Arc::new(app_state.inner().clone()))?;
+            }
 
             // Emit first-run event if this is the first time the app is launched
-            if get_was_first_run() {
-                let app_handle = app.handle().clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(1000));
-                    let _ = app_handle.emit("first-run-detected", ());
-                });
+            if let Some(app_state) = app.try_state::<AppState>() {
+                if app_state
+                    .was_first_run()
+                    .load(std::sync::atomic::Ordering::Relaxed)
+                {
+                    let app_handle = app.handle().clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(1000));
+                        let _ = app_handle.emit("first-run-detected", ());
+                    });
+                }
             }
 
             // Setup global shortcuts
             #[cfg(desktop)]
             {
                 // Get main shortcut from config
-                let main_shortcut = with_config(|config| {
-                    parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
-                        Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
-                    })
+                let config = if let Some(app_state) = app.try_state::<AppState>() {
+                    app_state
+                        .config
+                        .read()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .clone()
+                } else {
+                    crate::config::AppConfig::default()
+                };
+                let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
                 });
 
                 app.handle().plugin(

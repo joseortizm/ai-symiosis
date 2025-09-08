@@ -1,7 +1,4 @@
-use crate::{
-    config::{generate_config_template, get_config_path},
-    core::state::get_was_first_run,
-};
+use crate::config::{generate_config_template, get_config_path};
 use std::fs;
 
 #[tauri::command]
@@ -18,6 +15,8 @@ pub fn get_config_content() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn config_exists() -> bool {
-    !get_was_first_run()
+pub fn config_exists(app_state: tauri::State<crate::core::state::AppState>) -> bool {
+    !app_state
+        .was_first_run()
+        .load(std::sync::atomic::Ordering::Relaxed)
 }

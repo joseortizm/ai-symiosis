@@ -279,6 +279,29 @@ pub fn get_default_notes_dir() -> String {
 }
 
 pub fn get_config_path() -> PathBuf {
+    // SAFETY GUARDRAIL: Only allow test override in test builds and when explicitly enabled
+    #[cfg(test)]
+    {
+        // Only use test config when both the path AND the enable flag are set
+        // This prevents accidental global test pollution
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_ok() {
+            if let Ok(test_config_path) = std::env::var("SYMIOSIS_TEST_CONFIG_PATH") {
+                // CRITICAL: Validate that test path is actually in a temp directory
+                if test_config_path.contains("/tmp/")
+                    || test_config_path.contains("tmp")
+                    || test_config_path.contains("/T/")
+                {
+                    return PathBuf::from(test_config_path);
+                } else {
+                    eprintln!(
+                        "SAFETY ERROR: Test config path '{}' is not in temp directory!",
+                        test_config_path
+                    );
+                }
+            }
+        }
+    }
+
     if let Some(home_dir) = home::home_dir() {
         home_dir.join(".symiosis").join("config.toml")
     } else {
@@ -287,7 +310,9 @@ pub fn get_config_path() -> PathBuf {
 }
 
 pub fn get_config_notes_dir() -> PathBuf {
-    crate::core::state::with_config(|config| PathBuf::from(&config.notes_directory))
+    // Load config directly since we no longer have global state access
+    let config = load_config();
+    PathBuf::from(&config.notes_directory)
 }
 
 pub fn get_config_notes_dir_from_config(config: &AppConfig) -> PathBuf {
@@ -564,7 +589,6 @@ pub fn load_config() -> AppConfig {
     match fs::read_to_string(&config_path) {
         Ok(content) => load_config_from_content(&content),
         Err(_) => {
-            crate::core::state::set_was_first_run(true);
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
                 eprintln!("Failed to create default config file: {}", e);
@@ -572,6 +596,24 @@ pub fn load_config() -> AppConfig {
             default_config
         }
     }
+}
+
+pub fn load_config_with_first_run_info() -> (AppConfig, bool) {
+    let config_path = get_config_path();
+    let was_first_run = !config_path.exists();
+
+    let config = match fs::read_to_string(&config_path) {
+        Ok(content) => load_config_from_content(&content),
+        Err(_) => {
+            let default_config = AppConfig::default();
+            if let Err(e) = save_config(&default_config) {
+                eprintln!("Failed to create default config file: {}", e);
+            }
+            default_config
+        }
+    };
+
+    (config, was_first_run)
 }
 
 pub fn load_config_from_content(content: &str) -> AppConfig {

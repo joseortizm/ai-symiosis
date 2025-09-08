@@ -4,11 +4,11 @@
 //! but are not part of the production codebase.
 
 use crate::config::AppConfig;
-use crate::core::state::with_config_lock;
 use crate::services::database_service::recreate_database;
 use std::path::Path;
 use std::sync::Mutex;
 use tempfile::TempDir;
+use toml;
 
 // Global mutex to prevent race conditions when multiple tests override config
 #[cfg(test)]
@@ -167,7 +167,6 @@ impl DbTestHarness {
 #[cfg(test)]
 pub struct TestConfigOverride {
     _temp_dir: TempDir,
-    original_config: AppConfig,
     _lock: std::sync::MutexGuard<'static, ()>,
 }
 
@@ -192,28 +191,91 @@ impl TestConfigOverride {
         validate_test_directory_safety(temp_dir.path())
             .map_err(|e| format!("Test safety validation failed: {}", e))?;
 
-        let test_notes_path = temp_dir.path().to_string_lossy().to_string();
+        // Create a subdirectory for notes within the temp directory using _tmp prefix
+        // This ensures the cleanup integration test will find and clean up associated directories
+        let notes_dir = temp_dir.path().join("_tmp_notes");
+        std::fs::create_dir_all(&notes_dir)
+            .map_err(|e| format!("Failed to create notes directory: {}", e))?;
+        let test_notes_path = notes_dir.to_string_lossy().to_string();
 
-        let original_config = with_config_lock(|config_lock| {
-            config_lock
-                .read()
-                .map_err(|e| format!("Failed to read config: {}", e))
-                .map(|guard| guard.clone())
-        })?;
+        // Create a new config with the test notes directory
+        let mut test_config = AppConfig::default();
+        test_config.notes_directory = test_notes_path.clone();
 
-        // Create a new config with the test directory
-        let mut test_config = original_config.clone();
-        test_config.notes_directory = test_notes_path;
+        // Create a separate directory for the config file (not in the notes directory)
+        let config_dir = temp_dir.path().join("config");
+        std::fs::create_dir_all(&config_dir)
+            .map_err(|e| format!("Failed to create config directory: {}", e))?;
 
-        with_config_lock(|config_lock| -> Result<(), String> {
-            match config_lock.write() {
-                Ok(mut guard) => {
-                    *guard = test_config;
-                    Ok(())
-                }
-                Err(e) => Err(format!("Failed to write config: {}", e)),
-            }
-        })?;
+        let config_file_path = config_dir.join("config.toml");
+        let config_toml = toml::to_string(&test_config)
+            .map_err(|e| format!("Failed to serialize test config: {}", e))?;
+        std::fs::write(&config_file_path, config_toml)
+            .map_err(|e| format!("Failed to write test config file: {}", e))?;
+
+        // SAFETY VALIDATION: Ensure config file path is in temp directory
+        let config_path_str = config_file_path.to_string_lossy();
+        if !config_path_str.contains("/tmp/")
+            && !config_path_str.contains("tmp")
+            && !config_path_str.contains("/T/")
+        {
+            return Err(format!(
+                "CRITICAL SAFETY ERROR: Test config path is not in temp directory!"
+            )
+            .into());
+        }
+
+        // SAFETY VALIDATION: Ensure notes directory is in temp directory
+        if !test_notes_path.contains("/tmp/")
+            && !test_notes_path.contains("tmp")
+            && !test_notes_path.contains("/T/")
+        {
+            return Err(format!(
+                "CRITICAL SAFETY ERROR: Test notes path is not in temp directory!"
+            )
+            .into());
+        }
+
+        // Use a unique test ID to avoid cross-test pollution
+        let test_id = format!("test_{}", std::process::id());
+
+        // Set environment variables so get_config_path() finds our test config
+        std::env::set_var("SYMIOSIS_TEST_CONFIG_PATH", &config_file_path);
+        std::env::set_var("SYMIOSIS_TEST_MODE_ENABLED", &test_id);
+
+        // CRITICAL SAFETY CHECK: Verify we're actually using the test directory
+        let actual_notes_dir = crate::config::get_config_notes_dir();
+        let expected_notes_path = notes_dir.to_path_buf();
+
+        if actual_notes_dir != expected_notes_path {
+            // EMERGENCY ABORT: We're not using the test directory!
+            std::env::remove_var("SYMIOSIS_TEST_CONFIG_PATH");
+            std::env::remove_var("SYMIOSIS_TEST_MODE_ENABLED");
+            panic!(
+                "CRITICAL SAFETY ERROR: Test setup failed! Expected to use test directory '{}' but get_config_notes_dir() returned '{}'. This would cause data loss!",
+                expected_notes_path.display(),
+                actual_notes_dir.display()
+            );
+        }
+
+        // Additional safety check: ensure the directory is actually temporary
+        let actual_notes_str = actual_notes_dir.to_string_lossy();
+        if !actual_notes_str.contains("/tmp/")
+            && !actual_notes_str.contains("tmp")
+            && !actual_notes_str.contains("/T/")
+        {
+            std::env::remove_var("SYMIOSIS_TEST_CONFIG_PATH");
+            std::env::remove_var("SYMIOSIS_TEST_MODE_ENABLED");
+            panic!(
+                "CRITICAL SAFETY ERROR: get_config_notes_dir() returned '{}' which is not in a temp directory! This would cause data loss!",
+                actual_notes_dir.display()
+            );
+        }
+
+        println!(
+            "✅ SAFETY CHECK PASSED: Using test directory: {}",
+            actual_notes_dir.display()
+        );
 
         // Initialize a clean database for the test directory
         // Use recreate_database to ensure we start with a fresh database state
@@ -221,25 +283,22 @@ impl TestConfigOverride {
 
         Ok(Self {
             _temp_dir: temp_dir,
-            original_config,
             _lock: lock,
         })
     }
 
     /// Get the temporary notes directory path
     pub fn notes_dir(&self) -> std::path::PathBuf {
-        self._temp_dir.path().to_path_buf()
+        self._temp_dir.path().join("_tmp_notes")
     }
 }
 
 #[cfg(test)]
 impl Drop for TestConfigOverride {
     fn drop(&mut self) {
-        let _ = with_config_lock(|config_lock| {
-            if let Ok(mut guard) = config_lock.write() {
-                *guard = self.original_config.clone();
-            }
-        });
+        // Clean up the test config environment variables
+        std::env::remove_var("SYMIOSIS_TEST_CONFIG_PATH");
+        std::env::remove_var("SYMIOSIS_TEST_MODE_ENABLED");
     }
 }
 
@@ -247,19 +306,19 @@ impl Drop for TestConfigOverride {
 /// These use Tauri's official testing utilities to properly mock State
 #[cfg(test)]
 mod test_command_wrappers {
-    use crate::core::state::with_config_lock;
     use crate::core::state::AppState;
     use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
     use tauri::{App, Manager};
 
     /// Create a mock Tauri app with test AppState
     fn create_test_mock_app() -> App<MockRuntime> {
-        let config = with_config_lock(|config_lock| {
-            config_lock
-                .read()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone()
-        });
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: create_test_mock_app() called outside of TestConfigOverride!");
+        }
+
+        // Use the actual loaded config (which should be the test config if TestConfigOverride is active)
+        let config = crate::config::load_config();
 
         let app_state = AppState::new(config);
 
@@ -270,16 +329,33 @@ mod test_command_wrappers {
     }
 
     pub fn test_create_new_note(note_name: &str) -> Result<(), String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: test_create_new_note() called outside of TestConfigOverride!");
+        }
+
         let app = create_test_mock_app();
         let app_state = app.state::<AppState>();
         crate::commands::notes::create_new_note(note_name, app_state)
     }
 
     pub fn test_get_note_content(note_name: &str) -> Result<String, String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: test_get_note_content() called outside of TestConfigOverride!");
+        }
+
         crate::commands::notes::get_note_content(note_name)
     }
 
     pub fn test_delete_note(note_name: &str) -> Result<(), String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!(
+                "CRITICAL SAFETY ERROR: test_delete_note() called outside of TestConfigOverride!"
+            );
+        }
+
         let app = create_test_mock_app();
         let app_state = app.state::<AppState>();
         crate::commands::notes::delete_note(note_name, app_state)
@@ -290,6 +366,11 @@ mod test_command_wrappers {
         content: &str,
         original_content: &str,
     ) -> Result<(), String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: test_save_note_with_content_check() called outside of TestConfigOverride!");
+        }
+
         let app = create_test_mock_app();
         let app_state = app.state::<AppState>();
         crate::commands::notes::save_note_with_content_check(
@@ -301,6 +382,13 @@ mod test_command_wrappers {
     }
 
     pub fn test_rename_note(old_name: String, new_name: String) -> Result<(), String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!(
+                "CRITICAL SAFETY ERROR: test_rename_note() called outside of TestConfigOverride!"
+            );
+        }
+
         let app = create_test_mock_app();
         let app_state = app.state::<AppState>();
         crate::commands::notes::rename_note(old_name, new_name, app_state)

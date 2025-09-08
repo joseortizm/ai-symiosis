@@ -10,7 +10,7 @@ use std::process::{Command, Stdio};
 fn main() {
     println!("=== Integration Test Runner with Cleanup ===");
 
-    // Step 1: Run all unit tests (excluding this integration test)
+    // Step 1: Run all unit tests (excluding this integration test) with parallel execution
     println!("Running unit tests...");
     let unit_test_result = Command::new("cargo")
         .args(&["test", "--lib"])
