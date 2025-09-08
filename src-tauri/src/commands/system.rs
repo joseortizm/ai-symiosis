@@ -1,12 +1,12 @@
 use crate::{
     config::{reload_config, ConfigReloadResult},
+    core::state::with_config_lock,
     database::{refresh_database_connection, with_db_mut},
     logging::log,
     services::database_service::{
         init_db, load_all_notes_into_sqlite, load_all_notes_into_sqlite_with_progress,
         recreate_database_with_progress,
     },
-    APP_CONFIG,
 };
 use tauri::{AppHandle, Emitter};
 
@@ -74,17 +74,18 @@ pub async fn refresh_cache(app: AppHandle) -> Result<(), String> {
         emit_with_logging(&app, "db-loading-start", "Refreshing notes...");
         emit_with_logging(&app, "db-loading-progress", "Loading settings...");
 
-        let reload_result = match reload_config(&APP_CONFIG, Some(app.clone())) {
-            Ok(result) => result,
-            Err(e) => {
-                emit_with_logging(
-                    &app,
-                    "db-loading-error",
-                    format!("Failed to reload config: {}", e),
-                );
-                return Err(crate::core::AppError::ConfigLoad(e));
-            }
-        };
+        let reload_result =
+            match with_config_lock(|config_lock| reload_config(config_lock, Some(app.clone()))) {
+                Ok(result) => result,
+                Err(e) => {
+                    emit_with_logging(
+                        &app,
+                        "db-loading-error",
+                        format!("Failed to reload config: {}", e),
+                    );
+                    return Err(crate::core::AppError::ConfigLoad(e));
+                }
+            };
 
         if reload_result == ConfigReloadResult::NotesDirChanged {
             match refresh_database_connection() {

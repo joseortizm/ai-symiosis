@@ -1,5 +1,6 @@
 use crate::{
     config::get_config_notes_dir,
+    core::state::with_config,
     core::{AppError, AppResult},
     database::with_db,
     logging::log,
@@ -11,7 +12,7 @@ use crate::{
             validate_note_name, BackupType,
         },
     },
-    APP_CONFIG, PROGRAMMATIC_OPERATION_IN_PROGRESS,
+    PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use rusqlite::params;
 use std::fs;
@@ -58,9 +59,8 @@ pub fn list_all_notes() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 pub fn search_notes(query: &str) -> Result<Vec<String>, String> {
-    let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-    let result = search_notes_hybrid(query, config.preferences.max_search_results);
-    result.map_err(|e| e.to_string())
+    with_config(|config| search_notes_hybrid(query, config.preferences.max_search_results))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -1,5 +1,4 @@
-use crate::core::AppResult;
-use crate::APP_CONFIG;
+use crate::core::{state::with_config, AppResult};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 #[tauri::command]
@@ -11,8 +10,12 @@ pub fn show_main_window(app: AppHandle) -> Result<(), String> {
                 window.set_focus()?;
             }
             None => {
-                let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-                let interface_config = &config.interface;
+                let (window_decorations, always_on_top) = with_config(|config| {
+                    (
+                        config.interface.window_decorations,
+                        config.interface.always_on_top,
+                    )
+                });
 
                 let mut window_builder =
                     WebviewWindowBuilder::new(&app, "main", WebviewUrl::default())
@@ -20,9 +23,9 @@ pub fn show_main_window(app: AppHandle) -> Result<(), String> {
                         .inner_size(1200.0, 800.0)
                         .center()
                         .visible(false)
-                        .decorations(interface_config.window_decorations);
+                        .decorations(window_decorations);
 
-                if interface_config.always_on_top {
+                if always_on_top {
                     window_builder = window_builder.always_on_top(true);
                 }
 

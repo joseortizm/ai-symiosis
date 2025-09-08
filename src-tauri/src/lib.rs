@@ -15,13 +15,14 @@ use commands::*;
 use config::{
     get_config_path, get_editor_config, get_general_config, get_interface_config,
     get_preferences_config, get_shortcuts_config, load_config, parse_shortcut, save_config_content,
-    scan_available_themes, AppConfig,
+    scan_available_themes,
 };
+use core::state::with_config;
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
 use services::{database_service, note_service};
 use std::fs;
-use std::sync::{atomic::AtomicBool, LazyLock, RwLock};
+use std::sync::atomic::AtomicBool;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -30,8 +31,8 @@ use tauri::{
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use watcher::setup_notes_watcher;
 
-// Global static configuration
-pub static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
+// MIGRATION: Moved APP_CONFIG out of scope to find all usages via compiler errors
+// pub static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
 
 pub static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -218,8 +219,9 @@ pub fn run() {
 
             // Apply always_on_top setting to main window
             if let Some(window) = app.get_webview_window("main") {
-                let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-                let _ = window.set_always_on_top(config.interface.always_on_top);
+                with_config(|config| {
+                    let _ = window.set_always_on_top(config.interface.always_on_top);
+                });
             }
 
             // Setup file system watcher for notes directory
@@ -238,9 +240,10 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 // Get main shortcut from config
-                let config = APP_CONFIG.read().unwrap_or_else(|e| e.into_inner());
-                let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
-                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
+                let main_shortcut = with_config(|config| {
+                    parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
+                        Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
+                    })
                 });
 
                 app.handle().plugin(

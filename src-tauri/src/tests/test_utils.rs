@@ -4,8 +4,8 @@
 //! but are not part of the production codebase.
 
 use crate::config::AppConfig;
+use crate::core::state::with_config_lock;
 use crate::services::database_service::recreate_database;
-use crate::APP_CONFIG;
 use std::path::Path;
 use std::sync::Mutex;
 use tempfile::TempDir;
@@ -194,24 +194,26 @@ impl TestConfigOverride {
 
         let test_notes_path = temp_dir.path().to_string_lossy().to_string();
 
-        let original_config = {
-            let config_guard = APP_CONFIG
+        let original_config = with_config_lock(|config_lock| {
+            config_lock
                 .read()
-                .map_err(|e| format!("Failed to read config: {}", e))?;
-            config_guard.clone()
-        };
+                .map_err(|e| format!("Failed to read config: {}", e))
+                .map(|guard| guard.clone())
+        })?;
 
         // Create a new config with the test directory
         let mut test_config = original_config.clone();
         test_config.notes_directory = test_notes_path;
 
-        // Override the global config
-        {
-            let mut config_guard = APP_CONFIG
-                .write()
-                .map_err(|e| format!("Failed to write config: {}", e))?;
-            *config_guard = test_config;
-        }
+        with_config_lock(|config_lock| -> Result<(), String> {
+            match config_lock.write() {
+                Ok(mut guard) => {
+                    *guard = test_config;
+                    Ok(())
+                }
+                Err(e) => Err(format!("Failed to write config: {}", e)),
+            }
+        })?;
 
         // Initialize a clean database for the test directory
         // Use recreate_database to ensure we start with a fresh database state
@@ -233,8 +235,10 @@ impl TestConfigOverride {
 #[cfg(test)]
 impl Drop for TestConfigOverride {
     fn drop(&mut self) {
-        if let Ok(mut config_guard) = APP_CONFIG.write() {
-            *config_guard = self.original_config.clone();
-        }
+        let _ = with_config_lock(|config_lock| {
+            if let Ok(mut guard) = config_lock.write() {
+                *guard = self.original_config.clone();
+            }
+        });
     }
 }

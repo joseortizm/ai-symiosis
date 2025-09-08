@@ -1,5 +1,5 @@
+use crate::core::state::with_config;
 use crate::tests::test_utils::TestConfigOverride;
-use crate::APP_CONFIG;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::fs;
 use std::path::PathBuf;
@@ -135,8 +135,7 @@ fn test_get_config_notes_dir_returns_configured_path() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     let notes_dir = crate::config::get_config_notes_dir();
-    let config = APP_CONFIG.read().unwrap();
-    let expected_path = PathBuf::from(&config.notes_directory);
+    let expected_path = with_config(|config| PathBuf::from(&config.notes_directory));
 
     assert_eq!(
         notes_dir, expected_path,
