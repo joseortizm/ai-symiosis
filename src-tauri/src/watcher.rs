@@ -8,9 +8,9 @@ use tauri::{AppHandle, Emitter};
 
 use crate::{
     config::get_config_notes_dir,
+    core::state::get_programmatic_operation_in_progress,
     database::with_db,
     services::note_service::{create_versioned_backup, update_note_in_database, BackupType},
-    PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -114,7 +114,7 @@ pub fn setup_notes_watcher(app_handle: AppHandle) -> Result<(), Box<dyn std::err
 
                     if involves_notes {
                         // Only refresh cache if this is NOT a programmatic operation
-                        if !PROGRAMMATIC_OPERATION_IN_PROGRESS.load(Ordering::SeqCst) {
+                        if !get_programmatic_operation_in_progress() {
                             // Check if any of the paths should be processed (debounced)
                             let should_process = event
                                 .paths

@@ -1,6 +1,6 @@
 use crate::{
     config::{generate_config_template, get_config_path},
-    WAS_FIRST_RUN,
+    core::state::get_was_first_run,
 };
 use std::fs;
 
@@ -19,5 +19,5 @@ pub fn get_config_content() -> Result<String, String> {
 
 #[tauri::command]
 pub fn config_exists() -> bool {
-    !WAS_FIRST_RUN.load(std::sync::atomic::Ordering::Relaxed)
+    !get_was_first_run()
 }

@@ -17,12 +17,11 @@ use config::{
     get_preferences_config, get_shortcuts_config, load_config, parse_shortcut, save_config_content,
     scan_available_themes,
 };
-use core::state::with_config;
+use core::state::{get_was_first_run, set_global_state, with_config, AppState};
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
 use services::{database_service, note_service};
 use std::fs;
-use std::sync::atomic::AtomicBool;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -34,10 +33,8 @@ use watcher::setup_notes_watcher;
 // MIGRATION: Moved APP_CONFIG out of scope to find all usages via compiler errors
 // pub static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
 
-pub static WAS_FIRST_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-// Global flag to prevent file watcher from triggering cache refresh during programmatic operations
-pub static PROGRAMMATIC_OPERATION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+// These global flags are now managed through AppState and accessed via helper functions
+// in core::state - no more global statics needed
 
 // Database operations
 
@@ -207,13 +204,21 @@ pub fn initialize_notes() {
 // Main application entry point
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Early config load with proper state sharing
+    let config = load_config();
+    let app_state = AppState::new(config);
+    set_global_state(std::sync::Arc::new(app_state.clone()));
+
+    // Now initialize_notes() can access config through global state
     initialize_notes();
 
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .manage(std::sync::RwLock::new(load_config()))
+        .manage(app_state) // Use the same AppState instance
         .setup(|app| {
+            // Global state already set up above
+
             // Setup the system tray
             setup_tray(app.handle())?;
 
@@ -228,7 +233,7 @@ pub fn run() {
             setup_notes_watcher(app.handle().clone())?;
 
             // Emit first-run event if this is the first time the app is launched
-            if WAS_FIRST_RUN.load(std::sync::atomic::Ordering::Relaxed) {
+            if get_was_first_run() {
                 let app_handle = app.handle().clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(1000));

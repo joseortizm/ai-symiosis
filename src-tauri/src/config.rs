@@ -564,7 +564,7 @@ pub fn load_config() -> AppConfig {
     match fs::read_to_string(&config_path) {
         Ok(content) => load_config_from_content(&content),
         Err(_) => {
-            crate::WAS_FIRST_RUN.store(true, std::sync::atomic::Ordering::Relaxed);
+            crate::core::state::set_was_first_run(true);
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
                 eprintln!("Failed to create default config file: {}", e);
@@ -1100,37 +1100,37 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
 // ============================================================================
 
 #[tauri::command]
-pub fn get_general_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> GeneralConfig {
-    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+pub fn get_general_config(app_state: tauri::State<crate::core::state::AppState>) -> GeneralConfig {
+    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
     config.general.clone()
 }
 
 #[tauri::command]
 pub fn get_interface_config(
-    app_config: tauri::State<std::sync::RwLock<AppConfig>>,
+    app_state: tauri::State<crate::core::state::AppState>,
 ) -> InterfaceConfig {
-    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
     config.interface.clone()
 }
 
 #[tauri::command]
-pub fn get_editor_config(app_config: tauri::State<std::sync::RwLock<AppConfig>>) -> EditorConfig {
-    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+pub fn get_editor_config(app_state: tauri::State<crate::core::state::AppState>) -> EditorConfig {
+    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
     config.editor.clone()
 }
 
 #[tauri::command]
 pub fn get_shortcuts_config(
-    app_config: tauri::State<std::sync::RwLock<AppConfig>>,
+    app_state: tauri::State<crate::core::state::AppState>,
 ) -> ShortcutsConfig {
-    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
     config.shortcuts.clone()
 }
 
 #[tauri::command]
 pub fn get_preferences_config(
-    app_config: tauri::State<std::sync::RwLock<AppConfig>>,
+    app_state: tauri::State<crate::core::state::AppState>,
 ) -> PreferencesConfig {
-    let config = app_config.read().unwrap_or_else(|e| e.into_inner());
+    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
     config.preferences.clone()
 }

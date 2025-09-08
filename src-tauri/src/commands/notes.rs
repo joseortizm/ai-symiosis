@@ -1,6 +1,6 @@
 use crate::{
     config::get_config_notes_dir,
-    core::state::with_config,
+    core::state::{set_programmatic_operation_in_progress, with_config},
     core::{AppError, AppResult},
     database::with_db,
     logging::log,
@@ -12,11 +12,9 @@ use crate::{
             validate_note_name, BackupType,
         },
     },
-    PROGRAMMATIC_OPERATION_IN_PROGRESS,
 };
 use rusqlite::params;
 use std::fs;
-use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Helper function to wrap file operations with programmatic operation flag
@@ -25,7 +23,7 @@ where
     F: FnOnce() -> AppResult<T>,
 {
     // Set flag immediately
-    PROGRAMMATIC_OPERATION_IN_PROGRESS.store(true, Ordering::SeqCst);
+    set_programmatic_operation_in_progress(true);
 
     // Execute operation (this is still synchronous and fast)
     let result = operation();
@@ -33,7 +31,7 @@ where
     // Spawn background thread to clear flag after delay - NON-BLOCKING
     std::thread::spawn(|| {
         std::thread::sleep(Duration::from_secs(5)); // Long enough for watcher to process
-        PROGRAMMATIC_OPERATION_IN_PROGRESS.store(false, Ordering::SeqCst);
+        set_programmatic_operation_in_progress(false);
     });
 
     result
