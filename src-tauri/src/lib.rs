@@ -12,11 +12,7 @@ mod watcher;
 
 // External crates
 use commands::*;
-use config::{
-    get_config_path, get_editor_config, get_general_config, get_interface_config,
-    get_preferences_config, get_shortcuts_config, load_config_with_first_run_info, parse_shortcut,
-    save_config_content, scan_available_themes,
-};
+use config::{get_config_path, load_config_with_first_run_info, parse_shortcut};
 use core::state::AppState;
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
