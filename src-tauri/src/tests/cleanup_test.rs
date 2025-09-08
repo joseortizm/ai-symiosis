@@ -12,10 +12,31 @@ use super::test_utils::cleanup_all_tmp_directories;
 /// Run with: `cargo test test_cleanup_all_tmp_directories -- --nocapture`
 #[test]
 fn test_cleanup_all_tmp_directories() {
+    use crate::config::get_config_notes_dir;
     use crate::database::get_data_dir;
     use std::fs;
 
     println!("=== Manual Cleanup Test ===");
+
+    // SAFETY: Assert that we're running in a test environment before any destructive operations
+    let notes_dir = get_config_notes_dir();
+    let notes_path_str = notes_dir.to_string_lossy();
+
+    if !notes_path_str.contains("/tmp/") && !notes_path_str.contains("tmp") {
+        println!(
+            "⚠️  SAFETY SKIP: Cleanup test detected non-tmp notes directory: {}",
+            notes_path_str
+        );
+        println!("   This test only runs in test environments to prevent data loss.");
+        println!("   To run this test, ensure TestConfigOverride is used or set test environment variables.");
+        println!("   Manual cleanup completed (skipped for safety)!");
+        return;
+    }
+
+    println!(
+        "✓ Safety check passed: notes directory is in tmp ({})",
+        notes_path_str
+    );
 
     // Show what we're about to clean up
     if let Some(app_data_dir) = get_data_dir() {

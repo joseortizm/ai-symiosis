@@ -472,8 +472,24 @@ pub fn delete_note(
 ) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(note_name)?;
-        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let config = app_state.config.read().unwrap_or_else(|e| {
+            log(
+                "DELETE_NOTE",
+                "Config lock was poisoned, recovering",
+                Some(&format!("note: {}", note_name)),
+            );
+            e.into_inner()
+        });
         let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
+
+        log(
+            "DELETE_NOTE",
+            "Critical filesystem operation initiated",
+            Some(&format!(
+                "note: {}, directory: {}",
+                note_name, config.notes_directory
+            )),
+        );
 
         // Create backup using unified API - maintains atomic copy operation for TOCTOU protection
         let copy_result = create_versioned_backup(&note_path, BackupType::Delete, None);
@@ -847,8 +863,27 @@ pub fn recover_deleted_file(
     let result = || -> AppResult<()> {
         validate_note_name(original_filename)?;
 
-        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let config = app_state.config.read().unwrap_or_else(|e| {
+            log(
+                "RECOVER_FILE",
+                "Config lock was poisoned, recovering",
+                Some(&format!(
+                    "original: {}, backup: {}",
+                    original_filename, backup_filename
+                )),
+            );
+            e.into_inner()
+        });
         let notes_dir = std::path::PathBuf::from(&config.notes_directory);
+
+        log(
+            "RECOVER_FILE",
+            "Critical filesystem recovery operation initiated",
+            Some(&format!(
+                "original: {}, backup: {}, directory: {}",
+                original_filename, backup_filename, config.notes_directory
+            )),
+        );
         let note_path = notes_dir.join(original_filename);
         let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
         let backup_path = backup_dir.join(backup_filename);

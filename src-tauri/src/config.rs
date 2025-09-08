@@ -549,7 +549,8 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
 
     let path = std::path::Path::new(dir);
 
-    // Reject system directories for security
+    // Reject dangerous system directories for security
+    // Allow test directories and reasonable user paths
     let dangerous_paths = [
         "/etc",
         "/root",
@@ -561,6 +562,22 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
         "/System",
         "/Library/System",
     ];
+
+    // Special checks for very dangerous root paths - but allow test directories
+    if dir == "/" || dir == "C:\\" {
+        return Err(AppError::ConfigLoad(format!(
+            "Cannot use filesystem root as notes directory: {}",
+            dir
+        )));
+    }
+
+    // Block broad user directories, but allow specific subdirectories and test paths
+    if dir == "/home" || dir == "/Users" || dir == "C:\\Users" {
+        return Err(AppError::ConfigLoad(format!(
+            "Cannot use broad user directory as notes directory: {}. Use a specific subdirectory instead.",
+            dir
+        )));
+    }
 
     for dangerous in &dangerous_paths {
         if dir.starts_with(dangerous) {
