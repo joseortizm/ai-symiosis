@@ -3,11 +3,11 @@
 //! Tests all Create, Read, Update, Delete operations for notes with edge cases,
 //! error conditions, and cross-operation consistency validation.
 
-use crate::commands::notes::{
-    create_new_note, delete_note, get_note_content, get_note_html_content, list_all_notes,
-    rename_note, save_note_with_content_check,
+use crate::commands::notes::{get_note_html_content, list_all_notes};
+use crate::tests::test_utils::{
+    test_create_new_note, test_delete_note, test_get_note_content, test_rename_note,
+    test_save_note_with_content_check, TestConfigOverride,
 };
-use crate::tests::test_utils::TestConfigOverride;
 use std::fs;
 
 #[test]
@@ -15,7 +15,7 @@ fn test_create_new_note_success() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Test basic note creation
-    let result = create_new_note("test_note.md");
+    let result = test_create_new_note("test_note.md");
     assert!(result.is_ok(), "Should create new note successfully");
 
     // Verify file exists on filesystem
@@ -34,7 +34,7 @@ fn test_create_new_note_success() {
     );
 
     // Verify note content can be retrieved
-    let retrieved_content = get_note_content("test_note.md").expect("Should get note content");
+    let retrieved_content = test_get_note_content("test_note.md").expect("Should get note content");
     assert_eq!(retrieved_content, "", "Retrieved content should be empty");
 }
 
@@ -43,7 +43,7 @@ fn test_create_new_note_with_subdirectories() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Test creating note in subdirectory
-    let result = create_new_note("subfolder/nested_note.md");
+    let result = test_create_new_note("subfolder/nested_note.md");
     assert!(result.is_ok(), "Should create note in subdirectory");
 
     // Verify directory structure was created
@@ -60,7 +60,7 @@ fn test_create_new_note_deep_nesting() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Test deeply nested directory creation
-    let result = create_new_note("level1/level2/level3/deep_note.md");
+    let result = test_create_new_note("level1/level2/level3/deep_note.md");
     assert!(
         result.is_ok(),
         "Should create note in deeply nested directory"
@@ -77,11 +77,11 @@ fn test_create_new_note_duplicate_fails() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create first note
-    let result1 = create_new_note("duplicate.md");
+    let result1 = test_create_new_note("duplicate.md");
     assert!(result1.is_ok(), "First creation should succeed");
 
     // Attempt to create duplicate
-    let result2 = create_new_note("duplicate.md");
+    let result2 = test_create_new_note("duplicate.md");
     assert!(result2.is_err(), "Duplicate creation should fail");
     assert!(
         result2.unwrap_err().contains("already exists"),
@@ -105,7 +105,7 @@ fn test_create_new_note_invalid_names() {
     ];
 
     for invalid_name in invalid_names {
-        let result = create_new_note(invalid_name);
+        let result = test_create_new_note(invalid_name);
         assert!(
             result.is_err(),
             "Should reject invalid name: {}",
@@ -119,12 +119,12 @@ fn test_get_note_content_success() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create a note with content
-    create_new_note("content_test.md").expect("Should create note");
+    test_create_new_note("content_test.md").expect("Should create note");
     let content = "# Test Content\n\nThis is test content.";
-    save_note_with_content_check("content_test.md", content, "").expect("Should save content");
+    test_save_note_with_content_check("content_test.md", content, "").expect("Should save content");
 
     // Test retrieving content
-    let retrieved = get_note_content("content_test.md").expect("Should get content");
+    let retrieved = test_get_note_content("content_test.md").expect("Should get content");
     assert_eq!(
         retrieved, content,
         "Retrieved content should match saved content"
@@ -135,7 +135,7 @@ fn test_get_note_content_success() {
 fn test_get_note_content_nonexistent() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
-    let result = get_note_content("nonexistent.md");
+    let result = test_get_note_content("nonexistent.md");
     assert!(result.is_err(), "Should fail for nonexistent note");
     assert!(
         result.unwrap_err().contains("not found"),
@@ -148,9 +148,9 @@ fn test_get_note_html_content_markdown_rendering() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create note with markdown content
-    create_new_note("markdown_test.md").expect("Should create note");
+    test_create_new_note("markdown_test.md").expect("Should create note");
     let markdown_content = "# Heading\n\n**Bold text** and *italic text*\n\n- List item";
-    save_note_with_content_check("markdown_test.md", markdown_content, "")
+    test_save_note_with_content_check("markdown_test.md", markdown_content, "")
         .expect("Should save content");
 
     // Test HTML rendering
@@ -170,9 +170,10 @@ fn test_get_note_html_content_plain_text() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create note with .txt extension
-    create_new_note("plain_text.txt").expect("Should create note");
+    test_create_new_note("plain_text.txt").expect("Should create note");
     let text_content = "Plain text content with <script>alert('xss')</script>";
-    save_note_with_content_check("plain_text.txt", text_content, "").expect("Should save content");
+    test_save_note_with_content_check("plain_text.txt", text_content, "")
+        .expect("Should save content");
 
     // Test plain text rendering
     let html = get_note_html_content("plain_text.txt").expect("Should get HTML content");
@@ -210,7 +211,7 @@ fn test_list_all_notes_with_data() {
     let note_names = vec!["first.md", "second.md", "third.txt", "folder/nested.md"];
 
     for name in &note_names {
-        create_new_note(name).expect(&format!("Should create {}", name));
+        test_create_new_note(name).expect(&format!("Should create {}", name));
     }
 
     let notes = list_all_notes().expect("Should list notes");
@@ -235,13 +236,13 @@ fn test_list_all_notes_ordering() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create notes and modify them to test ordering
-    create_new_note("older.md").expect("Should create older note");
+    test_create_new_note("older.md").expect("Should create older note");
 
     // Sleep to ensure different timestamps (use 1 second to ensure different timestamps)
     std::thread::sleep(std::time::Duration::from_millis(1100));
 
-    create_new_note("newer.md").expect("Should create newer note");
-    save_note_with_content_check("newer.md", "Updated content", "")
+    test_create_new_note("newer.md").expect("Should create newer note");
+    test_save_note_with_content_check("newer.md", "Updated content", "")
         .expect("Should update newer note");
 
     let notes = list_all_notes().expect("Should list notes");
@@ -261,12 +262,12 @@ fn test_rename_note_success() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create a note with content
-    create_new_note("original.md").expect("Should create note");
+    test_create_new_note("original.md").expect("Should create note");
     let content = "Original content";
-    save_note_with_content_check("original.md", content, "").expect("Should save content");
+    test_save_note_with_content_check("original.md", content, "").expect("Should save content");
 
     // Rename the note
-    let result = rename_note("original.md".to_string(), "renamed.md".to_string());
+    let result = test_rename_note("original.md".to_string(), "renamed.md".to_string());
     assert!(result.is_ok(), "Should rename note successfully");
 
     // Verify old file doesn't exist
@@ -285,14 +286,14 @@ fn test_rename_note_success() {
 
     // Verify database was updated
     let retrieved_content =
-        get_note_content("renamed.md").expect("Should get renamed note content");
+        test_get_note_content("renamed.md").expect("Should get renamed note content");
     assert_eq!(
         retrieved_content, content,
         "Database should reflect renamed note"
     );
 
     // Verify old name is no longer in database
-    let old_result = get_note_content("original.md");
+    let old_result = test_get_note_content("original.md");
     assert!(old_result.is_err(), "Old name should not exist in database");
 }
 
@@ -301,11 +302,11 @@ fn test_rename_note_to_existing_fails() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create two notes
-    create_new_note("note1.md").expect("Should create first note");
-    create_new_note("note2.md").expect("Should create second note");
+    test_create_new_note("note1.md").expect("Should create first note");
+    test_create_new_note("note2.md").expect("Should create second note");
 
     // Attempt to rename first note to existing name
-    let result = rename_note("note1.md".to_string(), "note2.md".to_string());
+    let result = test_rename_note("note1.md".to_string(), "note2.md".to_string());
     assert!(result.is_err(), "Should fail to rename to existing name");
     assert!(
         result.unwrap_err().contains("already exists"),
@@ -323,7 +324,7 @@ fn test_rename_note_to_existing_fails() {
 fn test_rename_note_nonexistent() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
-    let result = rename_note("nonexistent.md".to_string(), "new_name.md".to_string());
+    let result = test_rename_note("nonexistent.md".to_string(), "new_name.md".to_string());
     assert!(result.is_err(), "Should fail to rename nonexistent note");
     assert!(
         result.unwrap_err().contains("not found"),
@@ -336,12 +337,13 @@ fn test_rename_note_with_subdirectories() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create note in subdirectory
-    create_new_note("folder/original.md").expect("Should create note in subdirectory");
+    test_create_new_note("folder/original.md").expect("Should create note in subdirectory");
     let content = "Nested content";
-    save_note_with_content_check("folder/original.md", content, "").expect("Should save content");
+    test_save_note_with_content_check("folder/original.md", content, "")
+        .expect("Should save content");
 
     // Rename to different subdirectory
-    let result = rename_note(
+    let result = test_rename_note(
         "folder/original.md".to_string(),
         "other_folder/renamed.md".to_string(),
     );
@@ -364,16 +366,16 @@ fn test_delete_note_success() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create a note with content
-    create_new_note("to_delete.md").expect("Should create note");
+    test_create_new_note("to_delete.md").expect("Should create note");
     let content = "Content to be deleted";
-    save_note_with_content_check("to_delete.md", content, "").expect("Should save content");
+    test_save_note_with_content_check("to_delete.md", content, "").expect("Should save content");
 
     // Verify note exists before deletion
     let note_path = _test_config.notes_dir().join("to_delete.md");
     assert!(note_path.exists(), "Note should exist before deletion");
 
     // Delete the note
-    let result = delete_note("to_delete.md");
+    let result = test_delete_note("to_delete.md");
     assert!(result.is_ok(), "Should delete note successfully");
 
     // Verify file is removed
@@ -383,7 +385,7 @@ fn test_delete_note_success() {
     );
 
     // Verify note is removed from database
-    let get_result = get_note_content("to_delete.md");
+    let get_result = test_get_note_content("to_delete.md");
     assert!(
         get_result.is_err(),
         "Deleted note should not be retrievable from database"
@@ -402,7 +404,7 @@ fn test_delete_note_nonexistent() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Attempt to delete nonexistent note - should succeed (idempotent operation)
-    let result = delete_note("nonexistent.md");
+    let result = test_delete_note("nonexistent.md");
     assert!(
         result.is_ok(),
         "Deleting nonexistent note should succeed (idempotent)"
@@ -414,12 +416,12 @@ fn test_delete_note_with_backup_verification() {
     let _test_config = TestConfigOverride::new().expect("Should create test config");
 
     // Create a note with specific content
-    create_new_note("backup_test.md").expect("Should create note");
+    test_create_new_note("backup_test.md").expect("Should create note");
     let content = "This content should be backed up";
-    save_note_with_content_check("backup_test.md", content, "").expect("Should save content");
+    test_save_note_with_content_check("backup_test.md", content, "").expect("Should save content");
 
     // Delete the note
-    let result = delete_note("backup_test.md");
+    let result = test_delete_note("backup_test.md");
     assert!(result.is_ok(), "Should delete note successfully");
 
     // Verify backup was created (check backup directory structure)
@@ -462,12 +464,12 @@ fn test_crud_workflow_consistency() {
     let updated_content = "Updated content";
 
     // CREATE
-    create_new_note(note_name).expect("Should create note");
-    save_note_with_content_check(note_name, initial_content, "")
+    test_create_new_note(note_name).expect("Should create note");
+    test_save_note_with_content_check(note_name, initial_content, "")
         .expect("Should save initial content");
 
     // READ
-    let retrieved = get_note_content(note_name).expect("Should read note");
+    let retrieved = test_get_note_content(note_name).expect("Should read note");
     assert_eq!(
         retrieved, initial_content,
         "Should read correct initial content"
@@ -481,9 +483,9 @@ fn test_crud_workflow_consistency() {
     );
 
     // UPDATE (via save)
-    save_note_with_content_check(note_name, updated_content, initial_content)
+    test_save_note_with_content_check(note_name, updated_content, initial_content)
         .expect("Should update content");
-    let updated_retrieved = get_note_content(note_name).expect("Should read updated content");
+    let updated_retrieved = test_get_note_content(note_name).expect("Should read updated content");
     assert_eq!(
         updated_retrieved, updated_content,
         "Should read updated content"
@@ -491,24 +493,24 @@ fn test_crud_workflow_consistency() {
 
     // UPDATE (via rename)
     let new_name = "renamed_workflow_test.md";
-    rename_note(note_name.to_string(), new_name.to_string()).expect("Should rename note");
+    test_rename_note(note_name.to_string(), new_name.to_string()).expect("Should rename note");
 
     // Verify old name is gone
-    let old_result = get_note_content(note_name);
+    let old_result = test_get_note_content(note_name);
     assert!(old_result.is_err(), "Old name should not exist");
 
     // Verify new name has correct content
-    let renamed_content = get_note_content(new_name).expect("Should read renamed note");
+    let renamed_content = test_get_note_content(new_name).expect("Should read renamed note");
     assert_eq!(
         renamed_content, updated_content,
         "Renamed note should have updated content"
     );
 
     // DELETE
-    delete_note(new_name).expect("Should delete note");
+    test_delete_note(new_name).expect("Should delete note");
 
     // Verify deletion
-    let deleted_result = get_note_content(new_name);
+    let deleted_result = test_get_note_content(new_name);
     assert!(deleted_result.is_err(), "Deleted note should not exist");
 
     let final_notes = list_all_notes().expect("Should list notes");
@@ -527,14 +529,15 @@ fn test_concurrent_operations_consistency() {
 
     // Create all notes
     for name in &note_names {
-        create_new_note(name).expect(&format!("Should create {}", name));
-        save_note_with_content_check(name, &format!("Content for {}", name), "")
+        test_create_new_note(name).expect(&format!("Should create {}", name));
+        test_save_note_with_content_check(name, &format!("Content for {}", name), "")
             .expect(&format!("Should save content for {}", name));
     }
 
     // Verify all notes exist and have correct content
     for name in &note_names {
-        let content = get_note_content(name).expect(&format!("Should get content for {}", name));
+        let content =
+            test_get_note_content(name).expect(&format!("Should get content for {}", name));
         assert_eq!(
             content,
             format!("Content for {}", name),
@@ -544,15 +547,15 @@ fn test_concurrent_operations_consistency() {
     }
 
     // Perform mixed operations
-    rename_note("concurrent1.md".to_string(), "renamed1.md".to_string())
+    test_rename_note("concurrent1.md".to_string(), "renamed1.md".to_string())
         .expect("Should rename first note");
-    save_note_with_content_check(
+    test_save_note_with_content_check(
         "concurrent2.md",
         "Updated content",
         &format!("Content for concurrent2.md"),
     )
     .expect("Should update second note");
-    delete_note("concurrent3.md").expect("Should delete third note");
+    test_delete_note("concurrent3.md").expect("Should delete third note");
 
     // Verify final state
     let final_notes = list_all_notes().expect("Should list final notes");
@@ -574,13 +577,14 @@ fn test_concurrent_operations_consistency() {
     );
 
     // Verify content integrity
-    let renamed_content = get_note_content("renamed1.md").expect("Should get renamed content");
+    let renamed_content = test_get_note_content("renamed1.md").expect("Should get renamed content");
     assert_eq!(
         renamed_content, "Content for concurrent1.md",
         "Renamed note should preserve content"
     );
 
-    let updated_content = get_note_content("concurrent2.md").expect("Should get updated content");
+    let updated_content =
+        test_get_note_content("concurrent2.md").expect("Should get updated content");
     assert_eq!(
         updated_content, "Updated content",
         "Updated note should have new content"

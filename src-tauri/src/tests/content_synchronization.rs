@@ -1,4 +1,4 @@
-use crate::commands::notes::save_note_with_content_check;
+use crate::tests::test_utils::test_save_note_with_content_check;
 use crate::tests::test_utils::TestConfigOverride;
 use std::fs;
 
@@ -41,7 +41,8 @@ fn test_content_synchronization_prevents_data_loss() {
     let edited_content_a = "This is file A content - EDITED VERSION";
 
     // SCENARIO 1: Correct save (file A → file A) should succeed
-    let save_result = save_note_with_content_check(file_a, edited_content_a, &original_content_a);
+    let save_result =
+        test_save_note_with_content_check(file_a, edited_content_a, &original_content_a);
     assert!(save_result.is_ok(), "Correct save should succeed");
 
     // Verify file A was updated
@@ -55,7 +56,7 @@ fn test_content_synchronization_prevents_data_loss() {
 
     // SCENARIO 3: Attempt wrong-target save (file A content → file B)
     // This simulates the data loss scenario: UI thinks it's saving file A but targets file B
-    let wrong_save_result = save_note_with_content_check(
+    let wrong_save_result = test_save_note_with_content_check(
         file_b,              // Wrong target (file B)
         edited_content_a,    // Content from file A editor
         &original_content_a, // Original content from when file A was opened
@@ -105,7 +106,7 @@ fn test_content_consistency_across_operations() {
     assert_eq!(original_content, content);
 
     // Save same content with correct original content should succeed
-    let save_result = save_note_with_content_check(file_name, content, &original_content);
+    let save_result = test_save_note_with_content_check(file_name, content, &original_content);
     assert!(
         save_result.is_ok(),
         "Save with correct original content should succeed"
@@ -127,7 +128,7 @@ fn test_nonexistent_file_content_handling() {
 
     // Save to nonexistent file should succeed with empty original content
     let new_content = "New file content";
-    let save_result = save_note_with_content_check(file_name, new_content, &original_content);
+    let save_result = test_save_note_with_content_check(file_name, new_content, &original_content);
     assert!(
         save_result.is_ok(),
         "Save to nonexistent file should succeed"
@@ -168,7 +169,7 @@ fn test_content_validation_with_external_changes() {
 
     // Attempt to save edited content with original content should fail
     let save_result =
-        save_note_with_content_check(file_name, edited_content, &stored_original_content);
+        test_save_note_with_content_check(file_name, edited_content, &stored_original_content);
     assert!(
         save_result.is_err(),
         "Save after external change should fail"

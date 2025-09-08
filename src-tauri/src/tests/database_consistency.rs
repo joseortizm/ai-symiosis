@@ -675,7 +675,7 @@ mod real_database_function_tests {
 
     #[test]
     fn test_two_phase_commit_file_database_synchronization() {
-        use crate::commands::notes::save_note_with_content_check;
+        use crate::tests::test_utils::test_save_note_with_content_check;
         use crate::tests::test_utils::TestConfigOverride;
         use std::fs;
 
@@ -689,7 +689,7 @@ mod real_database_function_tests {
         fs::write(&note_path, original_content).expect("Should create original file");
 
         // Test normal two-phase commit (should succeed)
-        let result = save_note_with_content_check(note_name, new_content, original_content);
+        let result = test_save_note_with_content_check(note_name, new_content, original_content);
 
         match result {
             Ok(()) => {
@@ -730,7 +730,7 @@ mod real_database_function_tests {
         fs::write(&note_path, modified_content).expect("Should modify file externally");
 
         let validation_result =
-            save_note_with_content_check(note_name, new_content, original_content);
+            test_save_note_with_content_check(note_name, new_content, original_content);
 
         match validation_result {
             Ok(()) => {

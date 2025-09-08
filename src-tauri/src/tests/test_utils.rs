@@ -242,3 +242,70 @@ impl Drop for TestConfigOverride {
         });
     }
 }
+
+/// Test wrapper functions using tauri::test::mock_app()
+/// These use Tauri's official testing utilities to properly mock State
+#[cfg(test)]
+mod test_command_wrappers {
+    use crate::core::state::with_config_lock;
+    use crate::core::state::AppState;
+    use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
+    use tauri::{App, Manager};
+
+    /// Create a mock Tauri app with test AppState
+    fn create_test_mock_app() -> App<MockRuntime> {
+        let config = with_config_lock(|config_lock| {
+            config_lock
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+        });
+
+        let app_state = AppState::new(config);
+
+        mock_builder()
+            .manage(app_state)
+            .build(mock_context(noop_assets()))
+            .expect("Failed to build test app")
+    }
+
+    pub fn test_create_new_note(note_name: &str) -> Result<(), String> {
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::create_new_note(note_name, app_state)
+    }
+
+    pub fn test_get_note_content(note_name: &str) -> Result<String, String> {
+        crate::commands::notes::get_note_content(note_name)
+    }
+
+    pub fn test_delete_note(note_name: &str) -> Result<(), String> {
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::delete_note(note_name, app_state)
+    }
+
+    pub fn test_save_note_with_content_check(
+        note_name: &str,
+        content: &str,
+        original_content: &str,
+    ) -> Result<(), String> {
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::save_note_with_content_check(
+            note_name,
+            content,
+            original_content,
+            app_state,
+        )
+    }
+
+    pub fn test_rename_note(old_name: String, new_name: String) -> Result<(), String> {
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::rename_note(old_name, new_name, app_state)
+    }
+}
+
+#[cfg(test)]
+pub use test_command_wrappers::*;

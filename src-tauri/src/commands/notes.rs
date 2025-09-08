@@ -1,6 +1,5 @@
 use crate::{
-    config::get_config_notes_dir,
-    core::state::{set_programmatic_operation_in_progress, with_config},
+    core::state::set_programmatic_operation_in_progress,
     core::{AppError, AppResult},
     database::with_db,
     logging::log,
@@ -56,9 +55,12 @@ pub fn list_all_notes() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub fn search_notes(query: &str) -> Result<Vec<String>, String> {
-    with_config(|config| search_notes_hybrid(query, config.preferences.max_search_results))
-        .map_err(|e| e.to_string())
+pub fn search_notes(
+    query: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<Vec<String>, String> {
+    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+    search_notes_hybrid(query, config.preferences.max_search_results).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -115,11 +117,15 @@ pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn create_new_note(note_name: &str) -> Result<(), String> {
+pub fn create_new_note(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(note_name)?;
 
-        let note_path = get_config_notes_dir().join(note_name);
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
 
         if let Some(parent) = note_path.parent() {
             fs::create_dir_all(parent)?;
@@ -193,10 +199,12 @@ pub fn save_note_with_content_check(
     note_name: &str,
     content: &str,
     original_content: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
 ) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(note_name)?;
-        let note_path = get_config_notes_dir().join(note_name);
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
 
         // CRITICAL: Validate that destination file hasn't changed since editing began
         // This prevents catastrophic data loss when UI state becomes desynchronized
@@ -271,12 +279,17 @@ pub fn save_note_with_content_check(
 }
 
 #[tauri::command]
-pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
+pub fn rename_note(
+    old_name: String,
+    new_name: String,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(&old_name)?;
         validate_note_name(&new_name)?;
 
-        let notes_dir = get_config_notes_dir();
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let notes_dir = std::path::PathBuf::from(&config.notes_directory);
         let old_path = notes_dir.join(&old_name);
         let new_path = notes_dir.join(&new_name);
 
@@ -447,10 +460,14 @@ pub fn rename_note(old_name: String, new_name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn delete_note(note_name: &str) -> Result<(), String> {
+pub fn delete_note(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(note_name)?;
-        let note_path = get_config_notes_dir().join(note_name);
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
 
         // Create backup using unified API - maintains atomic copy operation for TOCTOU protection
         let copy_result = create_versioned_backup(&note_path, BackupType::Delete, None);
@@ -537,10 +554,14 @@ pub fn delete_note(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_note_in_editor(note_name: &str) -> Result<(), String> {
+pub fn open_note_in_editor(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     validate_note_name(note_name)
         .and_then(|_| {
-            let note_path = get_config_notes_dir().join(note_name);
+            let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+            let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
             if !note_path.exists() {
                 return Err(AppError::FileNotFound(format!(
                     "Note not found: {}",
@@ -559,10 +580,14 @@ pub fn open_note_in_editor(note_name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_note_folder(note_name: &str) -> Result<(), String> {
+pub fn open_note_folder(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(note_name)?;
-        let note_path = get_config_notes_dir().join(note_name);
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
         if !note_path.exists() {
             return Err(AppError::FileNotFound(format!(
                 "Note not found: {}",
@@ -614,11 +639,16 @@ pub struct NoteVersion {
 }
 
 #[tauri::command]
-pub fn get_note_versions(note_name: &str) -> Result<Vec<NoteVersion>, String> {
+pub fn get_note_versions(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<Vec<NoteVersion>, String> {
     let result = || -> AppResult<Vec<NoteVersion>> {
         validate_note_name(note_name)?;
 
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let notes_dir = std::path::PathBuf::from(&config.notes_directory);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
         if !backup_dir.exists() {
             return Ok(Vec::new());
         }
@@ -668,9 +698,14 @@ pub fn get_note_versions(note_name: &str) -> Result<Vec<NoteVersion>, String> {
 }
 
 #[tauri::command]
-pub fn get_version_content(version_filename: &str) -> Result<String, String> {
+pub fn get_version_content(
+    version_filename: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<String, String> {
     let result = || -> AppResult<String> {
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let notes_dir = std::path::PathBuf::from(&config.notes_directory);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
         let version_path = backup_dir.join(version_filename);
 
         if !version_path.exists() {
@@ -687,12 +722,18 @@ pub fn get_version_content(version_filename: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn recover_note_version(note_name: &str, version_filename: &str) -> Result<(), String> {
+pub fn recover_note_version(
+    note_name: &str,
+    version_filename: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(note_name)?;
 
-        let note_path = get_config_notes_dir().join(note_name);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let notes_dir = std::path::PathBuf::from(&config.notes_directory);
+        let note_path = notes_dir.join(note_name);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
         let version_path = backup_dir.join(version_filename);
 
         if !version_path.exists() {
@@ -747,9 +788,13 @@ pub struct DeletedFile {
 }
 
 #[tauri::command]
-pub fn get_deleted_files() -> Result<Vec<DeletedFile>, String> {
+pub fn get_deleted_files(
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<Vec<DeletedFile>, String> {
     let result = || -> AppResult<Vec<DeletedFile>> {
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let notes_dir = std::path::PathBuf::from(&config.notes_directory);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
         if !backup_dir.exists() {
             return Ok(Vec::new());
         }
@@ -787,12 +832,18 @@ pub fn get_deleted_files() -> Result<Vec<DeletedFile>, String> {
 }
 
 #[tauri::command]
-pub fn recover_deleted_file(original_filename: &str, backup_filename: &str) -> Result<(), String> {
+pub fn recover_deleted_file(
+    original_filename: &str,
+    backup_filename: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = || -> AppResult<()> {
         validate_note_name(original_filename)?;
 
-        let note_path = get_config_notes_dir().join(original_filename);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&get_config_notes_dir())?;
+        let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+        let notes_dir = std::path::PathBuf::from(&config.notes_directory);
+        let note_path = notes_dir.join(original_filename);
+        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
         let backup_path = backup_dir.join(backup_filename);
 
         if !backup_path.exists() {

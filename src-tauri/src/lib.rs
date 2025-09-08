@@ -78,14 +78,19 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "open" => {
-                let _ = show_main_window(app.app_handle().clone());
+                let app_handle = app.app_handle().clone();
+                if let Some(app_state) = app_handle.try_state::<AppState>() {
+                    let _ = show_main_window(app_handle.clone(), app_state);
+                }
             }
             "refresh" => {
                 let _ = refresh_cache(app.app_handle().clone());
             }
             "settings" => {
                 let app_handle = app.app_handle().clone();
-                let _ = show_main_window(app_handle.clone());
+                if let Some(app_state) = app_handle.try_state::<AppState>() {
+                    let _ = show_main_window(app_handle.clone(), app_state);
+                }
                 if let Some(window) = app_handle.get_webview_window("main") {
                     let _ = window.emit("open-preferences", ());
                 }
@@ -117,7 +122,9 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                             }
                         }
                         None => {
-                            let _ = show_main_window(app.clone());
+                            if let Some(app_state) = app.try_state::<AppState>() {
+                                let _ = show_main_window(app.clone(), app_state);
+                            }
                         }
                     }
                 }
@@ -273,7 +280,12 @@ pub fn run() {
                                             }
                                         }
                                         None => {
-                                            let _ = show_main_window(app_handle);
+                                            if let Some(app_state) =
+                                                app_handle.try_state::<AppState>()
+                                            {
+                                                let _ =
+                                                    show_main_window(app_handle.clone(), app_state);
+                                            }
                                         }
                                     }
                                 }
