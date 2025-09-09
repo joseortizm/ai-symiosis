@@ -31,18 +31,15 @@ pub fn config_exists(app_state: tauri::State<crate::core::state::AppState>) -> b
 pub fn save_config_content(content: &str) -> Result<(), String> {
     let config_path = get_config_path();
 
-    // Parse using the same lenient approach as load_config
     let config = load_config_from_content(content);
 
     validate_config(&config).map_err(|e| format!("Configuration validation failed: {}", e))?;
 
-    // Create directory if it doesn't exist
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create config directory: {}", e))?;
     }
 
-    // Write the content to file
     std::fs::write(&config_path, content)
         .map_err(|e| format!("Failed to write config file: {}", e))?;
 
@@ -55,9 +52,7 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
     let mut ui_themes = Vec::new();
     let mut markdown_themes = Vec::new();
 
-    // Try to scan bundled resources first (production builds)
     if let Some(resource_dir) = app.path().resource_dir().ok() {
-        // Scan UI themes from resources
         let ui_themes_path = resource_dir.join("css/ui-themes");
         if ui_themes_path.exists() {
             if let Ok(entries) = fs::read_dir(&ui_themes_path) {
@@ -75,7 +70,6 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
             }
         }
 
-        // Scan markdown themes from resources
         let md_themes_path = resource_dir.join("css/md_render_themes");
         if md_themes_path.exists() {
             if let Ok(entries) = fs::read_dir(&md_themes_path) {
@@ -142,10 +136,6 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
         "markdown_themes": markdown_themes
     }))
 }
-
-// ============================================================================
-// TAURI COMMANDS FOR CONFIG ACCESS
-// ============================================================================
 
 #[tauri::command]
 pub fn get_general_config(app_state: tauri::State<crate::core::state::AppState>) -> GeneralConfig {

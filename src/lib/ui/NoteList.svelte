@@ -5,7 +5,6 @@ Handles note selection state and integrates with keyboard navigation.
 -->
 
 <script lang="ts">
-  // Imports
   import { getContext } from 'svelte'
   import type {
     AppManagers,
@@ -14,7 +13,6 @@ Handles note selection state and integrates with keyboard navigation.
   } from '../app/appCoordinator.svelte'
   import { getHighlightedTitle } from '../utils/contentHighlighting.svelte'
 
-  // Context and state
   const { focusManager, contentNavigationManager } =
     getContext<AppManagers>('managers')
   const appState = getContext<AppState>('state')
@@ -22,7 +20,6 @@ Handles note selection state and integrates with keyboard navigation.
 
   let noteListElement = $state<HTMLElement | undefined>(undefined)
 
-  // Effects
   $effect(() => {
     if (noteListElement) {
       focusManager.setNoteListElement(noteListElement)

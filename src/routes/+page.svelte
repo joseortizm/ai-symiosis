@@ -25,7 +25,6 @@ Composes all UI components and provides keyboard event handling for the entire a
 
   const appCoordinator = createAppCoordinator({})
 
-  // Set context for child components
   setContext('managers', {
     ...appCoordinator.managers,
     appCoordinator,
@@ -34,7 +33,6 @@ Composes all UI components and provides keyboard event handling for the entire a
   setContext('state', appCoordinator.state)
   setContext('actions', appCoordinator.actions)
 
-  // Access properties directly since this is the root component
   const {
     dialogManager,
     progressManager,

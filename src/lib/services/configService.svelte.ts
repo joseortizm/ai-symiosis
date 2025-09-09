@@ -8,7 +8,6 @@ import { invoke } from '@tauri-apps/api/core'
 
 // Configuration type definitions
 export interface GeneralConfig {
-  // Future extensible core settings
   [key: string]: unknown
 }
 
@@ -174,7 +173,6 @@ export function createConfigService(): ConfigService {
     state.error = null
   }
 
-  // Pane management methods for direct use in +page.svelte
   async function openPane(): Promise<void> {
     await open()
   }
@@ -288,7 +286,6 @@ export function createConfigService(): ConfigService {
     getShortcutsConfig,
     getPreferencesConfig,
 
-    // Reactive getters and setters (to support bind:value)
     get content(): string {
       return state.content
     },

@@ -6,7 +6,6 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
-// Type definitions
 export interface NoteVersion {
   filename: string
   backup_type: string
@@ -22,7 +21,6 @@ export interface DeletedFile {
   timestamp: number
 }
 
-// Service factory function
 export function createVersionService() {
   const state = $state({
     isLoading: false,
@@ -30,12 +28,10 @@ export function createVersionService() {
     lastOperation: null as 'list' | 'recover' | null,
   })
 
-  // Private helper functions
   function clearError(): void {
     state.error = null
   }
 
-  // Version operations with loading state
   async function getVersions(
     noteName: string
   ): Promise<{ success: boolean; versions?: NoteVersion[]; error?: string }> {
@@ -93,7 +89,6 @@ export function createVersionService() {
     }
   }
 
-  // Simple operations that throw (no loading state needed)
   async function getVersionContent(versionFilename: string): Promise<string> {
     try {
       return await invoke<string>('get_version_content', { versionFilename })
@@ -103,7 +98,6 @@ export function createVersionService() {
     }
   }
 
-  // Deleted files operations
   async function getDeletedFiles(): Promise<{
     success: boolean
     files?: DeletedFile[]
@@ -157,21 +151,16 @@ export function createVersionService() {
     }
   }
 
-  // Public API
   return {
-    // Version operations
     getVersions,
     getVersionContent,
     recoverVersion,
 
-    // Deleted files operations
     getDeletedFiles,
     recoverDeletedFile,
 
-    // Utility functions
     clearError,
 
-    // State getters
     get isLoading() {
       return state.isLoading
     },
@@ -184,5 +173,4 @@ export function createVersionService() {
   }
 }
 
-// Global service instance
 export const versionService = createVersionService()

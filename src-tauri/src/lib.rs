@@ -1,4 +1,3 @@
-// Module declarations
 mod commands;
 mod config;
 mod core;
@@ -10,7 +9,6 @@ mod services;
 mod tests;
 mod watcher;
 
-// External crates
 use commands::*;
 use config::{get_config_path, load_config_with_first_run_info, parse_shortcut};
 use core::state::AppState;
@@ -27,17 +25,7 @@ use tauri::{
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use watcher::setup_notes_watcher;
 
-// MIGRATION: Moved APP_CONFIG out of scope to find all usages via compiler errors
-// pub static APP_CONFIG: LazyLock<RwLock<AppConfig>> = LazyLock::new(|| RwLock::new(load_config()));
-
-// These global flags are now managed through AppState and accessed via helper functions
-// in core::state - no more global statics needed
-
-// Database operations
-
-// System tray setup
 fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    // Create menu items
     let open_item = MenuItem::with_id(app, "open", "Open Symiosis", true, None::<&str>)?;
     let refresh_item =
         MenuItem::with_id(app, "refresh", "Refresh Notes Cache", true, None::<&str>)?;
@@ -45,7 +33,6 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let separator = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
-    // Create the menu
     let menu = Menu::with_items(
         app,
         &[
@@ -58,10 +45,8 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    // Build the tray icon with icon specified
     let mut tray_builder = TrayIconBuilder::with_id("main-tray");
 
-    // Try to use the default app icon, but continue without icon if it fails
     if let Some(icon) = app.default_window_icon() {
         tray_builder = tray_builder.icon(icon.clone());
     } else {
@@ -135,9 +120,6 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-// Database integrity checking
-
-// Initialization functions
 pub fn initialize_notes() {
     if let Ok(db_path) = get_db_path() {
         if let Some(parent) = db_path.parent() {
@@ -151,7 +133,6 @@ pub fn initialize_notes() {
         }
     }
 
-    // Clean up any leftover temp files from previous runs
     if let Err(e) = note_service::cleanup_temp_files() {
         log(
             "INIT_CLEANUP",
@@ -166,7 +147,6 @@ pub fn initialize_notes() {
         eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
         eprintln!("🔄 Attempting automatic database recovery...");
 
-        // Attempt automatic recovery by recreating the database
         if let Err(recovery_error) = database_service::recreate_database() {
             eprintln!("💥 FATAL: Database recovery failed: {}. Application will continue with limited functionality.", recovery_error);
             return;
@@ -174,11 +154,8 @@ pub fn initialize_notes() {
             eprintln!("✅ Database successfully recovered!");
         }
     } else {
-        // Database initialized successfully, perform filesystem sync check
         match database_service::quick_filesystem_sync_check() {
-            Ok(true) => {
-                // Database and filesystem are in sync
-            }
+            Ok(true) => {}
             Ok(false) => {
                 eprintln!("🔄 Database-filesystem mismatch detected. Rebuilding database...");
                 if let Err(e) = database_service::recreate_database() {
@@ -208,30 +185,23 @@ pub fn initialize_notes() {
     // This allows the UI to render first before blocking on note loading
 }
 
-// Main application entry point
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Early config load with first run detection
     let (config, was_first_run) = load_config_with_first_run_info();
     let app_state = AppState::new(config);
     if was_first_run {
         app_state.set_first_run(true);
     }
 
-    // Now initialize_notes() can access config through global state
     initialize_notes();
 
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .manage(app_state) // Use the same AppState instance
+        .manage(app_state)
         .setup(|app| {
-            // Global state already set up above
-
-            // Setup the system tray
             setup_tray(app.handle())?;
 
-            // Apply always_on_top setting to main window
             if let Some(window) = app.get_webview_window("main") {
                 if let Some(app_state) = app.try_state::<AppState>() {
                     let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
@@ -239,12 +209,10 @@ pub fn run() {
                 }
             }
 
-            // Setup file system watcher for notes directory
             if let Some(app_state) = app.try_state::<AppState>() {
                 setup_notes_watcher(app.handle().clone(), Arc::new(app_state.inner().clone()))?;
             }
 
-            // Emit first-run event if this is the first time the app is launched
             if let Some(app_state) = app.try_state::<AppState>() {
                 if app_state
                     .was_first_run()
@@ -258,10 +226,8 @@ pub fn run() {
                 }
             }
 
-            // Setup global shortcuts
             #[cfg(desktop)]
             {
-                // Get main shortcut from config
                 let config = if let Some(app_state) = app.try_state::<AppState>() {
                     app_state
                         .config
@@ -364,7 +330,6 @@ pub fn run() {
             std::process::exit(1);
         });
 
-    // Hide from dock on macOS
     #[cfg(target_os = "macos")]
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 

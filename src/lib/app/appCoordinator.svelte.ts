@@ -26,9 +26,7 @@ import { createKeyboardActions } from './actions/keyboard.svelte'
 import { setupAppEffects } from './effects/app.svelte'
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface AppCoordinatorDeps {
-  // No external dependencies - all managers created internally
-}
+interface AppCoordinatorDeps {}
 
 export interface AppState {
   readonly query: string
@@ -139,11 +137,9 @@ export function createAppCoordinator(
     loadNoteContent,
   })
 
-  // State for managing content request cancellation and race conditions
   let contentRequestController: AbortController | null = null
   let contentRequestSequence = 0
 
-  // Track if this is first run to show hints after settings close
   let isFirstRun = false
 
   const isLoading = $derived(searchManager.isLoading)

@@ -26,7 +26,6 @@ interface ProgressManager {
   clearError(): void
 }
 
-// Manager factory function
 export function createProgressManager(): ProgressManager {
   const state = $state<ProgressState>({
     isLoading: false,
@@ -36,7 +35,6 @@ export function createProgressManager(): ProgressManager {
   })
 
   return {
-    // Getters
     get isLoading() {
       return state.isLoading
     },
@@ -59,7 +57,6 @@ export function createProgressManager(): ProgressManager {
       return state.isLoading && state.type === 'subtle'
     },
 
-    // State updates (called by event listeners in app coordinator)
     start(message: string, type: 'subtle' | 'modal' = 'modal') {
       state.isLoading = true
       state.message = message
@@ -87,7 +84,6 @@ export function createProgressManager(): ProgressManager {
       state.type = 'modal' // Errors always use modal for visibility
     },
 
-    // Clear error manually
     clearError() {
       state.error = null
     },

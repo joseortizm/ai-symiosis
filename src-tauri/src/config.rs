@@ -14,18 +14,12 @@ pub enum ConfigReloadResult {
     NotesDirChanged,
 }
 
-// ============================================================================
-// MAIN CONFIGURATION STRUCTURE
-// ============================================================================
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
-    // === TOP-LEVEL ESSENTIALS ===
     pub notes_directory: String,
     #[serde(default = "default_global_shortcut")]
     pub global_shortcut: String,
 
-    // === CONFIGURATION SECTIONS ===
     #[serde(default)]
     pub general: GeneralConfig,
 
@@ -42,18 +36,8 @@ pub struct AppConfig {
     pub preferences: PreferencesConfig,
 }
 
-// ============================================================================
-// GENERAL CONFIGURATION
-// ============================================================================
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GeneralConfig {
-    // Future extensible core settings
-}
-
-// ============================================================================
-// INTERFACE CONFIGURATION
-// ============================================================================
+pub struct GeneralConfig {}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InterfaceConfig {
@@ -68,10 +52,6 @@ pub struct InterfaceConfig {
     #[serde(default = "default_window_decorations")]
     pub window_decorations: bool,
 }
-
-// ============================================================================
-// UNIFIED SHORTCUTS CONFIGURATION
-// ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ShortcutsConfig {
@@ -97,19 +77,11 @@ pub struct ShortcutsConfig {
     pub recently_deleted: String,
 }
 
-// ============================================================================
-// PREFERENCES CONFIGURATION
-// ============================================================================
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PreferencesConfig {
     #[serde(default = "default_max_results")]
     pub max_search_results: usize,
 }
-
-// ============================================================================
-// EDITOR CONFIGURATION (Text Editing Only)
-// ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EditorConfig {
@@ -120,10 +92,6 @@ pub struct EditorConfig {
     pub expand_tabs: bool,
     pub show_line_numbers: bool,
 }
-
-// ============================================================================
-// DEFAULT VALUE FUNCTIONS
-// ============================================================================
 
 fn default_max_results() -> usize {
     100
@@ -136,10 +104,6 @@ fn default_global_shortcut() -> String {
 fn default_window_decorations() -> bool {
     true
 }
-
-// ============================================================================
-// DEFAULT IMPLEMENTATIONS
-// ============================================================================
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -157,9 +121,7 @@ impl Default for AppConfig {
 
 impl Default for GeneralConfig {
     fn default() -> Self {
-        Self {
-            // Future extensible core settings
-        }
+        Self {}
     }
 }
 
@@ -227,19 +189,13 @@ impl Default for EditorConfig {
     }
 }
 
-// ============================================================================
-// THEME DETECTION UTILITIES
-// ============================================================================
-
 /// Get available UI themes by scanning the ui-themes directory
 pub fn get_available_ui_themes() -> Vec<String> {
-    // Return all known UI themes - validation moved to frontend
     vec!["gruvbox-dark".to_string(), "one-dark".to_string()]
 }
 
-/// Get available markdown render themes - validation moved to frontend
+/// Get available markdown render themes
 pub fn get_available_markdown_themes() -> Vec<String> {
-    // Return all known markdown themes - validation moved to frontend
     vec![
         "light".to_string(),
         "dark".to_string(),
@@ -252,15 +208,10 @@ pub fn get_available_markdown_themes() -> Vec<String> {
     ]
 }
 
-/// Generate a simple configuration template (deprecated - returns empty string)
-/// The app now creates a clean default config automatically via AppConfig::default()
+/// Generate a simple configuration template
 pub fn generate_config_template() -> String {
     String::new()
 }
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
 
 pub fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
     shortcut_str.parse().ok()
@@ -279,14 +230,10 @@ pub fn get_default_notes_dir() -> String {
 }
 
 pub fn get_config_path() -> PathBuf {
-    // SAFETY GUARDRAIL: Only allow test override in test builds and when explicitly enabled
     #[cfg(test)]
     {
-        // Only use test config when both the path AND the enable flag are set
-        // This prevents accidental global test pollution
         if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_ok() {
             if let Ok(test_config_path) = std::env::var("SYMIOSIS_TEST_CONFIG_PATH") {
-                // CRITICAL: Validate that test path is actually in a temp directory
                 if test_config_path.contains("/tmp/")
                     || test_config_path.contains("tmp")
                     || test_config_path.contains("/T/")
@@ -310,7 +257,6 @@ pub fn get_config_path() -> PathBuf {
 }
 
 pub fn get_config_notes_dir() -> PathBuf {
-    // Load config directly since we no longer have global state access
     let config = load_config();
     PathBuf::from(&config.notes_directory)
 }
@@ -318,10 +264,6 @@ pub fn get_config_notes_dir() -> PathBuf {
 pub fn get_config_notes_dir_from_config(config: &AppConfig) -> PathBuf {
     PathBuf::from(&config.notes_directory)
 }
-
-// ============================================================================
-// VALIDATION FUNCTIONS
-// ============================================================================
 
 pub fn validate_config(config: &AppConfig) -> AppResult<()> {
     validate_notes_directory(&config.notes_directory)?;
@@ -335,7 +277,6 @@ pub fn validate_config(config: &AppConfig) -> AppResult<()> {
 }
 
 pub fn validate_general_config(_general: &GeneralConfig) -> AppResult<()> {
-    // Future validation for general settings
     Ok(())
 }
 
@@ -361,15 +302,12 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
         )));
     }
 
-    // Modern highlight.js themes (curated selection)
     let valid_md_code_themes = [
-        // Gruvbox variants
         "gruvbox-dark-hard",
         "gruvbox-dark-medium",
         "gruvbox-dark-soft",
         "gruvbox-light-hard",
         "gruvbox-light-medium",
-        // Popular dark themes
         "atom-one-dark",
         "dracula",
         "nord",
@@ -378,13 +316,11 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
         "vs2015",
         "night-owl",
         "tokyo-night-dark",
-        // Popular light themes
         "atom-one-light",
         "github",
         "vs",
         "xcode",
         "tokyo-night-light",
-        // Base16 classics
         "base16-tomorrow-night",
         "base16-ocean",
         "base16-solarized-dark",
@@ -414,9 +350,6 @@ pub fn validate_font_size(size: u16, context: &str) -> AppResult<()> {
 }
 
 pub fn validate_shortcuts_config(shortcuts: &ShortcutsConfig) -> AppResult<()> {
-    // Note: These shortcuts are used by frontend JavaScript, not Tauri global shortcuts
-    // So we only need basic validation, not Tauri shortcut parsing
-
     validate_basic_shortcut_format(&shortcuts.create_note)?;
     validate_basic_shortcut_format(&shortcuts.rename_note)?;
     validate_basic_shortcut_format(&shortcuts.delete_note)?;
@@ -505,17 +438,14 @@ pub fn validate_preferences_config(preferences: &PreferencesConfig) -> AppResult
 }
 
 pub fn validate_shortcut_format(shortcut: &str) -> AppResult<()> {
-    // This is for global shortcuts that need to be parsed by Tauri
     if shortcut.trim().is_empty() {
         return Err(AppError::ConfigLoad("Shortcut cannot be empty".to_string()));
     }
 
-    // Pre-validate shortcut format before calling parse_shortcut
     if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
         return Err(AppError::ConfigLoad("Invalid shortcut format".to_string()));
     }
 
-    // Test that it can be parsed by Tauri's global shortcut system
     match parse_shortcut(shortcut) {
         Some(_) => Ok(()),
         None => Err(AppError::ConfigLoad(format!(
@@ -526,13 +456,10 @@ pub fn validate_shortcut_format(shortcut: &str) -> AppResult<()> {
 }
 
 pub fn validate_basic_shortcut_format(shortcut: &str) -> AppResult<()> {
-    // This is for frontend shortcuts that are only used by JavaScript
-    // We just need basic validation since they're not parsed by Tauri
     if shortcut.trim().is_empty() {
         return Err(AppError::ConfigLoad("Shortcut cannot be empty".to_string()));
     }
 
-    // Basic format checks
     if shortcut.contains("++") || shortcut.starts_with('+') || shortcut.ends_with('+') {
         return Err(AppError::ConfigLoad("Invalid shortcut format".to_string()));
     }
@@ -549,8 +476,6 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
 
     let path = std::path::Path::new(dir);
 
-    // Reject dangerous system directories for security
-    // Allow test directories and reasonable user paths
     let dangerous_paths = [
         "/etc",
         "/root",
@@ -563,7 +488,6 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
         "/Library/System",
     ];
 
-    // Special checks for very dangerous root paths - but allow test directories
     if dir == "/" || dir == "C:\\" {
         return Err(AppError::ConfigLoad(format!(
             "Cannot use filesystem root as notes directory: {}",
@@ -571,7 +495,6 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
         )));
     }
 
-    // Block broad user directories, but allow specific subdirectories and test paths
     if dir == "/home" || dir == "/Users" || dir == "C:\\Users" {
         return Err(AppError::ConfigLoad(format!(
             "Cannot use broad user directory as notes directory: {}. Use a specific subdirectory instead.",
@@ -588,17 +511,12 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
         }
     }
 
-    // Warn about non-absolute paths but allow them
     if !path.is_absolute() {
         eprintln!("Warning: Using relative notes directory: {}", dir);
     }
 
     Ok(())
 }
-
-// ============================================================================
-// CONFIG LOADING AND SAVING
-// ============================================================================
 
 pub fn load_config() -> AppConfig {
     let config_path = get_config_path();
@@ -634,7 +552,6 @@ pub fn load_config_with_first_run_info() -> (AppConfig, bool) {
 }
 
 pub fn load_config_from_content(content: &str) -> AppConfig {
-    // Parse TOML content to flexible Value structure
     let toml_value = match toml::from_str::<toml::Value>(content) {
         Ok(value) => value,
         Err(e) => {
@@ -643,7 +560,6 @@ pub fn load_config_from_content(content: &str) -> AppConfig {
         }
     };
 
-    // Extract each field/section independently with fallbacks
     let notes_directory = extract_notes_directory(&toml_value);
     let global_shortcut = extract_global_shortcut(&toml_value);
     let general = extract_general_config(&toml_value);
@@ -662,10 +578,6 @@ pub fn load_config_from_content(content: &str) -> AppConfig {
         preferences,
     }
 }
-
-// ============================================================================
-// FIELD EXTRACTION HELPERS
-// ============================================================================
 
 fn extract_notes_directory(value: &toml::Value) -> String {
     match value.get("notes_directory").and_then(|v| v.as_str()) {
@@ -702,8 +614,6 @@ fn extract_global_shortcut(value: &toml::Value) -> String {
 }
 
 fn extract_general_config(_value: &toml::Value) -> GeneralConfig {
-    // General config is currently empty, just return default
-    // When fields are added, implement extraction logic here
     GeneralConfig::default()
 }
 
@@ -712,7 +622,6 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
     let mut config = InterfaceConfig::default();
 
     if let Some(section) = interface_section {
-        // Extract UI theme
         if let Some(theme) = section.get("ui_theme").and_then(|v| v.as_str()) {
             let valid_themes = get_available_ui_themes();
             if valid_themes.contains(&theme.to_string()) {
@@ -725,12 +634,10 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             }
         }
 
-        // Extract font family
         if let Some(font) = section.get("font_family").and_then(|v| v.as_str()) {
             config.font_family = font.to_string();
         }
 
-        // Extract font size
         if let Some(size) = section.get("font_size").and_then(|v| v.as_integer()) {
             let size = size as u16;
             if validate_font_size(size, "UI font size").is_ok() {
@@ -743,12 +650,10 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             }
         }
 
-        // Extract editor font family
         if let Some(font) = section.get("editor_font_family").and_then(|v| v.as_str()) {
             config.editor_font_family = font.to_string();
         }
 
-        // Extract editor font size
         if let Some(size) = section.get("editor_font_size").and_then(|v| v.as_integer()) {
             let size = size as u16;
             if validate_font_size(size, "Editor font size").is_ok() {
@@ -761,7 +666,6 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             }
         }
 
-        // Extract markdown render theme
         if let Some(theme) = section
             .get("markdown_render_theme")
             .and_then(|v| v.as_str())
@@ -777,16 +681,13 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             }
         }
 
-        // Extract markdown code theme
         if let Some(theme) = section.get("md_render_code_theme").and_then(|v| v.as_str()) {
             let valid_themes = [
-                // Gruvbox variants
                 "gruvbox-dark-hard",
                 "gruvbox-dark-medium",
                 "gruvbox-dark-soft",
                 "gruvbox-light-hard",
                 "gruvbox-light-medium",
-                // Popular dark themes
                 "atom-one-dark",
                 "dracula",
                 "nord",
@@ -795,13 +696,11 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
                 "vs2015",
                 "night-owl",
                 "tokyo-night-dark",
-                // Popular light themes
                 "atom-one-light",
                 "github",
                 "vs",
                 "xcode",
                 "tokyo-night-light",
-                // Base16 classics
                 "base16-tomorrow-night",
                 "base16-ocean",
                 "base16-solarized-dark",
@@ -836,7 +735,6 @@ fn extract_editor_config(value: &toml::Value) -> EditorConfig {
     let mut config = EditorConfig::default();
 
     if let Some(section) = editor_section {
-        // Extract editor mode
         if let Some(mode) = section.get("mode").and_then(|v| v.as_str()) {
             let valid_modes = ["basic", "vim", "emacs"];
             if valid_modes.contains(&mode) {
@@ -849,7 +747,6 @@ fn extract_editor_config(value: &toml::Value) -> EditorConfig {
             }
         }
 
-        // Extract editor theme
         if let Some(theme) = section.get("theme").and_then(|v| v.as_str()) {
             let valid_themes = [
                 "abcdef",
@@ -886,12 +783,10 @@ fn extract_editor_config(value: &toml::Value) -> EditorConfig {
             }
         }
 
-        // Extract word wrap
         if let Some(wrap) = section.get("word_wrap").and_then(|v| v.as_bool()) {
             config.word_wrap = wrap;
         }
 
-        // Extract tab size
         if let Some(size) = section.get("tab_size").and_then(|v| v.as_integer()) {
             let size = size as u16;
             if size > 0 && size <= 16 {
@@ -904,12 +799,10 @@ fn extract_editor_config(value: &toml::Value) -> EditorConfig {
             }
         }
 
-        // Extract expand tabs
         if let Some(expand) = section.get("expand_tabs").and_then(|v| v.as_bool()) {
             config.expand_tabs = expand;
         }
 
-        // Extract show line numbers
         if let Some(show_numbers) = section.get("show_line_numbers").and_then(|v| v.as_bool()) {
             config.show_line_numbers = show_numbers;
         }
@@ -923,7 +816,6 @@ fn extract_shortcuts_config(value: &toml::Value) -> ShortcutsConfig {
     let mut config = ShortcutsConfig::default();
 
     if let Some(section) = shortcuts_section {
-        // Helper macro to extract and validate shortcuts
         macro_rules! extract_shortcut {
             ($field:ident, $key:literal) => {
                 if let Some(shortcut) = section.get($key).and_then(|v| v.as_str()) {
@@ -966,7 +858,6 @@ fn extract_preferences_config(value: &toml::Value) -> PreferencesConfig {
     let mut config = PreferencesConfig::default();
 
     if let Some(section) = preferences_section {
-        // Extract max search results
         if let Some(max_results) = section
             .get("max_search_results")
             .and_then(|v| v.as_integer())
@@ -1008,7 +899,6 @@ pub fn reload_config(
 ) -> Result<ConfigReloadResult, String> {
     let new_config = load_config();
 
-    // Check if notes directory changed
     let result = {
         let old_config = app_config
             .read()
@@ -1029,7 +919,6 @@ pub fn reload_config(
     *config = new_config.clone();
     drop(config);
 
-    // Emit config update event to frontend
     if let Some(app) = app_handle {
         if let Err(e) = app.emit("config-updated", &new_config) {
             eprintln!("Failed to emit config-updated event: {}", e);

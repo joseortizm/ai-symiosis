@@ -22,8 +22,6 @@ describe('configService', () => {
       const configContent = 'notes_directory = "/path/to/notes"'
       mockInvoke.mockResolvedValueOnce(configContent)
 
-      // const onFocus = vi.fn()
-
       await configService.open()
 
       expect(mockInvoke).toHaveBeenCalledWith('get_config_content')
@@ -243,8 +241,6 @@ describe('configService', () => {
     it('should open pane with focus management', async () => {
       const configContent = 'notes_directory = "/path/to/notes"'
       mockInvoke.mockResolvedValueOnce(configContent)
-      // const mockFocusFunction = vi.fn()
-
       await configService.openPane()
 
       expect(mockInvoke).toHaveBeenCalledWith('get_config_content')

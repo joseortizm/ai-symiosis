@@ -8,8 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// Global logging configuration
-const LOGGING_ENABLED: bool = true; // TODO: Move to config file later
+const LOGGING_ENABLED: bool = true;
 
 // Static logger instance
 static LOGGER: OnceLock<Mutex<BufWriter<File>>> = OnceLock::new();
