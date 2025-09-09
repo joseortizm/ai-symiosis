@@ -23,20 +23,20 @@ pub fn default_window_decorations() -> bool {
     true
 }
 
-pub fn get_available_ui_themes() -> Vec<String> {
-    vec!["gruvbox-dark".to_string(), "one-dark".to_string()]
+pub fn get_available_ui_themes() -> Vec<&'static str> {
+    vec!["gruvbox-dark", "one-dark"]
 }
 
-pub fn get_available_markdown_themes() -> Vec<String> {
+pub fn get_available_markdown_themes() -> Vec<&'static str> {
     vec![
-        "light".to_string(),
-        "dark".to_string(),
-        "dark_dimmed".to_string(),
-        "auto".to_string(),
-        "modern_dark".to_string(),
-        "article".to_string(),
-        "gruvbox".to_string(),
-        "dark_high_contrast".to_string(),
+        "light",
+        "dark",
+        "dark_dimmed",
+        "auto",
+        "modern_dark",
+        "article",
+        "gruvbox",
+        "dark_high_contrast",
     ]
 }
 
@@ -182,7 +182,7 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
     if let Some(section) = interface_section {
         if let Some(theme) = section.get("ui_theme").and_then(|v| v.as_str()) {
             let valid_themes = get_available_ui_themes();
-            if valid_themes.contains(&theme.to_string()) {
+            if valid_themes.contains(&theme) {
                 config.ui_theme = theme.to_string();
             } else {
                 eprintln!(
@@ -229,7 +229,7 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             .and_then(|v| v.as_str())
         {
             let valid_themes = get_available_markdown_themes();
-            if valid_themes.contains(&theme.to_string()) {
+            if valid_themes.contains(&theme) {
                 config.markdown_render_theme = theme.to_string();
             } else {
                 eprintln!(

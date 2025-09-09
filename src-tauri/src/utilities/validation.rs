@@ -21,7 +21,7 @@ pub fn validate_general_config(_general: &GeneralConfig) -> AppResult<()> {
 
 pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
     let valid_themes = get_available_ui_themes();
-    if !valid_themes.contains(&interface.ui_theme) {
+    if !valid_themes.contains(&interface.ui_theme.as_str()) {
         return Err(AppError::ConfigLoad(format!(
             "Invalid UI theme '{}'. Valid themes: {}",
             interface.ui_theme,
@@ -33,7 +33,7 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
     validate_font_size(interface.editor_font_size, "Editor font size")?;
 
     let valid_markdown_render_themes = get_available_markdown_themes();
-    if !valid_markdown_render_themes.contains(&interface.markdown_render_theme) {
+    if !valid_markdown_render_themes.contains(&interface.markdown_render_theme.as_str()) {
         return Err(AppError::ConfigLoad(format!(
             "Invalid markdown render theme '{}'. Valid themes: {}",
             interface.markdown_render_theme,

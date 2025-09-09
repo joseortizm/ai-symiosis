@@ -120,10 +120,16 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
 
     // Final fallback to known themes
     if ui_themes.is_empty() {
-        ui_themes = get_available_ui_themes();
+        ui_themes = get_available_ui_themes()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
     }
     if markdown_themes.is_empty() {
-        markdown_themes = get_available_markdown_themes();
+        markdown_themes = get_available_markdown_themes()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
     }
 
     ui_themes.sort();
