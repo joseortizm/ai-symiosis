@@ -1,5 +1,3 @@
-// String processing and content transformation utilities
-
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn extract_title_from_filename(filename: &str) -> String {

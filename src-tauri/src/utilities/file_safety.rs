@@ -1,5 +1,3 @@
-// File safety and backup utilities
-
 use crate::{
     config::get_config_notes_dir,
     core::{AppError, AppResult},
@@ -67,15 +65,12 @@ pub fn create_versioned_backup(
         }
     };
 
-    // Ensure backup directory exists
     if let Some(backup_parent) = backup_path.parent() {
         fs::create_dir_all(backup_parent)?;
     }
 
-    // Create backup based on content source
     match content_override {
         Some(content) => {
-            // Use provided content
             fs::write(&backup_path, content)?;
         }
         None => {
@@ -99,7 +94,6 @@ pub fn create_versioned_backup(
         }
     }
 
-    // Prune old backups for this file
     prune_old_backups(&backup_path, MAX_BACKUPS)?;
 
     Ok(backup_path)
@@ -340,14 +334,12 @@ fn generate_backup_filename(
     backup_type: &BackupType,
     timestamp: u64,
 ) -> String {
-    // Extract the base name without extension
     let base_name = if let Some(stem) = std::path::Path::new(note_filename).file_stem() {
         stem.to_string_lossy()
     } else {
         std::borrow::Cow::from(note_filename)
     };
 
-    // Format: {base_name}.{suffix}.{timestamp}.md
     format!("{}.{}.{}.md", base_name, backup_type.suffix(), timestamp)
 }
 

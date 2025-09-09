@@ -104,7 +104,6 @@ impl From<rusqlite::Error> for AppError {
 
 impl From<String> for AppError {
     fn from(err: String) -> Self {
-        // Try to categorize common error patterns
         let error = if err.contains("permission") || err.contains("Permission") {
             AppError::FilePermission(err)
         } else if err.contains("not found") || err.contains("No such file") {
@@ -140,7 +139,6 @@ impl From<AppError> for String {
     }
 }
 
-// Helper functions for common error scenarios
 impl AppError {
     pub fn validation_error(field: &str, message: &str) -> Self {
         let error = AppError::InvalidNoteName(format!("{}: {}", field, message));

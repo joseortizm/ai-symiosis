@@ -31,7 +31,7 @@ export function createProgressManager(): ProgressManager {
     isLoading: false,
     message: '',
     error: null,
-    type: 'modal', // Default to modal for backward compatibility
+    type: 'modal',
   })
 
   return {

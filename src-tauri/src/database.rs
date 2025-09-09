@@ -1,10 +1,8 @@
-// External crates
 use crate::core::{AppError, AppResult};
 use crate::utilities::paths::{encode_path_for_backup, get_data_dir};
 use rusqlite::Connection;
 use std::path::PathBuf;
 
-// Shared database connection manager
 pub struct DatabaseManager {
     connection: Connection,
     current_db_path: PathBuf,
@@ -22,8 +20,6 @@ impl DatabaseManager {
     }
 
     pub fn new_fallback() -> Self {
-        // Create an in-memory database as fallback
-        // This allows the app to continue running even if file-based database fails
         use std::path::PathBuf;
 
         let fallback_conn =
@@ -50,9 +46,7 @@ impl DatabaseManager {
         let expected_db_path = get_database_path()?;
 
         if self.current_db_path != expected_db_path {
-            // Create new connection for the new notes directory
             let new_conn = Self::create_connection(&expected_db_path)?;
-
             // Atomically replace both connection and path
             self.connection = new_conn;
             self.current_db_path = expected_db_path;

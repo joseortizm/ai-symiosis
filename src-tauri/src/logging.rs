@@ -1,6 +1,3 @@
-// Centralized logging module for Symiosis
-// Provides comprehensive logging for database operations, CRUD, and debugging
-
 use crate::core::{AppError, AppResult};
 use crate::utilities::strings::get_timestamp;
 use std::fs::{File, OpenOptions};
@@ -10,7 +7,6 @@ use std::sync::{Mutex, OnceLock};
 
 const LOGGING_ENABLED: bool = true;
 
-// Static logger instance
 static LOGGER: OnceLock<Mutex<BufWriter<File>>> = OnceLock::new();
 
 fn get_log_path() -> AppResult<PathBuf> {
@@ -26,7 +22,6 @@ fn init_logger() -> AppResult<()> {
 
     let log_path = get_log_path()?;
 
-    // Create directory if it doesn't exist
     if let Some(parent) = log_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -46,13 +41,12 @@ fn init_logger() -> AppResult<()> {
     Ok(())
 }
 
-/// Main logging function - logs to symiosis.log
+/// Main logging function - logs to APP_DIR/symiosis.log
 pub fn log(operation: &str, message: &str, details: Option<&str>) {
     if !LOGGING_ENABLED {
         return;
     }
 
-    // Initialize logger if not already done
     if LOGGER.get().is_none() {
         let _ = init_logger();
     }

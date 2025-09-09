@@ -5,7 +5,6 @@ use crate::{
     utilities::note_renderer::render_note,
 };
 use rusqlite::params;
-// Removed unused time imports - no longer needed with centralized logging
 
 pub fn update_note_in_database(
     app_state: &crate::core::state::AppState,
@@ -14,7 +13,6 @@ pub fn update_note_in_database(
     modified: i64,
 ) -> AppResult<()> {
     with_db(app_state, |conn| {
-        // Generate HTML render from content
         let html_render = render_note(note_name, content);
 
         // First try to update existing note

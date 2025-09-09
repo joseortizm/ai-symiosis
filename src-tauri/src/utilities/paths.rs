@@ -1,4 +1,3 @@
-use crate::logging::log;
 use std::path::PathBuf;
 
 pub fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
@@ -24,11 +23,8 @@ pub fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
     let mut hasher = DefaultHasher::new();
     notes_dir.to_string_lossy().hash(&mut hasher);
     let hash = hasher.finish();
-
-    // Create short hash (6 hex chars should be enough for uniqueness)
     let short_hash = format!("{:06x}", hash & 0xFFFFFF);
 
-    // Combine friendly name with hash: "notes-3f8c9a"
     format!("{}-{}", friendly_name, short_hash)
 }
 
@@ -76,7 +72,7 @@ pub fn get_config_path() -> PathBuf {
                 {
                     return PathBuf::from(test_config_path);
                 } else {
-                    log(
+                    crate::logging::log(
                         "PATH_SAFETY",
                         &format!(
                             "SAFETY ERROR: Test config path '{}' is not in temp directory!",
