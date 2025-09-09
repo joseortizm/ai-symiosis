@@ -2,11 +2,15 @@
 //!
 //! Tests for search functionality, FTS security, and performance.
 
-use crate::search::search_notes_hybrid;
+use crate::tests::test_utils::{test_search_notes_hybrid, TestConfigOverride};
+use serial_test::serial;
 use std::time::Instant;
 
 #[test]
+#[serial]
 fn test_fts_injection_attempts() {
+    let _test_config = TestConfigOverride::new().expect("Failed to setup test config");
+
     let injection_attempts = vec![
         "test AND malicious",
         "test OR secret",
@@ -27,7 +31,7 @@ fn test_fts_injection_attempts() {
     ];
 
     for malicious_query in injection_attempts {
-        let result = std::panic::catch_unwind(|| search_notes_hybrid(malicious_query, 10));
+        let result = std::panic::catch_unwind(|| test_search_notes_hybrid(malicious_query, 10));
 
         assert!(
             result.is_ok(),
@@ -49,7 +53,10 @@ fn test_fts_injection_attempts() {
 }
 
 #[test]
+#[serial]
 fn test_fts_query_sanitization() {
+    let _test_config = TestConfigOverride::new().expect("Failed to setup test config");
+
     let special_chars = vec![
         "test\"quote",
         "test(paren",
@@ -59,7 +66,7 @@ fn test_fts_query_sanitization() {
     ];
 
     for query in special_chars {
-        let result = search_notes_hybrid(query, 10);
+        let result = test_search_notes_hybrid(query, 10);
 
         match result {
             Ok(_) => {}
@@ -76,7 +83,10 @@ fn test_fts_query_sanitization() {
 }
 
 #[test]
+#[serial]
 fn test_fts_parameter_safety() {
+    let _test_config = TestConfigOverride::new().expect("Failed to setup test config");
+
     let dangerous_inputs = vec![
         "'; DROP TABLE notes; --",
         "' UNION SELECT * FROM sqlite_master --",
@@ -85,7 +95,7 @@ fn test_fts_parameter_safety() {
     ];
 
     for dangerous_input in dangerous_inputs {
-        let result = search_notes_hybrid(dangerous_input, 10);
+        let result = test_search_notes_hybrid(dangerous_input, 10);
 
         match result {
             Ok(_) => {}
@@ -102,13 +112,16 @@ fn test_fts_parameter_safety() {
 }
 
 #[test]
+#[serial]
 fn test_search_performance_baseline() {
+    let _test_config = TestConfigOverride::new().expect("Failed to setup test config");
+
     // Test that search operations complete within reasonable time
     let test_queries = vec!["test", "note", "content", "markdown", "file"];
 
     for query in test_queries {
         let start = Instant::now();
-        let result = search_notes_hybrid(query, 100);
+        let result = test_search_notes_hybrid(query, 100);
         let duration = start.elapsed();
 
         // Search should complete within 1 second for typical queries
@@ -130,14 +143,17 @@ fn test_search_performance_baseline() {
 }
 
 #[test]
+#[serial]
 fn test_search_performance_with_limits() {
+    let _test_config = TestConfigOverride::new().expect("Failed to setup test config");
+
     // Test that different result limits don't significantly impact performance
     let query = "test";
     let limits = vec![1, 10, 100, 1000];
 
     for limit in limits {
         let start = Instant::now();
-        let result = search_notes_hybrid(query, limit);
+        let result = test_search_notes_hybrid(query, limit);
         let duration = start.elapsed();
 
         // Performance should scale reasonably with result limits
@@ -167,7 +183,10 @@ fn test_search_performance_with_limits() {
 }
 
 #[test]
+#[serial]
 fn test_search_performance_stress_queries() {
+    let _test_config = TestConfigOverride::new().expect("Failed to setup test config");
+
     // Test performance with potentially expensive queries
     let stress_queries = vec![
         "a",             // Very short query (might match many results)
@@ -179,7 +198,7 @@ fn test_search_performance_stress_queries() {
 
     for query in stress_queries {
         let start = Instant::now();
-        let result = search_notes_hybrid(query, 50);
+        let result = test_search_notes_hybrid(query, 50);
         let duration = start.elapsed();
 
         // Even stress queries should complete within reasonable time

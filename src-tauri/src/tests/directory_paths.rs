@@ -159,7 +159,9 @@ fn test_database_path_uses_data_dir() {
     }
 
     // Test the function integration - database path should actually work with database connection
-    let db_result = crate::database::with_db(|_conn| Ok("Connection works"));
+    let config = crate::config::AppConfig::default();
+    let app_state = crate::core::state::AppState::new_with_fallback(config);
+    let db_result = crate::database::with_db(&app_state, |_conn| Ok("Connection works"));
     assert!(
         db_result.is_ok() || db_result.is_err(),
         "Database connection should either succeed or fail gracefully"

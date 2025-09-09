@@ -4,6 +4,7 @@
 //! but are not part of the production codebase.
 
 use crate::config::AppConfig;
+use crate::core::state::AppState;
 use crate::services::database_service::recreate_database;
 use std::path::Path;
 use std::sync::Mutex;
@@ -168,6 +169,7 @@ impl DbTestHarness {
 pub struct TestConfigOverride {
     _temp_dir: TempDir,
     _lock: std::sync::MutexGuard<'static, ()>,
+    pub app_state: AppState,
 }
 
 #[cfg(test)]
@@ -277,13 +279,18 @@ impl TestConfigOverride {
             actual_notes_dir.display()
         );
 
+        // Create AppState with the test config
+        let app_state = AppState::new_with_fallback(test_config);
+
         // Initialize a clean database for the test directory
         // Use recreate_database to ensure we start with a fresh database state
-        recreate_database().map_err(|e| format!("Failed to recreate test database: {}", e))?;
+        recreate_database(&app_state)
+            .map_err(|e| format!("Failed to recreate test database: {}", e))?;
 
         Ok(Self {
             _temp_dir: temp_dir,
             _lock: lock,
+            app_state,
         })
     }
 
@@ -320,7 +327,7 @@ mod test_command_wrappers {
         // Use the actual loaded config (which should be the test config if TestConfigOverride is active)
         let config = crate::config::load_config();
 
-        let app_state = AppState::new(config);
+        let app_state = AppState::new_with_fallback(config);
 
         mock_builder()
             .manage(app_state)
@@ -345,7 +352,9 @@ mod test_command_wrappers {
             panic!("CRITICAL SAFETY ERROR: test_get_note_content() called outside of TestConfigOverride!");
         }
 
-        crate::commands::notes::get_note_content(note_name)
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::get_note_content(note_name, app_state)
     }
 
     pub fn test_delete_note(note_name: &str) -> Result<(), String> {
@@ -392,6 +401,42 @@ mod test_command_wrappers {
         let app = create_test_mock_app();
         let app_state = app.state::<AppState>();
         crate::commands::notes::rename_note(old_name, new_name, app_state)
+    }
+
+    pub fn test_list_all_notes() -> Result<Vec<String>, String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: test_list_all_notes() called outside of TestConfigOverride!");
+        }
+
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::list_all_notes(app_state)
+    }
+
+    pub fn test_get_note_html_content(note_name: &str) -> Result<String, String> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: test_get_note_html_content() called outside of TestConfigOverride!");
+        }
+
+        let app = create_test_mock_app();
+        let app_state = app.state::<AppState>();
+        crate::commands::notes::get_note_html_content(note_name, app_state)
+    }
+
+    pub fn test_search_notes_hybrid(
+        query: &str,
+        max_results: usize,
+    ) -> crate::core::AppResult<Vec<String>> {
+        // SAFETY CHECK: Ensure we're in test mode before proceeding
+        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_err() {
+            panic!("CRITICAL SAFETY ERROR: test_search_notes_hybrid() called outside of TestConfigOverride!");
+        }
+
+        let config = crate::config::load_config();
+        let app_state = AppState::new_with_fallback(config);
+        crate::search::search_notes_hybrid(&app_state, query, max_results)
     }
 }
 

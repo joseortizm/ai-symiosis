@@ -3,10 +3,10 @@
 //! Tests all Create, Read, Update, Delete operations for notes with edge cases,
 //! error conditions, and cross-operation consistency validation.
 
-use crate::commands::notes::{get_note_html_content, list_all_notes};
+// Test wrappers imported from test_utils
 use crate::tests::test_utils::{
-    test_create_new_note, test_delete_note, test_get_note_content, test_rename_note,
-    test_save_note_with_content_check, TestConfigOverride,
+    test_create_new_note, test_delete_note, test_get_note_content, test_get_note_html_content,
+    test_list_all_notes, test_rename_note, test_save_note_with_content_check, TestConfigOverride,
 };
 use serial_test::serial;
 use std::fs;
@@ -33,7 +33,7 @@ mod serial_tests {
         assert_eq!(content, "", "New note should have empty content");
 
         // Verify note appears in list
-        let notes_list = list_all_notes().expect("Should list notes");
+        let notes_list = test_list_all_notes().expect("Should list notes");
         assert!(
             notes_list.contains(&"test_note.md".to_string()),
             "New note should appear in list"
@@ -162,7 +162,7 @@ mod serial_tests {
             .expect("Should save content");
 
         // Test HTML rendering
-        let html = get_note_html_content("markdown_test.md").expect("Should get HTML content");
+        let html = test_get_note_html_content("markdown_test.md").expect("Should get HTML content");
 
         // Verify markdown was rendered to HTML
         assert!(html.contains("<h1>"), "Should contain h1 tag");
@@ -184,7 +184,7 @@ mod serial_tests {
             .expect("Should save content");
 
         // Test plain text rendering
-        let html = get_note_html_content("plain_text.txt").expect("Should get HTML content");
+        let html = test_get_note_html_content("plain_text.txt").expect("Should get HTML content");
 
         // Verify plain text was wrapped in pre tags and escaped
         assert!(html.starts_with("<pre>"), "Should start with pre tag");
@@ -203,7 +203,7 @@ mod serial_tests {
     fn test_list_all_notes_empty() {
         let _test_config = TestConfigOverride::new().expect("Should create test config");
 
-        let notes = list_all_notes().expect("Should list notes");
+        let notes = test_list_all_notes().expect("Should list notes");
         assert_eq!(
             notes.len(),
             0,
@@ -222,7 +222,7 @@ mod serial_tests {
             test_create_new_note(name).expect(&format!("Should create {}", name));
         }
 
-        let notes = list_all_notes().expect("Should list notes");
+        let notes = test_list_all_notes().expect("Should list notes");
         assert_eq!(
             notes.len(),
             note_names.len(),
@@ -253,7 +253,7 @@ mod serial_tests {
         test_save_note_with_content_check("newer.md", "Updated content", "")
             .expect("Should update newer note");
 
-        let notes = list_all_notes().expect("Should list notes");
+        let notes = test_list_all_notes().expect("Should list notes");
 
         // Should be ordered by modification time (DESC)
         let newer_pos = notes.iter().position(|n| n == "newer.md").unwrap();
@@ -401,7 +401,7 @@ mod serial_tests {
         );
 
         // Verify note is removed from list
-        let notes = list_all_notes().expect("Should list notes");
+        let notes = test_list_all_notes().expect("Should list notes");
         assert!(
             !notes.contains(&"to_delete.md".to_string()),
             "Deleted note should not appear in list"
@@ -487,7 +487,7 @@ mod serial_tests {
         );
 
         // Verify in list
-        let notes = list_all_notes().expect("Should list notes");
+        let notes = test_list_all_notes().expect("Should list notes");
         assert!(
             notes.contains(&note_name.to_string()),
             "Note should appear in list"
@@ -525,7 +525,7 @@ mod serial_tests {
         let deleted_result = test_get_note_content(new_name);
         assert!(deleted_result.is_err(), "Deleted note should not exist");
 
-        let final_notes = list_all_notes().expect("Should list notes");
+        let final_notes = test_list_all_notes().expect("Should list notes");
         assert!(
             !final_notes.contains(&new_name.to_string()),
             "Deleted note should not appear in list"
@@ -570,7 +570,7 @@ mod serial_tests {
         test_delete_note("concurrent3.md").expect("Should delete third note");
 
         // Verify final state
-        let final_notes = list_all_notes().expect("Should list final notes");
+        let final_notes = test_list_all_notes().expect("Should list final notes");
         assert!(
             final_notes.contains(&"renamed1.md".to_string()),
             "Renamed note should exist"
