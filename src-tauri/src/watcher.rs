@@ -9,7 +9,8 @@ use tauri::{AppHandle, Emitter};
 use crate::{
     config::get_config_notes_dir,
     database::with_db,
-    services::note_service::{create_versioned_backup, update_note_in_database, BackupType},
+    services::note_service::update_note_in_database,
+    utilities::file_safety::{create_versioned_backup, BackupType},
 };
 use std::sync::atomic::{AtomicU32, Ordering};
 

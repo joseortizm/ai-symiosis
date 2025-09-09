@@ -3,14 +3,11 @@ use crate::{
     database::with_db,
     logging::log,
     search::search_notes_hybrid,
-    services::{
-        database_service::recreate_database,
-        note_service::{
-            create_versioned_backup, safe_write_note, update_note_in_database, BackupType,
-        },
-    },
+    services::{database_service::recreate_database, note_service::update_note_in_database},
     utilities::{
-        note_renderer::render_note, strings::format_timestamp_for_humans,
+        file_safety::{create_versioned_backup, safe_write_note, BackupType},
+        note_renderer::render_note,
+        strings::format_timestamp_for_humans,
         validation::validate_note_name,
     },
 };

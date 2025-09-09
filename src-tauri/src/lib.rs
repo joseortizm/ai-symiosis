@@ -15,7 +15,7 @@ use config::{load_config_with_first_run_info, parse_shortcut};
 use core::state::AppState;
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
-use services::{database_service, note_service};
+use services::database_service;
 use std::fs;
 use std::sync::Arc;
 use tauri::{
@@ -135,7 +135,7 @@ pub fn initialize_notes(app_state: &AppState) {
         }
     }
 
-    if let Err(e) = note_service::cleanup_temp_files() {
+    if let Err(e) = utilities::file_safety::cleanup_temp_files() {
         log(
             "INIT_CLEANUP",
             "Failed to clean up temp files during initialization",

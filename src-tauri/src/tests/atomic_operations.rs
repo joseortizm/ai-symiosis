@@ -3,7 +3,7 @@
 //! Tests for atomic file operations, backup creation, and temp file cleanup.
 
 use crate::database::{get_backup_dir_for_notes_path, get_temp_dir};
-use crate::services::note_service::{cleanup_temp_files, safe_backup_path};
+use crate::utilities::file_safety::{cleanup_temp_files, safe_backup_path};
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -271,7 +271,7 @@ fn test_path_based_backup_directories() {
 
 #[test]
 fn test_atomic_write_rollback_protection() {
-    use crate::services::note_service::safe_write_note;
+    use crate::utilities::file_safety::safe_write_note;
     use tempfile::TempDir;
 
     let temp_dir = TempDir::new().expect("Should create temp directory");
