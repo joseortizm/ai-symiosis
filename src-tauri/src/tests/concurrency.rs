@@ -4,8 +4,8 @@
 
 use crate::config::*;
 use crate::database::get_database_path;
-use crate::services::note_service::validate_note_name;
 use crate::utilities::note_renderer::render_note;
+use crate::utilities::validation::{validate_config, validate_note_name, validate_shortcut_format};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;

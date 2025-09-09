@@ -12,43 +12,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-pub fn validate_note_name(note_name: &str) -> AppResult<()> {
-    // Check for empty name
-    if note_name.trim().is_empty() {
-        return Err(AppError::InvalidNoteName(
-            "Note name cannot be empty".to_string(),
-        ));
-    }
-    // Prevent path traversal attacks
-    if std::path::Path::new(note_name)
-        .components()
-        .any(|c| matches!(c, std::path::Component::ParentDir))
-    {
-        return Err(AppError::PathTraversal);
-    }
-
-    if note_name.contains('\\') {
-        return Err(AppError::InvalidNoteName("Invalid note name".to_string()));
-    }
-
-    if std::path::Path::new(note_name).is_absolute() {
-        return Err(AppError::InvalidNoteName(
-            "Absolute paths not allowed".to_string(),
-        ));
-    }
-    // Prevent hidden files and system files
-    if note_name.starts_with('.') {
-        return Err(AppError::InvalidNoteName(
-            "Note name cannot start with a dot".to_string(),
-        ));
-    }
-    // Prevent excessively long names
-    if note_name.len() > 255 {
-        return Err(AppError::InvalidNoteName("Note name too long".to_string()));
-    }
-    Ok(())
-}
-
 // How many backup versions we keep
 const MAX_BACKUPS: usize = 20;
 

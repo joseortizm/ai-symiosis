@@ -2,7 +2,7 @@
 //!
 //! Tests for note name validation and security functions.
 
-use crate::services::note_service::validate_note_name;
+use crate::utilities::validation::validate_note_name;
 
 #[test]
 fn test_validate_note_name_valid_names() {

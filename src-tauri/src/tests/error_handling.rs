@@ -2,7 +2,7 @@
 //!
 //! Tests for error message quality and input validation bounds.
 
-use crate::services::note_service::validate_note_name;
+use crate::utilities::validation::validate_note_name;
 
 #[test]
 fn test_error_message_quality() {

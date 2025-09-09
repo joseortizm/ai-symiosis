@@ -2,7 +2,7 @@
 //!
 //! Tests for security-related functionality and regression tests.
 
-use crate::services::note_service::validate_note_name;
+use crate::utilities::validation::validate_note_name;
 
 #[test]
 fn test_path_traversal_variations() {
