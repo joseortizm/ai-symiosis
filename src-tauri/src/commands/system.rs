@@ -20,7 +20,10 @@ fn emit_with_logging<T: serde::Serialize + Clone>(app: &AppHandle, event: &str, 
 }
 
 #[tauri::command]
-pub async fn initialize_notes_with_progress(app: AppHandle) -> Result<(), String> {
+pub async fn initialize_notes_with_progress(
+    app: AppHandle,
+    app_state: tauri::State<'_, crate::core::state::AppState>,
+) -> Result<(), String> {
     let result = async {
         std::thread::sleep(std::time::Duration::from_millis(50));
 
@@ -40,9 +43,10 @@ pub async fn initialize_notes_with_progress(app: AppHandle) -> Result<(), String
         );
 
         let app_clone = app.clone();
+        let app_state_clone = app_state.inner().clone();
         let result = tokio::task::spawn_blocking(move || {
-            with_db_mut(|conn| {
-                load_all_notes_into_sqlite_with_progress(conn, Some(&app_clone))
+            with_db_mut(&app_state_clone, |conn| {
+                load_all_notes_into_sqlite_with_progress(&app_state_clone, conn, Some(&app_clone))
                     .map_err(|e| e.into())
             })
         })
@@ -89,7 +93,7 @@ pub async fn refresh_cache(
         };
 
         if reload_result == ConfigReloadResult::NotesDirChanged {
-            match refresh_database_connection() {
+            match refresh_database_connection(&app_state) {
                 Ok(true) => {
                     emit_with_logging(
                         &app,
@@ -122,10 +126,11 @@ pub async fn refresh_cache(
 
         emit_with_logging(&app, "db-loading-progress", "Loading notes...");
 
+        let app_state_clone = app_state.inner().clone();
         let result = tokio::task::spawn_blocking(move || {
-            with_db_mut(|conn| {
+            with_db_mut(&app_state_clone, |conn| {
                 init_db(conn)?;
-                load_all_notes_into_sqlite(conn).map_err(|e| e.into())
+                load_all_notes_into_sqlite(&app_state_clone, conn).map_err(|e| e.into())
             })
         })
         .await
@@ -150,6 +155,7 @@ pub async fn refresh_cache(
                 );
 
                 let result = recreate_database_with_progress(
+                    &app_state,
                     &app,
                     "Database corruption detected. Recreating database tables...",
                 )

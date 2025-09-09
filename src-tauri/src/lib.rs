@@ -120,7 +120,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-pub fn initialize_notes() {
+pub fn initialize_notes(app_state: &AppState) {
     if let Ok(db_path) = get_db_path() {
         if let Some(parent) = db_path.parent() {
             if let Err(e) = fs::create_dir_all(parent) {
@@ -141,24 +141,26 @@ pub fn initialize_notes() {
         );
     }
 
-    let init_result = with_db(|conn| database_service::init_db(conn).map_err(|e| e.into()));
+    let init_result = with_db(app_state, |conn| {
+        database_service::init_db(conn).map_err(|e| e.into())
+    });
 
     if let Err(e) = init_result {
         eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
         eprintln!("🔄 Attempting automatic database recovery...");
 
-        if let Err(recovery_error) = database_service::recreate_database() {
+        if let Err(recovery_error) = database_service::recreate_database(app_state) {
             eprintln!("💥 FATAL: Database recovery failed: {}. Application will continue with limited functionality.", recovery_error);
             return;
         } else {
             eprintln!("✅ Database successfully recovered!");
         }
     } else {
-        match database_service::quick_filesystem_sync_check() {
+        match database_service::quick_filesystem_sync_check(app_state) {
             Ok(true) => {}
             Ok(false) => {
                 eprintln!("🔄 Database-filesystem mismatch detected. Rebuilding database...");
-                if let Err(e) = database_service::recreate_database() {
+                if let Err(e) = database_service::recreate_database(app_state) {
                     eprintln!("💥 FATAL: Database rebuild failed: {}. Application will continue with limited functionality.", e);
                     return;
                 } else {
@@ -175,8 +177,9 @@ pub fn initialize_notes() {
     }
 
     if !get_config_path().exists() {
-        if let Err(e) = with_db(|conn| conn.execute("DELETE FROM notes", []).map_err(|e| e.into()))
-        {
+        if let Err(e) = with_db(app_state, |conn| {
+            conn.execute("DELETE FROM notes", []).map_err(|e| e.into())
+        }) {
             eprintln!("Failed to purge database: {}. Continuing anyway.", e);
         }
     }
@@ -188,12 +191,12 @@ pub fn initialize_notes() {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let (config, was_first_run) = load_config_with_first_run_info();
-    let app_state = AppState::new(config);
+    let app_state = AppState::new_with_fallback(config);
     if was_first_run {
         app_state.set_first_run(true);
     }
 
-    initialize_notes();
+    initialize_notes(&app_state);
 
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

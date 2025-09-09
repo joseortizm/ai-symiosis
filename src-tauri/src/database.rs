@@ -2,7 +2,6 @@
 use crate::core::{AppError, AppResult};
 use rusqlite::Connection;
 use std::path::PathBuf;
-use std::sync::{LazyLock, Mutex};
 
 // Shared database connection manager
 pub struct DatabaseManager {
@@ -19,6 +18,20 @@ impl DatabaseManager {
             connection: conn,
             current_db_path: db_path,
         })
+    }
+
+    pub fn new_fallback() -> Self {
+        // Create an in-memory database as fallback
+        // This allows the app to continue running even if file-based database fails
+        use std::path::PathBuf;
+
+        let fallback_conn =
+            Connection::open(":memory:").expect("Failed to create fallback in-memory database");
+
+        Self {
+            connection: fallback_conn,
+            current_db_path: PathBuf::from(":memory:"),
+        }
     }
 
     fn create_connection(db_path: &PathBuf) -> AppResult<Connection> {
@@ -63,34 +76,29 @@ impl DatabaseManager {
     }
 }
 
-// Global database manager instance
-static DB_MANAGER: LazyLock<Mutex<DatabaseManager>> = LazyLock::new(|| {
-    Mutex::new(DatabaseManager::new().expect("Failed to initialize database manager"))
-});
-
-pub fn with_db<T, F>(f: F) -> AppResult<T>
+pub fn with_db<T, F>(app_state: &crate::core::state::AppState, f: F) -> AppResult<T>
 where
     F: FnOnce(&Connection) -> AppResult<T>,
 {
-    let manager = DB_MANAGER.lock().map_err(|e| {
-        AppError::DatabaseConnection(format!("Global database manager lock poisoned: {}", e))
+    let manager = app_state.database_manager.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
     })?;
     manager.with_connection(f)
 }
 
-pub fn with_db_mut<T, F>(f: F) -> AppResult<T>
+pub fn with_db_mut<T, F>(app_state: &crate::core::state::AppState, f: F) -> AppResult<T>
 where
     F: FnOnce(&mut Connection) -> AppResult<T>,
 {
-    let mut manager = DB_MANAGER.lock().map_err(|e| {
-        AppError::DatabaseConnection(format!("Global database manager lock poisoned: {}", e))
+    let mut manager = app_state.database_manager.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
     })?;
     manager.with_connection_mut(f)
 }
 
-pub fn refresh_database_connection() -> AppResult<bool> {
-    let mut manager = DB_MANAGER.lock().map_err(|e| {
-        AppError::DatabaseConnection(format!("Global database manager lock poisoned: {}", e))
+pub fn refresh_database_connection(app_state: &crate::core::state::AppState) -> AppResult<bool> {
+    let mut manager = app_state.database_manager.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
     })?;
     manager.ensure_current_connection()
 }

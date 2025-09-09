@@ -115,6 +115,7 @@ pub fn setup_notes_watcher(
                             if should_process {
                                 let app_handle_for_refresh = app_handle_clone.clone();
                                 let paths_to_update = event.paths.clone();
+                                let app_state_for_task = app_state.clone();
 
                                 tauri::async_runtime::spawn(async move {
                                     let notes_dir = get_config_notes_dir();
@@ -141,10 +142,10 @@ pub fn setup_notes_watcher(
                                                     .unwrap_or(0);
 
                                                 if let Ok(content) = std::fs::read_to_string(path) {
-                                                    let _ = with_db(|conn| {
+                                                    let _ = with_db(&app_state_for_task, |conn| {
                                                         let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
                                                         match stmt.query_row(rusqlite::params![filename], |row| {
-                                                            Ok(row.get::<_, String>(0)?)
+                                                            row.get::<_, String>(0)
                                                         }) {
                                                             Ok(old_content) => {
                                                                 if old_content != content {
@@ -172,7 +173,10 @@ pub fn setup_notes_watcher(
                                                     });
 
                                                     if let Err(e) = update_note_in_database(
-                                                        &filename, &content, modified,
+                                                        &app_state_for_task,
+                                                        &filename,
+                                                        &content,
+                                                        modified,
                                                     ) {
                                                         eprintln!(
                                                             "Failed to update note {}: {}",
@@ -181,14 +185,19 @@ pub fn setup_notes_watcher(
                                                     }
                                                 }
                                             } else {
-                                                if let Err(e) = crate::with_db(|conn| {
-                                                    conn.execute(
+                                                if let Err(e) =
+                                                    crate::database::with_db(
+                                                        &app_state_for_task,
+                                                        |conn| {
+                                                            conn.execute(
                                                         "DELETE FROM notes WHERE filename = ?1",
                                                         rusqlite::params![filename],
                                                     )
                                                     .map_err(|e| format!("Database error: {}", e))?;
-                                                    Ok(())
-                                                }) {
+                                                            Ok(())
+                                                        },
+                                                    )
+                                                {
                                                     eprintln!(
                                                         "Failed to delete note {}: {}",
                                                         filename, e

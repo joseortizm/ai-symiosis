@@ -89,12 +89,17 @@ impl HybridSearcher {
         filtered_words.join(" ").trim().to_string()
     }
 
-    pub fn search(&mut self, query: &str, max_results: usize) -> AppResult<Vec<String>> {
+    pub fn search(
+        &mut self,
+        app_state: &crate::core::state::AppState,
+        query: &str,
+        max_results: usize,
+    ) -> AppResult<Vec<String>> {
         if query.trim().is_empty() {
-            return self.get_recent_notes(max_results);
+            return self.get_recent_notes(app_state, max_results);
         }
 
-        let candidates = self.get_candidates_from_sqlite(query)?;
+        let candidates = self.get_candidates_from_sqlite(app_state, query)?;
         let mut results = Vec::new();
 
         for candidate in candidates {
@@ -109,7 +114,11 @@ impl HybridSearcher {
         Ok(results.into_iter().map(|r| r.filename).collect())
     }
 
-    fn get_candidates_from_sqlite(&self, query: &str) -> AppResult<Vec<SearchCandidate>> {
+    fn get_candidates_from_sqlite(
+        &self,
+        app_state: &crate::core::state::AppState,
+        query: &str,
+    ) -> AppResult<Vec<SearchCandidate>> {
         let sanitized_query = Self::sanitize_fts_query(query);
 
         if sanitized_query.trim().is_empty() {
@@ -127,7 +136,7 @@ impl HybridSearcher {
             format!("{}*", sanitized_query)
         };
 
-        crate::database::with_db(|conn| {
+        crate::database::with_db(app_state, |conn| {
             let mut stmt = conn.prepare(
                 "SELECT filename, content, modified FROM notes
                      WHERE notes MATCH ?
@@ -250,8 +259,12 @@ impl HybridSearcher {
             .then_with(|| a.title.cmp(&b.title))
     }
 
-    fn get_recent_notes(&self, max_results: usize) -> AppResult<Vec<String>> {
-        crate::database::with_db(|conn| {
+    fn get_recent_notes(
+        &self,
+        app_state: &crate::core::state::AppState,
+        max_results: usize,
+    ) -> AppResult<Vec<String>> {
+        crate::database::with_db(app_state, |conn| {
             let mut stmt =
                 conn.prepare("SELECT filename FROM notes ORDER BY modified DESC LIMIT ?")?;
 
@@ -263,8 +276,12 @@ impl HybridSearcher {
     }
 }
 
-pub fn search_notes_hybrid(query: &str, max_results: usize) -> AppResult<Vec<String>> {
+pub fn search_notes_hybrid(
+    app_state: &crate::core::state::AppState,
+    query: &str,
+    max_results: usize,
+) -> AppResult<Vec<String>> {
     let mut searcher =
         HybridSearcher::new().map_err(|e| AppError::DatabaseConnection(e.to_string()))?;
-    searcher.search(query, max_results)
+    searcher.search(app_state, query, max_results)
 }

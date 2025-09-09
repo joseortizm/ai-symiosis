@@ -1,6 +1,6 @@
 use crate::{
     config::get_config_notes_dir,
-    core::{AppError, AppResult},
+    core::{state::AppState, AppError, AppResult},
     database::{with_db, with_db_mut},
     logging::log,
     services::note_service,
@@ -9,30 +9,10 @@ use rusqlite::{params, Connection};
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    sync::{LazyLock, Mutex},
     time::UNIX_EPOCH,
 };
 use tauri::{AppHandle, Emitter};
 use walkdir::WalkDir;
-
-// Global database lock to prevent concurrent database operations
-static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
-// Critical database rebuild lock - prevents ALL database operations during rebuild
-static DATABASE_REBUILD_LOCK: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
-
-pub fn is_database_rebuilding() -> bool {
-    DATABASE_REBUILD_LOCK
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone()
-}
-
-fn set_database_rebuilding(rebuilding: bool) {
-    *DATABASE_REBUILD_LOCK
-        .lock()
-        .unwrap_or_else(|e| e.into_inner()) = rebuilding;
-}
 
 // Number of most recent notes to get immediate HTML rendering during startup
 // Remaining notes get metadata-only and are processed on demand
@@ -64,15 +44,19 @@ pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-pub fn load_all_notes_into_sqlite(conn: &mut Connection) -> rusqlite::Result<()> {
-    load_all_notes_into_sqlite_with_progress(conn, None)
+pub fn load_all_notes_into_sqlite(
+    app_state: &AppState,
+    conn: &mut Connection,
+) -> rusqlite::Result<()> {
+    load_all_notes_into_sqlite_with_progress(app_state, conn, None)
 }
 
 pub fn load_all_notes_into_sqlite_with_progress(
+    app_state: &AppState,
     conn: &mut Connection,
     app_handle: Option<&AppHandle>,
 ) -> rusqlite::Result<()> {
-    let _lock = DB_LOCK.lock().map_err(|e| {
+    let _lock = app_state.database_lock.lock().map_err(|e| {
         rusqlite::Error::SqliteFailure(
             rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY),
             Some(format!("Operation lock poisoned: {}", e)),
@@ -191,19 +175,19 @@ pub fn load_all_notes_into_sqlite_with_progress(
     tx.commit()
 }
 
-pub fn recreate_database() -> AppResult<()> {
+pub fn recreate_database(app_state: &AppState) -> AppResult<()> {
     log(
         "DATABASE_RECREATE",
         "Database discrepancy detected - recreating tables",
         None,
     );
 
-    with_db_mut(|conn| {
+    with_db_mut(app_state, |conn| {
         conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
         init_db(conn)?;
 
-        load_all_notes_into_sqlite(conn)?;
+        load_all_notes_into_sqlite(app_state, conn)?;
 
         log(
             "DATABASE_RECREATE_SUCCESS",
@@ -215,10 +199,11 @@ pub fn recreate_database() -> AppResult<()> {
 }
 
 pub async fn recreate_database_with_progress(
+    app_state: &AppState,
     app_handle: &AppHandle,
     reason: &str,
 ) -> AppResult<()> {
-    if is_database_rebuilding() {
+    if app_state.is_database_rebuilding()? {
         log(
             "DATABASE_REBUILD_COLLISION",
             "Database rebuild already in progress - skipping duplicate rebuild",
@@ -229,7 +214,7 @@ pub async fn recreate_database_with_progress(
         ));
     }
 
-    set_database_rebuilding(true);
+    app_state.set_database_rebuilding(true)?;
     log(
         "DATABASE_REBUILD_START",
         "Database rebuild started - all database operations blocked",
@@ -245,7 +230,7 @@ pub async fn recreate_database_with_progress(
     }
     eprintln!("{}", reason);
 
-    let rebuild_result = with_db_mut(|conn| {
+    let rebuild_result = with_db_mut(app_state, |conn| {
         conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
         init_db(conn)?;
@@ -258,10 +243,10 @@ pub async fn recreate_database_with_progress(
             );
         }
 
-        load_all_notes_into_sqlite(conn).map_err(|e| e.into())
+        load_all_notes_into_sqlite(app_state, conn).map_err(|e| e.into())
     });
 
-    set_database_rebuilding(false);
+    let _ = app_state.set_database_rebuilding(false);
 
     match rebuild_result {
         Ok(()) => {
@@ -291,14 +276,14 @@ pub async fn recreate_database_with_progress(
     rebuild_result
 }
 
-pub fn quick_filesystem_sync_check() -> AppResult<bool> {
+pub fn quick_filesystem_sync_check(app_state: &AppState) -> AppResult<bool> {
     let notes_dir = get_config_notes_dir();
 
     if !notes_dir.exists() {
         return Ok(true);
     }
 
-    with_db(|conn| {
+    with_db(app_state, |conn| {
         let mut files: Vec<_> = WalkDir::new(&notes_dir)
             .follow_links(false)
             .into_iter()

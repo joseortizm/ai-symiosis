@@ -427,8 +427,13 @@ pub fn cleanup_temp_files() -> AppResult<()> {
     Ok(())
 }
 
-pub fn update_note_in_database(note_name: &str, content: &str, modified: i64) -> AppResult<()> {
-    with_db(|conn| {
+pub fn update_note_in_database(
+    app_state: &crate::core::state::AppState,
+    note_name: &str,
+    content: &str,
+    modified: i64,
+) -> AppResult<()> {
+    with_db(app_state, |conn| {
         // Generate HTML render from content
         let html_render = render_note(note_name, content);
 

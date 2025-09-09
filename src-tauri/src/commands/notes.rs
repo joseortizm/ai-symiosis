@@ -43,8 +43,10 @@ where
 }
 
 #[tauri::command]
-pub fn list_all_notes() -> Result<Vec<String>, String> {
-    let result = with_db(|conn| {
+pub fn list_all_notes(
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<Vec<String>, String> {
+    let result = with_db(&app_state, |conn| {
         let mut stmt = conn.prepare("SELECT filename FROM notes ORDER BY modified DESC")?;
         let rows = stmt.query_map([], |row| row.get(0))?;
 
@@ -66,14 +68,18 @@ pub fn search_notes(
     app_state: tauri::State<crate::core::state::AppState>,
 ) -> Result<Vec<String>, String> {
     let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
-    search_notes_hybrid(query, config.preferences.max_search_results).map_err(|e| e.to_string())
+    search_notes_hybrid(&app_state, query, config.preferences.max_search_results)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn get_note_content(note_name: &str) -> Result<String, String> {
+pub fn get_note_content(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<String, String> {
     validate_note_name(note_name)
         .and_then(|_| {
-            with_db(|conn| {
+            with_db(&app_state, |conn| {
                 let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
                 let content = stmt
                     .query_row(params![note_name], |row| Ok(row.get::<_, String>(0)?))
@@ -87,10 +93,13 @@ pub fn get_note_content(note_name: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn get_note_html_content(note_name: &str) -> Result<String, String> {
+pub fn get_note_html_content(
+    note_name: &str,
+    app_state: tauri::State<crate::core::state::AppState>,
+) -> Result<String, String> {
     validate_note_name(note_name).map_err(|e| e.to_string())?;
 
-    with_db(|conn| {
+    with_db(&app_state, |conn| {
         let mut stmt =
             conn.prepare("SELECT html_render, is_indexed, content FROM notes WHERE filename = ?1")?;
 
@@ -163,7 +172,7 @@ pub fn create_new_note(
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
 
-        match with_db(|conn| {
+        match with_db(&app_state, |conn| {
             let html_render = render_note(note_name, "");
             conn.execute(
                 "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -178,7 +187,7 @@ pub fn create_new_note(
                     note_name, e
                 );
 
-                match recreate_database() {
+                match recreate_database(&app_state) {
                     Ok(()) => {
                         eprintln!("Database successfully rebuilt from files.");
                         Ok(())
@@ -257,7 +266,7 @@ pub fn save_note_with_content_check(
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
 
-        match update_note_in_database(note_name, content, modified) {
+        match update_note_in_database(&app_state, note_name, content, modified) {
             Ok(()) => Ok(()),
             Err(e) => {
                 eprintln!(
@@ -265,7 +274,7 @@ pub fn save_note_with_content_check(
                     note_name, e
                 );
 
-                match recreate_database() {
+                match recreate_database(&app_state) {
                     Ok(()) => {
                         eprintln!("Database successfully rebuilt from files.");
                         Ok(())
@@ -335,7 +344,7 @@ pub fn rename_note(
                 match rename_result {
                     Ok(()) => {
                         // Rename succeeded - update database and clean up backup
-                        match with_db(|conn| {
+                        match with_db(&app_state, |conn| {
                             conn.execute(
                                 "UPDATE notes SET filename = ?1 WHERE filename = ?2",
                                 params![new_name, old_name],
@@ -369,7 +378,7 @@ pub fn rename_note(
                                     old_name, new_name, e
                                 );
 
-                                match recreate_database() {
+                                match recreate_database(&app_state) {
                                     Ok(()) => {
                                         eprintln!("Database successfully rebuilt from files.");
                                         if let Err(e) = fs::remove_file(&backup_path) {
@@ -427,7 +436,7 @@ pub fn rename_note(
                     AppError::FileNotFound(_) => {
                         // Handle case where file exists only in database
                         if new_path.exists() {
-                            match with_db(|conn| {
+                            match with_db(&app_state, |conn| {
                                 conn.execute(
                                     "UPDATE notes SET filename = ?1 WHERE filename = ?2",
                                     params![new_name, old_name],
@@ -436,7 +445,7 @@ pub fn rename_note(
                             }) {
                                 Ok(_) => return Ok(()),
                                 Err(_) => {
-                                    if let Err(e) = recreate_database() {
+                                    if let Err(e) = recreate_database(&app_state) {
                                         log(
                                             "DATABASE_RECOVERY",
                                             "Failed to recreate database during error recovery",
@@ -527,13 +536,13 @@ pub fn delete_note(
             }
             Err(_) => {
                 // File doesn't exist - handle database-only deletion
-                match with_db(|conn| {
+                match with_db(&app_state, |conn| {
                     conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
                     Ok(())
                 }) {
                     Ok(_) => return Ok(()),
                     Err(_) => {
-                        if let Err(e) = recreate_database() {
+                        if let Err(e) = recreate_database(&app_state) {
                             log(
                                 "DATABASE_RECOVERY",
                                 "Failed to recreate database during error recovery",
@@ -546,7 +555,7 @@ pub fn delete_note(
             }
         }
 
-        match with_db(|conn| {
+        match with_db(&app_state, |conn| {
             conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
             Ok(())
         }) {
@@ -557,7 +566,7 @@ pub fn delete_note(
                     note_name, e
                 );
 
-                match recreate_database() {
+                match recreate_database(&app_state) {
                     Ok(()) => {
                         eprintln!("Database successfully rebuilt from files.");
                         Ok(())
@@ -778,7 +787,7 @@ pub fn recover_note_version(
             .unwrap_or(0);
 
         // Update database with recovered content
-        update_note_in_database(note_name, &version_content, modified)?;
+        update_note_in_database(&app_state, note_name, &version_content, modified)?;
 
         Ok(())
     }();
@@ -915,7 +924,7 @@ pub fn recover_deleted_file(
             .unwrap_or(0);
 
         // Update database with recovered content
-        update_note_in_database(original_filename, &backup_content, modified)?;
+        update_note_in_database(&app_state, original_filename, &backup_content, modified)?;
 
         // Remove the backup file after successful recovery
         fs::remove_file(&backup_path)?;
