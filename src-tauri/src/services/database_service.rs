@@ -3,7 +3,6 @@ use crate::{
     core::{state::AppState, AppError, AppResult},
     database::with_db,
     logging::log,
-    services::note_service,
 };
 use rusqlite::{params, Connection};
 use std::{
@@ -147,7 +146,7 @@ pub fn load_all_notes_into_sqlite_with_progress(
             let content = fs::read_to_string(path).unwrap_or_default();
 
             if index < IMMEDIATE_RENDER_COUNT {
-                let html_render = note_service::render_note(filename, &content);
+                let html_render = crate::utilities::note_renderer::render_note(filename, &content);
                 tx.execute(
                     "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![filename, content, html_render, *fs_modified, true],
@@ -160,7 +159,7 @@ pub fn load_all_notes_into_sqlite_with_progress(
             }
         } else if !is_indexed && index < IMMEDIATE_RENDER_COUNT {
             let content = fs::read_to_string(path).unwrap_or_default();
-            let html_render = note_service::render_note(filename, &content);
+            let html_render = crate::utilities::note_renderer::render_note(filename, &content);
             tx.execute(
                 "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
                 params![filename, html_render, true],

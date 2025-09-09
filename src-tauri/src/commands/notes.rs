@@ -6,10 +6,11 @@ use crate::{
     services::{
         database_service::recreate_database,
         note_service::{
-            create_versioned_backup, render_note, safe_write_note, update_note_in_database,
-            validate_note_name, BackupType,
+            create_versioned_backup, safe_write_note, update_note_in_database, validate_note_name,
+            BackupType,
         },
     },
+    utilities::note_renderer::render_note,
 };
 use rusqlite::params;
 use std::fs;

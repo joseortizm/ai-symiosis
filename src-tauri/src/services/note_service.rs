@@ -3,9 +3,8 @@ use crate::{
     core::{AppError, AppResult},
     database::{get_backup_dir_for_notes_path, get_temp_dir, with_db},
     logging::log,
+    utilities::note_renderer::render_note,
 };
-use html_escape;
-use pulldown_cmark::{html, Options, Parser};
 use rusqlite::params;
 use std::{
     fs,
@@ -48,26 +47,6 @@ pub fn validate_note_name(note_name: &str) -> AppResult<()> {
         return Err(AppError::InvalidNoteName("Note name too long".to_string()));
     }
     Ok(())
-}
-
-pub fn render_note(filename: &str, content: &str) -> String {
-    if filename.ends_with(".md") || filename.ends_with(".markdown") {
-        // Configure pulldown-cmark options
-        let mut options = Options::empty();
-        options.insert(Options::ENABLE_STRIKETHROUGH);
-        options.insert(Options::ENABLE_TABLES);
-        options.insert(Options::ENABLE_FOOTNOTES);
-        options.insert(Options::ENABLE_TASKLISTS);
-
-        // Parse markdown and convert to HTML
-        let parser = Parser::new_ext(content, options);
-        let mut html_output = String::new();
-        html::push_html(&mut html_output, parser);
-
-        html_output
-    } else {
-        format!("<pre>{}</pre>", html_escape::encode_text(content))
-    }
 }
 
 // How many backup versions we keep

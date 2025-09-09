@@ -7,6 +7,7 @@ mod search;
 mod services;
 #[cfg(test)]
 mod tests;
+mod utilities;
 mod watcher;
 
 use commands::*;
