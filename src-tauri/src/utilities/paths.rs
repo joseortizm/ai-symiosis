@@ -51,6 +51,18 @@ fn get_data_dir_impl() -> Option<PathBuf> {
 
 pub fn get_default_notes_dir() -> String {
     if let Some(home_dir) = home::home_dir() {
+        #[cfg(debug_assertions)]
+        {
+            let dev_config_path = home_dir.join(".symiosis-dev").join("config.toml");
+            if dev_config_path.exists() {
+                return home_dir
+                    .join("Documents")
+                    .join("Notes-dev")
+                    .to_string_lossy()
+                    .to_string();
+            }
+        }
+
         home_dir
             .join("Documents")
             .join("Notes")
@@ -81,6 +93,16 @@ pub fn get_config_path() -> PathBuf {
                         None,
                     );
                 }
+            }
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        if let Some(home_dir) = home::home_dir() {
+            let dev_config_path = home_dir.join(".symiosis-dev").join("config.toml");
+            if dev_config_path.exists() {
+                return dev_config_path;
             }
         }
     }

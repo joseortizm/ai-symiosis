@@ -184,6 +184,30 @@ recently_deleted = "Ctrl+."
 max_search_results = 100
 ```
 
-Simply edit the configuration file to customize Symiosis to your preferences.
+## Development
+
+### Using Development Mode
+
+If you're developing Symiosis and want to keep your development data separate from your personal notes, you can enable development mode:
+
+1. **Create a development config file:**
+   ```bash
+   mkdir -p ~/.symiosis-dev
+   cp ~/.symiosis/config.toml ~/.symiosis-dev/config.toml
+   ```
+
+2. **Update the development config** to use a separate notes directory:
+   ```toml
+   notes_directory = "/Users/username/Documents/Notes-dev"
+   ```
+
+3. **Development builds automatically detect the dev config:**
+   - When running `pnpm tauri dev`, Symiosis will automatically use `~/.symiosis-dev/config.toml` if it exists
+   - This separates your development data from your personal notes
+   - Production builds ignore the dev config and always use `~/.symiosis/config.toml`
+
+4. **To disable development mode**, simply delete or rename the `~/.symiosis-dev/config.toml` file.
+
+This approach keeps your development and personal notes completely separate without requiring environment variables or additional configuration.
 
 Have fun 🙂
