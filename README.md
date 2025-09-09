@@ -36,8 +36,10 @@ Usual keys like arrows etc. will also work.
 *   **`Enter`:** When a note is selected, enter edit mode for that note.
 *   **`Ctrl + U` / `Ctrl + D`:** Scroll up or down currently selected note
 *   **`Ctrl + P` / `Ctrl + N`:** Navigate search term highlights (if active) or Markdown headers in currently selected note. Other headers will collapse creating an outline for easy navigation.
-*   **`Ctrl + H` / `Ctrl + L`:** Navigate code blocks in currently selected note.
-*   **`Escape`:** Clear search highlights in the current note, or get out of markdown header navigation mode if currently in it. If neither highlights or headers are in use, clear current search text.
+*   **`Ctrl + H` / `Ctrl + L`:** Navigate links in currently selected note.
+*   **`Ctrl + Alt + H` / `Ctrl + Alt + L`:** Navigate code blocks in currently selected note.
+*   **`Escape`:** Exit current navigation mode (links, code blocks, headers) or clear search highlights. If no navigation is active, clear current search text.
+*   **`Enter`:** When navigating links, opens the selected link in your default browser. Otherwise, enters edit mode for the selected note.
 *   **`Ctrl + Y`:** Copy currently selected markdown section or code block to clipboard.
 
 ### Note Management
@@ -118,8 +120,10 @@ All keyboard shortcuts are configurable:
 - `down` - Navigate down (vim-style) (default: `"Ctrl+j"`)
 - `navigate_previous` - Navigate to previous note (default: `"Ctrl+p"`)
 - `navigate_next` - Navigate to next note (default: `"Ctrl+n"`)
-- `navigate_code_previous` - Navigate to previous code block (default: `"Ctrl+h"`)
-- `navigate_code_next` - Navigate to next code block (default: `"Ctrl+l"`)
+- `navigate_code_previous` - Navigate to previous code block (default: `"Ctrl+Alt+h"`)
+- `navigate_code_next` - Navigate to next code block (default: `"Ctrl+Alt+l"`)
+- `navigate_link_previous` - Navigate to previous link (default: `"Ctrl+h"`)
+- `navigate_link_next` - Navigate to next link (default: `"Ctrl+l"`)
 - `copy_current_section` - Copy current section to clipboard (default: `"Ctrl+y"`)
 - `open_settings` - Open settings panel (default: `"Meta+,"`)
 - `version_explorer` - Open version explorer for selected note (default: `"Ctrl+/"`)
@@ -173,8 +177,10 @@ up = "Ctrl+k"
 down = "Ctrl+j"
 navigate_previous = "Ctrl+p"
 navigate_next = "Ctrl+n"
-navigate_code_previous = "Ctrl+h"
-navigate_code_next = "Ctrl+l"
+navigate_code_previous = "Ctrl+Alt+h"
+navigate_code_next = "Ctrl+Alt+l"
+navigate_link_previous = "Ctrl+h"
+navigate_link_next = "Ctrl+l"
 copy_current_section = "Ctrl+y"
 open_settings = "Meta+,"
 version_explorer = "Ctrl+/"

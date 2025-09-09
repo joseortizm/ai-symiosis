@@ -123,8 +123,17 @@ export function createKeyboardActions(
       navigateCodePrevious: ({ actions }: ActionContext) => {
         actions.contentNavigationManager.navigateCodePrevious()
       },
+      navigateLinkNext: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.navigateLinkNext()
+      },
+      navigateLinkPrevious: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.navigateLinkPrevious()
+      },
       copyCurrentSection: async ({ actions }: ActionContext) => {
         await actions.contentNavigationManager.copyCurrentSection()
+      },
+      openCurrentLink: ({ actions }: ActionContext) => {
+        actions.contentNavigationManager.openCurrentLink()
       },
     },
 
@@ -145,6 +154,12 @@ export function createKeyboardActions(
 
     editing: {
       enterEdit: async ({ state, actions }: ActionContext) => {
+        // If we're navigating links, open the current link instead of entering edit mode
+        if (actions.contentNavigationManager.isNavigatingLinks) {
+          actions.contentNavigationManager.openCurrentLink()
+          return
+        }
+
         if (state.selectedNote && state.filteredNotes.length > 0) {
           await actions.noteActions.enterEditMode(state.selectedNote)
         }
@@ -253,6 +268,8 @@ export function createKeyboardActions(
         [shortcuts.navigate_next]: 'navigation.navigateNext',
         [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
         [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
+        [shortcuts.navigate_link_previous]: 'navigation.navigateLinkPrevious',
+        [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
         [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
         Escape: 'search.handleEscape',
         [shortcuts.open_settings]: 'settings.openSettings',
@@ -274,6 +291,8 @@ export function createKeyboardActions(
         [shortcuts.navigate_next]: 'navigation.navigateNext',
         [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
         [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
+        [shortcuts.navigate_link_previous]: 'navigation.navigateLinkPrevious',
+        [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
         [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
         [shortcuts.version_explorer]: 'settings.openVersionExplorer',
         [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',

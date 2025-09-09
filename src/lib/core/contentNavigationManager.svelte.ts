@@ -8,7 +8,7 @@ import { SvelteSet } from 'svelte/reactivity'
 
 interface NavigationState {
   currentIndex: number
-  navigationMode: 'inactive' | 'highlights' | 'headers'
+  navigationMode: 'inactive' | 'highlights' | 'headers' | 'links'
   highlightVisibility: 'visible' | 'hidden'
   currentElement: Element | null
   collapsedSections: SvelteSet<Element>
@@ -16,6 +16,9 @@ interface NavigationState {
   // Separate state for code block navigation
   codeBlockIndex: number
   codeBlockElement: Element | null
+  // Separate state for link navigation
+  linkIndex: number
+  linkElement: Element | null
 }
 
 interface NavigationDeps {
@@ -40,6 +43,9 @@ export interface ContentNavigationManager {
   navigatePrevious(): void
   navigateCodeNext(): void
   navigateCodePrevious(): void
+  navigateLinkNext(): void
+  navigateLinkPrevious(): void
+  openCurrentLink(): void
   resetNavigation(): void
   clearCurrentStyles(): void
   clearHighlights(): void
@@ -51,6 +57,7 @@ export interface ContentNavigationManager {
   navigateToHeader(headerText: string): boolean
   readonly isActivelyNavigating: boolean
   readonly hideHighlights: boolean
+  readonly isNavigatingLinks: boolean
 }
 
 export function createContentNavigationManager(
@@ -65,6 +72,8 @@ export function createContentNavigationManager(
     currentSection: null,
     codeBlockIndex: -1,
     codeBlockElement: null,
+    linkIndex: -1,
+    linkElement: null,
   })
 
   function determineNavigationMode(): 'highlights' | 'headers' {
@@ -108,6 +117,13 @@ export function createContentNavigationManager(
     return Array.from(contentElement.querySelectorAll('pre > code'))
   }
 
+  function getLinkElements(): Element[] {
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return []
+
+    return Array.from(contentElement.querySelectorAll('a[href]'))
+  }
+
   function getCurrentNavigationElements(): Element[] {
     const targetMode = determineNavigationMode()
 
@@ -138,6 +154,16 @@ export function createContentNavigationManager(
     if (state.codeBlockElement) {
       state.codeBlockElement.classList.remove('codeblock-current')
       state.codeBlockElement = null
+    }
+
+    if (state.linkElement) {
+      state.linkElement.classList.remove('link-current')
+      state.linkElement = null
+    }
+
+    // Reset navigation mode when clearing all styles
+    if (state.navigationMode === 'links') {
+      state.navigationMode = 'inactive'
     }
   }
 
@@ -377,6 +403,116 @@ export function createContentNavigationManager(
     scrollToCodeBlock(elements[state.codeBlockIndex])
   }
 
+  function scrollToLink(element: Element): void {
+    if (state.linkElement) {
+      state.linkElement.classList.remove('link-current')
+    }
+
+    state.linkElement = element
+    element.classList.add('link-current')
+
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest',
+      })
+      return
+    }
+
+    const elementRect = element.getBoundingClientRect()
+    const containerRect = contentElement.getBoundingClientRect()
+    const containerHeight = contentElement.clientHeight
+    const targetPosition = containerHeight * 0.25
+
+    const scrollTop =
+      contentElement.scrollTop +
+      (elementRect.top - containerRect.top) -
+      targetPosition
+
+    contentElement.scrollTo({
+      top: scrollTop,
+      behavior: 'smooth',
+    })
+  }
+
+  function navigateLinkNext(): void {
+    const elements = getLinkElements()
+    if (elements.length === 0) return
+
+    // Clear any existing navigation state before switching to link mode
+    if (state.navigationMode !== 'links') {
+      resetNavigation()
+    }
+
+    state.navigationMode = 'links'
+    if (state.linkIndex === -1) {
+      state.linkIndex = 0
+    } else {
+      state.linkIndex = Math.min(state.linkIndex + 1, elements.length - 1)
+    }
+
+    scrollToLink(elements[state.linkIndex])
+  }
+
+  function navigateLinkPrevious(): void {
+    const elements = getLinkElements()
+    if (elements.length === 0) return
+
+    // Clear any existing navigation state before switching to link mode
+    if (state.navigationMode !== 'links') {
+      resetNavigation()
+    }
+
+    state.navigationMode = 'links'
+    if (state.linkIndex === -1) {
+      state.linkIndex = 0
+    } else {
+      state.linkIndex = Math.max(state.linkIndex - 1, 0)
+    }
+
+    scrollToLink(elements[state.linkIndex])
+  }
+
+  function openCurrentLink(): void {
+    if (state.navigationMode !== 'links' || !state.linkElement) return
+
+    const href = state.linkElement.getAttribute('href')
+
+    if (!href) {
+      import('../utils/errorNotification').then(({ errorNotification }) => {
+        errorNotification.trigger('Link has no URL')
+      })
+      return
+    }
+
+    if (!href.startsWith('http://') && !href.startsWith('https://')) {
+      import('../utils/errorNotification').then(({ errorNotification }) => {
+        errorNotification.trigger(`Invalid link format: ${href}`)
+      })
+      return
+    }
+
+    try {
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity
+      new URL(href)
+
+      import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
+        openUrl(href).catch((error) => {
+          console.error('Failed to open URL:', error)
+          import('../utils/errorNotification').then(({ errorNotification }) => {
+            errorNotification.trigger(`Failed to open link: ${href}`)
+          })
+        })
+      })
+    } catch {
+      import('../utils/errorNotification').then(({ errorNotification }) => {
+        errorNotification.trigger(`Malformed URL: ${href}`)
+      })
+    }
+  }
+
   function resetNavigation(): void {
     clearCurrentElementStyle()
 
@@ -399,6 +535,7 @@ export function createContentNavigationManager(
     state.currentIndex = -1
     state.navigationMode = 'inactive'
     state.codeBlockIndex = -1
+    state.linkIndex = -1
   }
 
   function clearCurrentStyles(): void {
@@ -488,14 +625,29 @@ export function createContentNavigationManager(
   }
 
   function handleEscape(): EscapeAction {
-    // Priority 1: Clear highlights immediately if actively navigating highlights
+    // Priority 1: Clear link navigation if actively navigating links
+    if (state.navigationMode === 'links') {
+      resetNavigation()
+      return 'navigation_cleared'
+    }
+
+    // Priority 2: Clear code block navigation if navigating code blocks
+    if (state.codeBlockElement) {
+      clearCurrentElementStyle()
+      state.codeBlockIndex = -1
+      state.linkIndex = -1 // Also reset link navigation
+      state.navigationMode = 'inactive' // Reset navigation mode
+      return 'navigation_cleared'
+    }
+
+    // Priority 3: Clear highlights immediately if actively navigating highlights
     if (state.navigationMode === 'highlights') {
       resetNavigation()
       clearHighlights()
       return 'highlights_cleared'
     }
 
-    // Priority 2: Clear active header navigation
+    // Priority 4: Clear active header navigation
     if (state.navigationMode !== 'inactive') {
       resetNavigation()
       return 'navigation_cleared'
@@ -660,6 +812,9 @@ export function createContentNavigationManager(
     navigatePrevious,
     navigateCodeNext,
     navigateCodePrevious,
+    navigateLinkNext,
+    navigateLinkPrevious,
+    openCurrentLink,
     resetNavigation,
     clearCurrentStyles,
     clearHighlights,
@@ -676,6 +831,10 @@ export function createContentNavigationManager(
 
     get hideHighlights(): boolean {
       return state.highlightVisibility === 'hidden'
+    },
+
+    get isNavigatingLinks(): boolean {
+      return state.navigationMode === 'links'
     },
   }
 }

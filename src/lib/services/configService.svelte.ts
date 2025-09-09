@@ -48,6 +48,8 @@ export interface ShortcutsConfig {
   navigate_next: string
   navigate_code_previous: string
   navigate_code_next: string
+  navigate_link_previous: string
+  navigate_link_next: string
   copy_current_section: string
   open_settings: string
   version_explorer: string
@@ -248,8 +250,10 @@ export function createConfigService(): ConfigService {
         down: 'Ctrl+j',
         navigate_previous: 'Ctrl+p',
         navigate_next: 'Ctrl+n',
-        navigate_code_previous: 'Ctrl+h',
-        navigate_code_next: 'Ctrl+l',
+        navigate_code_previous: 'Ctrl+Alt+h',
+        navigate_code_next: 'Ctrl+Alt+l',
+        navigate_link_previous: 'Ctrl+h',
+        navigate_link_next: 'Ctrl+l',
         copy_current_section: 'Ctrl+y',
         open_settings: 'Meta+,',
         version_explorer: 'Ctrl+/',
