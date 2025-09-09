@@ -1,4 +1,5 @@
 use crate::core::{AppError, AppResult};
+use crate::logging::log;
 use crate::utilities::config_helpers::{default_global_shortcut, default_window_decorations};
 
 pub use crate::utilities::config_helpers::{
@@ -201,7 +202,11 @@ pub fn load_config() -> AppConfig {
         Err(_) => {
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
-                eprintln!("Failed to create default config file: {}", e);
+                log(
+                    "CONFIG_CREATION",
+                    "Failed to create default config file",
+                    Some(&e.to_string()),
+                );
             }
             default_config
         }
@@ -217,7 +222,11 @@ pub fn load_config_with_first_run_info() -> (AppConfig, bool) {
         Err(_) => {
             let default_config = AppConfig::default();
             if let Err(e) = save_config(&default_config) {
-                eprintln!("Failed to create default config file: {}", e);
+                log(
+                    "CONFIG_CREATION",
+                    "Failed to create default config file",
+                    Some(&e.to_string()),
+                );
             }
             default_config
         }
@@ -270,7 +279,11 @@ pub fn reload_config(
 
     if let Some(app) = app_handle {
         if let Err(e) = app.emit("config-updated", &new_config) {
-            eprintln!("Failed to emit config-updated event: {}", e);
+            log(
+                "CONFIG_EVENT",
+                "Failed to emit config-updated event",
+                Some(&e.to_string()),
+            );
         }
     }
     Ok(result)

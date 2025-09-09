@@ -1,10 +1,11 @@
 use crate::{
     core::{AppError, AppResult},
     database::with_db,
+    logging::log,
     utilities::note_renderer::render_note,
 };
 use rusqlite::params;
-use std::time::{SystemTime, UNIX_EPOCH};
+// Removed unused time imports - no longer needed with centralized logging
 
 pub fn update_note_in_database(
     app_state: &crate::core::state::AppState,
@@ -49,26 +50,23 @@ pub fn update_note_in_database(
                 content.len(),
                 db_content.len()
             );
-            eprintln!(
-                "[{}] {}",
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs(),
-                error_msg
+            log(
+                "DATABASE_VERIFICATION",
+                "Database update verification failed",
+                Some(&error_msg),
             );
             return Err(AppError::DatabaseQuery(error_msg));
         }
 
         // Log successful database operation
-        eprintln!(
-            "[{}] Database Operation: UPDATE/INSERT | File: {} | Size: {} bytes | Result: SUCCESS",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
-            note_name,
-            content.len()
+        log(
+            "DATABASE_OPERATION",
+            &format!(
+                "UPDATE/INSERT: {} | Size: {} bytes | SUCCESS",
+                note_name,
+                content.len()
+            ),
+            None,
         );
 
         Ok(())

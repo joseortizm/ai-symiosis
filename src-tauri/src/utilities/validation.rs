@@ -3,6 +3,7 @@ use crate::config::{
     EditorConfig, GeneralConfig, InterfaceConfig, PreferencesConfig, ShortcutsConfig,
 };
 use crate::core::{AppError, AppResult};
+use crate::logging::log;
 
 pub fn validate_config(config: &AppConfig) -> AppResult<()> {
     validate_notes_directory(&config.notes_directory)?;
@@ -251,7 +252,11 @@ pub fn validate_notes_directory(dir: &str) -> AppResult<()> {
     }
 
     if !path.is_absolute() {
-        eprintln!("Warning: Using relative notes directory: {}", dir);
+        log(
+            "CONFIG_VALIDATION",
+            &format!("Warning: Using relative notes directory: {}", dir),
+            None,
+        );
     }
 
     Ok(())

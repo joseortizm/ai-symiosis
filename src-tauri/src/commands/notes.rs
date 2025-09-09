@@ -122,7 +122,11 @@ pub fn get_note_html_content(
                 "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
                 params![note_name, html_render, true],
             ) {
-                eprintln!("Failed to update note indexing for '{}': {}", note_name, e);
+                log(
+                    "NOTE_INDEXING",
+                    &format!("Failed to update note indexing for '{}'", note_name),
+                    Some(&e.to_string()),
+                );
             }
 
             Ok(html_render)
@@ -182,20 +186,29 @@ pub fn create_new_note(
         }) {
             Ok(_) => Ok(()),
             Err(e) => {
-                eprintln!(
-                    "Database operation failed for '{}': {}. Rebuilding database...",
-                    note_name, e
+                log(
+                    "DATABASE_RECOVERY",
+                    &format!(
+                        "Database operation failed for '{}': {}. Rebuilding database...",
+                        note_name, e
+                    ),
+                    None,
                 );
 
                 match recreate_database(&app_state) {
                     Ok(()) => {
-                        eprintln!("Database successfully rebuilt from files.");
+                        log(
+                            "DATABASE_RECOVERY",
+                            "Database successfully rebuilt from files.",
+                            None,
+                        );
                         Ok(())
                     }
                     Err(rebuild_error) => {
-                        eprintln!(
-                            "Database rebuild failed: {}. Note was created but may not be searchable.",
-                            rebuild_error
+                        log(
+                            "DATABASE_RECOVERY",
+                            "Database rebuild failed. Note was created but may not be searchable.",
+                            Some(&rebuild_error.to_string()),
                         );
                         Err(AppError::DatabaseRebuild(format!(
                             "Note created but database rebuild failed: {}",
@@ -233,16 +246,20 @@ pub fn save_note_with_content_check(
             // Content validation failed - create backup of the content that would have been saved
             match create_versioned_backup(&note_path, BackupType::SaveFailure, Some(content)) {
                 Ok(backup_path) => {
-                    eprintln!(
-                        "Created save failure backup due to external modification: {}",
-                        backup_path.display()
+                    log(
+                        "FILE_BACKUP",
+                        "Created save failure backup due to external modification",
+                        Some(&backup_path.display().to_string()),
                     );
                 }
                 Err(e) => {
-                    eprintln!(
-                        "Failed to create save failure backup for '{}': {}",
-                        note_path.display(),
-                        e
+                    log(
+                        "FILE_BACKUP",
+                        &format!(
+                            "Failed to create save failure backup for '{}'",
+                            note_path.display()
+                        ),
+                        Some(&e.to_string()),
                     );
                 }
             }
@@ -269,18 +286,30 @@ pub fn save_note_with_content_check(
         match update_note_in_database(&app_state, note_name, content, modified) {
             Ok(()) => Ok(()),
             Err(e) => {
-                eprintln!(
-                    "Database update failed for '{}': {}. Rebuilding database...",
-                    note_name, e
+                log(
+                    "DATABASE_RECOVERY",
+                    &format!(
+                        "Database update failed for '{}': {}. Rebuilding database...",
+                        note_name, e
+                    ),
+                    None,
                 );
 
                 match recreate_database(&app_state) {
                     Ok(()) => {
-                        eprintln!("Database successfully rebuilt from files.");
+                        log(
+                            "DATABASE_RECOVERY",
+                            "Database successfully rebuilt from files.",
+                            None,
+                        );
                         Ok(())
                     }
                     Err(rebuild_error) => {
-                        eprintln!("Critical error: {}", rebuild_error);
+                        log(
+                            "DATABASE_RECOVERY",
+                            "Critical error: Database rebuild failed",
+                            Some(&rebuild_error.to_string()),
+                        );
                         Err(AppError::DatabaseRebuild(format!(
                             "Note saved but database rebuild failed: {}",
                             rebuild_error
@@ -362,25 +391,22 @@ pub fn rename_note(
                                 }
 
                                 // Log successful rename operation
-                                eprintln!(
-                                    "[{}] File Operation: RENAME | From: {} | To: {} | Result: SUCCESS",
-                                    SystemTime::now()
-                                        .duration_since(UNIX_EPOCH)
-                                        .unwrap_or_default()
-                                        .as_secs(),
-                                    old_name,
-                                    new_name
+                                log(
+                                    "FILE_OPERATION",
+                                    &format!("RENAME: {} -> {} | SUCCESS", old_name, new_name),
+                                    None,
                                 );
                             }
                             Err(e) => {
-                                eprintln!(
-                                    "Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...",
-                                    old_name, new_name, e
-                                );
+                                log("DATABASE_RECOVERY", &format!("Database operation failed for rename '{}' -> '{}': {}. Rebuilding database...", old_name, new_name, e), None);
 
                                 match recreate_database(&app_state) {
                                     Ok(()) => {
-                                        eprintln!("Database successfully rebuilt from files.");
+                                        log(
+                                            "DATABASE_RECOVERY",
+                                            "Database successfully rebuilt from files.",
+                                            None,
+                                        );
                                         if let Err(e) = fs::remove_file(&backup_path) {
                                             log(
                                                 "BACKUP_CLEANUP",
@@ -393,10 +419,7 @@ pub fn rename_note(
                                         }
                                     }
                                     Err(rebuild_error) => {
-                                        eprintln!(
-                                            "Database rebuild failed: {}. Note was renamed but may not be searchable.",
-                                            rebuild_error
-                                        );
+                                        log("DATABASE_RECOVERY", "Database rebuild failed. Note was renamed but may not be searchable.", Some(&rebuild_error.to_string()));
                                         return Err(AppError::DatabaseRebuild(format!(
                                             "Note renamed but database rebuild failed: {}",
                                             rebuild_error
@@ -409,9 +432,10 @@ pub fn rename_note(
                     Err(e) => {
                         // Rename failed - restore from backup and return error
                         if let Err(restore_err) = fs::rename(&backup_path, &old_path) {
-                            eprintln!(
-                                "CRITICAL: Failed to restore backup after failed rename: {}",
-                                restore_err
+                            log(
+                                "FILE_OPERATION",
+                                "CRITICAL: Failed to restore backup after failed rename",
+                                Some(&restore_err.to_string()),
                             );
                         }
 
@@ -511,14 +535,14 @@ pub fn delete_note(
                 }) {
                     Ok(()) => {
                         // Delete succeeded - log success but keep backup
-                        eprintln!(
-                            "[{}] File Operation: DELETE | File: {} | Backup: {} | Result: SUCCESS",
-                            SystemTime::now()
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap_or_default()
-                                .as_secs(),
-                            note_name,
-                            backup_path.display()
+                        log(
+                            "FILE_OPERATION",
+                            &format!(
+                                "DELETE: {} | Backup: {} | SUCCESS",
+                                note_name,
+                                backup_path.display()
+                            ),
+                            None,
                         );
                     }
                     Err(e) => {
@@ -561,18 +585,26 @@ pub fn delete_note(
         }) {
             Ok(_) => Ok(()),
             Err(e) => {
-                eprintln!(
-                    "Database operation failed for delete '{}': {}. Rebuilding database...",
-                    note_name, e
+                log(
+                    "DATABASE_RECOVERY",
+                    &format!(
+                        "Database operation failed for delete '{}': {}. Rebuilding database...",
+                        note_name, e
+                    ),
+                    None,
                 );
 
                 match recreate_database(&app_state) {
                     Ok(()) => {
-                        eprintln!("Database successfully rebuilt from files.");
+                        log(
+                            "DATABASE_RECOVERY",
+                            "Database successfully rebuilt from files.",
+                            None,
+                        );
                         Ok(())
                     }
                     Err(rebuild_error) => {
-                        eprintln!("Database rebuild failed: {}. Note was deleted but database may be inconsistent.", rebuild_error);
+                        log("DATABASE_RECOVERY", "Database rebuild failed. Note was deleted but database may be inconsistent.", Some(&rebuild_error.to_string()));
                         Err(AppError::DatabaseRebuild(format!(
                             "Note deleted but database rebuild failed: {}",
                             rebuild_error

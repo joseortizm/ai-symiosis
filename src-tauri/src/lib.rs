@@ -52,8 +52,10 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     if let Some(icon) = app.default_window_icon() {
         tray_builder = tray_builder.icon(icon.clone());
     } else {
-        eprintln!(
-            "Warning: Could not load default window icon for tray. Tray will appear without icon."
+        log(
+            "TRAY_SETUP",
+            "Warning: Could not load default window icon for tray. Tray will appear without icon.",
+            None,
         );
     }
 
@@ -152,42 +154,67 @@ pub fn initialize_notes(app_state: &AppState) {
         let is_new_db = !db_path.exists();
 
         if is_new_db {
-            eprintln!("🔧 Creating new database...");
+            log("DATABASE_INIT", "🔧 Creating new database...", None);
         } else {
-            eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
-            eprintln!("🔄 Attempting automatic database recovery...");
+            log(
+                "DATABASE_INIT",
+                "❌ CRITICAL: Database initialization failed",
+                Some(&e.to_string()),
+            );
+            log(
+                "DATABASE_RECOVERY",
+                "🔄 Attempting automatic database recovery...",
+                None,
+            );
         }
 
         if let Err(recovery_error) = database_service::recreate_database(app_state) {
             if is_new_db {
-                eprintln!("💥 FATAL: Failed to create new database: {}. Application will continue with limited functionality.", recovery_error);
+                log("DATABASE_INIT", "💥 FATAL: Failed to create new database. Application will continue with limited functionality.", Some(&recovery_error.to_string()));
             } else {
-                eprintln!("💥 FATAL: Database recovery failed: {}. Application will continue with limited functionality.", recovery_error);
+                log("DATABASE_RECOVERY", "💥 FATAL: Database recovery failed. Application will continue with limited functionality.", Some(&recovery_error.to_string()));
             }
             return;
         } else {
             if is_new_db {
-                eprintln!("✅ New database created successfully!");
+                log(
+                    "DATABASE_INIT",
+                    "✅ New database created successfully!",
+                    None,
+                );
             } else {
-                eprintln!("✅ Database successfully recovered!");
+                log(
+                    "DATABASE_RECOVERY",
+                    "✅ Database successfully recovered!",
+                    None,
+                );
             }
         }
     } else {
         match database_service::quick_filesystem_sync_check(app_state) {
             Ok(true) => {}
             Ok(false) => {
-                eprintln!("🔄 Database-filesystem mismatch detected. Rebuilding database...");
+                log(
+                    "DATABASE_SYNC",
+                    "🔄 Database-filesystem mismatch detected. Rebuilding database...",
+                    None,
+                );
                 if let Err(e) = database_service::recreate_database(app_state) {
-                    eprintln!("💥 FATAL: Database rebuild failed: {}. Application will continue with limited functionality.", e);
+                    log("DATABASE_SYNC", "💥 FATAL: Database rebuild failed. Application will continue with limited functionality.", Some(&e.to_string()));
                     return;
                 } else {
-                    eprintln!("✅ Database successfully rebuilt from filesystem!");
+                    log(
+                        "DATABASE_SYNC",
+                        "✅ Database successfully rebuilt from filesystem!",
+                        None,
+                    );
                 }
             }
             Err(e) => {
-                eprintln!(
-                    "⚠️  Filesystem sync check failed: {}. Continuing without rebuild.",
-                    e
+                log(
+                    "DATABASE_SYNC",
+                    "⚠️  Filesystem sync check failed. Continuing without rebuild.",
+                    Some(&e.to_string()),
                 );
             }
         }
@@ -197,7 +224,11 @@ pub fn initialize_notes(app_state: &AppState) {
         if let Err(e) = with_db(app_state, |conn| {
             conn.execute("DELETE FROM notes", []).map_err(|e| e.into())
         }) {
-            eprintln!("Failed to purge database: {}. Continuing anyway.", e);
+            log(
+                "DATABASE_CLEANUP",
+                "Failed to purge database. Continuing anyway.",
+                Some(&e.to_string()),
+            );
         }
     }
 
@@ -307,7 +338,11 @@ pub fn run() {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
                     // Hide window instead of closing when user clicks X
                     if let Err(e) = window.hide() {
-                        eprintln!("Failed to hide window: {}. Continuing anyway.", e);
+                        log(
+                            "WINDOW_OPERATION",
+                            "Failed to hide window. Continuing anyway.",
+                            Some(&e.to_string()),
+                        );
                     }
                     api.prevent_close();
                 }
@@ -346,7 +381,11 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {
-            eprintln!("Failed to build Tauri application: {}", e);
+            log(
+                "APPLICATION_STARTUP",
+                "Failed to build Tauri application",
+                Some(&e.to_string()),
+            );
             std::process::exit(1);
         });
 

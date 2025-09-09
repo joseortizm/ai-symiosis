@@ -1,3 +1,4 @@
+use crate::logging::log;
 use std::path::PathBuf;
 
 pub fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
@@ -75,9 +76,13 @@ pub fn get_config_path() -> PathBuf {
                 {
                     return PathBuf::from(test_config_path);
                 } else {
-                    eprintln!(
-                        "SAFETY ERROR: Test config path '{}' is not in temp directory!",
-                        test_config_path
+                    log(
+                        "PATH_SAFETY",
+                        &format!(
+                            "SAFETY ERROR: Test config path '{}' is not in temp directory!",
+                            test_config_path
+                        ),
+                        None,
                     );
                 }
             }

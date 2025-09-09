@@ -149,9 +149,10 @@ pub async fn refresh_cache(
                     "db-loading-progress",
                     "Database sync failed, attempting recovery...",
                 );
-                eprintln!(
-                    "Failed to refresh notes cache: {}. Attempting recovery...",
-                    e
+                log(
+                    "DATABASE_RECOVERY",
+                    "Failed to refresh notes cache. Attempting recovery...",
+                    Some(&e.to_string()),
                 );
 
                 let result = recreate_database_with_progress(

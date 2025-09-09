@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter};
 use crate::{
     config::get_config_notes_dir,
     database::with_db,
+    logging::log,
     services::note_service::update_note_in_database,
     utilities::file_safety::{create_versioned_backup, BackupType},
 };
@@ -34,7 +35,11 @@ impl DebouncedWatcher {
         let mut pending = match self.pending_events.lock() {
             Ok(pending) => pending,
             Err(e) => {
-                eprintln!("Watcher lock poisoned, recovering: {}", e);
+                log(
+                    "WATCHER_ERROR",
+                    "Watcher lock poisoned, recovering",
+                    Some(&e.to_string()),
+                );
                 e.into_inner()
             }
         };
@@ -54,7 +59,11 @@ impl DebouncedWatcher {
         let mut pending = match self.pending_events.lock() {
             Ok(pending) => pending,
             Err(e) => {
-                eprintln!("Watcher cleanup lock poisoned, recovering: {}", e);
+                log(
+                    "WATCHER_ERROR",
+                    "Watcher cleanup lock poisoned, recovering",
+                    Some(&e.to_string()),
+                );
                 e.into_inner()
             }
         };
@@ -152,16 +161,10 @@ pub fn setup_notes_watcher(
                                                                 if old_content != content {
                                                                     match create_versioned_backup(path, BackupType::ExternalChange, Some(&old_content)) {
                                                                         Ok(backup_path) => {
-                                                                            eprintln!(
-                                                                                "Created external change backup: {}",
-                                                                                backup_path.display()
-                                                                            );
+                                                                            log("FILE_BACKUP", "Created external change backup", Some(&backup_path.display().to_string()));
                                                                         }
                                                                         Err(e) => {
-                                                                            eprintln!(
-                                                                                "Failed to create external change backup for {}: {}",
-                                                                                filename, e
-                                                                            );
+                                                                            log("FILE_BACKUP", &format!("Failed to create external change backup for {}", filename), Some(&e.to_string()));
                                                                         }
                                                                     }
                                                                 }
@@ -170,7 +173,7 @@ pub fn setup_notes_watcher(
                                                         }
                                                         Ok(())
                                                     }).unwrap_or_else(|e| {
-                                                        eprintln!("Failed to check for existing content before external change backup: {}", e);
+                                                        log("FILE_BACKUP", "Failed to check for existing content before external change backup", Some(&e.to_string()));
                                                     });
 
                                                     if let Err(e) = update_note_in_database(
@@ -179,9 +182,13 @@ pub fn setup_notes_watcher(
                                                         &content,
                                                         modified,
                                                     ) {
-                                                        eprintln!(
-                                                            "Failed to update note {}: {}",
-                                                            filename, e
+                                                        log(
+                                                            "DATABASE_UPDATE",
+                                                            &format!(
+                                                                "Failed to update note {}",
+                                                                filename
+                                                            ),
+                                                            Some(&e.to_string()),
                                                         );
                                                     }
                                                 }
@@ -199,9 +206,13 @@ pub fn setup_notes_watcher(
                                                         },
                                                     )
                                                 {
-                                                    eprintln!(
-                                                        "Failed to delete note {}: {}",
-                                                        filename, e
+                                                    log(
+                                                        "DATABASE_DELETE",
+                                                        &format!(
+                                                            "Failed to delete note {}",
+                                                            filename
+                                                        ),
+                                                        Some(&e.to_string()),
                                                     );
                                                 }
                                             }
@@ -211,7 +222,11 @@ pub fn setup_notes_watcher(
                                     if let Err(e) =
                                         app_handle_for_refresh.emit("cache-refreshed", ())
                                     {
-                                        eprintln!("Failed to emit cache-refreshed event: {}", e);
+                                        log(
+                                            "UI_EVENT",
+                                            "Failed to emit cache-refreshed event",
+                                            Some(&e.to_string()),
+                                        );
                                     }
                                 });
                             }

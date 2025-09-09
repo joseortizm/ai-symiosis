@@ -62,7 +62,11 @@ pub fn load_all_notes_into_sqlite_with_progress(
 
     if !notes_dir.exists() {
         if let Err(e) = fs::create_dir_all(&notes_dir) {
-            eprintln!("Failed to create notes directory: {}", e);
+            log(
+                "DIRECTORY_CREATION",
+                "Failed to create notes directory",
+                Some(&e.to_string()),
+            );
             return Ok(());
         }
     }
@@ -225,7 +229,7 @@ pub async fn recreate_database_with_progress(
             Some(&e.to_string()),
         );
     }
-    eprintln!("{}", reason);
+    log("DATABASE_REBUILD_REASON", reason, None);
 
     // We need to access the database manager directly since we're already holding the rebuild lock
     let rebuild_result = {
@@ -325,9 +329,13 @@ pub fn quick_filesystem_sync_check(app_state: &AppState) -> AppResult<bool> {
             let file_content = match std::fs::read_to_string(file_path) {
                 Ok(content) => content,
                 Err(_) => {
-                    eprintln!(
-                        "Warning: Could not read file {} during sync check",
-                        filename
+                    log(
+                        "FILE_SYNC_CHECK",
+                        &format!(
+                            "Warning: Could not read file {} during sync check",
+                            filename
+                        ),
+                        None,
                     );
                     continue;
                 }

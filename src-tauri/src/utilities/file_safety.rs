@@ -214,14 +214,14 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
     }
 
     // Log successful operation
-    eprintln!(
-        "[{}] File Operation: WRITE | File: {} | Size: {} bytes | Result: SUCCESS",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-        note_path.display(),
-        content.len()
+    log(
+        "FILE_OPERATION",
+        &format!(
+            "WRITE: {} | Size: {} bytes | SUCCESS",
+            note_path.display(),
+            content.len()
+        ),
+        None,
     );
 
     // 5. Verify content was written correctly
@@ -235,13 +235,10 @@ pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
             content.len(),
             written_content.len()
         );
-        eprintln!(
-            "[{}] {}",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
-            error_msg
+        log(
+            "FILE_VERIFICATION",
+            "Content verification failed",
+            Some(&error_msg),
         );
         return Err(AppError::FileWrite(error_msg));
     }
@@ -357,13 +354,20 @@ fn generate_backup_filename(
 fn create_save_failure_backup(note_path: &PathBuf, content: &str) {
     match create_versioned_backup(note_path, BackupType::SaveFailure, Some(content)) {
         Ok(backup_path) => {
-            eprintln!("Created save failure backup: {}", backup_path.display());
+            log(
+                "FILE_BACKUP",
+                "Created save failure backup",
+                Some(&backup_path.display().to_string()),
+            );
         }
         Err(e) => {
-            eprintln!(
-                "Failed to create save failure backup for '{}': {}",
-                note_path.display(),
-                e
+            log(
+                "FILE_BACKUP",
+                &format!(
+                    "Failed to create save failure backup for '{}'",
+                    note_path.display()
+                ),
+                Some(&e.to_string()),
             );
         }
     }

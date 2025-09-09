@@ -1,3 +1,4 @@
+use crate::logging::log;
 use crate::utilities::paths::get_default_notes_dir;
 use crate::utilities::validation::{
     validate_basic_shortcut_format, validate_font_size, validate_notes_directory,
@@ -113,7 +114,11 @@ pub fn load_config_from_content(content: &str) -> AppConfig {
     let toml_value = match toml::from_str::<toml::Value>(content) {
         Ok(value) => value,
         Err(e) => {
-            eprintln!("Failed to parse config TOML: {}. Using defaults.", e);
+            log(
+                "CONFIG_PARSE",
+                "Failed to parse config TOML. Using defaults.",
+                Some(&e.to_string()),
+            );
             return AppConfig::default();
         }
     };
@@ -141,9 +146,13 @@ fn extract_notes_directory(value: &toml::Value) -> String {
     match value.get("notes_directory").and_then(|v| v.as_str()) {
         Some(dir) => {
             if let Err(e) = validate_notes_directory(dir) {
-                eprintln!(
-                    "Warning: Invalid notes_directory '{}': {}. Using default.",
-                    dir, e
+                log(
+                    "CONFIG_VALIDATION",
+                    &format!(
+                        "Warning: Invalid notes_directory '{}': {}. Using default.",
+                        dir, e
+                    ),
+                    None,
                 );
                 get_default_notes_dir()
             } else {
@@ -158,9 +167,13 @@ fn extract_global_shortcut(value: &toml::Value) -> String {
     match value.get("global_shortcut").and_then(|v| v.as_str()) {
         Some(shortcut) => {
             if let Err(e) = validate_shortcut_format(shortcut) {
-                eprintln!(
-                    "Warning: Invalid global_shortcut '{}': {}. Using default.",
-                    shortcut, e
+                log(
+                    "CONFIG_VALIDATION",
+                    &format!(
+                        "Warning: Invalid global_shortcut '{}': {}. Using default.",
+                        shortcut, e
+                    ),
+                    None,
                 );
                 default_global_shortcut()
             } else {
@@ -185,9 +198,13 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             if valid_themes.contains(&theme) {
                 config.ui_theme = theme.to_string();
             } else {
-                eprintln!(
-                    "Warning: Invalid ui_theme '{}'. Using default '{}'.",
-                    theme, config.ui_theme
+                log(
+                    "CONFIG_VALIDATION",
+                    &format!(
+                        "Warning: Invalid ui_theme '{}'. Using default '{}'.",
+                        theme, config.ui_theme
+                    ),
+                    None,
                 );
             }
         }
@@ -201,9 +218,13 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             if validate_font_size(size, "UI font size").is_ok() {
                 config.font_size = size;
             } else {
-                eprintln!(
-                    "Warning: Invalid font_size {}. Using default {}.",
-                    size, config.font_size
+                log(
+                    "CONFIG_VALIDATION",
+                    &format!(
+                        "Warning: Invalid font_size {}. Using default {}.",
+                        size, config.font_size
+                    ),
+                    None,
                 );
             }
         }
@@ -217,9 +238,13 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
             if validate_font_size(size, "Editor font size").is_ok() {
                 config.editor_font_size = size;
             } else {
-                eprintln!(
-                    "Warning: Invalid editor_font_size {}. Using default {}.",
-                    size, config.editor_font_size
+                log(
+                    "CONFIG_VALIDATION",
+                    &format!(
+                        "Warning: Invalid editor_font_size {}. Using default {}.",
+                        size, config.editor_font_size
+                    ),
+                    None,
                 );
             }
         }
@@ -331,9 +356,13 @@ fn extract_shortcuts_config(value: &toml::Value) -> ShortcutsConfig {
                     if validate_basic_shortcut_format(shortcut).is_ok() {
                         config.$field = shortcut.to_string();
                     } else {
-                        eprintln!(
-                            "Warning: Invalid shortcut '{}' for {}. Using default '{}'.",
-                            shortcut, $key, config.$field
+                        log(
+                            "CONFIG_VALIDATION",
+                            &format!(
+                                "Warning: Invalid shortcut '{}' for {}. Using default '{}'.",
+                                shortcut, $key, config.$field
+                            ),
+                            None,
                         );
                     }
                 }
