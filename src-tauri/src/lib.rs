@@ -146,14 +146,29 @@ pub fn initialize_notes(app_state: &AppState) {
     });
 
     if let Err(e) = init_result {
-        eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
-        eprintln!("🔄 Attempting automatic database recovery...");
+        let db_path = get_db_path().unwrap_or_default();
+        let is_new_db = !db_path.exists();
+
+        if is_new_db {
+            eprintln!("🔧 Creating new database...");
+        } else {
+            eprintln!("❌ CRITICAL: Database initialization failed: {}", e);
+            eprintln!("🔄 Attempting automatic database recovery...");
+        }
 
         if let Err(recovery_error) = database_service::recreate_database(app_state) {
-            eprintln!("💥 FATAL: Database recovery failed: {}. Application will continue with limited functionality.", recovery_error);
+            if is_new_db {
+                eprintln!("💥 FATAL: Failed to create new database: {}. Application will continue with limited functionality.", recovery_error);
+            } else {
+                eprintln!("💥 FATAL: Database recovery failed: {}. Application will continue with limited functionality.", recovery_error);
+            }
             return;
         } else {
-            eprintln!("✅ Database successfully recovered!");
+            if is_new_db {
+                eprintln!("✅ New database created successfully!");
+            } else {
+                eprintln!("✅ Database successfully recovered!");
+            }
         }
     } else {
         match database_service::quick_filesystem_sync_check(app_state) {
