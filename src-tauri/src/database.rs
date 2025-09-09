@@ -80,9 +80,16 @@ pub fn with_db<T, F>(app_state: &crate::core::state::AppState, f: F) -> AppResul
 where
     F: FnOnce(&Connection) -> AppResult<T>,
 {
+    // First acquire read lock on rebuild_lock to ensure no rebuilds are happening
+    let _rebuild_guard = app_state.database_rebuild_lock.read().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database rebuild lock poisoned: {}", e))
+    })?;
+
+    // Then acquire database manager lock
     let manager = app_state.database_manager.lock().map_err(|e| {
         AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
     })?;
+
     manager.with_connection(f)
 }
 
@@ -90,16 +97,30 @@ pub fn with_db_mut<T, F>(app_state: &crate::core::state::AppState, f: F) -> AppR
 where
     F: FnOnce(&mut Connection) -> AppResult<T>,
 {
+    // First acquire read lock on rebuild_lock to ensure no rebuilds are happening
+    let _rebuild_guard = app_state.database_rebuild_lock.read().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database rebuild lock poisoned: {}", e))
+    })?;
+
+    // Then acquire database manager lock
     let mut manager = app_state.database_manager.lock().map_err(|e| {
         AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
     })?;
+
     manager.with_connection_mut(f)
 }
 
 pub fn refresh_database_connection(app_state: &crate::core::state::AppState) -> AppResult<bool> {
+    // First acquire read lock on rebuild_lock to ensure no rebuilds are happening
+    let _rebuild_guard = app_state.database_rebuild_lock.read().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database rebuild lock poisoned: {}", e))
+    })?;
+
+    // Then acquire database manager lock
     let mut manager = app_state.database_manager.lock().map_err(|e| {
         AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
     })?;
+
     manager.ensure_current_connection()
 }
 

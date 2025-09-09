@@ -7,8 +7,7 @@ pub struct AppState {
     pub was_first_run: Arc<AtomicBool>,
     pub programmatic_operation_in_progress: Arc<AtomicBool>,
     pub database_manager: Arc<Mutex<DatabaseManager>>,
-    pub database_lock: Arc<Mutex<()>>,
-    pub database_rebuild_lock: Arc<RwLock<bool>>,
+    pub database_rebuild_lock: Arc<RwLock<()>>,
 }
 
 impl AppState {
@@ -20,8 +19,7 @@ impl AppState {
             was_first_run: Arc::new(AtomicBool::new(false)),
             programmatic_operation_in_progress: Arc::new(AtomicBool::new(false)),
             database_manager: Arc::new(Mutex::new(database_manager)),
-            database_lock: Arc::new(Mutex::new(())),
-            database_rebuild_lock: Arc::new(RwLock::new(false)),
+            database_rebuild_lock: Arc::new(RwLock::new(())),
         })
     }
 
@@ -36,8 +34,7 @@ impl AppState {
                     was_first_run: Arc::new(AtomicBool::new(false)),
                     programmatic_operation_in_progress: Arc::new(AtomicBool::new(false)),
                     database_manager: Arc::new(Mutex::new(DatabaseManager::new_fallback())),
-                    database_lock: Arc::new(Mutex::new(())),
-                    database_rebuild_lock: Arc::new(RwLock::new(false)),
+                    database_rebuild_lock: Arc::new(RwLock::new(())),
                 }
             }
         }
@@ -54,24 +51,5 @@ impl AppState {
 
     pub fn programmatic_operation_in_progress(&self) -> &AtomicBool {
         &self.programmatic_operation_in_progress
-    }
-
-    pub fn is_database_rebuilding(&self) -> AppResult<bool> {
-        Ok(*self.database_rebuild_lock.read().map_err(|e| {
-            crate::core::AppError::DatabaseConnection(format!(
-                "Database rebuild lock poisoned: {}",
-                e
-            ))
-        })?)
-    }
-
-    pub fn set_database_rebuilding(&self, rebuilding: bool) -> AppResult<()> {
-        *self.database_rebuild_lock.write().map_err(|e| {
-            crate::core::AppError::DatabaseConnection(format!(
-                "Database rebuild lock poisoned: {}",
-                e
-            ))
-        })? = rebuilding;
-        Ok(())
     }
 }

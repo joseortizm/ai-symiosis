@@ -169,7 +169,7 @@ impl DbTestHarness {
 pub struct TestConfigOverride {
     _temp_dir: TempDir,
     _lock: std::sync::MutexGuard<'static, ()>,
-    pub app_state: AppState,
+    // pub app_state: AppState,
 }
 
 #[cfg(test)]
@@ -290,7 +290,7 @@ impl TestConfigOverride {
         Ok(Self {
             _temp_dir: temp_dir,
             _lock: lock,
-            app_state,
+            // app_state,
         })
     }
 

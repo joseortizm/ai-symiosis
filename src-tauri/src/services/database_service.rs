@@ -1,7 +1,7 @@
 use crate::{
     config::get_config_notes_dir,
     core::{state::AppState, AppError, AppResult},
-    database::{with_db, with_db_mut},
+    database::with_db,
     logging::log,
     services::note_service,
 };
@@ -52,16 +52,12 @@ pub fn load_all_notes_into_sqlite(
 }
 
 pub fn load_all_notes_into_sqlite_with_progress(
-    app_state: &AppState,
+    _app_state: &AppState,
     conn: &mut Connection,
     app_handle: Option<&AppHandle>,
 ) -> rusqlite::Result<()> {
-    let _lock = app_state.database_lock.lock().map_err(|e| {
-        rusqlite::Error::SqliteFailure(
-            rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY),
-            Some(format!("Operation lock poisoned: {}", e)),
-        )
-    })?;
+    // Note: This function is called from within rebuild context,
+    // so rebuild lock is already held by caller
 
     let notes_dir = get_config_notes_dir();
 
@@ -182,7 +178,17 @@ pub fn recreate_database(app_state: &AppState) -> AppResult<()> {
         None,
     );
 
-    with_db_mut(app_state, |conn| {
+    // Acquire exclusive write lock for entire rebuild operation
+    let _rebuild_lock = app_state.database_rebuild_lock.write().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database rebuild lock poisoned: {}", e))
+    })?;
+
+    // Access database manager directly since we hold rebuild lock
+    let mut manager = app_state.database_manager.lock().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
+    })?;
+
+    manager.with_connection_mut(|conn| {
         conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
         init_db(conn)?;
@@ -203,18 +209,10 @@ pub async fn recreate_database_with_progress(
     app_handle: &AppHandle,
     reason: &str,
 ) -> AppResult<()> {
-    if app_state.is_database_rebuilding()? {
-        log(
-            "DATABASE_REBUILD_COLLISION",
-            "Database rebuild already in progress - skipping duplicate rebuild",
-            None,
-        );
-        return Err(AppError::DatabaseRebuild(
-            "Database rebuild already in progress - please wait for completion".to_string(),
-        ));
-    }
-
-    app_state.set_database_rebuilding(true)?;
+    // Acquire exclusive write lock for entire rebuild operation
+    let _rebuild_lock = app_state.database_rebuild_lock.write().map_err(|e| {
+        AppError::DatabaseConnection(format!("Database rebuild lock poisoned: {}", e))
+    })?;
     log(
         "DATABASE_REBUILD_START",
         "Database rebuild started - all database operations blocked",
@@ -230,23 +228,30 @@ pub async fn recreate_database_with_progress(
     }
     eprintln!("{}", reason);
 
-    let rebuild_result = with_db_mut(app_state, |conn| {
-        conn.execute("DROP TABLE IF EXISTS notes", [])?;
+    // We need to access the database manager directly since we're already holding the rebuild lock
+    let rebuild_result = {
+        let mut manager = app_state.database_manager.lock().map_err(|e| {
+            AppError::DatabaseConnection(format!("Database manager lock poisoned: {}", e))
+        })?;
 
-        init_db(conn)?;
+        manager.with_connection_mut(|conn| {
+            conn.execute("DROP TABLE IF EXISTS notes", [])?;
 
-        if let Err(e) = app_handle.emit("db-loading-progress", "Rendering notes...") {
-            log(
-                "UI_UPDATE",
-                "Failed to emit rendering progress",
-                Some(&e.to_string()),
-            );
-        }
+            init_db(conn)?;
 
-        load_all_notes_into_sqlite(app_state, conn).map_err(|e| e.into())
-    });
+            if let Err(e) = app_handle.emit("db-loading-progress", "Rendering notes...") {
+                log(
+                    "UI_UPDATE",
+                    "Failed to emit rendering progress",
+                    Some(&e.to_string()),
+                );
+            }
 
-    let _ = app_state.set_database_rebuilding(false);
+            load_all_notes_into_sqlite(app_state, conn).map_err(|e| e.into())
+        })
+    };
+
+    // Rebuild lock is automatically released when _rebuild_lock goes out of scope
 
     match rebuild_result {
         Ok(()) => {
