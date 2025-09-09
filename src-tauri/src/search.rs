@@ -1,4 +1,7 @@
 use crate::core::{AppError, AppResult};
+use crate::utilities::strings::{
+    extract_title_from_content, extract_title_from_filename, sanitize_fts_query,
+};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::params;
 use std::cmp::Ordering;
@@ -38,57 +41,6 @@ impl HybridSearcher {
         Ok(Self { matcher })
     }
 
-    fn extract_title_from_filename(filename: &str) -> String {
-        filename
-            .trim_end_matches(".md")
-            .trim_end_matches(".txt")
-            .trim_end_matches(".markdown")
-            .replace('_', " ")
-            .replace('-', " ")
-    }
-
-    fn extract_title_from_content(content: &str) -> Option<String> {
-        content
-            .lines()
-            .find(|line| !line.trim().is_empty())
-            .map(|line| line.trim_start_matches('#').trim().to_string())
-            .filter(|title| !title.is_empty())
-    }
-
-    fn sanitize_fts_query(query: &str) -> String {
-        // First pass: remove dangerous characters and special syntax
-        let cleaned_chars: String = query
-            .chars()
-            .filter_map(|c| match c {
-                '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' => None,
-                ':' | ';' | ',' | '!' | '@' | '#' | '$' | '%' | '^' | '&' => None,
-                '*' if query.len() == 1 => None,
-                c if c.is_alphanumeric()
-                    || c.is_whitespace()
-                    || c == '-'
-                    || c == '_'
-                    || c == '.' =>
-                {
-                    Some(c)
-                }
-                '*' if query.len() > 1 => Some(c),
-                _ => None,
-            })
-            .collect();
-
-        // Second pass: remove FTS operators as standalone words only
-        let words: Vec<&str> = cleaned_chars.split_whitespace().collect();
-        let filtered_words: Vec<&str> = words
-            .into_iter()
-            .filter(|&word| {
-                let upper_word = word.to_uppercase();
-                !matches!(upper_word.as_str(), "AND" | "OR" | "NOT" | "NEAR" | "MATCH")
-            })
-            .collect();
-
-        filtered_words.join(" ").trim().to_string()
-    }
-
     pub fn search(
         &mut self,
         app_state: &crate::core::state::AppState,
@@ -119,7 +71,7 @@ impl HybridSearcher {
         app_state: &crate::core::state::AppState,
         query: &str,
     ) -> AppResult<Vec<SearchCandidate>> {
-        let sanitized_query = Self::sanitize_fts_query(query);
+        let sanitized_query = sanitize_fts_query(query);
 
         if sanitized_query.trim().is_empty() {
             return Ok(Vec::new());
@@ -149,8 +101,8 @@ impl HybridSearcher {
                 let content: String = row.get(1)?;
                 let modified: i64 = row.get(2)?;
 
-                let title = Self::extract_title_from_content(&content)
-                    .unwrap_or_else(|| Self::extract_title_from_filename(&filename));
+                let title = extract_title_from_content(&content)
+                    .unwrap_or_else(|| extract_title_from_filename(&filename));
 
                 Ok(SearchCandidate {
                     filename,

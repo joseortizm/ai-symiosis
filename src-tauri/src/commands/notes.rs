@@ -9,7 +9,10 @@ use crate::{
             create_versioned_backup, safe_write_note, update_note_in_database, BackupType,
         },
     },
-    utilities::{note_renderer::render_note, validation::validate_note_name},
+    utilities::{
+        note_renderer::render_note, strings::format_timestamp_for_humans,
+        validation::validate_note_name,
+    },
 };
 use rusqlite::params;
 use std::fs;
@@ -706,7 +709,7 @@ pub fn get_note_versions(
                             let size = metadata.len();
 
                             // Format timestamp for display
-                            let formatted_time = format_timestamp(timestamp);
+                            let formatted_time = format_timestamp_for_humans(timestamp);
 
                             versions.push(NoteVersion {
                                 filename: filename.clone(),
@@ -794,23 +797,6 @@ pub fn recover_note_version(
     result.map_err(|e| e.to_string())
 }
 
-fn format_timestamp(timestamp: u64) -> String {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-
-    let diff = now.saturating_sub(timestamp);
-
-    match diff {
-        0..=59 => "Just now".to_string(),
-        60..=3599 => format!("{}m ago", diff / 60),
-        3600..=86399 => format!("{}h ago", diff / 3600),
-        86400..=2591999 => format!("{}d ago", diff / 86400),
-        _ => format!("{}w ago", diff / 604800),
-    }
-}
-
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct DeletedFile {
     pub filename: String,
@@ -842,7 +828,7 @@ pub fn get_deleted_files(
                 if parts.len() == 4 && parts[1] == "delete_backup" && parts[3] == "md" {
                     if let Ok(timestamp) = parts[2].parse::<u64>() {
                         let original_filename = format!("{}.md", parts[0]);
-                        let formatted_time = format_timestamp(timestamp);
+                        let formatted_time = format_timestamp_for_humans(timestamp);
 
                         deleted_files.push(DeletedFile {
                             filename: original_filename,

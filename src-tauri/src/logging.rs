@@ -2,11 +2,11 @@
 // Provides comprehensive logging for database operations, CRUD, and debugging
 
 use crate::core::{AppError, AppResult};
+use crate::utilities::strings::get_timestamp;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const LOGGING_ENABLED: bool = true;
 
@@ -17,17 +17,6 @@ fn get_log_path() -> AppResult<PathBuf> {
     crate::utilities::paths::get_data_dir()
         .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
         .map(|path| path.join("symiosis").join("symiosis.log"))
-}
-
-fn get_timestamp() -> String {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| {
-            let timestamp = d.as_secs();
-            let datetime = std::time::UNIX_EPOCH + std::time::Duration::from_secs(timestamp);
-            format!("{:?}", datetime)
-        })
-        .unwrap_or_else(|_| "UNKNOWN_TIME".to_string())
 }
 
 fn init_logger() -> AppResult<()> {
