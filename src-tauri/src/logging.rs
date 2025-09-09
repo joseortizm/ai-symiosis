@@ -14,7 +14,7 @@ const LOGGING_ENABLED: bool = true;
 static LOGGER: OnceLock<Mutex<BufWriter<File>>> = OnceLock::new();
 
 fn get_log_path() -> AppResult<PathBuf> {
-    crate::database::get_data_dir()
+    crate::utilities::paths::get_data_dir()
         .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
         .map(|path| path.join("symiosis").join("symiosis.log"))
 }

@@ -2,9 +2,10 @@ use tauri::{AppHandle, Manager};
 
 use crate::config::{
     generate_config_template, get_available_markdown_themes, get_available_ui_themes,
-    get_config_path, load_config_from_content, EditorConfig, GeneralConfig, InterfaceConfig,
-    PreferencesConfig, ShortcutsConfig,
+    load_config_from_content, EditorConfig, GeneralConfig, InterfaceConfig, PreferencesConfig,
+    ShortcutsConfig,
 };
+use crate::utilities::paths::get_config_path;
 use crate::utilities::validation::validate_config;
 use std::fs;
 

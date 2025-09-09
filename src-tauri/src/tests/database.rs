@@ -4,9 +4,9 @@
 
 use crate::config::get_config_notes_dir;
 use crate::database::{
-    encode_path_for_backup, get_backup_dir_for_notes_path, get_database_path_for_notes_dir,
-    get_temp_dir,
+    get_backup_dir_for_notes_path, get_database_path_for_notes_dir, get_temp_dir,
 };
+use crate::utilities::paths::encode_path_for_backup;
 use std::path::PathBuf;
 
 #[test]

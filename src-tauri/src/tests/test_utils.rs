@@ -90,7 +90,7 @@ pub mod database_testing;
 /// Clean up all _tmp* directories (removes leftover test directories)
 #[cfg(test)]
 pub fn cleanup_all_tmp_directories() -> Result<(), Box<dyn std::error::Error>> {
-    use crate::database::get_data_dir;
+    use crate::utilities::paths::get_data_dir;
     use std::fs;
 
     // Get the symiosis app support directory using the same method as production code

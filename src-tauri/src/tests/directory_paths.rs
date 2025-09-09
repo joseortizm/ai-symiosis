@@ -2,8 +2,8 @@
 //!
 //! Tests for directory path functions and platform-specific behavior.
 
-use crate::config::{get_config_path, get_default_notes_dir};
-use crate::database::{get_data_dir, get_database_path};
+use crate::database::get_database_path;
+use crate::utilities::paths::{get_config_path, get_data_dir, get_default_notes_dir};
 
 #[test]
 fn test_get_data_dir_returns_valid_path() {

@@ -29,7 +29,7 @@ pub async fn initialize_notes_with_progress(
 
         emit_with_logging(&app, "db-loading-start", "Initializing notes database...");
 
-        if !crate::config::get_config_path().exists() {
+        if !crate::utilities::paths::get_config_path().exists() {
             emit_with_logging(&app, "db-loading-complete", ());
             return Ok(());
         }

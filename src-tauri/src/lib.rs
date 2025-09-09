@@ -11,7 +11,7 @@ mod utilities;
 mod watcher;
 
 use commands::*;
-use config::{get_config_path, load_config_with_first_run_info, parse_shortcut};
+use config::{load_config_with_first_run_info, parse_shortcut};
 use core::state::AppState;
 use database::{get_database_path as get_db_path, with_db};
 use logging::log;
@@ -24,6 +24,7 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use utilities::paths::get_config_path;
 use watcher::setup_notes_watcher;
 
 fn setup_tray(app: &AppHandle) -> tauri::Result<()> {

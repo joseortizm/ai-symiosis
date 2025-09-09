@@ -3,10 +3,8 @@
 //! Tests config loading, parsing, and validation functionality.
 //! These tests access internal/private functions and test the actual production behavior.
 
-use crate::config::{
-    get_config_path, get_default_notes_dir, load_config, load_config_from_content, parse_shortcut,
-    AppConfig,
-};
+use crate::config::{load_config, load_config_from_content, parse_shortcut, AppConfig};
+use crate::utilities::paths::{get_config_path, get_default_notes_dir};
 
 #[test]
 fn test_default_config_values() {

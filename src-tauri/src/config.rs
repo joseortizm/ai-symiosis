@@ -2,6 +2,7 @@
 // Contains essential configuration structures, validation, and management logic
 
 use crate::core::{AppError, AppResult};
+use crate::utilities::paths::{get_config_path, get_default_notes_dir};
 use crate::utilities::validation::{
     validate_basic_shortcut_format, validate_font_size, validate_notes_directory,
     validate_shortcut_format,
@@ -219,45 +220,6 @@ pub fn generate_config_template() -> String {
 
 pub fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {
     shortcut_str.parse().ok()
-}
-
-pub fn get_default_notes_dir() -> String {
-    if let Some(home_dir) = home::home_dir() {
-        home_dir
-            .join("Documents")
-            .join("Notes")
-            .to_string_lossy()
-            .to_string()
-    } else {
-        "./notes".to_string()
-    }
-}
-
-pub fn get_config_path() -> PathBuf {
-    #[cfg(test)]
-    {
-        if std::env::var("SYMIOSIS_TEST_MODE_ENABLED").is_ok() {
-            if let Ok(test_config_path) = std::env::var("SYMIOSIS_TEST_CONFIG_PATH") {
-                if test_config_path.contains("/tmp/")
-                    || test_config_path.contains("tmp")
-                    || test_config_path.contains("/T/")
-                {
-                    return PathBuf::from(test_config_path);
-                } else {
-                    eprintln!(
-                        "SAFETY ERROR: Test config path '{}' is not in temp directory!",
-                        test_config_path
-                    );
-                }
-            }
-        }
-    }
-
-    if let Some(home_dir) = home::home_dir() {
-        home_dir.join(".symiosis").join("config.toml")
-    } else {
-        PathBuf::from(".symiosis/config.toml")
-    }
 }
 
 pub fn get_config_notes_dir() -> PathBuf {

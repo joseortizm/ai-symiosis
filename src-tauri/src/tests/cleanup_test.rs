@@ -13,7 +13,7 @@ use super::test_utils::cleanup_all_tmp_directories;
 #[test]
 fn test_cleanup_all_tmp_directories() {
     use crate::config::get_config_notes_dir;
-    use crate::database::get_data_dir;
+    use crate::utilities::paths::get_data_dir;
     use std::fs;
 
     println!("=== Manual Cleanup Test ===");
