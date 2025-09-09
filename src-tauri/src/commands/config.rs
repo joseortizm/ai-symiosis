@@ -1,9 +1,8 @@
 use tauri::{AppHandle, Manager};
 
 use crate::config::{
-    generate_config_template, get_available_markdown_themes, get_available_ui_themes,
-    load_config_from_content, EditorConfig, GeneralConfig, InterfaceConfig, PreferencesConfig,
-    ShortcutsConfig,
+    get_available_markdown_themes, get_available_ui_themes, load_config_from_content, EditorConfig,
+    GeneralConfig, InterfaceConfig, PreferencesConfig, ShortcutsConfig,
 };
 use crate::utilities::paths::get_config_path;
 use crate::utilities::validation::validate_config;
@@ -15,10 +14,7 @@ pub fn get_config_content() -> Result<String, String> {
 
     match fs::read_to_string(&config_path) {
         Ok(content) => Ok(content),
-        Err(_) => {
-            let template = generate_config_template();
-            Ok(template)
-        }
+        Err(_) => Ok(String::new()),
     }
 }
 
