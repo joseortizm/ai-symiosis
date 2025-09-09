@@ -31,6 +31,24 @@ Shows highlighted content or renders the CodeMirror editor.
       },
     }
   }
+
+  function handleLinkClick(event: Event) {
+    const target = event.target as HTMLElement
+    if (target?.tagName === 'A') {
+      const link = target as HTMLAnchorElement
+      const href = link.getAttribute('href')
+
+      if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+        event.preventDefault()
+
+        import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
+          openUrl(href).catch((error) => {
+            console.error('Failed to open URL:', error)
+          })
+        })
+      }
+    }
+  }
 </script>
 
 <div class="note-preview">
@@ -49,6 +67,7 @@ Shows highlighted content or renders the CodeMirror editor.
       />
     {:else}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div
         class="note-content"
         bind:this={noteContentElement}
@@ -57,6 +76,7 @@ Shows highlighted content or renders the CodeMirror editor.
         onfocus={() => focusManager.setNoteContentFocused(true)}
         onblur={() => focusManager.setNoteContentFocused(false)}
         ondblclick={actions.enterEditMode}
+        onclick={handleLinkClick}
       >
         <div class="markdown-body">
           <SyntaxHighlighter content={contentManager.highlightedContent} />
