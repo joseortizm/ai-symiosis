@@ -135,6 +135,9 @@ export function createKeyboardActions(
       openCurrentLink: ({ actions }: ActionContext) => {
         actions.contentNavigationManager.openCurrentLink()
       },
+      handleTab: ({ actions }: ActionContext) => {
+        actions.focusManager.focusSearch()
+      },
     },
 
     scrolling: {
@@ -272,6 +275,7 @@ export function createKeyboardActions(
         [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
         [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
         Escape: 'search.handleEscape',
+        Tab: 'navigation.handleTab',
         [shortcuts.open_settings]: 'settings.openSettings',
         [shortcuts.version_explorer]: 'settings.openVersionExplorer',
         [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
