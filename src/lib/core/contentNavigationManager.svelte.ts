@@ -475,6 +475,38 @@ export function createContentNavigationManager(
     scrollToLink(elements[state.linkIndex])
   }
 
+  function isUrl(href: string): boolean {
+    return (
+      href.startsWith('http://') ||
+      href.startsWith('https://') ||
+      href.startsWith('mailto:') ||
+      href.startsWith('tel:') ||
+      href.startsWith('ftp://') ||
+      href.startsWith('ftps://')
+    )
+  }
+
+  function isSection(href: string): boolean {
+    return href.startsWith('#')
+  }
+
+  function isFilePath(href: string): boolean {
+    // Check for absolute paths (starting with / or C:\ etc)
+    if (href.startsWith('/') || /^[A-Za-z]:\\/.test(href)) {
+      return true
+    }
+
+    // Check for relative paths (starting with ./ or ../)
+    if (href.startsWith('./') || href.startsWith('../')) {
+      return true
+    }
+
+    // Check for file extensions (common file types)
+    const fileExtensions =
+      /\.(txt|md|pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|gif|svg|mp4|mp3|zip|tar|gz|json|xml|csv|html|css|js|ts|py|rs|go|java|cpp|c|h)$/i
+    return fileExtensions.test(href)
+  }
+
   function openCurrentLink(): void {
     if (state.navigationMode !== 'links' || !state.linkElement) return
 
@@ -487,30 +519,98 @@ export function createContentNavigationManager(
       return
     }
 
-    if (!href.startsWith('http://') && !href.startsWith('https://')) {
+    // Handle #section navigation
+    if (isSection(href)) {
+      const sectionName = href.substring(1) // Remove the # prefix
+
+      // Try to find and navigate to the header
+      const contentElement = deps.focusManager.noteContentElement
+      if (!contentElement) {
+        import('../utils/errorNotification').then(({ errorNotification }) => {
+          errorNotification.trigger('Content not available for navigation')
+        })
+        return
+      }
+
+      const headers = Array.from(
+        contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+      )
+
+      // Try exact text match first
+      let targetHeader = headers.find((header) => {
+        const headerText = (header.textContent || '').trim().toLowerCase()
+        return headerText === sectionName.toLowerCase()
+      })
+
+      // If no exact match, try partial match
+      if (!targetHeader) {
+        targetHeader = headers.find((header) => {
+          const headerText = (header.textContent || '').trim().toLowerCase()
+          return (
+            headerText.includes(sectionName.toLowerCase()) ||
+            sectionName.toLowerCase().includes(headerText)
+          )
+        })
+      }
+
+      if (targetHeader) {
+        const headerElements = getHeaderElements()
+        const headerIndex = headerElements.indexOf(targetHeader)
+        if (headerIndex >= 0) {
+          state.currentIndex = headerIndex
+          state.navigationMode = 'headers'
+          scrollToElement(targetHeader)
+          return
+        }
+      }
+
       import('../utils/errorNotification').then(({ errorNotification }) => {
-        errorNotification.trigger(`Invalid link format: ${href}`)
+        errorNotification.trigger(`Section not found: ${sectionName}`)
       })
       return
     }
 
-    try {
-      // eslint-disable-next-line svelte/prefer-svelte-reactivity
-      new URL(href)
-
-      import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
-        openUrl(href).catch((error) => {
-          console.error('Failed to open URL:', error)
+    // Handle file paths
+    if (isFilePath(href)) {
+      import('@tauri-apps/plugin-opener').then(({ openPath }) => {
+        openPath(href).catch((error) => {
+          console.error('Failed to open file:', error)
           import('../utils/errorNotification').then(({ errorNotification }) => {
-            errorNotification.trigger(`Failed to open link: ${href}`)
+            errorNotification.trigger(`Failed to open file: ${href}`)
           })
         })
       })
-    } catch {
-      import('../utils/errorNotification').then(({ errorNotification }) => {
-        errorNotification.trigger(`Malformed URL: ${href}`)
-      })
+      return
     }
+
+    // Handle URLs
+    if (isUrl(href)) {
+      try {
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        new URL(href)
+
+        import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
+          openUrl(href).catch((error) => {
+            console.error('Failed to open URL:', error)
+            import('../utils/errorNotification').then(
+              ({ errorNotification }) => {
+                errorNotification.trigger(`Failed to open link: ${href}`)
+              }
+            )
+          })
+        })
+      } catch {
+        import('../utils/errorNotification').then(({ errorNotification }) => {
+          errorNotification.trigger(`Malformed URL: ${href}`)
+        })
+      }
+      return
+    }
+
+    // Fallback for unrecognized link types
+    import('../utils/errorNotification').then(({ errorNotification }) => {
+      errorNotification.trigger(`Unsupported link format: ${href}`)
+    })
   }
 
   function resetNavigation(): void {
