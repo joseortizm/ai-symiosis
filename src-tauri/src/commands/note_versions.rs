@@ -2,7 +2,10 @@ use crate::{
     core::{AppError, AppResult},
     services::note_service::update_note_in_database,
     utilities::{
-        file_safety::safe_write_note, strings::format_timestamp_for_humans,
+        file_safety::safe_write_note,
+        strings::{
+            format_timestamp_for_humans, parse_backup_filename, parse_deleted_backup_filename,
+        },
         validation::validate_note_name,
     },
 };
@@ -53,25 +56,19 @@ pub fn get_note_versions(
             for entry in entries.flatten() {
                 let filename = entry.file_name().to_string_lossy().to_string();
 
-                // Parse backup filename format: {base_name}.{suffix}.{timestamp}.md
-                let parts: Vec<&str> = filename.splitn(4, '.').collect();
-                if parts.len() == 4 && parts[0] == base_name && parts[3] == "md" {
-                    let backup_type = parts[1].to_string();
-                    if let Ok(timestamp) = parts[2].parse::<u64>() {
-                        if let Ok(metadata) = entry.metadata() {
-                            let size = metadata.len();
+                if let Some((backup_type, timestamp)) = parse_backup_filename(&filename, &base_name)
+                {
+                    if let Ok(metadata) = entry.metadata() {
+                        let size = metadata.len();
+                        let formatted_time = format_timestamp_for_humans(timestamp);
 
-                            // Format timestamp for display
-                            let formatted_time = format_timestamp_for_humans(timestamp);
-
-                            versions.push(NoteVersion {
-                                filename: filename.clone(),
-                                backup_type,
-                                timestamp,
-                                size,
-                                formatted_time,
-                            });
-                        }
+                        versions.push(NoteVersion {
+                            filename: filename.clone(),
+                            backup_type,
+                            timestamp,
+                            size,
+                            formatted_time,
+                        });
                     }
                 }
             }
@@ -170,20 +167,17 @@ pub fn get_deleted_files(
             for entry in entries.flatten() {
                 let filename = entry.file_name().to_string_lossy().to_string();
 
-                // Parse backup filename format: {base_name}.delete_backup.{timestamp}.md
-                let parts: Vec<&str> = filename.splitn(4, '.').collect();
-                if parts.len() == 4 && parts[1] == "delete_backup" && parts[3] == "md" {
-                    if let Ok(timestamp) = parts[2].parse::<u64>() {
-                        let original_filename = format!("{}.md", parts[0]);
-                        let formatted_time = format_timestamp_for_humans(timestamp);
+                if let Some((original_filename, timestamp)) =
+                    parse_deleted_backup_filename(&filename)
+                {
+                    let formatted_time = format_timestamp_for_humans(timestamp);
 
-                        deleted_files.push(DeletedFile {
-                            filename: original_filename,
-                            backup_filename: filename,
-                            deleted_at: formatted_time,
-                            timestamp,
-                        });
-                    }
+                    deleted_files.push(DeletedFile {
+                        filename: original_filename,
+                        backup_filename: filename,
+                        deleted_at: formatted_time,
+                        timestamp,
+                    });
                 }
             }
         }

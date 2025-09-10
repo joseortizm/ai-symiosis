@@ -73,3 +73,25 @@ pub fn get_timestamp() -> String {
         })
         .unwrap_or_else(|_| "UNKNOWN_TIME".to_string())
 }
+
+pub fn parse_backup_filename(filename: &str, base_name: &str) -> Option<(String, u64)> {
+    let parts: Vec<&str> = filename.splitn(4, '.').collect();
+    if parts.len() == 4 && parts[0] == base_name && parts[3] == "md" {
+        let backup_type = parts[1].to_string();
+        if let Ok(timestamp) = parts[2].parse::<u64>() {
+            return Some((backup_type, timestamp));
+        }
+    }
+    None
+}
+
+pub fn parse_deleted_backup_filename(filename: &str) -> Option<(String, u64)> {
+    let parts: Vec<&str> = filename.splitn(4, '.').collect();
+    if parts.len() == 4 && parts[1] == "delete_backup" && parts[3] == "md" {
+        if let Ok(timestamp) = parts[2].parse::<u64>() {
+            let original_filename = format!("{}.md", parts[0]);
+            return Some((original_filename, timestamp));
+        }
+    }
+    None
+}
