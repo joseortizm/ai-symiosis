@@ -239,7 +239,23 @@ pub fn initialize_notes(app_state: &AppState) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let (config, was_first_run) = load_config_with_first_run_info();
-    let app_state = AppState::new_with_fallback(config);
+    let app_state = match AppState::new_with_fallback(config) {
+        Ok(state) => state,
+        Err(e) => {
+            log(
+                "FATAL_DATABASE_ERROR",
+                "Database initialization failed and could not be recovered",
+                Some(&e.to_string()),
+            );
+            log(
+                "SHUTDOWN",
+                "Application shutting down due to unrecoverable database error",
+                None,
+            );
+            std::process::exit(1);
+        }
+    };
+
     if was_first_run {
         app_state.set_first_run(true);
     }

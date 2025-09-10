@@ -280,7 +280,8 @@ impl TestConfigOverride {
         );
 
         // Create AppState with the test config
-        let app_state = AppState::new_with_fallback(test_config);
+        let app_state =
+            AppState::new_with_fallback(test_config).expect("Test database setup failed");
 
         // Initialize a clean database for the test directory
         // Use recreate_database to ensure we start with a fresh database state
@@ -327,7 +328,7 @@ mod test_command_wrappers {
         // Use the actual loaded config (which should be the test config if TestConfigOverride is active)
         let config = crate::config::load_config();
 
-        let app_state = AppState::new_with_fallback(config);
+        let app_state = AppState::new_with_fallback(config).expect("Test database setup failed");
 
         mock_builder()
             .manage(app_state)
@@ -435,7 +436,7 @@ mod test_command_wrappers {
         }
 
         let config = crate::config::load_config();
-        let app_state = AppState::new_with_fallback(config);
+        let app_state = AppState::new_with_fallback(config).expect("Test database setup failed");
         crate::search::search_notes_hybrid(&app_state, query, max_results)
     }
 }

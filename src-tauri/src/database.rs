@@ -19,18 +19,6 @@ impl DatabaseManager {
         })
     }
 
-    pub fn new_fallback() -> Self {
-        use std::path::PathBuf;
-
-        let fallback_conn =
-            Connection::open(":memory:").expect("Failed to create fallback in-memory database");
-
-        Self {
-            connection: fallback_conn,
-            current_db_path: PathBuf::from(":memory:"),
-        }
-    }
-
     fn create_connection(db_path: &PathBuf) -> AppResult<Connection> {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
