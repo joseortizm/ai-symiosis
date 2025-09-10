@@ -169,68 +169,83 @@ pub fn save_note_with_content_check(
         validate_note_name(note_name)?;
         let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
         let note_path = std::path::PathBuf::from(&config.notes_directory).join(note_name);
-
-        // CRITICAL: Validate that destination file hasn't changed since editing began
-        // This prevents catastrophic data loss when UI state becomes desynchronized
-        let current_content = if note_path.exists() {
-            fs::read_to_string(&note_path)?
-        } else {
-            String::new()
-        };
-
-        if current_content != original_content {
-            // Content validation failed - create backup of the content that would have been saved
-            match create_versioned_backup(&note_path, BackupType::SaveFailure, Some(content)) {
-                Ok(backup_path) => {
-                    log(
-                        "FILE_BACKUP",
-                        "Created save failure backup due to external modification",
-                        Some(&backup_path.display().to_string()),
-                    );
-                }
-                Err(e) => {
-                    log(
-                        "FILE_BACKUP",
-                        &format!(
-                            "Failed to create save failure backup for '{}'",
-                            note_path.display()
-                        ),
-                        Some(&e.to_string()),
-                    );
-                }
-            }
-
-            return Err(AppError::InvalidPath(format!(
-                "Cannot save '{}': file has been modified since editing began. \
-                This safety check prevents accidental data loss.",
-                note_name
-            )));
-        }
-
-        // Content validation passed - proceed with save
-        if let Some(parent) = note_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        super::notes::with_programmatic_flag(&app_state, || safe_write_note(&note_path, content))?;
-
-        let modified = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
-
-        match update_note_in_database(&app_state, note_name, content, modified) {
-            Ok(()) => Ok(()),
-            Err(e) => handle_database_recovery(
-                &app_state,
-                &format!("update '{}'", note_name),
-                &e,
-                "Note saved but database rebuild failed",
-                "Critical error: Database rebuild failed",
-            ),
-        }
+        validate_content_unchanged(&note_path, note_name, original_content, content)?;
+        perform_safe_write_and_update(&note_path, content, note_name, &app_state)?;
+        Ok(())
     }();
     result.map_err(|e| e.to_string())
+}
+
+fn validate_content_unchanged(
+    note_path: &std::path::PathBuf,
+    note_name: &str,
+    original_content: &str,
+    content: &str,
+) -> AppResult<()> {
+    let current_content = if note_path.exists() {
+        fs::read_to_string(note_path)?
+    } else {
+        String::new()
+    };
+
+    if current_content != original_content {
+        match create_versioned_backup(note_path, BackupType::SaveFailure, Some(content)) {
+            Ok(backup_path) => {
+                log(
+                    "FILE_BACKUP",
+                    "Created save failure backup due to external modification",
+                    Some(&backup_path.display().to_string()),
+                );
+            }
+            Err(e) => {
+                log(
+                    "FILE_BACKUP",
+                    &format!(
+                        "Failed to create save failure backup for '{}'",
+                        note_path.display()
+                    ),
+                    Some(&e.to_string()),
+                );
+            }
+        }
+
+        return Err(AppError::InvalidPath(format!(
+            "Cannot save '{}': file has been modified since editing began. \
+            This safety check prevents accidental data loss.",
+            note_name
+        )));
+    }
+
+    Ok(())
+}
+
+fn perform_safe_write_and_update(
+    note_path: &std::path::PathBuf,
+    content: &str,
+    note_name: &str,
+    app_state: &tauri::State<crate::core::state::AppState>,
+) -> AppResult<()> {
+    if let Some(parent) = note_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    super::notes::with_programmatic_flag(app_state, || safe_write_note(note_path, content))?;
+
+    let modified = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    match update_note_in_database(app_state, note_name, content, modified) {
+        Ok(()) => Ok(()),
+        Err(e) => handle_database_recovery(
+            app_state,
+            &format!("update '{}'", note_name),
+            &e,
+            "Note saved but database rebuild failed",
+            "Critical error: Database rebuild failed",
+        ),
+    }
 }
 
 #[tauri::command]
