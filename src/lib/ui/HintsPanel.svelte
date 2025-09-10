@@ -12,7 +12,7 @@ Shows configured shortcuts with proper theming and overlay styling.
     appCoordinator: ReturnType<typeof createAppCoordinator>
   }>('managers')
 
-  const { configManager } = appCoordinator.managers
+  const { configManager, focusManager } = appCoordinator.managers
 
   let isVisible = $state(false)
   let isEnabled = $state(true)
@@ -25,6 +25,7 @@ Shows configured shortcuts with proper theming and overlay styling.
   function handleOverlayClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
       isVisible = false
+      focusManager.focusSearch()
     }
   }
 
@@ -33,6 +34,7 @@ Shows configured shortcuts with proper theming and overlay styling.
       event.preventDefault()
       event.stopPropagation()
       isVisible = false
+      focusManager.focusSearch()
       return
     }
 
@@ -185,8 +187,12 @@ Shows configured shortcuts with proper theming and overlay styling.
           ⌨️ Keyboard Shortcuts
           <span class="note">(basic keys like arrows etc. also work)</span>
         </h2>
-        <button class="close-button" onclick={() => (isVisible = false)}
-          >×</button
+        <button
+          class="close-button"
+          onclick={() => {
+            isVisible = false
+            focusManager.focusSearch()
+          }}>×</button
         >
       </div>
 
