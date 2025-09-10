@@ -507,8 +507,8 @@ export function createContentNavigationManager(
     return fileExtensions.test(href)
   }
 
-  function openCurrentLink(): void {
-    if (state.navigationMode !== 'links' || !state.linkElement) return
+  function validateLinkForOpening(): string | null {
+    if (state.navigationMode !== 'links' || !state.linkElement) return null
 
     const href = state.linkElement.getAttribute('href')
 
@@ -516,101 +516,119 @@ export function createContentNavigationManager(
       import('../utils/errorNotification').then(({ errorNotification }) => {
         errorNotification.trigger('Link has no URL')
       })
+      return null
+    }
+
+    return href
+  }
+
+  function handleSectionNavigation(href: string): void {
+    const sectionName = href.substring(1)
+
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) {
+      import('../utils/errorNotification').then(({ errorNotification }) => {
+        errorNotification.trigger('Content not available for navigation')
+      })
       return
     }
 
-    // Handle #section navigation
-    if (isSection(href)) {
-      const sectionName = href.substring(1) // Remove the # prefix
+    const headers = Array.from(
+      contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    )
 
-      // Try to find and navigate to the header
-      const contentElement = deps.focusManager.noteContentElement
-      if (!contentElement) {
-        import('../utils/errorNotification').then(({ errorNotification }) => {
-          errorNotification.trigger('Content not available for navigation')
-        })
+    let targetHeader = headers.find((header) => {
+      const headerText = (header.textContent || '').trim().toLowerCase()
+      return headerText === sectionName.toLowerCase()
+    })
+
+    if (!targetHeader) {
+      targetHeader = headers.find((header) => {
+        const headerText = (header.textContent || '').trim().toLowerCase()
+        return (
+          headerText.includes(sectionName.toLowerCase()) ||
+          sectionName.toLowerCase().includes(headerText)
+        )
+      })
+    }
+
+    if (targetHeader) {
+      const headerElements = getHeaderElements()
+      const headerIndex = headerElements.indexOf(targetHeader)
+      if (headerIndex >= 0) {
+        state.currentIndex = headerIndex
+        state.navigationMode = 'headers'
+        scrollToElement(targetHeader)
         return
       }
+    }
 
-      const headers = Array.from(
-        contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
-      )
+    import('../utils/errorNotification').then(({ errorNotification }) => {
+      errorNotification.trigger(`Section not found: ${sectionName}`)
+    })
+  }
 
-      // Try exact text match first
-      let targetHeader = headers.find((header) => {
-        const headerText = (header.textContent || '').trim().toLowerCase()
-        return headerText === sectionName.toLowerCase()
-      })
-
-      // If no exact match, try partial match
-      if (!targetHeader) {
-        targetHeader = headers.find((header) => {
-          const headerText = (header.textContent || '').trim().toLowerCase()
-          return (
-            headerText.includes(sectionName.toLowerCase()) ||
-            sectionName.toLowerCase().includes(headerText)
-          )
+  function handleFilePathOpening(href: string): void {
+    import('@tauri-apps/plugin-opener').then(({ openPath }) => {
+      openPath(href).catch((error) => {
+        console.error('Failed to open file:', error)
+        import('../utils/errorNotification').then(({ errorNotification }) => {
+          errorNotification.trigger(`Failed to open file: ${href}`)
         })
-      }
-
-      if (targetHeader) {
-        const headerElements = getHeaderElements()
-        const headerIndex = headerElements.indexOf(targetHeader)
-        if (headerIndex >= 0) {
-          state.currentIndex = headerIndex
-          state.navigationMode = 'headers'
-          scrollToElement(targetHeader)
-          return
-        }
-      }
-
-      import('../utils/errorNotification').then(({ errorNotification }) => {
-        errorNotification.trigger(`Section not found: ${sectionName}`)
       })
+    })
+  }
+
+  function handleUrlOpening(href: string): void {
+    try {
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity
+      new URL(href)
+
+      import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
+        openUrl(href).catch((error) => {
+          console.error('Failed to open URL:', error)
+          import('../utils/errorNotification').then(({ errorNotification }) => {
+            errorNotification.trigger(`Failed to open link: ${href}`)
+          })
+        })
+      })
+    } catch {
+      import('../utils/errorNotification').then(({ errorNotification }) => {
+        errorNotification.trigger(`Malformed URL: ${href}`)
+      })
+    }
+  }
+
+  function handleUnsupportedLinkFormat(href: string): void {
+    import('../utils/errorNotification').then(({ errorNotification }) => {
+      errorNotification.trigger(`Unsupported link format: ${href}`)
+    })
+  }
+
+  function openCurrentLink(): void {
+    const href = validateLinkForOpening()
+    if (!href) return
+
+    // Handle #section navigation
+    if (isSection(href)) {
+      handleSectionNavigation(href)
       return
     }
 
     // Handle file paths
     if (isFilePath(href)) {
-      import('@tauri-apps/plugin-opener').then(({ openPath }) => {
-        openPath(href).catch((error) => {
-          console.error('Failed to open file:', error)
-          import('../utils/errorNotification').then(({ errorNotification }) => {
-            errorNotification.trigger(`Failed to open file: ${href}`)
-          })
-        })
-      })
+      handleFilePathOpening(href)
       return
     }
 
     // Handle URLs
     if (isUrl(href)) {
-      try {
-        // eslint-disable-next-line svelte/prefer-svelte-reactivity
-        new URL(href)
-
-        import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
-          openUrl(href).catch((error) => {
-            console.error('Failed to open URL:', error)
-            import('../utils/errorNotification').then(
-              ({ errorNotification }) => {
-                errorNotification.trigger(`Failed to open link: ${href}`)
-              }
-            )
-          })
-        })
-      } catch {
-        import('../utils/errorNotification').then(({ errorNotification }) => {
-          errorNotification.trigger(`Malformed URL: ${href}`)
-        })
-      }
+      handleUrlOpening(href)
       return
     }
 
     // Fallback for unrecognized link types
-    import('../utils/errorNotification').then(({ errorNotification }) => {
-      errorNotification.trigger(`Unsupported link format: ${href}`)
-    })
+    handleUnsupportedLinkFormat(href)
   }
 
   function resetNavigation(): void {
