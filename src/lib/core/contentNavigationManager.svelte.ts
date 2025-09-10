@@ -1,11 +1,17 @@
-/**
- * Core Layer - Content Navigation Manager
- * Navigation between search highlights and markdown headers.
- * Handles Ctrl+H/L navigation with position tracking and smooth scrolling.
- */
-
 import { SvelteSet } from 'svelte/reactivity'
 import { htmlToMarkdown, markdownToHtml } from '../utils/markdown'
+import {
+  getContentBetweenHeaders,
+  getFormattedText,
+  isUrl,
+  isSection,
+  isFilePath,
+  getHighlightElements,
+  getHeaderElements,
+  getCodeBlockElements,
+  getLinkElements,
+  getAccordionHeaders,
+} from '../utils/navigation'
 
 interface NavigationState {
   currentIndex: number
@@ -97,32 +103,28 @@ export function createContentNavigationManager(
     return 'headers'
   }
 
-  function getHighlightElements(): Element[] {
+  function getHighlightElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-
-    return Array.from(contentElement.querySelectorAll('mark.highlight'))
+    return getHighlightElements(contentElement)
   }
 
-  function getHeaderElements(): Element[] {
+  function getHeaderElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-
-    return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+    return getHeaderElements(contentElement)
   }
 
-  function getCodeBlockElements(): Element[] {
+  function getCodeBlockElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-
-    return Array.from(contentElement.querySelectorAll('pre > code'))
+    return getCodeBlockElements(contentElement)
   }
 
-  function getLinkElements(): Element[] {
+  function getLinkElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-
-    return Array.from(contentElement.querySelectorAll('a[href]'))
+    return getLinkElements(contentElement)
   }
 
   function getCurrentNavigationElements(): Element[] {
@@ -138,8 +140,8 @@ export function createContentNavigationManager(
     }
 
     return targetMode === 'highlights'
-      ? getHighlightElements()
-      : getHeaderElements()
+      ? getHighlightElementsWithFallback()
+      : getHeaderElementsWithFallback()
   }
 
   function clearCurrentElementStyle(): void {
@@ -166,34 +168,6 @@ export function createContentNavigationManager(
     if (state.navigationMode === 'links') {
       state.navigationMode = 'inactive'
     }
-  }
-
-  function getHeaderLevel(header: Element): number {
-    return parseInt(header.tagName.charAt(1))
-  }
-
-  function getContentBetweenHeaders(startHeader: Element): Element[] {
-    const content: Element[] = []
-    const startLevel = getHeaderLevel(startHeader)
-    let current = startHeader.nextElementSibling
-
-    while (current) {
-      if (current.matches('h1, h2, h3, h4, h5, h6')) {
-        const currentLevel = getHeaderLevel(current)
-        // Stop if we hit a header at the same level or higher (parent level)
-        if (currentLevel <= startLevel) {
-          break
-        }
-        // Include sub-headers as content (they belong to this section)
-        content.push(current)
-      } else {
-        // Include all non-header content
-        content.push(current)
-      }
-      current = current.nextElementSibling
-    }
-
-    return content
   }
 
   function clearAccordionStyling(
@@ -255,10 +229,6 @@ export function createContentNavigationManager(
 
   function shouldUpdateAccordion(): boolean {
     return state.navigationMode !== 'highlights'
-  }
-
-  function getAccordionHeaders(contentElement: HTMLElement): Element[] {
-    return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
   }
 
   function processHeaderAccordionStates(
@@ -425,7 +395,7 @@ export function createContentNavigationManager(
 
   function navigateCodeNext(): void {
     navigateGeneric(
-      getCodeBlockElements,
+      getCodeBlockElementsWithFallback,
       () => state.codeBlockIndex,
       (index) => {
         state.codeBlockIndex = index
@@ -437,7 +407,7 @@ export function createContentNavigationManager(
 
   function navigateCodePrevious(): void {
     navigateGeneric(
-      getCodeBlockElements,
+      getCodeBlockElementsWithFallback,
       () => state.codeBlockIndex,
       (index) => {
         state.codeBlockIndex = index
@@ -488,7 +458,7 @@ export function createContentNavigationManager(
     state.navigationMode = 'links'
 
     navigateGeneric(
-      getLinkElements,
+      getLinkElementsWithFallback,
       () => state.linkIndex,
       (index) => {
         state.linkIndex = index
@@ -505,7 +475,7 @@ export function createContentNavigationManager(
     state.navigationMode = 'links'
 
     navigateGeneric(
-      getLinkElements,
+      getLinkElementsWithFallback,
       () => state.linkIndex,
       (index) => {
         state.linkIndex = index
@@ -513,38 +483,6 @@ export function createContentNavigationManager(
       scrollToLink,
       'previous'
     )
-  }
-
-  function isUrl(href: string): boolean {
-    return (
-      href.startsWith('http://') ||
-      href.startsWith('https://') ||
-      href.startsWith('mailto:') ||
-      href.startsWith('tel:') ||
-      href.startsWith('ftp://') ||
-      href.startsWith('ftps://')
-    )
-  }
-
-  function isSection(href: string): boolean {
-    return href.startsWith('#')
-  }
-
-  function isFilePath(href: string): boolean {
-    // Check for absolute paths (starting with / or C:\ etc)
-    if (href.startsWith('/') || /^[A-Za-z]:\\/.test(href)) {
-      return true
-    }
-
-    // Check for relative paths (starting with ./ or ../)
-    if (href.startsWith('./') || href.startsWith('../')) {
-      return true
-    }
-
-    // Check for file extensions (common file types)
-    const fileExtensions =
-      /\.(txt|md|pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|gif|svg|mp4|mp3|zip|tar|gz|json|xml|csv|html|css|js|ts|py|rs|go|java|cpp|c|h)$/i
-    return fileExtensions.test(href)
   }
 
   function validateLinkForOpening(): string | null {
@@ -593,7 +531,7 @@ export function createContentNavigationManager(
     }
 
     if (targetHeader) {
-      const headerElements = getHeaderElements()
+      const headerElements = getHeaderElementsWithFallback()
       const headerIndex = headerElements.indexOf(targetHeader)
       if (headerIndex >= 0) {
         state.currentIndex = headerIndex
@@ -717,7 +655,7 @@ export function createContentNavigationManager(
       return
     }
 
-    const elements = getHighlightElements()
+    const elements = getHighlightElementsWithFallback()
     if (elements.length === 0) {
       return
     }
@@ -726,32 +664,6 @@ export function createContentNavigationManager(
     state.navigationMode = 'highlights'
     state.currentIndex = 0
     scrollToElement(elements[0])
-  }
-
-  function getFormattedText(element: Element): string {
-    if (element.tagName === 'UL' || element.tagName === 'OL') {
-      const items = Array.from(element.children)
-      const marker =
-        element.tagName === 'UL' ? '- ' : (index: number) => `${index + 1}. `
-      return items
-        .map((item, index) => {
-          const prefix = typeof marker === 'string' ? marker : marker(index)
-          return prefix + (item.textContent || '').trim()
-        })
-        .join('\n')
-    }
-
-    if (element.tagName === 'LI') {
-      const parent = element.parentElement
-      if (parent?.tagName === 'UL') {
-        return '- ' + (element.textContent || '').trim()
-      } else if (parent?.tagName === 'OL') {
-        const index = Array.from(parent.children).indexOf(element)
-        return `${index + 1}. ` + (element.textContent || '').trim()
-      }
-    }
-
-    return element.textContent || ''
   }
 
   async function copyCurrentSection(): Promise<boolean> {
@@ -967,7 +879,7 @@ export function createContentNavigationManager(
     })
 
     if (targetHeader) {
-      const headerElements = getHeaderElements()
+      const headerElements = getHeaderElementsWithFallback()
       const headerIndex = headerElements.indexOf(targetHeader)
       if (headerIndex >= 0) {
         state.currentIndex = headerIndex
