@@ -373,3 +373,42 @@ pub fn quick_filesystem_sync_check(app_state: &AppState) -> AppResult<bool> {
         Ok(true)
     })
 }
+
+pub fn handle_database_recovery(
+    app_state: &crate::core::state::AppState,
+    operation_description: &str,
+    original_error: &crate::core::AppError,
+    success_message: &str,
+    failure_message: &str,
+) -> AppResult<()> {
+    log(
+        "DATABASE_RECOVERY",
+        &format!(
+            "Database operation failed for {}: {}. Rebuilding database...",
+            operation_description, original_error
+        ),
+        None,
+    );
+
+    match recreate_database(app_state) {
+        Ok(()) => {
+            log(
+                "DATABASE_RECOVERY",
+                "Database successfully rebuilt from files.",
+                None,
+            );
+            Ok(())
+        }
+        Err(rebuild_error) => {
+            log(
+                "DATABASE_RECOVERY",
+                failure_message,
+                Some(&rebuild_error.to_string()),
+            );
+            Err(AppError::DatabaseRebuild(format!(
+                "{}: {}",
+                success_message, rebuild_error
+            )))
+        }
+    }
+}
