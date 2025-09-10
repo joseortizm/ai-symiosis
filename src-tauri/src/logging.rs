@@ -1,5 +1,5 @@
 use crate::core::{AppError, AppResult};
-use crate::utilities::strings::get_timestamp;
+use crate::utilities::strings::get_log_timestamp;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -51,16 +51,23 @@ pub fn log(operation: &str, message: &str, details: Option<&str>) {
         let _ = init_logger();
     }
 
+    let timestamp = get_log_timestamp();
+    let log_line = if let Some(details) = details {
+        format!("[{}] {}: {} | {}", timestamp, operation, message, details)
+    } else {
+        format!("[{}] {}: {}", timestamp, operation, message)
+    };
+
+    // Print ERROR messages to stderr in development builds
+    #[cfg(debug_assertions)]
+    if operation == "ERROR" {
+        eprintln!("{}", log_line);
+    }
+
+    // Always log to file
     if let Some(logger) = LOGGER.get() {
         if let Ok(mut writer) = logger.lock() {
-            let timestamp = get_timestamp();
-            let log_line = if let Some(details) = details {
-                format!("[{}] {}: {} | {}\n", timestamp, operation, message, details)
-            } else {
-                format!("[{}] {}: {}\n", timestamp, operation, message)
-            };
-
-            let _ = writer.write_all(log_line.as_bytes());
+            let _ = writer.write_all(format!("{}\n", log_line).as_bytes());
             let _ = writer.flush();
         }
     }

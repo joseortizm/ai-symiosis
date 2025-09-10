@@ -1,3 +1,4 @@
+use chrono::Utc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn extract_title_from_filename(filename: &str) -> String {
@@ -63,15 +64,8 @@ pub fn format_timestamp_for_humans(timestamp: u64) -> String {
     }
 }
 
-pub fn get_timestamp() -> String {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| {
-            let timestamp = d.as_secs();
-            let datetime = std::time::UNIX_EPOCH + std::time::Duration::from_secs(timestamp);
-            format!("{:?}", datetime)
-        })
-        .unwrap_or_else(|_| "UNKNOWN_TIME".to_string())
+pub fn get_log_timestamp() -> String {
+    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 pub fn parse_backup_filename(filename: &str, base_name: &str) -> Option<(String, u64)> {
