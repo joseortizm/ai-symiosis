@@ -79,17 +79,51 @@ pub fn setup_notes_watcher(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let notes_dir = get_config_notes_dir();
 
+    // Ensure directory exists before resolving symlinks
     std::fs::create_dir_all(&notes_dir)?;
+
+    // Resolve canonical path with proper error handling
+    let canonical_notes_dir = notes_dir.canonicalize().map_err(|e| {
+        log(
+            "WATCHER_ERROR",
+            &format!("Failed to resolve notes directory symlinks: {}", e),
+            Some(&notes_dir.display().to_string()),
+        );
+        e
+    })?;
+
+    // Validate that canonical path is still reasonable (security check)
+    if !canonical_notes_dir.exists() || !canonical_notes_dir.is_dir() {
+        return Err(format!(
+            "Canonical notes directory is invalid: {}",
+            canonical_notes_dir.display()
+        )
+        .into());
+    }
+
+    log(
+        "WATCHER_SETUP",
+        &format!(
+            "Setting up file watcher - Original: {}, Canonical: {}",
+            notes_dir.display(),
+            canonical_notes_dir.display()
+        ),
+        None,
+    );
 
     let debounced_watcher = Arc::new(DebouncedWatcher::new(500));
 
     let (mut watcher, rx) = create_watcher_and_channel()?;
 
-    watcher.watch(&notes_dir, RecursiveMode::Recursive)?;
+    // Watch canonical path to ensure event paths match
+    watcher.watch(&canonical_notes_dir, RecursiveMode::Recursive)?;
+
+    log("WATCHER_SETUP", "File watcher started successfully", None);
 
     let app_handle_clone = app_handle.clone();
     let debounced_watcher_clone = debounced_watcher.clone();
     let app_state_clone = app_state.clone();
+    let canonical_notes_dir_for_processing = canonical_notes_dir.clone();
     thread::spawn(move || {
         let _watcher = watcher;
 
@@ -97,22 +131,64 @@ pub fn setup_notes_watcher(
             match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                     if involves_note_files(&event) {
-                        if !app_state_clone
+                        #[cfg(debug_assertions)]
+                        log(
+                            "WATCHER_EVENT",
+                            &format!("File event: {:?} | Paths: {:?}", event.kind, event.paths),
+                            None,
+                        );
+                        let prog_op_in_progress = app_state_clone
                             .programmatic_operation_in_progress()
-                            .load(Ordering::Relaxed)
-                        {
+                            .load(Ordering::Relaxed);
+
+                        #[cfg(debug_assertions)]
+                        if prog_op_in_progress {
+                            log(
+                                "WATCHER_EVENT",
+                                "⏸️  Skipping - programmatic operation in progress",
+                                None,
+                            );
+                        }
+
+                        if !prog_op_in_progress {
                             let should_process = event
                                 .paths
                                 .iter()
                                 .any(|path| debounced_watcher_clone.should_process_event(path));
 
+                            #[cfg(debug_assertions)]
+                            log(
+                                "WATCHER_EVENT",
+                                if should_process {
+                                    "✅ Processing event"
+                                } else {
+                                    "⏭️  Skipping - debounced"
+                                },
+                                None,
+                            );
+
                             if should_process {
                                 let app_handle_for_refresh = app_handle_clone.clone();
                                 let paths_to_update = event.paths.clone();
                                 let app_state_for_task = app_state.clone();
+                                let canonical_dir = canonical_notes_dir_for_processing.clone();
 
                                 tauri::async_runtime::spawn(async move {
-                                    process_file_paths(&paths_to_update, &app_state_for_task);
+                                    #[cfg(debug_assertions)]
+                                    log(
+                                        "WATCHER_PROCESS",
+                                        &format!(
+                                            "🔄 Processing {} file paths",
+                                            paths_to_update.len()
+                                        ),
+                                        None,
+                                    );
+
+                                    process_file_paths(
+                                        &paths_to_update,
+                                        &canonical_dir,
+                                        &app_state_for_task,
+                                    );
                                     emit_cache_refresh_notification(&app_handle_for_refresh);
                                 });
                             }
@@ -266,21 +342,36 @@ fn emit_cache_refresh_notification(app_handle: &AppHandle) {
     }
 }
 
-fn process_file_paths(paths: &[PathBuf], app_state: &Arc<crate::core::state::AppState>) {
-    let notes_dir = get_config_notes_dir();
-
+fn process_file_paths(
+    paths: &[PathBuf],
+    canonical_notes_dir: &PathBuf,
+    app_state: &Arc<crate::core::state::AppState>,
+) {
     for path in paths {
-        if let Ok(relative) = path.strip_prefix(&notes_dir) {
-            let filename = relative.to_string_lossy().to_string();
+        match path.strip_prefix(canonical_notes_dir) {
+            Ok(relative) => {
+                let filename = relative.to_string_lossy().to_string();
 
-            if should_ignore_file(&filename) {
-                continue;
+                if should_ignore_file(&filename) {
+                    continue;
+                }
+
+                if path.exists() {
+                    process_existing_file(path, &filename, app_state);
+                } else {
+                    process_deleted_file(&filename, app_state);
+                }
             }
-
-            if path.exists() {
-                process_existing_file(path, &filename, app_state);
-            } else {
-                process_deleted_file(&filename, app_state);
+            Err(_) => {
+                #[cfg(debug_assertions)]
+                log(
+                    "WATCHER_PATH",
+                    &format!(
+                        "Received event for path outside notes directory: {}",
+                        path.display()
+                    ),
+                    None,
+                );
             }
         }
     }
