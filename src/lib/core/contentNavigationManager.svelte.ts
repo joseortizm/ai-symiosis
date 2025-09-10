@@ -195,18 +195,10 @@ export function createContentNavigationManager(
     return content
   }
 
-  function updateAccordionState(currentHeader: Element): void {
-    // Skip accordion logic for highlight navigation
-    if (state.navigationMode === 'highlights') return
-
-    const contentElement = deps.focusManager.noteContentElement
-    if (!contentElement) return
-
-    // Get all headers for hierarchical folding
-    const allHeaders = Array.from(
-      contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
-    )
-
+  function clearAccordionStyling(
+    allHeaders: Element[],
+    contentElement: HTMLElement
+  ): void {
     // Clear all existing header styling
     allHeaders.forEach((header) => {
       header.classList.remove('header-expanded', 'header-collapsed')
@@ -219,36 +211,76 @@ export function createContentNavigationManager(
     })
 
     state.collapsedSections.clear()
+  }
 
-    // For each header, determine if it should be expanded or collapsed
-    allHeaders.forEach((header) => {
+  function isHeaderInCurrentPath(
+    header: Element,
+    currentHeader: Element
+  ): boolean {
+    const content = getContentBetweenHeaders(header)
+
+    // Check if this header or any of its descendants is the current header
+    return (
+      header === currentHeader ||
+      content.some(
+        (el) =>
+          el === currentHeader ||
+          (el.matches('h1, h2, h3, h4, h5, h6') &&
+            isHeaderInPath(el, currentHeader))
+      )
+    )
+  }
+
+  function applyHeaderAccordionState(
+    header: Element,
+    isCurrentPath: boolean
+  ): void {
+    if (isCurrentPath) {
+      // This header is in the path to current - expand it
+      header.classList.add('header-expanded')
+    } else {
+      // This header is not in the current path - collapse it
+      header.classList.add('header-collapsed')
+      // Hide its content (but keep sub-headers visible for structure)
       const content = getContentBetweenHeaders(header)
+      content.forEach((el) => {
+        if (!el.matches('h1, h2, h3, h4, h5, h6')) {
+          el.classList.add('content-collapsed')
+        }
+      })
+      state.collapsedSections.add(header)
+    }
+  }
 
-      // Check if this header or any of its descendants is the current header
-      const isCurrentPath =
-        header === currentHeader ||
-        content.some(
-          (el) =>
-            el === currentHeader ||
-            (el.matches('h1, h2, h3, h4, h5, h6') &&
-              isHeaderInPath(el, currentHeader))
-        )
+  function shouldUpdateAccordion(): boolean {
+    return state.navigationMode !== 'highlights'
+  }
 
-      if (isCurrentPath) {
-        // This header is in the path to current - expand it
-        header.classList.add('header-expanded')
-      } else {
-        // This header is not in the current path - collapse it
-        header.classList.add('header-collapsed')
-        // Hide its content (but keep sub-headers visible for structure)
-        content.forEach((el) => {
-          if (!el.matches('h1, h2, h3, h4, h5, h6')) {
-            el.classList.add('content-collapsed')
-          }
-        })
-        state.collapsedSections.add(header)
-      }
+  function getAccordionHeaders(contentElement: HTMLElement): Element[] {
+    return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+  }
+
+  function processHeaderAccordionStates(
+    allHeaders: Element[],
+    currentHeader: Element
+  ): void {
+    allHeaders.forEach((header) => {
+      const isCurrentPath = isHeaderInCurrentPath(header, currentHeader)
+      applyHeaderAccordionState(header, isCurrentPath)
     })
+  }
+
+  function updateAccordionState(currentHeader: Element): void {
+    if (!shouldUpdateAccordion()) return
+
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return
+
+    const allHeaders = getAccordionHeaders(contentElement)
+
+    clearAccordionStyling(allHeaders, contentElement)
+
+    processHeaderAccordionStates(allHeaders, currentHeader)
   }
 
   function isHeaderInPath(header: Element, target: Element): boolean {
