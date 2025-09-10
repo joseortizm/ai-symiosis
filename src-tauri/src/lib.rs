@@ -24,103 +24,6 @@ use tauri::{
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use watcher::setup_notes_watcher;
 
-fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    let open_item = MenuItem::with_id(app, "open", "Open Symiosis", true, None::<&str>)?;
-    let refresh_item =
-        MenuItem::with_id(app, "refresh", "Refresh Notes Cache", true, None::<&str>)?;
-    let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-    let separator = PredefinedMenuItem::separator(app)?;
-    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-
-    let menu = Menu::with_items(
-        app,
-        &[
-            &open_item,
-            &separator,
-            &refresh_item,
-            &settings_item,
-            &separator,
-            &quit_item,
-        ],
-    )?;
-
-    let mut tray_builder = TrayIconBuilder::with_id("main-tray");
-
-    if let Some(icon) = app.default_window_icon() {
-        tray_builder = tray_builder.icon(icon.clone());
-    } else {
-        log(
-            "TRAY_SETUP",
-            "Warning: Could not load default window icon for tray. Tray will appear without icon.",
-            None,
-        );
-    }
-
-    let _tray = tray_builder
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(move |app, event| match event.id.as_ref() {
-            "open" => {
-                let app_handle = app.app_handle().clone();
-                if let Some(app_state) = app_handle.try_state::<AppState>() {
-                    let _ = show_main_window(app_handle.clone(), app_state);
-                }
-            }
-            "refresh" => {
-                let app_handle = app.app_handle().clone();
-                if let Some(app_state) = app_handle.try_state::<AppState>() {
-                    let _ = refresh_cache(app_handle.clone(), app_state);
-                }
-            }
-            "settings" => {
-                let app_handle = app.app_handle().clone();
-                if let Some(app_state) = app_handle.try_state::<AppState>() {
-                    let _ = show_main_window(app_handle.clone(), app_state);
-                }
-                if let Some(window) = app_handle.get_webview_window("main") {
-                    let _ = window.emit("open-preferences", ());
-                }
-            }
-            "quit" => {
-                std::process::exit(0);
-            }
-            _ => {}
-        })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button,
-                button_state,
-                ..
-            } = event
-            {
-                if button == tauri::tray::MouseButton::Left
-                    && button_state == tauri::tray::MouseButtonState::Up
-                {
-                    // Toggle window visibility on left click
-                    let app = tray.app_handle();
-                    match app.get_webview_window("main") {
-                        Some(window) => {
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                        None => {
-                            if let Some(app_state) = app.try_state::<AppState>() {
-                                let _ = show_main_window(app.clone(), app_state);
-                            }
-                        }
-                    }
-                }
-            }
-        })
-        .build(app)?;
-
-    Ok(())
-}
-
 pub fn initialize_notes(app_state: &AppState) {
     if let Err(e) = database_service::initialize_application_database(app_state) {
         log(
@@ -309,4 +212,106 @@ pub fn run() {
         }
         _ => {}
     });
+}
+
+fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent) {
+    match event.id.as_ref() {
+        "open" => {
+            let app_handle = app.app_handle().clone();
+            if let Some(app_state) = app_handle.try_state::<AppState>() {
+                let _ = show_main_window(app_handle.clone(), app_state);
+            }
+        }
+        "refresh" => {
+            let app_handle = app.app_handle().clone();
+            if let Some(app_state) = app_handle.try_state::<AppState>() {
+                let _ = refresh_cache(app_handle.clone(), app_state);
+            }
+        }
+        "settings" => {
+            let app_handle = app.app_handle().clone();
+            if let Some(app_state) = app_handle.try_state::<AppState>() {
+                let _ = show_main_window(app_handle.clone(), app_state);
+            }
+            if let Some(window) = app_handle.get_webview_window("main") {
+                let _ = window.emit("open-preferences", ());
+            }
+        }
+        "quit" => {
+            std::process::exit(0);
+        }
+        _ => {}
+    }
+}
+
+fn handle_tray_icon_event(tray: &tauri::tray::TrayIcon, event: &tauri::tray::TrayIconEvent) {
+    if let TrayIconEvent::Click {
+        button,
+        button_state,
+        ..
+    } = event
+    {
+        if *button == tauri::tray::MouseButton::Left
+            && *button_state == tauri::tray::MouseButtonState::Up
+        {
+            let app = tray.app_handle();
+            match app.get_webview_window("main") {
+                Some(window) => {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+                None => {
+                    if let Some(app_state) = app.try_state::<AppState>() {
+                        let _ = show_main_window(app.clone(), app_state);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+    let open_item = MenuItem::with_id(app, "open", "Open Symiosis", true, None::<&str>)?;
+    let refresh_item =
+        MenuItem::with_id(app, "refresh", "Refresh Notes Cache", true, None::<&str>)?;
+    let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+
+    let menu = Menu::with_items(
+        app,
+        &[
+            &open_item,
+            &separator,
+            &refresh_item,
+            &settings_item,
+            &separator,
+            &quit_item,
+        ],
+    )?;
+
+    let mut tray_builder = TrayIconBuilder::with_id("main-tray");
+
+    if let Some(icon) = app.default_window_icon() {
+        tray_builder = tray_builder.icon(icon.clone());
+    } else {
+        log(
+            "TRAY_SETUP",
+            "Warning: Could not load default window icon for tray. Tray will appear without icon.",
+            None,
+        );
+    }
+
+    let _tray = tray_builder
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(move |app, event| handle_tray_menu_event(app, &event))
+        .on_tray_icon_event(|tray, event| handle_tray_icon_event(tray, &event))
+        .build(app)?;
+
+    Ok(())
 }
