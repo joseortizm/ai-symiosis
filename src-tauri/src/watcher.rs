@@ -83,16 +83,7 @@ pub fn setup_notes_watcher(
 
     let debounced_watcher = Arc::new(DebouncedWatcher::new(500));
 
-    let (tx, rx) = mpsc::channel();
-
-    let mut watcher = RecommendedWatcher::new(
-        move |res: Result<Event, notify::Error>| {
-            if let Ok(event) = res {
-                let _ = tx.send(event);
-            }
-        },
-        Config::default(),
-    )?;
+    let (mut watcher, rx) = create_watcher_and_channel()?;
 
     watcher.watch(&notes_dir, RecursiveMode::Recursive)?;
 
@@ -105,14 +96,7 @@ pub fn setup_notes_watcher(
         for event in rx {
             match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                    let involves_notes = event.paths.iter().any(|path| {
-                        path.extension()
-                            .and_then(|ext| ext.to_str())
-                            .map(|ext| matches!(ext, "md" | "txt" | "markdown"))
-                            .unwrap_or(false)
-                    });
-
-                    if involves_notes {
+                    if involves_note_files(&event) {
                         if !app_state_clone
                             .programmatic_operation_in_progress()
                             .load(Ordering::Relaxed)
@@ -128,106 +112,8 @@ pub fn setup_notes_watcher(
                                 let app_state_for_task = app_state.clone();
 
                                 tauri::async_runtime::spawn(async move {
-                                    let notes_dir = get_config_notes_dir();
-
-                                    for path in &paths_to_update {
-                                        if let Ok(relative) = path.strip_prefix(&notes_dir) {
-                                            let filename = relative.to_string_lossy().to_string();
-
-                                            if filename.contains("/.") || filename.starts_with('.')
-                                            {
-                                                continue;
-                                            }
-
-                                            if path.exists() {
-                                                let modified = path
-                                                    .metadata()
-                                                    .and_then(|m| m.modified())
-                                                    .map(|mtime| {
-                                                        mtime
-                                                            .duration_since(std::time::UNIX_EPOCH)
-                                                            .map(|d| d.as_secs() as i64)
-                                                            .unwrap_or(0)
-                                                    })
-                                                    .unwrap_or(0);
-
-                                                if let Ok(content) = std::fs::read_to_string(path) {
-                                                    let _ = with_db(&app_state_for_task, |conn| {
-                                                        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
-                                                        match stmt.query_row(rusqlite::params![filename], |row| {
-                                                            row.get::<_, String>(0)
-                                                        }) {
-                                                            Ok(old_content) => {
-                                                                if old_content != content {
-                                                                    match create_versioned_backup(path, BackupType::ExternalChange, Some(&old_content)) {
-                                                                        Ok(backup_path) => {
-                                                                            log("FILE_BACKUP", "Created external change backup", Some(&backup_path.display().to_string()));
-                                                                        }
-                                                                        Err(e) => {
-                                                                            log("FILE_BACKUP", &format!("Failed to create external change backup for {}", filename), Some(&e.to_string()));
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                            Err(_) => {}
-                                                        }
-                                                        Ok(())
-                                                    }).unwrap_or_else(|e| {
-                                                        log("FILE_BACKUP", "Failed to check for existing content before external change backup", Some(&e.to_string()));
-                                                    });
-
-                                                    if let Err(e) = update_note_in_database(
-                                                        &app_state_for_task,
-                                                        &filename,
-                                                        &content,
-                                                        modified,
-                                                    ) {
-                                                        log(
-                                                            "DATABASE_UPDATE",
-                                                            &format!(
-                                                                "Failed to update note {}",
-                                                                filename
-                                                            ),
-                                                            Some(&e.to_string()),
-                                                        );
-                                                    }
-                                                }
-                                            } else {
-                                                if let Err(e) =
-                                                    crate::database::with_db(
-                                                        &app_state_for_task,
-                                                        |conn| {
-                                                            conn.execute(
-                                                        "DELETE FROM notes WHERE filename = ?1",
-                                                        rusqlite::params![filename],
-                                                    )
-                                                    .map_err(|e| format!("Database error: {}", e))?;
-                                                            Ok(())
-                                                        },
-                                                    )
-                                                {
-                                                    log(
-                                                        "DATABASE_DELETE",
-                                                        &format!(
-                                                            "Failed to delete note {}",
-                                                            filename
-                                                        ),
-                                                        Some(&e.to_string()),
-                                                    );
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if let Err(e) =
-                                        app_handle_for_refresh.emit("cache-refreshed", ())
-                                    {
-                                        log(
-                                            "UI_EVENT",
-                                            "Failed to emit cache-refreshed event",
-                                            Some(&e.to_string()),
-                                        );
-                                    }
+                                    process_file_paths(&paths_to_update, &app_state_for_task);
+                                    emit_cache_refresh_notification(&app_handle_for_refresh);
                                 });
                             }
                         }
@@ -236,17 +122,178 @@ pub fn setup_notes_watcher(
                 _ => {}
             }
 
-            let counter = debounced_watcher_clone
-                .cleanup_counter
-                .fetch_add(1, Ordering::Relaxed);
-            if counter >= 100 {
-                debounced_watcher_clone.cleanup_old_events();
-                debounced_watcher_clone
-                    .cleanup_counter
-                    .store(0, Ordering::Relaxed);
-            }
+            handle_periodic_cleanup(&debounced_watcher_clone);
         }
     });
 
     Ok(())
+}
+
+fn create_watcher_and_channel(
+) -> Result<(RecommendedWatcher, mpsc::Receiver<Event>), Box<dyn std::error::Error>> {
+    let (tx, rx) = mpsc::channel();
+
+    let watcher = RecommendedWatcher::new(
+        move |res: Result<Event, notify::Error>| {
+            if let Ok(event) = res {
+                let _ = tx.send(event);
+            }
+        },
+        Config::default(),
+    )?;
+
+    Ok((watcher, rx))
+}
+
+fn involves_note_files(event: &Event) -> bool {
+    event.paths.iter().any(|path| {
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| matches!(ext, "md" | "txt" | "markdown"))
+            .unwrap_or(false)
+    })
+}
+
+fn should_ignore_file(filename: &str) -> bool {
+    filename.contains("/.") || filename.starts_with('.')
+}
+
+fn get_file_modification_time(path: &PathBuf) -> i64 {
+    path.metadata()
+        .and_then(|m| m.modified())
+        .map(|mtime| {
+            mtime
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0)
+        })
+        .unwrap_or(0)
+}
+
+fn create_backup_if_content_changed(
+    path: &PathBuf,
+    filename: &str,
+    new_content: &str,
+    app_state: &Arc<crate::core::state::AppState>,
+) {
+    let _ = with_db(app_state, |conn| {
+        let mut stmt = conn.prepare("SELECT content FROM notes WHERE filename = ?1")?;
+        match stmt.query_row(rusqlite::params![filename], |row| row.get::<_, String>(0)) {
+            Ok(old_content) => {
+                if old_content != new_content {
+                    match create_versioned_backup(
+                        path,
+                        BackupType::ExternalChange,
+                        Some(&old_content),
+                    ) {
+                        Ok(backup_path) => {
+                            log(
+                                "FILE_BACKUP",
+                                "Created external change backup",
+                                Some(&backup_path.display().to_string()),
+                            );
+                        }
+                        Err(e) => {
+                            log(
+                                "FILE_BACKUP",
+                                &format!(
+                                    "Failed to create external change backup for {}",
+                                    filename
+                                ),
+                                Some(&e.to_string()),
+                            );
+                        }
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+        Ok(())
+    })
+    .unwrap_or_else(|e| {
+        log(
+            "FILE_BACKUP",
+            "Failed to check for existing content before external change backup",
+            Some(&e.to_string()),
+        );
+    });
+}
+
+fn process_existing_file(
+    path: &PathBuf,
+    filename: &str,
+    app_state: &Arc<crate::core::state::AppState>,
+) {
+    let modified = get_file_modification_time(path);
+
+    if let Ok(content) = std::fs::read_to_string(path) {
+        create_backup_if_content_changed(path, filename, &content, app_state);
+
+        if let Err(e) = update_note_in_database(app_state, filename, &content, modified) {
+            log(
+                "DATABASE_UPDATE",
+                &format!("Failed to update note {}", filename),
+                Some(&e.to_string()),
+            );
+        }
+    }
+}
+
+fn process_deleted_file(filename: &str, app_state: &Arc<crate::core::state::AppState>) {
+    if let Err(e) = crate::database::with_db(app_state, |conn| {
+        conn.execute(
+            "DELETE FROM notes WHERE filename = ?1",
+            rusqlite::params![filename],
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+        Ok(())
+    }) {
+        log(
+            "DATABASE_DELETE",
+            &format!("Failed to delete note {}", filename),
+            Some(&e.to_string()),
+        );
+    }
+}
+
+fn emit_cache_refresh_notification(app_handle: &AppHandle) {
+    if let Err(e) = app_handle.emit("cache-refreshed", ()) {
+        log(
+            "UI_EVENT",
+            "Failed to emit cache-refreshed event",
+            Some(&e.to_string()),
+        );
+    }
+}
+
+fn process_file_paths(paths: &[PathBuf], app_state: &Arc<crate::core::state::AppState>) {
+    let notes_dir = get_config_notes_dir();
+
+    for path in paths {
+        if let Ok(relative) = path.strip_prefix(&notes_dir) {
+            let filename = relative.to_string_lossy().to_string();
+
+            if should_ignore_file(&filename) {
+                continue;
+            }
+
+            if path.exists() {
+                process_existing_file(path, &filename, app_state);
+            } else {
+                process_deleted_file(&filename, app_state);
+            }
+        }
+    }
+}
+
+fn handle_periodic_cleanup(debounced_watcher: &Arc<DebouncedWatcher>) {
+    let counter = debounced_watcher
+        .cleanup_counter
+        .fetch_add(1, Ordering::Relaxed);
+    if counter >= 100 {
+        debounced_watcher.cleanup_old_events();
+        debounced_watcher
+            .cleanup_counter
+            .store(0, Ordering::Relaxed);
+    }
 }
