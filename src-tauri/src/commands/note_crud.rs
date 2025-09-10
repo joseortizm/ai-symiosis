@@ -232,76 +232,93 @@ pub fn delete_note(
             )),
         );
 
-        // Create backup using unified API - maintains atomic copy operation for TOCTOU protection
-        let copy_result = create_versioned_backup(&note_path, BackupType::Delete, None);
-
-        match copy_result {
-            Ok(backup_path) => {
-                // File exists and backup was created, now delete the original
-                match super::notes::with_programmatic_flag(&app_state, || {
-                    fs::remove_file(&note_path).map_err(AppError::from)
-                }) {
-                    Ok(()) => {
-                        // Delete succeeded - log success but keep backup
-                        log(
-                            "FILE_OPERATION",
-                            &format!(
-                                "DELETE: {} | Backup: {} | SUCCESS",
-                                note_name,
-                                backup_path.display()
-                            ),
-                            None,
-                        );
-                    }
-                    Err(e) => {
-                        // Delete failed - clean up backup and return error
-                        if let Err(e) = fs::remove_file(&backup_path) {
-                            log(
-                                "BACKUP_CLEANUP",
-                                &format!("Failed to remove backup file: {:?}", backup_path),
-                                Some(&e.to_string()),
-                            );
-                        }
-                        return Err(AppError::FileWrite(format!("Failed to delete note: {}", e)));
-                    }
-                }
-            }
-            Err(_) => {
-                // File doesn't exist - handle database-only deletion
-                match with_db(&app_state, |conn| {
-                    conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
-                    Ok(())
-                }) {
-                    Ok(_) => return Ok(()),
-                    Err(e) => {
-                        let _ = handle_database_recovery(
-                            &app_state,
-                            "database-only delete recovery",
-                            &e,
-                            "Database recovery completed",
-                            "Failed to recreate database during error recovery",
-                        );
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
-        match with_db(&app_state, |conn| {
-            conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
-            Ok(())
-        }) {
-            Ok(_) => Ok(()),
-            Err(e) => handle_database_recovery(
-                &app_state,
-                &format!("delete '{}'", note_name),
-                &e,
-                "Note deleted but database rebuild failed",
-                "Database rebuild failed. Note was deleted but database may be inconsistent.",
-            ),
+        match perform_backup_and_delete(&note_path, note_name, &app_state)? {
+            true => handle_database_cleanup(note_name, &app_state),
+            false => handle_database_only_delete(note_name, &app_state),
         }
     }();
     result.map_err(|e| e.to_string())
+}
+
+fn perform_backup_and_delete(
+    note_path: &std::path::PathBuf,
+    note_name: &str,
+    app_state: &tauri::State<crate::core::state::AppState>,
+) -> AppResult<bool> {
+    let copy_result = create_versioned_backup(note_path, BackupType::Delete, None);
+
+    match copy_result {
+        Ok(backup_path) => {
+            match super::notes::with_programmatic_flag(app_state, || {
+                fs::remove_file(note_path).map_err(AppError::from)
+            }) {
+                Ok(()) => {
+                    log(
+                        "FILE_OPERATION",
+                        &format!(
+                            "DELETE: {} | Backup: {} | SUCCESS",
+                            note_name,
+                            backup_path.display()
+                        ),
+                        None,
+                    );
+                    Ok(true)
+                }
+                Err(e) => {
+                    if let Err(e) = fs::remove_file(&backup_path) {
+                        log(
+                            "BACKUP_CLEANUP",
+                            &format!("Failed to remove backup file: {:?}", backup_path),
+                            Some(&e.to_string()),
+                        );
+                    }
+                    Err(AppError::FileWrite(format!("Failed to delete note: {}", e)))
+                }
+            }
+        }
+        Err(_) => Ok(false),
+    }
+}
+
+fn handle_database_only_delete(
+    note_name: &str,
+    app_state: &tauri::State<crate::core::state::AppState>,
+) -> AppResult<()> {
+    match with_db(app_state, |conn| {
+        conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
+        Ok(())
+    }) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            let _ = handle_database_recovery(
+                app_state,
+                "database-only delete recovery",
+                &e,
+                "Database recovery completed",
+                "Failed to recreate database during error recovery",
+            );
+            Ok(())
+        }
+    }
+}
+
+fn handle_database_cleanup(
+    note_name: &str,
+    app_state: &tauri::State<crate::core::state::AppState>,
+) -> AppResult<()> {
+    match with_db(app_state, |conn| {
+        conn.execute("DELETE FROM notes WHERE filename = ?1", params![note_name])?;
+        Ok(())
+    }) {
+        Ok(_) => Ok(()),
+        Err(e) => handle_database_recovery(
+            app_state,
+            &format!("delete '{}'", note_name),
+            &e,
+            "Note deleted but database rebuild failed",
+            "Database rebuild failed. Note was deleted but database may be inconsistent.",
+        ),
+    }
 }
 
 fn validate_content_unchanged(
