@@ -24,6 +24,22 @@ use tauri::{
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use watcher::setup_notes_watcher;
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let app_state = load_config_and_initialize_state();
+
+    let app = build_tauri_app_with_plugins(app_state)
+        .setup(setup_app_components)
+        .on_window_event(handle_window_events)
+        .invoke_handler(register_command_handlers())
+        .build(tauri::generate_context!())
+        .unwrap_or_else(|e| {
+            handle_app_build_error(e);
+        });
+
+    run_app_with_platform_config(app);
+}
+
 pub fn initialize_notes(app_state: &AppState) {
     if let Err(e) = database_service::initialize_application_database(app_state) {
         log(
@@ -34,8 +50,7 @@ pub fn initialize_notes(app_state: &AppState) {
     }
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+fn load_config_and_initialize_state() -> AppState {
     let (config, was_first_run) = load_config_with_first_run_info();
     let app_state = match AppState::new_with_fallback(config) {
         Ok(state) => state,
@@ -59,150 +74,177 @@ pub fn run() {
     }
 
     initialize_notes(&app_state);
+    app_state
+}
 
-    let mut app = tauri::Builder::default()
+fn build_tauri_app_with_plugins(app_state: AppState) -> tauri::Builder<tauri::Wry> {
+    tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(app_state)
-        .setup(|app| {
-            setup_tray(app.handle())?;
+}
 
-            if let Some(window) = app.get_webview_window("main") {
-                if let Some(app_state) = app.try_state::<AppState>() {
-                    let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
-                    let _ = window.set_always_on_top(config.interface.always_on_top);
-                }
-            }
+fn setup_window_configuration(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(window) = app.get_webview_window("main") {
+        if let Some(app_state) = app.try_state::<AppState>() {
+            let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
+            let _ = window.set_always_on_top(config.interface.always_on_top);
+        }
+    }
+    Ok(())
+}
 
-            if let Some(app_state) = app.try_state::<AppState>() {
-                setup_notes_watcher(app.handle().clone(), Arc::new(app_state.inner().clone()))?;
-            }
+fn setup_notes_watcher_for_app(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(app_state) = app.try_state::<AppState>() {
+        setup_notes_watcher(app.handle().clone(), Arc::new(app_state.inner().clone()))?;
+    }
+    Ok(())
+}
 
-            if let Some(app_state) = app.try_state::<AppState>() {
-                if app_state
-                    .was_first_run()
-                    .load(std::sync::atomic::Ordering::Relaxed)
-                {
-                    let app_handle = app.handle().clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(1000));
-                        let _ = app_handle.emit("first-run-detected", ());
-                    });
-                }
-            }
+fn handle_first_run_detection(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(app_state) = app.try_state::<AppState>() {
+        if app_state
+            .was_first_run()
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+                let _ = app_handle.emit("first-run-detected", ());
+            });
+        }
+    }
+    Ok(())
+}
 
-            #[cfg(desktop)]
+fn handle_main_window_toggle(app_handle: tauri::AppHandle) {
+    match app_handle.get_webview_window("main") {
+        Some(window) => {
+            if window.is_visible().unwrap_or(false) && window.is_focused().unwrap_or(false) {
+                let _ = window.hide();
+            } else if window.is_visible().unwrap_or(false) && !window.is_focused().unwrap_or(false)
             {
-                let config = if let Some(app_state) = app.try_state::<AppState>() {
-                    app_state
-                        .config
-                        .read()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .clone()
-                } else {
-                    crate::config::AppConfig::default()
-                };
-                let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
-                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
-                });
-
-                app.handle().plugin(
-                    tauri_plugin_global_shortcut::Builder::new()
-                        .with_handler(move |app, shortcut, event| {
-                            if event.state() == ShortcutState::Pressed {
-                                if shortcut == &main_shortcut {
-                                    let app_handle = app.clone();
-                                    match app_handle.get_webview_window("main") {
-                                        Some(window) => {
-                                            if window.is_visible().unwrap_or(false)
-                                                && window.is_focused().unwrap_or(false)
-                                            {
-                                                let _ = window.hide();
-                                            } else if window.is_visible().unwrap_or(false)
-                                                && !window.is_focused().unwrap_or(false)
-                                            {
-                                                let _ = window.set_focus();
-                                            } else {
-                                                let _ = window.show();
-                                                let _ = window.set_focus();
-                                            }
-                                        }
-                                        None => {
-                                            if let Some(app_state) =
-                                                app_handle.try_state::<AppState>()
-                                            {
-                                                let _ =
-                                                    show_main_window(app_handle.clone(), app_state);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        .build(),
-                )?;
-
-                app.global_shortcut().register(main_shortcut)?;
+                let _ = window.set_focus();
+            } else {
+                let _ = window.show();
+                let _ = window.set_focus();
             }
-
-            Ok(())
-        })
-        .on_window_event(|window, event| {
-            match event {
-                tauri::WindowEvent::CloseRequested { api, .. } => {
-                    // Hide window instead of closing when user clicks X
-                    if let Err(e) = window.hide() {
-                        log(
-                            "WINDOW_OPERATION",
-                            "Failed to hide window. Continuing anyway.",
-                            Some(&e.to_string()),
-                        );
-                    }
-                    api.prevent_close();
-                }
-                _ => {}
+        }
+        None => {
+            if let Some(app_state) = app_handle.try_state::<AppState>() {
+                let _ = show_main_window(app_handle.clone(), app_state);
             }
-        })
-        .invoke_handler(tauri::generate_handler![
-            search_notes,
-            get_note_content,
-            get_note_html_content,
-            create_new_note,
-            delete_note,
-            rename_note,
-            save_note_with_content_check,
-            initialize_notes_with_progress,
-            refresh_cache,
-            open_note_in_editor,
-            open_note_folder,
-            list_all_notes,
-            get_note_versions,
-            get_version_content,
-            recover_note_version,
-            get_deleted_files,
-            recover_deleted_file,
-            show_main_window,
-            hide_main_window,
-            get_config_content,
-            save_config_content,
-            config_exists,
-            get_general_config,
-            get_interface_config,
-            get_editor_config,
-            get_shortcuts_config,
-            get_preferences_config,
-            scan_available_themes
-        ])
-        .build(tauri::generate_context!())
-        .unwrap_or_else(|e| {
-            log(
-                "APPLICATION_STARTUP",
-                "Failed to build Tauri application",
-                Some(&e.to_string()),
-            );
-            std::process::exit(1);
+        }
+    }
+}
+
+fn setup_global_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(desktop)]
+    {
+        let config = if let Some(app_state) = app.try_state::<AppState>() {
+            app_state
+                .config
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+        } else {
+            crate::config::AppConfig::default()
+        };
+        let main_shortcut = parse_shortcut(&config.global_shortcut).unwrap_or_else(|| {
+            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyN)
         });
 
+        app.handle()
+            .plugin(
+                tauri_plugin_global_shortcut::Builder::new()
+                    .with_handler(move |app, shortcut, event| {
+                        if event.state() == ShortcutState::Pressed {
+                            if shortcut == &main_shortcut {
+                                let app_handle = app.clone();
+                                handle_main_window_toggle(app_handle);
+                            }
+                        }
+                    })
+                    .build(),
+            )
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
+        app.global_shortcut()
+            .register(main_shortcut)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+    }
+    Ok(())
+}
+
+fn setup_app_components(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    setup_tray(app.handle())?;
+    setup_window_configuration(app)?;
+    setup_notes_watcher_for_app(app)?;
+    handle_first_run_detection(app)?;
+    setup_global_shortcuts(app)?;
+    Ok(())
+}
+
+fn handle_window_events(window: &tauri::Window, event: &tauri::WindowEvent) {
+    match event {
+        tauri::WindowEvent::CloseRequested { api, .. } => {
+            if let Err(e) = window.hide() {
+                log(
+                    "WINDOW_OPERATION",
+                    "Failed to hide window. Continuing anyway.",
+                    Some(&e.to_string()),
+                );
+            }
+            api.prevent_close();
+        }
+        _ => {}
+    }
+}
+
+fn register_command_handlers(
+) -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
+    tauri::generate_handler![
+        search_notes,
+        get_note_content,
+        get_note_html_content,
+        create_new_note,
+        delete_note,
+        rename_note,
+        save_note_with_content_check,
+        initialize_notes_with_progress,
+        refresh_cache,
+        open_note_in_editor,
+        open_note_folder,
+        list_all_notes,
+        get_note_versions,
+        get_version_content,
+        recover_note_version,
+        get_deleted_files,
+        recover_deleted_file,
+        show_main_window,
+        hide_main_window,
+        get_config_content,
+        save_config_content,
+        config_exists,
+        get_general_config,
+        get_interface_config,
+        get_editor_config,
+        get_shortcuts_config,
+        get_preferences_config,
+        scan_available_themes
+    ]
+}
+
+fn handle_app_build_error(e: tauri::Error) -> ! {
+    log(
+        "APPLICATION_STARTUP",
+        "Failed to build Tauri application",
+        Some(&e.to_string()),
+    );
+    std::process::exit(1);
+}
+
+fn run_app_with_platform_config(mut app: tauri::App) {
     #[cfg(target_os = "macos")]
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
