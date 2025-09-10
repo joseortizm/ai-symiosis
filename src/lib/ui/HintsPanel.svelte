@@ -88,6 +88,14 @@ Shows configured shortcuts with proper theming and overlay styling.
           description: 'Next note',
         },
         {
+          key: configManager.shortcuts.scroll_up,
+          description: 'Scroll up content',
+        },
+        {
+          key: configManager.shortcuts.scroll_down,
+          description: 'Scroll down content',
+        },
+        {
           key: configManager.shortcuts.navigate_previous,
           description: 'Previous Markdown header or search term',
         },
@@ -96,12 +104,20 @@ Shows configured shortcuts with proper theming and overlay styling.
           description: 'Next Markdown header or search term',
         },
         {
-          key: configManager.shortcuts.scroll_up,
-          description: 'Scroll up content',
+          key: configManager.shortcuts.navigate_code_previous,
+          description: 'Previous code block',
         },
         {
-          key: configManager.shortcuts.scroll_down,
-          description: 'Scroll down content',
+          key: configManager.shortcuts.navigate_code_next,
+          description: 'Next code block',
+        },
+        {
+          key: configManager.shortcuts.navigate_link_previous,
+          description: 'Previous link',
+        },
+        {
+          key: configManager.shortcuts.navigate_link_next,
+          description: 'Next link',
         },
       ],
     },
@@ -134,6 +150,14 @@ Shows configured shortcuts with proper theming and overlay styling.
         {
           key: configManager.shortcuts.recently_deleted,
           description: 'Recover recently deleted files',
+        },
+        {
+          key: configManager.shortcuts.copy_current_section,
+          description: 'Copy current section to clipboard',
+        },
+        {
+          key: 'Enter',
+          description: 'Open current link (when navigating links)',
         },
       ],
     },
@@ -347,5 +371,23 @@ Shows configured shortcuts with proper theming and overlay styling.
     border: 1px solid var(--theme-border);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     margin: 0 2px;
+  }
+
+  /* scroll bars */
+  .hints-content::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .hints-content::-webkit-scrollbar-track {
+    background: var(--theme-bg-secondary);
+  }
+
+  .hints-content::-webkit-scrollbar-thumb {
+    background: var(--theme-bg-tertiary);
+    border-radius: 5px;
+  }
+
+  .hints-content::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-bg-tertiary);
   }
 </style>
