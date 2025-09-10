@@ -781,14 +781,15 @@ export function createContentNavigationManager(
     return false
   }
 
-  function handleEscape(): EscapeAction {
-    // Priority 1: Clear link navigation if actively navigating links
+  function clearLinkNavigationIfActive(): EscapeAction | null {
     if (state.navigationMode === 'links') {
       resetNavigation()
       return 'navigation_cleared'
     }
+    return null
+  }
 
-    // Priority 2: Clear code block navigation if navigating code blocks
+  function clearCodeBlockNavigationIfActive(): EscapeAction | null {
     if (state.codeBlockElement) {
       clearCurrentElementStyle()
       state.codeBlockIndex = -1
@@ -796,44 +797,97 @@ export function createContentNavigationManager(
       state.navigationMode = 'inactive' // Reset navigation mode
       return 'navigation_cleared'
     }
+    return null
+  }
 
-    // Priority 3: Clear highlights immediately if actively navigating highlights
+  function clearHighlightNavigationIfActive(): EscapeAction | null {
     if (state.navigationMode === 'highlights') {
       resetNavigation()
       clearHighlights()
       return 'highlights_cleared'
     }
+    return null
+  }
 
-    // Priority 4: Clear active header navigation
+  function clearHeaderNavigationIfActive(): EscapeAction | null {
     if (state.navigationMode !== 'inactive') {
       resetNavigation()
       return 'navigation_cleared'
     }
+    return null
+  }
 
-    // Priority 3: Clear highlights if they exist and query exists
+  function evaluateSearchState() {
     const query = deps.searchManager.query
     const searchInput = deps.searchManager.searchInput
     const hasQuery = query.trim() !== ''
     const hasSearchInput = searchInput.trim() !== ''
+    return { query, searchInput, hasQuery, hasSearchInput }
+  }
 
-    if (hasQuery && state.highlightVisibility === 'visible') {
+  function clearVisibleHighlightsIfQueryExists(
+    searchState: ReturnType<typeof evaluateSearchState>
+  ): EscapeAction | null {
+    if (searchState.hasQuery && state.highlightVisibility === 'visible') {
       clearHighlights()
       return 'highlights_cleared'
     }
+    return null
+  }
+
+  function clearSearchIfHighlightsHidden(
+    searchState: ReturnType<typeof evaluateSearchState>
+  ): EscapeAction | null {
+    if (searchState.hasQuery && state.highlightVisibility === 'hidden') {
+      deps.searchManager.clearSearch()
+      showHighlights() // Reset highlights for next search
+      return 'search_cleared'
+    }
+    return null
+  }
+
+  function clearPartialSearchInput(
+    searchState: ReturnType<typeof evaluateSearchState>
+  ): EscapeAction | null {
+    if (searchState.hasSearchInput && searchState.searchInput.length < 3) {
+      deps.searchManager.clearSearch()
+      showHighlights() // Reset highlights for next search
+      return 'search_cleared'
+    }
+    return null
+  }
+
+  function handleEscape(): EscapeAction {
+    // Priority 1: Clear link navigation if actively navigating links
+    const linkResult = clearLinkNavigationIfActive()
+    if (linkResult) return linkResult
+
+    // Priority 2: Clear code block navigation if navigating code blocks
+    const codeBlockResult = clearCodeBlockNavigationIfActive()
+    if (codeBlockResult) return codeBlockResult
+
+    // Priority 3: Clear highlights immediately if actively navigating highlights
+    const highlightNavResult = clearHighlightNavigationIfActive()
+    if (highlightNavResult) return highlightNavResult
+
+    // Priority 4: Clear active header navigation
+    const headerNavResult = clearHeaderNavigationIfActive()
+    if (headerNavResult) return headerNavResult
+
+    // Evaluate search state for remaining priorities
+    const searchState = evaluateSearchState()
+
+    const visibleHighlightsResult =
+      clearVisibleHighlightsIfQueryExists(searchState)
+    if (visibleHighlightsResult) return visibleHighlightsResult
 
     // Priority 4: Clear search if highlights hidden but query exists
-    if (hasQuery && state.highlightVisibility === 'hidden') {
-      deps.searchManager.clearSearch()
-      showHighlights() // Reset highlights for next search
-      return 'search_cleared'
-    }
+    const hiddenHighlightsResult = clearSearchIfHighlightsHidden(searchState)
+    if (hiddenHighlightsResult) return hiddenHighlightsResult
 
     // Priority 5: Clear search if searchInput has less than 3 characters (typed but not committed)
-    if (hasSearchInput && searchInput.length < 3) {
-      deps.searchManager.clearSearch()
-      showHighlights() // Reset highlights for next search
-      return 'search_cleared'
-    }
+    const partialSearchResult = clearPartialSearchInput(searchState)
+    if (partialSearchResult) return partialSearchResult
 
     // Priority 6: Focus search (default case)
     return 'focus_search'
