@@ -13,10 +13,8 @@ mod watcher;
 use commands::*;
 use config::{load_config_with_first_run_info, parse_shortcut};
 use core::state::AppState;
-use database::{get_database_path as get_db_path, with_db};
 use logging::log;
 use services::database_service;
-use std::fs;
 use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -24,7 +22,6 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
-use utilities::paths::get_config_path;
 use watcher::setup_notes_watcher;
 
 fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
@@ -125,115 +122,13 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 }
 
 pub fn initialize_notes(app_state: &AppState) {
-    if let Ok(db_path) = get_db_path() {
-        if let Some(parent) = db_path.parent() {
-            if let Err(e) = fs::create_dir_all(parent) {
-                log(
-                    "INIT_ERROR",
-                    &format!("Failed to create database directory: {:?}", parent),
-                    Some(&e.to_string()),
-                );
-            }
-        }
-    }
-
-    if let Err(e) = utilities::file_safety::cleanup_temp_files() {
+    if let Err(e) = database_service::initialize_application_database(app_state) {
         log(
-            "INIT_CLEANUP",
-            "Failed to clean up temp files during initialization",
+            "DATABASE_INIT",
+            "Application database initialization failed",
             Some(&e.to_string()),
         );
     }
-
-    let init_result = with_db(app_state, |conn| {
-        database_service::init_db(conn).map_err(|e| e.into())
-    });
-
-    if let Err(e) = init_result {
-        let db_path = get_db_path().unwrap_or_default();
-        let is_new_db = !db_path.exists();
-
-        if is_new_db {
-            log("DATABASE_INIT", "🔧 Creating new database...", None);
-        } else {
-            log(
-                "DATABASE_INIT",
-                "❌ CRITICAL: Database initialization failed",
-                Some(&e.to_string()),
-            );
-            log(
-                "DATABASE_RECOVERY",
-                "🔄 Attempting automatic database recovery...",
-                None,
-            );
-        }
-
-        if let Err(recovery_error) = database_service::recreate_database(app_state) {
-            if is_new_db {
-                log("DATABASE_INIT", "💥 FATAL: Failed to create new database. Application will continue with limited functionality.", Some(&recovery_error.to_string()));
-            } else {
-                log("DATABASE_RECOVERY", "💥 FATAL: Database recovery failed. Application will continue with limited functionality.", Some(&recovery_error.to_string()));
-            }
-            return;
-        } else {
-            if is_new_db {
-                log(
-                    "DATABASE_INIT",
-                    "✅ New database created successfully!",
-                    None,
-                );
-            } else {
-                log(
-                    "DATABASE_RECOVERY",
-                    "✅ Database successfully recovered!",
-                    None,
-                );
-            }
-        }
-    } else {
-        match database_service::quick_filesystem_sync_check(app_state) {
-            Ok(true) => {}
-            Ok(false) => {
-                log(
-                    "DATABASE_SYNC",
-                    "🔄 Database-filesystem mismatch detected. Rebuilding database...",
-                    None,
-                );
-                if let Err(e) = database_service::recreate_database(app_state) {
-                    log("DATABASE_SYNC", "💥 FATAL: Database rebuild failed. Application will continue with limited functionality.", Some(&e.to_string()));
-                    return;
-                } else {
-                    log(
-                        "DATABASE_SYNC",
-                        "✅ Database successfully rebuilt from filesystem!",
-                        None,
-                    );
-                }
-            }
-            Err(e) => {
-                log(
-                    "DATABASE_SYNC",
-                    "⚠️  Filesystem sync check failed. Continuing without rebuild.",
-                    Some(&e.to_string()),
-                );
-            }
-        }
-    }
-
-    if !get_config_path().exists() {
-        if let Err(e) = with_db(app_state, |conn| {
-            conn.execute("DELETE FROM notes", []).map_err(|e| e.into())
-        }) {
-            log(
-                "DATABASE_CLEANUP",
-                "Failed to purge database. Continuing anyway.",
-                Some(&e.to_string()),
-            );
-        }
-    }
-
-    // Note: Notes loading is now deferred to async initialization command
-    // This allows the UI to render first before blocking on note loading
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

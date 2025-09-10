@@ -374,6 +374,158 @@ pub fn quick_filesystem_sync_check(app_state: &AppState) -> AppResult<bool> {
     })
 }
 
+fn log_fatal_database_error(category: &str, operation: &str, error: &AppError) {
+    log(
+        category,
+        &format!(
+            "💥 FATAL: {}. Application will continue with limited functionality.",
+            operation
+        ),
+        Some(&error.to_string()),
+    );
+}
+
+fn log_database_success(category: &str, message: &str) {
+    log(category, &format!("✅ {}", message), None);
+}
+
+fn is_new_database() -> bool {
+    let db_path = crate::database::get_database_path().unwrap_or_default();
+    !db_path.exists()
+}
+
+fn cleanup_database_if_no_config(app_state: &AppState) -> () {
+    if !crate::utilities::paths::get_config_path().exists() {
+        if let Err(e) = with_db(app_state, |conn| {
+            conn.execute("DELETE FROM notes", []).map_err(|e| e.into())
+        }) {
+            log(
+                "DATABASE_CLEANUP",
+                "Failed to purge database. Continuing anyway.",
+                Some(&e.to_string()),
+            );
+        }
+    }
+}
+
+fn validate_and_sync_filesystem(app_state: &AppState) -> AppResult<()> {
+    match quick_filesystem_sync_check(app_state) {
+        Ok(true) => {}
+        Ok(false) => {
+            log(
+                "DATABASE_SYNC",
+                "🔄 Database-filesystem mismatch detected. Rebuilding database...",
+                None,
+            );
+            if let Err(e) = recreate_database(app_state) {
+                log_fatal_database_error("DATABASE_SYNC", "Database rebuild failed", &e);
+                return Err(e);
+            } else {
+                log_database_success(
+                    "DATABASE_SYNC",
+                    "Database successfully rebuilt from filesystem!",
+                );
+            }
+        }
+        Err(e) => {
+            log(
+                "DATABASE_SYNC",
+                "⚠️  Filesystem sync check failed. Continuing without rebuild.",
+                Some(&e.to_string()),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn handle_database_initialization_failure(
+    app_state: &AppState,
+    e: crate::core::AppError,
+) -> AppResult<()> {
+    let is_new_db = is_new_database();
+
+    if is_new_db {
+        log("DATABASE_INIT", "🔧 Creating new database...", None);
+    } else {
+        log(
+            "DATABASE_INIT",
+            "❌ CRITICAL: Database initialization failed",
+            Some(&e.to_string()),
+        );
+        log(
+            "DATABASE_RECOVERY",
+            "🔄 Attempting automatic database recovery...",
+            None,
+        );
+    }
+
+    if let Err(recovery_error) = recreate_database(app_state) {
+        if is_new_db {
+            log_fatal_database_error(
+                "DATABASE_INIT",
+                "Failed to create new database",
+                &recovery_error,
+            );
+        } else {
+            log_fatal_database_error(
+                "DATABASE_RECOVERY",
+                "Database recovery failed",
+                &recovery_error,
+            );
+        }
+        return Err(recovery_error);
+    } else {
+        if is_new_db {
+            log_database_success("DATABASE_INIT", "New database created successfully!");
+        } else {
+            log_database_success("DATABASE_RECOVERY", "Database successfully recovered!");
+        }
+    }
+    Ok(())
+}
+
+fn initialize_database_schema(app_state: &AppState) -> AppResult<()> {
+    with_db(app_state, |conn| init_db(conn).map_err(|e| e.into()))
+}
+
+fn prepare_database_environment() -> () {
+    if let Ok(db_path) = crate::database::get_database_path() {
+        if let Some(parent) = db_path.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                log(
+                    "INIT_ERROR",
+                    &format!("Failed to create database directory: {:?}", parent),
+                    Some(&e.to_string()),
+                );
+            }
+        }
+    }
+
+    if let Err(e) = crate::utilities::file_safety::cleanup_temp_files() {
+        log(
+            "INIT_CLEANUP",
+            "Failed to clean up temp files during initialization",
+            Some(&e.to_string()),
+        );
+    }
+}
+
+pub fn initialize_application_database(app_state: &AppState) -> AppResult<()> {
+    prepare_database_environment();
+
+    let init_result = initialize_database_schema(app_state);
+
+    if let Err(e) = init_result {
+        handle_database_initialization_failure(app_state, e)?;
+    } else {
+        validate_and_sync_filesystem(app_state)?;
+    }
+
+    cleanup_database_if_no_config(app_state);
+
+    Ok(())
+}
+
 pub fn handle_database_recovery(
     app_state: &crate::core::state::AppState,
     operation_description: &str,
