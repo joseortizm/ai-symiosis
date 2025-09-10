@@ -374,65 +374,76 @@ export function createContentNavigationManager(
     })
   }
 
-  function navigateNext(): void {
-    const elements = getCurrentNavigationElements()
+  function navigateGeneric(
+    getElements: () => Element[],
+    getIndex: () => number,
+    setIndex: (index: number) => void,
+    scrollTo: (element: Element) => void,
+    direction: 'next' | 'previous'
+  ): void {
+    const elements = getElements()
     if (elements.length === 0) return
 
-    // If no current position, start with first element
-    if (state.currentIndex === -1) {
-      state.currentIndex = 0
-      scrollToElement(elements[state.currentIndex])
-      return
+    let index = getIndex()
+    if (index === -1) {
+      index = 0
+    } else {
+      index =
+        direction === 'next'
+          ? Math.min(index + 1, elements.length - 1)
+          : Math.max(index - 1, 0)
     }
 
-    // Move to next element
-    state.currentIndex = Math.min(state.currentIndex + 1, elements.length - 1)
-    scrollToElement(elements[state.currentIndex])
+    setIndex(index)
+    scrollTo(elements[index])
+  }
+
+  function navigateNext(): void {
+    navigateGeneric(
+      getCurrentNavigationElements,
+      () => state.currentIndex,
+      (index) => {
+        state.currentIndex = index
+      },
+      scrollToElement,
+      'next'
+    )
   }
 
   function navigatePrevious(): void {
-    const elements = getCurrentNavigationElements()
-    if (elements.length === 0) return
-
-    // If no current position, start with first element
-    if (state.currentIndex === -1) {
-      state.currentIndex = 0
-      scrollToElement(elements[state.currentIndex])
-      return
-    }
-
-    // Move to previous element
-    state.currentIndex = Math.max(state.currentIndex - 1, 0)
-    scrollToElement(elements[state.currentIndex])
+    navigateGeneric(
+      getCurrentNavigationElements,
+      () => state.currentIndex,
+      (index) => {
+        state.currentIndex = index
+      },
+      scrollToElement,
+      'previous'
+    )
   }
 
   function navigateCodeNext(): void {
-    const elements = getCodeBlockElements()
-    if (elements.length === 0) return
-
-    if (state.codeBlockIndex === -1) {
-      state.codeBlockIndex = 0
-    } else {
-      state.codeBlockIndex = Math.min(
-        state.codeBlockIndex + 1,
-        elements.length - 1
-      )
-    }
-
-    scrollToCodeBlock(elements[state.codeBlockIndex])
+    navigateGeneric(
+      getCodeBlockElements,
+      () => state.codeBlockIndex,
+      (index) => {
+        state.codeBlockIndex = index
+      },
+      scrollToCodeBlock,
+      'next'
+    )
   }
 
   function navigateCodePrevious(): void {
-    const elements = getCodeBlockElements()
-    if (elements.length === 0) return
-
-    if (state.codeBlockIndex === -1) {
-      state.codeBlockIndex = 0
-    } else {
-      state.codeBlockIndex = Math.max(state.codeBlockIndex - 1, 0)
-    }
-
-    scrollToCodeBlock(elements[state.codeBlockIndex])
+    navigateGeneric(
+      getCodeBlockElements,
+      () => state.codeBlockIndex,
+      (index) => {
+        state.codeBlockIndex = index
+      },
+      scrollToCodeBlock,
+      'previous'
+    )
   }
 
   function scrollToLink(element: Element): void {
@@ -470,41 +481,37 @@ export function createContentNavigationManager(
   }
 
   function navigateLinkNext(): void {
-    const elements = getLinkElements()
-    if (elements.length === 0) return
-
-    // Clear any existing navigation state before switching to link mode
     if (state.navigationMode !== 'links') {
       resetNavigation()
     }
-
     state.navigationMode = 'links'
-    if (state.linkIndex === -1) {
-      state.linkIndex = 0
-    } else {
-      state.linkIndex = Math.min(state.linkIndex + 1, elements.length - 1)
-    }
 
-    scrollToLink(elements[state.linkIndex])
+    navigateGeneric(
+      getLinkElements,
+      () => state.linkIndex,
+      (index) => {
+        state.linkIndex = index
+      },
+      scrollToLink,
+      'next'
+    )
   }
 
   function navigateLinkPrevious(): void {
-    const elements = getLinkElements()
-    if (elements.length === 0) return
-
-    // Clear any existing navigation state before switching to link mode
     if (state.navigationMode !== 'links') {
       resetNavigation()
     }
-
     state.navigationMode = 'links'
-    if (state.linkIndex === -1) {
-      state.linkIndex = 0
-    } else {
-      state.linkIndex = Math.max(state.linkIndex - 1, 0)
-    }
 
-    scrollToLink(elements[state.linkIndex])
+    navigateGeneric(
+      getLinkElements,
+      () => state.linkIndex,
+      (index) => {
+        state.linkIndex = index
+      },
+      scrollToLink,
+      'previous'
+    )
   }
 
   function isUrl(href: string): boolean {
