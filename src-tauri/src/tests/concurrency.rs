@@ -3,8 +3,8 @@
 //! Tests for concurrent access patterns and multi-user scenarios.
 
 use crate::config::*;
-use crate::database::get_database_path;
 use crate::utilities::note_renderer::render_note;
+use crate::utilities::paths::get_database_path;
 use crate::utilities::paths::{get_config_path, get_default_notes_dir};
 use crate::utilities::validation::{validate_config, validate_note_name, validate_shortcut_format};
 use std::sync::{Arc, Mutex};

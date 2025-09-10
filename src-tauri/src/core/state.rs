@@ -62,7 +62,7 @@ impl AppState {
 
     fn new_with_recovery(config: AppConfig) -> AppResult<Self> {
         // Try to delete the corrupted database and start fresh
-        if let Ok(db_path) = crate::database::get_database_path() {
+        if let Ok(db_path) = crate::utilities::paths::get_database_path() {
             if db_path.exists() {
                 if let Err(e) = std::fs::remove_file(&db_path) {
                     log(

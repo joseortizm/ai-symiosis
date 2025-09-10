@@ -1,3 +1,4 @@
+use crate::core::{AppError, AppResult};
 use std::path::PathBuf;
 
 pub fn encode_path_for_backup(notes_dir: &std::path::Path) -> String {
@@ -112,4 +113,34 @@ pub fn get_config_path() -> PathBuf {
     } else {
         PathBuf::from(".symiosis/config.toml")
     }
+}
+
+pub fn get_database_path() -> AppResult<PathBuf> {
+    let notes_dir = crate::config::get_config_notes_dir();
+    get_database_path_for_notes_dir(&notes_dir)
+}
+
+pub fn get_database_path_for_notes_dir(notes_dir: &std::path::Path) -> AppResult<PathBuf> {
+    let encoded_path = encode_path_for_backup(notes_dir);
+    get_data_dir()
+        .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
+        .map(|path| {
+            path.join("symiosis")
+                .join("databases")
+                .join(encoded_path)
+                .join("notes.sqlite")
+        })
+}
+
+pub fn get_backup_dir_for_notes_path(notes_dir: &std::path::Path) -> AppResult<PathBuf> {
+    let encoded_path = encode_path_for_backup(notes_dir);
+    get_data_dir()
+        .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
+        .map(|path| path.join("symiosis").join("backups").join(encoded_path))
+}
+
+pub fn get_temp_dir() -> AppResult<PathBuf> {
+    get_data_dir()
+        .ok_or_else(|| AppError::ConfigLoad("Failed to get data directory".to_string()))
+        .map(|path| path.join("symiosis").join("temp"))
 }

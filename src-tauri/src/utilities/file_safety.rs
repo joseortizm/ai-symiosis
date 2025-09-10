@@ -1,8 +1,8 @@
 use crate::{
     config::get_config_notes_dir,
     core::{AppError, AppResult},
-    database::{get_backup_dir_for_notes_path, get_temp_dir},
     logging::log,
+    utilities::paths::{get_backup_dir_for_notes_path, get_temp_dir},
 };
 use std::{
     fs,

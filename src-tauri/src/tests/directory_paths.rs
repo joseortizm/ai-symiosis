@@ -2,7 +2,7 @@
 //!
 //! Tests for directory path functions and platform-specific behavior.
 
-use crate::database::get_database_path;
+use crate::utilities::paths::get_database_path;
 use crate::utilities::paths::{get_config_path, get_data_dir, get_default_notes_dir};
 
 #[test]

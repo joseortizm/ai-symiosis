@@ -390,7 +390,7 @@ fn log_database_success(category: &str, message: &str) {
 }
 
 fn is_new_database() -> bool {
-    let db_path = crate::database::get_database_path().unwrap_or_default();
+    let db_path = crate::utilities::paths::get_database_path().unwrap_or_default();
     !db_path.exists()
 }
 
@@ -489,7 +489,7 @@ fn initialize_database_schema(app_state: &AppState) -> AppResult<()> {
 }
 
 fn prepare_database_environment() -> () {
-    if let Ok(db_path) = crate::database::get_database_path() {
+    if let Ok(db_path) = crate::utilities::paths::get_database_path() {
         if let Some(parent) = db_path.parent() {
             if let Err(e) = std::fs::create_dir_all(parent) {
                 log(

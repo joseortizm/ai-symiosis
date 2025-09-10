@@ -39,7 +39,7 @@ pub fn get_note_versions(
 
         let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
         let notes_dir = std::path::PathBuf::from(&config.notes_directory);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
+        let backup_dir = crate::utilities::paths::get_backup_dir_for_notes_path(&notes_dir)?;
         if !backup_dir.exists() {
             return Ok(Vec::new());
         }
@@ -90,7 +90,7 @@ pub fn get_version_content(
     let result = || -> AppResult<String> {
         let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
         let notes_dir = std::path::PathBuf::from(&config.notes_directory);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
+        let backup_dir = crate::utilities::paths::get_backup_dir_for_notes_path(&notes_dir)?;
         let version_path = backup_dir.join(version_filename);
 
         if !version_path.exists() {
@@ -118,7 +118,7 @@ pub fn recover_note_version(
         let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
         let notes_dir = std::path::PathBuf::from(&config.notes_directory);
         let note_path = notes_dir.join(note_name);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
+        let backup_dir = crate::utilities::paths::get_backup_dir_for_notes_path(&notes_dir)?;
         let version_path = backup_dir.join(version_filename);
 
         if !version_path.exists() {
@@ -156,7 +156,7 @@ pub fn get_deleted_files(
     let result = || -> AppResult<Vec<DeletedFile>> {
         let config = app_state.config.read().unwrap_or_else(|e| e.into_inner());
         let notes_dir = std::path::PathBuf::from(&config.notes_directory);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
+        let backup_dir = crate::utilities::paths::get_backup_dir_for_notes_path(&notes_dir)?;
         if !backup_dir.exists() {
             return Ok(Vec::new());
         }
@@ -221,7 +221,7 @@ pub fn recover_deleted_file(
             )),
         );
         let note_path = notes_dir.join(original_filename);
-        let backup_dir = crate::database::get_backup_dir_for_notes_path(&notes_dir)?;
+        let backup_dir = crate::utilities::paths::get_backup_dir_for_notes_path(&notes_dir)?;
         let backup_path = backup_dir.join(backup_filename);
 
         if !backup_path.exists() {

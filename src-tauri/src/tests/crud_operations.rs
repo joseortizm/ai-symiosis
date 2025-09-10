@@ -436,7 +436,7 @@ mod serial_tests {
 
         // Verify backup was created (check backup directory structure)
         let backup_result =
-            crate::database::get_backup_dir_for_notes_path(&_test_config.notes_dir());
+            crate::utilities::paths::get_backup_dir_for_notes_path(&_test_config.notes_dir());
         if let Ok(backup_dir) = backup_result {
             // Look for backup files
             if backup_dir.exists() {

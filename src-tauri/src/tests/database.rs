@@ -3,10 +3,10 @@
 //! Tests for database integration functionality and backup systems.
 
 use crate::config::get_config_notes_dir;
-use crate::database::{
+use crate::utilities::paths::encode_path_for_backup;
+use crate::utilities::paths::{
     get_backup_dir_for_notes_path, get_database_path_for_notes_dir, get_temp_dir,
 };
-use crate::utilities::paths::encode_path_for_backup;
 use std::path::PathBuf;
 
 #[test]
