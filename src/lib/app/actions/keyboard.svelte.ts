@@ -4,7 +4,6 @@
  * Maps key combinations to business logic functions across different UI contexts.
  */
 
-// Type definitions
 export interface KeyboardActionDeps {
   focusManager: ReturnType<
     typeof import('../../core/focusManager.svelte').createFocusManager

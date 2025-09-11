@@ -38,7 +38,6 @@ interface SearchManager {
   abort(): void
 }
 
-// Manager factory function
 export function createSearchManager(deps: SearchManagerDeps): SearchManager {
   const state = $state<SearchState>({
     searchInput: '',
@@ -48,10 +47,7 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     filteredNotes: [],
   })
 
-  // Callback storage
   let onSearchCompleteCallback: ((notes: string[]) => void) | null = null
-
-  // Private helper functions
   async function performSearch(query: string): Promise<void> {
     if (state.requestController) {
       state.requestController.abort()
@@ -91,7 +87,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
       if (value.length < 3) {
         state.query = ''
-        // Show recent notes by searching with empty string
         state.searchTimeout = setTimeout(async () => {
           await performSearch('')
         }, 100)
@@ -113,14 +108,11 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
     setSearchInput('')
   }
 
-  // Public API
   return {
-    // Core operations
     setSearchInput,
     setFilteredNotes,
     clearSearch,
 
-    // State getters/setters
     get isLoading(): boolean {
       return deps.progressManager.isLoading
     },
@@ -137,12 +129,10 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
       return state.query
     },
 
-    // Callback management
     setSearchCompleteCallback(callback: (notes: string[]) => void): void {
       onSearchCompleteCallback = callback
     },
 
-    // Advanced search operations
     async searchImmediate(query: string): Promise<string[]> {
       await performSearch(query)
       return state.filteredNotes
@@ -152,7 +142,6 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
       return results
     },
 
-    // Cleanup
     abort(): void {
       if (state.searchTimeout !== undefined) {
         clearTimeout(state.searchTimeout)

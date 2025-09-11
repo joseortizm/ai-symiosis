@@ -137,12 +137,10 @@ describe('editorManager', () => {
     const mockNoteName = 'test-note.md'
 
     it('should save note content via API', async () => {
-      // Setup: enter edit mode first
       mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode(mockNoteName)
       editorManager.updateContent('modified content')
 
-      // Test: save the note
       mockNoteService.save.mockResolvedValue(undefined)
 
       const result = await editorManager.saveNote()
@@ -157,12 +155,10 @@ describe('editorManager', () => {
     })
 
     it('should return error if save fails', async () => {
-      // Setup: enter edit mode first
       mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode(mockNoteName)
       editorManager.updateContent('modified content')
 
-      // Test: simulate save failure
       const error = new Error('Save failed')
       mockNoteService.save.mockRejectedValue(error)
 
@@ -182,12 +178,10 @@ describe('editorManager', () => {
     })
 
     it('should handle empty content', async () => {
-      // Setup: enter edit mode first
       mockNoteService.getRawContent.mockResolvedValue('original content')
       await editorManager.enterEditMode(mockNoteName)
       editorManager.updateContent('')
 
-      // Test: save with empty content
       mockNoteService.save.mockResolvedValue(undefined)
       const result = await editorManager.saveNote()
 

@@ -4,7 +4,6 @@
  * Tracks focused elements and provides programmatic focus control.
  */
 
-// Type definitions
 interface FocusState {
   isSearchInputFocused: boolean
   isNoteContentFocused: boolean
@@ -34,7 +33,6 @@ export interface FocusManager {
   scrollToIndex(selectedIndex: number): void
 }
 
-// Manager factory function
 export function createFocusManager(): FocusManager {
   const state = $state<FocusState>({
     isSearchInputFocused: false,
@@ -44,8 +42,6 @@ export function createFocusManager(): FocusManager {
     noteContentElement: null,
     noteListElement: null,
   })
-
-  // Private helper functions
   function scrollToSelectedInList(selectedIndex: number): void {
     if (state.noteListElement && selectedIndex >= 0) {
       const selectedButton =
@@ -60,9 +56,7 @@ export function createFocusManager(): FocusManager {
     scrollToSelectedInList(selectedIndex)
   }
 
-  // Public API
   return {
-    // State getters
     get isSearchInputFocused(): boolean {
       return state.isSearchInputFocused
     },
@@ -82,7 +76,6 @@ export function createFocusManager(): FocusManager {
       return state.noteListElement
     },
 
-    // Focus state setters
     setSearchInputFocused(value: boolean): void {
       state.isSearchInputFocused = value
     },
@@ -93,7 +86,6 @@ export function createFocusManager(): FocusManager {
       state.selectedIndex = index
     },
 
-    // Element setters
     setSearchElement(element: HTMLInputElement | null): void {
       state.searchElement = element
     },
@@ -104,12 +96,10 @@ export function createFocusManager(): FocusManager {
       state.noteListElement = element
     },
 
-    // Focus actions
     focusSearch(): void {
       state.searchElement?.focus()
     },
 
-    // Scroll actions
     scrollNoteContentUp(): void {
       state.noteContentElement?.scrollBy({
         top: -50,

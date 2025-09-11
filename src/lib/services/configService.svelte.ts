@@ -6,7 +6,6 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
-// Configuration type definitions
 export interface GeneralConfig {
   [key: string]: unknown
 }

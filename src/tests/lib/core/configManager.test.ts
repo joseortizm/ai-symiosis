@@ -19,7 +19,6 @@ describe('configManager', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
 
-    // Get the mocked functions
     const { invoke } = await import('@tauri-apps/api/core')
     const { listen } = await import('@tauri-apps/api/event')
     mockInvoke = invoke as ReturnType<typeof vi.fn>

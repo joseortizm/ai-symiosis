@@ -10,12 +10,10 @@ pub fn with_programmatic_flag<T, F>(
 where
     F: FnOnce() -> AppResult<T>,
 {
-    // Set flag immediately
     app_state
         .programmatic_operation_in_progress()
         .store(true, std::sync::atomic::Ordering::Relaxed);
 
-    // Execute operation (this is still synchronous and fast)
     let result = operation();
 
     // Spawn background thread to clear flag after delay - NON-BLOCKING

@@ -813,7 +813,6 @@ export function createContentNavigationManager(
       return `${'#'.repeat(level)} ${content}`
     }
 
-    // Your previous logic for finding the header:
     let header: Element | null = null
 
     if (state.navigationMode === 'headers' && state.currentElement) {

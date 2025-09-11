@@ -34,7 +34,6 @@ export interface RecentlyDeletedManager {
   recoverFile(filename: string): Promise<void>
 }
 
-// Manager factory function
 export function createRecentlyDeletedManager(
   deps: RecentlyDeletedManagerDeps
 ): RecentlyDeletedManager {
@@ -45,8 +44,6 @@ export function createRecentlyDeletedManager(
     isLoading: false,
     error: null,
   })
-
-  // Dialog operations
   async function openDialog(): Promise<void> {
     state.isVisible = true
     state.selectedIndex = 0
@@ -63,7 +60,6 @@ export function createRecentlyDeletedManager(
     deps.focusSearch()
   }
 
-  // File loading - private helper
   async function loadDeletedFiles(): Promise<void> {
     state.isLoading = true
     state.error = null
@@ -74,7 +70,6 @@ export function createRecentlyDeletedManager(
       if (result.success && result.files) {
         state.files = result.files
 
-        // Auto-select first file if available
         if (state.files.length > 0) {
           state.selectedIndex = 0
         }
@@ -90,7 +85,6 @@ export function createRecentlyDeletedManager(
     }
   }
 
-  // Navigation operations
   function selectFile(index: number): void {
     if (index >= 0 && index < state.files.length) {
       state.selectedIndex = index
@@ -109,13 +103,11 @@ export function createRecentlyDeletedManager(
     }
   }
 
-  // Recovery operations
   async function recoverFile(filename: string): Promise<void> {
     state.isLoading = true
     state.error = null
 
     try {
-      // Find the file in our list to get the backup filename
       const deletedFile = state.files.find((f) => f.filename === filename)
       if (!deletedFile) {
         throw new Error(`File not found in deleted files list: ${filename}`)
@@ -127,18 +119,14 @@ export function createRecentlyDeletedManager(
       )
 
       if (result.success) {
-        // Remove recovered file from list
         state.files = state.files.filter((f) => f.filename !== filename)
 
-        // Adjust selected index if needed
         if (state.selectedIndex >= state.files.length) {
           state.selectedIndex = Math.max(0, state.files.length - 1)
         }
 
-        // Refresh the database and UI to show the recovered file
         await deps.refreshCacheAndUI()
 
-        // Close dialog if no more files
         if (state.files.length === 0) {
           closeDialog()
         }

@@ -89,7 +89,6 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = htmlContent
 
-    // Convert HTML to text with proper line breaks
     let extractedContent = ''
     const walker = document.createTreeWalker(
       tempDiv,
@@ -113,7 +112,6 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
       }
     }
 
-    // Clean up extra whitespace and normalize line breaks
     return extractedContent.replace(/\n\n+/g, '\n\n').trim()
   }
 
@@ -173,7 +171,6 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
   }
 
   return {
-    // Reactive getters
     get isEditMode() {
       return state.isEditMode
     },
@@ -194,7 +191,6 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
       return state.editingNoteName
     },
 
-    // Actions
     enterEditMode,
     exitEditMode,
     updateContent,

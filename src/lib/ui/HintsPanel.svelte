@@ -1,7 +1,6 @@
 <!--
 UI Layer - Hints Panel
 Keyboard shortcuts overlay panel for displaying current key bindings.
-Shows configured shortcuts with proper theming and overlay styling.
 -->
 
 <script lang="ts">

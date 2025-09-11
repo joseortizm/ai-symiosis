@@ -167,8 +167,6 @@ describe('Editor Bindable Property Issue Documentation', () => {
         console.error(
           'This will cause runtime errors when users type in the editor!'
         )
-      } else {
-        // Verified: CodeMirrorEditor.svelte does not contain problematic bindable assignments
       }
 
       // This assertion will FAIL if problematic code is present, PASS if it's fixed

@@ -1,9 +1,3 @@
-/**
- * Core Layer - Config State Manager
- * Reactive configuration state management with real-time updates from backend.
- * Listens to Tauri config-changed events and provides reactive access to config values.
- * Also handles theme management for UI and markdown rendering.
- */
 
 import { listen } from '@tauri-apps/api/event'
 import { configService } from '../services/configService.svelte'
@@ -133,7 +127,6 @@ export function createConfigManager(): ConfigManager {
   }
 
   function applyInterfaceConfig(interfaceConfig: InterfaceConfig): void {
-    // Apply font configuration
     const root = document.documentElement
     root.style.setProperty('--theme-font-family', interfaceConfig.font_family)
     root.style.setProperty(
@@ -152,13 +145,11 @@ export function createConfigManager(): ConfigManager {
 
   async function loadTheme(theme: string): Promise<void> {
     try {
-      // Remove existing UI theme
       const existingLink = document.head.querySelector('link[data-ui-theme]')
       if (existingLink) {
         existingLink.remove()
       }
 
-      // Validate theme
       if (validUIThemes.length > 0 && !validUIThemes.includes(theme)) {
         console.warn(
           `Unknown UI theme: ${theme}. Using gruvbox-dark as default.`
@@ -166,7 +157,6 @@ export function createConfigManager(): ConfigManager {
         theme = 'gruvbox-dark'
       }
 
-      // Create new UI theme link
       const link = document.createElement('link')
       link.rel = 'stylesheet'
       link.href = `/css/ui-themes/ui-${theme}.css`
@@ -174,10 +164,9 @@ export function createConfigManager(): ConfigManager {
 
       document.head.appendChild(link)
 
-      // Wait for theme to load
       await new Promise<void>((resolve) => {
         link.onload = () => resolve()
-        link.onerror = () => resolve() // Don't fail on theme load errors
+        link.onerror = () => resolve()
       })
     } catch (e) {
       console.error('Failed to load UI theme:', e)
@@ -186,7 +175,6 @@ export function createConfigManager(): ConfigManager {
 
   async function loadMarkdownTheme(theme: string): Promise<void> {
     try {
-      // Remove existing theme
       const existingLink = document.head.querySelector(
         'link[data-markdown-theme]'
       )
@@ -194,7 +182,6 @@ export function createConfigManager(): ConfigManager {
         existingLink.remove()
       }
 
-      // Create new theme link
       const link = document.createElement('link')
       link.rel = 'stylesheet'
       link.href = `/css/md_render_themes/${theme}.css`
@@ -202,10 +189,9 @@ export function createConfigManager(): ConfigManager {
 
       document.head.appendChild(link)
 
-      // Wait for theme to load
       await new Promise<void>((resolve) => {
         link.onload = () => resolve()
-        link.onerror = () => resolve() // Don't fail on theme load errors
+        link.onerror = () => resolve()
       })
     } catch (e) {
       console.error('Failed to load markdown theme:', e)
@@ -214,7 +200,6 @@ export function createConfigManager(): ConfigManager {
 
   async function loadHighlightJSTheme(theme: string): Promise<void> {
     try {
-      // Remove existing code theme
       const existingLink = document.head.querySelector(
         'link[data-highlight-theme]'
       )
@@ -232,7 +217,7 @@ export function createConfigManager(): ConfigManager {
           'gruvbox-light-hard',
           'gruvbox-light-medium',
           'gruvbox-light-soft',
-          'base16-', // All themes starting with base16-
+          'base16-',
         ]
 
         const isBase16Theme = base16Themes.some((prefix) =>
@@ -242,11 +227,9 @@ export function createConfigManager(): ConfigManager {
         if (isBase16Theme) {
           return `base16/${themeName}.css`
         }
-        // Regular themes
         return `${themeName}.css`
       }
 
-      // Create new theme link - load from static directory
       const link = document.createElement('link')
       link.rel = 'stylesheet'
       link.href = `/highlight-js-themes/${getThemePath(theme)}`
@@ -254,12 +237,11 @@ export function createConfigManager(): ConfigManager {
 
       document.head.appendChild(link)
 
-      // Wait for theme to load
       await new Promise<void>((resolve) => {
         link.onload = () => resolve()
         link.onerror = () => {
           console.warn(`Failed to load highlight.js theme: ${theme}`)
-          resolve() // Don't fail on theme load errors
+          resolve()
         }
       })
     } catch (e) {
@@ -306,7 +288,6 @@ export function createConfigManager(): ConfigManager {
     state.error = null
 
     try {
-      // Get initial config values
       const [
         generalConfig,
         interfaceConfig,
@@ -329,7 +310,6 @@ export function createConfigManager(): ConfigManager {
       state.shortcuts = shortcutsConfig
       state.preferences = preferencesConfig
 
-      // Initialize themes
       applyInterfaceConfig(interfaceConfig)
       await loadTheme(interfaceConfig.ui_theme)
       await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
@@ -359,10 +339,8 @@ export function createConfigManager(): ConfigManager {
     state.error = null
 
     try {
-      // Force refresh from backend
       await configService.refreshCache()
 
-      // Get fresh config values
       const [
         generalConfig,
         interfaceConfig,
@@ -383,7 +361,6 @@ export function createConfigManager(): ConfigManager {
       state.shortcuts = shortcutsConfig
       state.preferences = preferencesConfig
 
-      // Reapply themes
       if (state.isThemeInitialized) {
         applyInterfaceConfig(interfaceConfig)
         await loadTheme(interfaceConfig.ui_theme)
@@ -487,7 +464,6 @@ export function createConfigManager(): ConfigManager {
       return state.interface.md_render_code_theme
     },
 
-    // Actions
     initialize,
     cleanup,
     forceRefresh,

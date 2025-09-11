@@ -41,7 +41,6 @@ export interface VersionExplorerManager {
   recoverSelectedVersion(): Promise<void>
 }
 
-// Manager factory function
 export function createVersionExplorerManager(
   deps: VersionExplorerManagerDeps
 ): VersionExplorerManager {
@@ -54,8 +53,6 @@ export function createVersionExplorerManager(
     isLoadingPreview: false,
     error: null,
   })
-
-  // Version Explorer operations
   async function openVersionExplorer(noteName: string): Promise<void> {
     state.selectedNote = noteName
     state.selectedVersionIndex = 0
@@ -76,7 +73,6 @@ export function createVersionExplorerManager(
     deps.focusSearch()
   }
 
-  // Version loading operations - private helper
   async function loadVersions(): Promise<void> {
     if (!state.selectedNote) return
 
@@ -89,7 +85,6 @@ export function createVersionExplorerManager(
       if (result.success && result.versions) {
         state.versions = result.versions
 
-        // Auto-select first version if available
         if (state.versions.length > 0) {
           state.selectedVersionIndex = 0
           await loadPreviewContent()
@@ -104,7 +99,6 @@ export function createVersionExplorerManager(
     }
   }
 
-  // Preview content operations - private helper
   async function loadPreviewContent(): Promise<void> {
     if (
       state.versions.length === 0 ||
@@ -133,7 +127,6 @@ export function createVersionExplorerManager(
     }
   }
 
-  // Version selection operations
   async function selectVersion(index: number): Promise<void> {
     if (index >= 0 && index < state.versions.length) {
       state.selectedVersionIndex = index
@@ -153,7 +146,6 @@ export function createVersionExplorerManager(
     }
   }
 
-  // Recovery operations
   async function recoverSelectedVersion(): Promise<void> {
     if (
       !state.selectedNote ||

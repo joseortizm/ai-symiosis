@@ -5,7 +5,6 @@
 
 import type { Extension } from '@codemirror/state'
 
-// Import all themes from the bundle
 import {
   abcdef,
   abyss,
@@ -32,7 +31,6 @@ import {
   vsCodeLight,
 } from '@fsegurai/codemirror-theme-bundle'
 
-// Theme mapping
 const themes: Record<string, Extension> = {
   abcdef: abcdef,
   abyss: abyss,

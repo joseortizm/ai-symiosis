@@ -33,7 +33,6 @@ describe('editorManager integration', () => {
 
   describe('real API compatibility', () => {
     it('should call correct save_note_with_content_check API endpoint', async () => {
-      // Setup: enter edit mode with a note
       mockInvoke.mockResolvedValue('test content')
       await editorManager.enterEditMode('test.md')
       editorManager.updateContent('modified content')
@@ -79,7 +78,6 @@ describe('editorManager integration', () => {
     })
 
     it('should handle missing content gracefully like real save', async () => {
-      // Setup: empty content case
       mockInvoke.mockResolvedValue('')
       await editorManager.enterEditMode('empty.md')
       // editorManager.updateContent(''); // Keep empty
@@ -98,7 +96,6 @@ describe('editorManager integration', () => {
 
   describe('editor workflow integration', () => {
     it('should save but NOT exit editor mode (save only)', async () => {
-      // Setup: enter edit mode
       mockInvoke.mockResolvedValue('test content')
       await editorManager.enterEditMode('test.md')
       editorManager.updateContent('modified content')
@@ -118,7 +115,6 @@ describe('editorManager integration', () => {
     })
 
     it('should allow saving and exiting separately for clean architecture', async () => {
-      // Setup: enter edit mode
       mockInvoke.mockResolvedValue('test content')
       await editorManager.enterEditMode('test.md')
       editorManager.updateContent('modified content')

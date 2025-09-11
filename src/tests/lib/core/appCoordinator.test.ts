@@ -264,14 +264,12 @@ describe('appCoordinator', () => {
     })
 
     it('should provide reactive state that updates when state changes', async () => {
-      // Get initial state
       let state = appCoordinator.state
       expect(state.filteredNotes).toEqual([])
 
       // Simulate state change (like what happens during initialization)
       appCoordinator.updateFilteredNotes(['test1.md', 'test2.md'])
 
-      // Get state again - this should reflect the updated state
       state = appCoordinator.state
       expect(state.filteredNotes).toEqual(['test1.md', 'test2.md'])
     })

@@ -1,7 +1,6 @@
 /**
  * App Layer - Application Coordinator
  * Central coordinator for app-wide state, actions, and effects.
- * Maintains separation of concerns across the application architecture.
  */
 
 import { tick } from 'svelte'
@@ -213,18 +212,15 @@ export function createAppCoordinator(
   }
 
   async function loadNoteContent(note: string): Promise<void> {
-    // Cancel previous content request
     if (contentRequestController) {
       contentRequestController.abort()
     }
 
-    // Increment sequence to track this request
     const currentSequence = ++contentRequestSequence
 
     contentNavigationManager.resetNavigation()
 
     if (!note) {
-      // Only update if this is still the latest request
       if (currentSequence === contentRequestSequence) {
         contentManager.setNoteContent('')
       }
@@ -291,11 +287,8 @@ export function createAppCoordinator(
   })
 
   async function refreshUI(): Promise<void> {
-    // Delegate to search manager to refresh and update results
     await searchManager.refreshSearch('')
-    // Clear content through content manager
     contentManager.setNoteContent('')
-    // Reset focus through focus manager
     focusManager.setSelectedIndex(0)
   }
 
@@ -306,7 +299,6 @@ export function createAppCoordinator(
     const result = await configService.save()
 
     if (result.success) {
-      // Delegate search refresh to search manager instead of direct operations
       await searchManager.refreshSearch('')
       focusManager.focusSearch()
     }
@@ -491,7 +483,6 @@ export function createAppCoordinator(
       if (!configExists) {
         await settingsActions.openSettingsPane()
       } else {
-        // Initialize notes database with progress
         const result = await noteService.initializeDatabase()
         if (!result.success) {
           console.error('Failed to initialize notes:', result.error)
