@@ -49,55 +49,102 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
   let onSearchCompleteCallback: ((notes: string[]) => void) | null = null
   async function performSearch(query: string): Promise<void> {
+    const searchController = setupSearchRequest()
+
+    try {
+      await executeSearchRequest(query, searchController)
+    } catch (e) {
+      handleSearchError(e, searchController)
+    }
+  }
+
+  function setupSearchRequest(): AbortController {
     if (state.requestController) {
       state.requestController.abort()
     }
 
     state.requestController = new AbortController()
-    const currentController = state.requestController
+    return state.requestController
+  }
 
-    try {
-      deps.progressManager.start('Searching notes...', 'subtle')
-      const notes = await deps.noteService.search(query)
+  async function executeSearchRequest(
+    query: string,
+    controller: AbortController
+  ): Promise<void> {
+    deps.progressManager.start('Searching notes...', 'subtle')
+    const notes = await deps.noteService.search(query)
 
-      if (currentController.signal.aborted) {
-        return
-      }
+    if (controller.signal.aborted) {
+      return
+    }
 
-      state.filteredNotes = notes
-      onSearchCompleteCallback?.(notes)
-      deps.progressManager.complete()
-    } catch (e) {
-      if (!currentController.signal.aborted) {
-        console.error('❌ Failed to load notes:', e)
-        deps.progressManager.setError('Failed to search notes')
-        state.filteredNotes = []
-        onSearchCompleteCallback?.([])
-      }
+    handleSuccessfulSearch(notes)
+  }
+
+  function handleSuccessfulSearch(notes: string[]): void {
+    state.filteredNotes = notes
+    onSearchCompleteCallback?.(notes)
+    deps.progressManager.complete()
+  }
+
+  function handleSearchError(e: unknown, controller: AbortController): void {
+    if (!controller.signal.aborted) {
+      console.error('❌ Failed to load notes:', e)
+      deps.progressManager.setError('Failed to search notes')
+      handleFailedSearch()
     }
   }
 
-  // Core search operations
+  function handleFailedSearch(): void {
+    state.filteredNotes = []
+    onSearchCompleteCallback?.([])
+  }
+
   function setSearchInput(value: string): void {
     if (value !== state.searchInput) {
-      clearTimeout(state.searchTimeout)
-      state.requestController?.abort()
-
-      state.searchInput = value
-
-      if (value.length < 3) {
-        state.query = ''
-        state.searchTimeout = setTimeout(async () => {
-          await performSearch('')
-        }, 100)
-        return
-      }
-
-      state.searchTimeout = setTimeout(async () => {
-        state.query = state.searchInput
-        await performSearch(state.searchInput)
-      }, 100)
+      processSearchInputChange(value)
     }
+  }
+
+  function processSearchInputChange(value: string): void {
+    cleanupPreviousSearch()
+    updateSearchInputState(value)
+    scheduleSearchExecution(value)
+  }
+
+  function cleanupPreviousSearch(): void {
+    clearTimeout(state.searchTimeout)
+    state.requestController?.abort()
+  }
+
+  function updateSearchInputState(value: string): void {
+    state.searchInput = value
+  }
+
+  function scheduleSearchExecution(value: string): void {
+    if (isShortQuery(value)) {
+      scheduleEmptySearch()
+    } else {
+      scheduleFullTextSearch(value)
+    }
+  }
+
+  function isShortQuery(value: string): boolean {
+    return value.length < 3
+  }
+
+  function scheduleEmptySearch(): void {
+    state.query = ''
+    state.searchTimeout = setTimeout(async () => {
+      await performSearch('')
+    }, 100)
+  }
+
+  function scheduleFullTextSearch(_value: string): void {
+    state.searchTimeout = setTimeout(async () => {
+      state.query = state.searchInput
+      await performSearch(state.searchInput)
+    }, 100)
   }
 
   function setFilteredNotes(notes: string[]): void {

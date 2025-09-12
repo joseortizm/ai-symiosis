@@ -132,107 +132,130 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function setupVimFoldingCommands(): void {
-    // Define vim folding actions
+    defineBasicVimFoldingActions()
+    defineAdvancedVimFoldingActions()
+    mapVimFoldingKeys()
+  }
+
+  function defineBasicVimFoldingActions(): void {
     Vim.defineAction('foldClose', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
+      const view = extractEditorView(cm)
       foldCode(view)
     })
 
     Vim.defineAction('foldOpen', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
+      const view = extractEditorView(cm)
       unfoldCode(view)
     })
 
     Vim.defineAction('foldToggle', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
-      const state = view.state
-
-      // Try to unfold first, if nothing happens then fold
-      const beforeFolds = state.field(foldState, false)?.size || 0
-      unfoldCode(view)
-      const afterUnfold = view.state.field(foldState, false)?.size || 0
-
-      // If no change occurred, then nothing was unfolded, so fold instead
-      if (beforeFolds === afterUnfold) {
-        foldCode(view)
-      }
+      const view = extractEditorView(cm)
+      performFoldToggle(view)
     })
+  }
 
+  function extractEditorView(cm: unknown): any {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (cm as any).cm6 || cm
+  }
+
+  function performFoldToggle(view: any): void {
+    const state = view.state
+    const beforeFolds = state.field(foldState, false)?.size || 0
+    unfoldCode(view)
+    const afterUnfold = view.state.field(foldState, false)?.size || 0
+
+    if (beforeFolds === afterUnfold) {
+      foldCode(view)
+    }
+  }
+
+  function defineAdvancedVimFoldingActions(): void {
     Vim.defineAction('foldCloseAll', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
-      // Sensible fold like vim's zM - only fold headers (h2+), code blocks, and lists
-      const state = view.state
-      const foldRanges: { from: number; to: number }[] = []
-
-      syntaxTree(state).iterate({
-        enter(node) {
-          // Only fold sensible markdown structures
-          const shouldFold =
-            // All headers (including H1)
-            node.name === 'ATXHeading1' ||
-            node.name === 'ATXHeading2' ||
-            node.name === 'ATXHeading3' ||
-            node.name === 'ATXHeading4' ||
-            node.name === 'ATXHeading5' ||
-            node.name === 'ATXHeading6' ||
-            node.name === 'SetextHeading1' ||
-            node.name === 'SetextHeading2' ||
-            // Code blocks
-            node.name === 'FencedCode' ||
-            node.name === 'CodeBlock' ||
-            // Block quotes
-            node.name === 'Blockquote' ||
-            // Lists (but not individual list items)
-            node.name === 'BulletList' ||
-            node.name === 'OrderedList'
-
-          if (shouldFold) {
-            const isFoldable = foldable(state, node.from, node.to)
-            if (isFoldable) {
-              foldRanges.push({ from: isFoldable.from, to: isFoldable.to })
-            }
-          }
-        },
-      })
-
-      if (foldRanges.length > 0) {
-        view.dispatch({
-          effects: foldRanges.map((range) =>
-            foldEffect.of({ from: range.from, to: range.to })
-          ),
-        })
-      }
+      const view = extractEditorView(cm)
+      performSensibleFoldAll(view)
     })
 
     Vim.defineAction('foldOpenAll', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
+      const view = extractEditorView(cm)
       unfoldAll(view)
     })
 
     Vim.defineAction('foldMore', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
+      const view = extractEditorView(cm)
       foldCode(view)
     })
 
     Vim.defineAction('foldLess', (cm: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const view = (cm as any).cm6 || cm
+      const view = extractEditorView(cm)
       unfoldCode(view)
     })
+  }
 
-    // Map vim folding keys to actions
+  function performSensibleFoldAll(view: any): void {
+    const state = view.state
+    const foldRanges = collectFoldableRanges(state)
+
+    if (foldRanges.length > 0) {
+      applyFoldRanges(view, foldRanges)
+    }
+  }
+
+  function collectFoldableRanges(state: any): { from: number; to: number }[] {
+    const foldRanges: { from: number; to: number }[] = []
+
+    syntaxTree(state).iterate({
+      enter(node) {
+        if (isFoldableMarkdownNode(node)) {
+          const isFoldable = foldable(state, node.from, node.to)
+          if (isFoldable) {
+            foldRanges.push({ from: isFoldable.from, to: isFoldable.to })
+          }
+        }
+      },
+    })
+
+    return foldRanges
+  }
+
+  function isFoldableMarkdownNode(node: any): boolean {
+    const foldableNodeTypes = [
+      'ATXHeading1',
+      'ATXHeading2',
+      'ATXHeading3',
+      'ATXHeading4',
+      'ATXHeading5',
+      'ATXHeading6',
+      'SetextHeading1',
+      'SetextHeading2',
+      'FencedCode',
+      'CodeBlock',
+      'Blockquote',
+      'BulletList',
+      'OrderedList',
+    ]
+
+    return foldableNodeTypes.includes(node.name)
+  }
+
+  function applyFoldRanges(
+    view: any,
+    foldRanges: { from: number; to: number }[]
+  ): void {
+    view.dispatch({
+      effects: foldRanges.map((range) =>
+        foldEffect.of({ from: range.from, to: range.to })
+      ),
+    })
+  }
+
+  function mapVimFoldingKeys(): void {
     Vim.mapCommand('zc', 'action', 'foldClose', undefined, {})
     Vim.mapCommand('zo', 'action', 'foldOpen', undefined, {})
     Vim.mapCommand('za', 'action', 'foldToggle', undefined, {})
-    Vim.mapCommand('zC', 'action', 'foldClose', undefined, {}) // Close recursively
-    Vim.mapCommand('zO', 'action', 'foldOpen', undefined, {}) // Open recursively
-    Vim.mapCommand('zA', 'action', 'foldToggle', undefined, {}) // Toggle recursively
+    Vim.mapCommand('zC', 'action', 'foldClose', undefined, {})
+    Vim.mapCommand('zO', 'action', 'foldOpen', undefined, {})
+    Vim.mapCommand('zA', 'action', 'foldToggle', undefined, {})
     Vim.mapCommand('zM', 'action', 'foldCloseAll', undefined, {})
     Vim.mapCommand('zR', 'action', 'foldOpenAll', undefined, {})
     Vim.mapCommand('zm', 'action', 'foldMore', undefined, {})
@@ -270,25 +293,37 @@ Focused component handling CodeMirror initialization and content editing.
     if (!editorContainer) return
 
     prepareContainer()
+    initializeEditor()
+  }
 
+  function initializeEditor(): void {
     try {
-      // Setup vim folding commands if in vim mode
-      if (keyBindingMode === 'vim') {
-        setupVimFoldingCommands()
-      }
-
-      const extensions = buildEditorConfiguration()
-      const newEditorView = new EditorView({
-        doc: value || '',
-        extensions,
-        parent: editorContainer,
-      })
-
-      editorView = newEditorView
-      scrollToHeader()
+      setupVimModeIfNeeded()
+      const newEditorView = createEditorViewInstance()
+      finalizeEditorSetup(newEditorView)
     } catch (error) {
       handleCreationFailure(error)
     }
+  }
+
+  function setupVimModeIfNeeded(): void {
+    if (keyBindingMode === 'vim') {
+      setupVimFoldingCommands()
+    }
+  }
+
+  function createEditorViewInstance(): EditorView {
+    const extensions = buildEditorConfiguration()
+    return new EditorView({
+      doc: value || '',
+      extensions,
+      parent: editorContainer,
+    })
+  }
+
+  function finalizeEditorSetup(newEditorView: EditorView): void {
+    editorView = newEditorView
+    scrollToHeader()
   }
 
   function prepareContainer(): void {
@@ -298,28 +333,43 @@ Focused component handling CodeMirror initialization and content editing.
 
   function buildEditorConfiguration(): Extension[] {
     const keymaps = createKeymaps()
-    const updateListener = EditorView.updateListener.of((update) => {
+    const updateListener = createUpdateListener()
+    const customSetup = createBasicSetupConfiguration()
+    const coreExtensions = createCoreExtensions(
+      customSetup,
+      keymaps,
+      updateListener
+    )
+
+    return coreExtensions.filter((ext): ext is Extension => Boolean(ext))
+  }
+
+  function createUpdateListener(): Extension {
+    return EditorView.updateListener.of((update) => {
       if (update.docChanged) {
-        const newValue = update.state.doc.toString()
-        lastPropsValue = newValue
-        onContentChange?.(newValue)
-        const isDirty = newValue !== initialValue
-        handleDirtyChange(isDirty)
+        handleDocumentChange(update)
       }
     })
+  }
 
-    // Create custom setup based on basicSetup but with configurable line numbers
-    const customSetup = (() => {
-      if (configManager.editor.show_line_numbers) {
-        return basicSetup
-      } else {
-        // Use basicSetup but remove line numbers by adding empty array
-        // LineNumbers will be overridden by our conditional extension
-        return basicSetup
-      }
-    })()
+  function handleDocumentChange(update: any): void {
+    const newValue = update.state.doc.toString()
+    lastPropsValue = newValue
+    onContentChange?.(newValue)
+    const isDirty = newValue !== initialValue
+    handleDirtyChange(isDirty)
+  }
 
-    const extensions: Extension[] = [
+  function createBasicSetupConfiguration(): Extension {
+    return basicSetup
+  }
+
+  function createCoreExtensions(
+    customSetup: Extension,
+    keymaps: Extension[],
+    updateListener: Extension
+  ): Extension[] {
+    const baseExtensions = [
       getKeyMappingsMode(keyBindingMode),
       customSetup,
       getLanguageExtension(filename),
@@ -327,23 +377,36 @@ Focused component handling CodeMirror initialization and content editing.
       currentTheme,
       createFontExtension(editorFontFamily, editorFontSize),
       ...keymaps,
-      ...(configManager.editor.word_wrap ? [EditorView.lineWrapping] : []),
-      // Only add line numbers if not already in basicSetup and if enabled
-      ...(!configManager.editor.show_line_numbers
-        ? [
-            EditorView.theme({
-              '.cm-gutters': { display: 'none' },
-            }),
-          ]
-        : []),
+      updateListener,
+    ].filter((ext): ext is Extension => Boolean(ext))
+
+    const conditionalExtensions = createConditionalExtensions()
+    return [...baseExtensions, ...conditionalExtensions]
+  }
+
+  function createConditionalExtensions(): Extension[] {
+    const extensions: Extension[] = []
+
+    if (configManager.editor.word_wrap) {
+      extensions.push(EditorView.lineWrapping)
+    }
+
+    if (!configManager.editor.show_line_numbers) {
+      extensions.push(
+        EditorView.theme({
+          '.cm-gutters': { display: 'none' },
+        })
+      )
+    }
+
+    extensions.push(
       indentUnit.of(
         configManager.editor.expand_tabs
           ? ' '.repeat(configManager.editor.tab_size || 2)
           : '\t'
       ),
-      EditorState.tabSize.of(configManager.editor.tab_size || 2),
-      updateListener,
-    ].filter((ext): ext is Extension => Boolean(ext))
+      EditorState.tabSize.of(configManager.editor.tab_size || 2)
+    )
 
     return extensions
   }
@@ -415,32 +478,46 @@ Focused component handling CodeMirror initialization and content editing.
   function findNearestHeaderAtCursor(): string {
     if (!editorView) return ''
 
-    const doc = editorView.state.doc
-    const cursorPos = editorView.state.selection.main.head
-    const fullText = doc.toString()
+    const cursorInfo = getCursorInformation()
+    return findHeaderAboveCursor(cursorInfo.lines, cursorInfo.cursorLine)
+  }
 
+  function getCursorInformation(): { lines: string[]; cursorLine: number } {
+    const doc = editorView!.state.doc
+    const cursorPos = editorView!.state.selection.main.head
+    const fullText = doc.toString()
     const lines = fullText.split('\n')
-    let cursorLine = 0
+    const cursorLine = calculateCursorLine(lines, cursorPos)
+
+    return { lines, cursorLine }
+  }
+
+  function calculateCursorLine(lines: string[], cursorPos: number): number {
     let charCount = 0
 
     for (let i = 0; i < lines.length; i++) {
       if (charCount + lines[i].length >= cursorPos) {
-        cursorLine = i
-        break
+        return i
       }
       charCount += lines[i].length + 1
     }
 
-    let nearestHeader = ''
+    return 0
+  }
+
+  function findHeaderAboveCursor(lines: string[], cursorLine: number): string {
     for (let i = cursorLine; i >= 0; i--) {
       const line = lines[i].trim()
-      if (line.match(/^#{1,6}\s+/)) {
-        nearestHeader = line
-        break
+      if (isHeaderLine(line)) {
+        return line
       }
     }
 
-    return nearestHeader
+    return ''
+  }
+
+  function isHeaderLine(line: string): boolean {
+    return line.match(/^#{1,6}\s+/) !== null
   }
 
   function captureExitPosition(): void {
@@ -470,59 +547,98 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function scrollToHeader(): void {
-    if (nearestHeaderText.length > 2 && editorView) {
-      setTimeout(() => {
-        if (editorView) {
-          const doc = editorView.state.doc
-          const fullText = doc.toString()
-
-          function escapeRegex(text: string): string {
-            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-          }
-
-          const headerRegex = new RegExp(
-            `^${escapeRegex(nearestHeaderText)}\\s*$`,
-            'm'
-          )
-          const match = fullText.match(headerRegex)
-
-          if (match && match.index !== undefined) {
-            editorView.dispatch({
-              selection: { anchor: match.index, head: match.index },
-              effects: EditorView.scrollIntoView(match.index, {
-                y: 'start',
-                yMargin: 80,
-              }),
-            })
-          }
-
-          editorView.focus()
-        }
-      }, 150)
+    if (shouldScrollToHeaderText()) {
+      scheduleHeaderTextScroll()
     } else {
-      setTimeout(() => {
-        if (editorView) {
-          if (initialCursor) {
-            try {
-              const [line, column] = initialCursor
-              const doc = editorView.state.doc
-              const targetLine = Math.min(line, doc.lines)
-              const lineObj = doc.line(targetLine)
-              const targetColumn = Math.min(column - 1, lineObj.length)
-              const pos = lineObj.from + targetColumn
-
-              editorView.dispatch({
-                selection: { anchor: pos, head: pos },
-                effects: EditorView.scrollIntoView(pos, { y: 'center' }),
-              })
-            } catch (error) {
-              console.warn('Failed to set initial cursor position:', error)
-            }
-          }
-          editorView.focus()
-        }
-      }, 100)
+      scheduleInitialCursorScroll()
     }
+  }
+
+  function shouldScrollToHeaderText(): boolean {
+    return nearestHeaderText.length > 2 && Boolean(editorView)
+  }
+
+  function scheduleHeaderTextScroll(): void {
+    setTimeout(() => {
+      if (editorView) {
+        scrollToHeaderText()
+        editorView.focus()
+      }
+    }, 150)
+  }
+
+  function scrollToHeaderText(): void {
+    const doc = editorView!.state.doc
+    const fullText = doc.toString()
+    const match = findHeaderTextMatch(fullText)
+
+    if (match && match.index !== undefined) {
+      scrollToMatchPosition(match.index)
+    }
+  }
+
+  function findHeaderTextMatch(fullText: string): RegExpMatchArray | null {
+    const escapedHeader = escapeRegexText(nearestHeaderText)
+    const headerRegex = new RegExp(`^${escapedHeader}\\s*$`, 'm')
+    return fullText.match(headerRegex)
+  }
+
+  function escapeRegexText(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }
+
+  function scrollToMatchPosition(position: number): void {
+    editorView!.dispatch({
+      selection: { anchor: position, head: position },
+      effects: EditorView.scrollIntoView(position, {
+        y: 'start',
+        yMargin: 80,
+      }),
+    })
+  }
+
+  function scheduleInitialCursorScroll(): void {
+    setTimeout(() => {
+      if (editorView) {
+        handleInitialCursorPosition()
+        editorView.focus()
+      }
+    }, 100)
+  }
+
+  function handleInitialCursorPosition(): void {
+    if (initialCursor) {
+      setInitialCursorPosition()
+    }
+  }
+
+  function setInitialCursorPosition(): void {
+    try {
+      const [line, column] = initialCursor!
+      const doc = editorView!.state.doc
+      const pos = calculateCursorPosition(doc, line, column)
+      scrollToCursorPosition(pos)
+    } catch (error) {
+      console.warn('Failed to set initial cursor position:', error)
+    }
+  }
+
+  function calculateCursorPosition(
+    doc: any,
+    line: number,
+    column: number
+  ): number {
+    const targetLine = Math.min(line, doc.lines)
+    const lineObj = doc.line(targetLine)
+    const targetColumn = Math.min(column - 1, lineObj.length)
+    return lineObj.from + targetColumn
+  }
+
+  function scrollToCursorPosition(position: number): void {
+    editorView!.dispatch({
+      selection: { anchor: position, head: position },
+      effects: EditorView.scrollIntoView(position, { y: 'center' }),
+    })
   }
 
   let fallbackInputHandler: ((event: Event) => void) | null = null

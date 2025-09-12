@@ -211,60 +211,85 @@ export function createAppCoordinator(
     }
   }
 
-  async function loadNoteContent(note: string): Promise<void> {
+  function abortPreviousContentRequest(): void {
     if (contentRequestController) {
       contentRequestController.abort()
     }
+  }
+
+  function handleEmptyNote(currentSequence: number): void {
+    if (currentSequence === contentRequestSequence) {
+      contentManager.setNoteContent('')
+    }
+  }
+
+  function setupNewContentRequest(): AbortController {
+    const controller = new AbortController()
+    contentRequestController = controller
+    return controller
+  }
+
+  function isRequestStillValid(
+    controller: AbortController,
+    currentSequence: number
+  ): boolean {
+    return (
+      !controller.signal.aborted && currentSequence === contentRequestSequence
+    )
+  }
+
+  function scheduleScrollToFirstMatch(currentSequence: number): void {
+    requestAnimationFrame(() => {
+      if (currentSequence === contentRequestSequence) {
+        contentManager.scrollToFirstMatch()
+      }
+    })
+  }
+
+  async function handleContentLoadError(
+    error: unknown,
+    controller: AbortController,
+    currentSequence: number
+  ): Promise<void> {
+    if (!isRequestStillValid(controller, currentSequence)) {
+      return
+    }
+
+    console.error('Failed to load note content:', error)
+    const errorMessage = String(error)
+    contentManager.setNoteContent(`Error loading note: ${errorMessage}`)
+
+    if (errorMessage.includes('Note not found')) {
+      try {
+        await refreshCacheAndUI()
+      } catch (refreshError) {
+        console.error('Auto-refresh failed:', refreshError)
+      }
+    }
+  }
+
+  async function loadNoteContent(note: string): Promise<void> {
+    abortPreviousContentRequest()
 
     const currentSequence = ++contentRequestSequence
 
     contentNavigationManager.resetNavigation()
 
     if (!note) {
-      if (currentSequence === contentRequestSequence) {
-        contentManager.setNoteContent('')
-      }
+      handleEmptyNote(currentSequence)
       return
     }
 
-    const controller = new AbortController()
-    contentRequestController = controller
+    const controller = setupNewContentRequest()
 
     try {
-      // Delegate to content manager - this handles both service call and state update
       await contentManager.refreshContent(note)
 
-      // CRITICAL: Check both abort signal AND sequence to prevent race conditions
-      if (
-        !controller.signal.aborted &&
-        currentSequence === contentRequestSequence
-      ) {
-        // Trigger navigation after content is loaded - only if this is still the latest request
-        requestAnimationFrame(() => {
-          // Double-check sequence in requestAnimationFrame since it's async
-          if (currentSequence === contentRequestSequence) {
-            contentManager.scrollToFirstMatch()
-          }
-        })
+      if (isRequestStillValid(controller, currentSequence)) {
+        scheduleScrollToFirstMatch(currentSequence)
       }
     } catch (e) {
-      // Only handle error if this is still the latest request and not aborted
-      if (
-        !controller.signal.aborted &&
-        currentSequence === contentRequestSequence
-      ) {
-        console.error('Failed to load note content:', e)
-        const errorMessage = String(e)
-        contentManager.setNoteContent(`Error loading note: ${errorMessage}`)
-
-        if (errorMessage.includes('Note not found')) {
-          try {
-            await refreshCacheAndUI()
-          } catch (refreshError) {
-            console.error('Auto-refresh failed:', refreshError)
-          }
-        }
-      }
+      await handleContentLoadError(e, controller, currentSequence)
     }
   }
 
@@ -285,6 +310,124 @@ export function createAppCoordinator(
     focusSearch: () => focusManager.focusSearch(),
     refreshCacheAndUI,
   })
+
+  function setupSearchCompleteCallback(): void {
+    searchManager.setSearchCompleteCallback(async (notes: string[]) => {
+      if (notes.length > 0) {
+        focusManager.setSelectedIndex(0)
+        await loadNoteContent(notes[0])
+      }
+    })
+  }
+
+  async function setupEventListeners(): Promise<{
+    unlisten: () => void
+    unlistenCacheRefresh: () => void
+    unlistenFirstRun: () => void
+    unlistenDbLoadingStart: () => void
+    unlistenDbLoadingProgress: () => void
+    unlistenDbLoadingComplete: () => void
+    unlistenDbLoadingError: () => void
+  }> {
+    const unlisten = await listen('open-preferences', async () => {
+      await settingsActions.openSettingsPane()
+    })
+
+    const unlistenCacheRefresh = await listen('cache-refreshed', async () => {
+      await refreshUI()
+    })
+
+    const unlistenFirstRun = await listen('first-run-detected', () => {
+      isFirstRun = true
+    })
+
+    const unlistenDbLoadingStart = await listen<string>(
+      'db-loading-start',
+      (event) => {
+        progressManager.start(event.payload)
+      }
+    )
+
+    const unlistenDbLoadingProgress = await listen<string>(
+      'db-loading-progress',
+      (event) => {
+        progressManager.updateProgress(event.payload)
+      }
+    )
+
+    const unlistenDbLoadingComplete = await listen(
+      'db-loading-complete',
+      () => {
+        progressManager.complete()
+      }
+    )
+
+    const unlistenDbLoadingError = await listen<string>(
+      'db-loading-error',
+      (event) => {
+        progressManager.setError(event.payload)
+      }
+    )
+
+    return {
+      unlisten,
+      unlistenCacheRefresh,
+      unlistenFirstRun,
+      unlistenDbLoadingStart,
+      unlistenDbLoadingProgress,
+      unlistenDbLoadingComplete,
+      unlistenDbLoadingError,
+    }
+  }
+
+  async function initializeNotesAndUI(): Promise<void> {
+    const configExists = await configService.exists()
+    if (!configExists) {
+      await settingsActions.openSettingsPane()
+    } else {
+      const result = await noteService.initializeDatabase()
+      if (!result.success) {
+        console.error('Failed to initialize notes:', result.error)
+      }
+
+      focusManager.focusSearch()
+      const notes = await searchManager.searchImmediate('')
+      if (notes.length > 0) {
+        focusManager.setSelectedIndex(0)
+        await loadNoteContent(notes[0])
+      }
+    }
+  }
+
+  function createCleanupFunction(
+    listeners: {
+      unlisten: () => void
+      unlistenCacheRefresh: () => void
+      unlistenFirstRun: () => void
+      unlistenDbLoadingStart: () => void
+      unlistenDbLoadingProgress: () => void
+      unlistenDbLoadingComplete: () => void
+      unlistenDbLoadingError: () => void
+    },
+    cleanupEffects: () => void
+  ): () => void {
+    return () => {
+      searchManager.abort()
+      if (contentRequestController) {
+        contentRequestController.abort()
+        contentRequestController = null
+      }
+      cleanupEffects()
+      listeners.unlisten()
+      listeners.unlistenCacheRefresh()
+      listeners.unlistenFirstRun()
+      listeners.unlistenDbLoadingStart()
+      listeners.unlistenDbLoadingProgress()
+      listeners.unlistenDbLoadingComplete()
+      listeners.unlistenDbLoadingError()
+      configManager.cleanup()
+    }
+  }
 
   async function refreshUI(): Promise<void> {
     await searchManager.refreshSearch('')
@@ -427,93 +570,15 @@ export function createAppCoordinator(
 
     async initialize(): Promise<() => void> {
       await tick()
-
       await configManager.initialize()
 
-      // Set up search complete callback to load first note content
-      searchManager.setSearchCompleteCallback(async (notes: string[]) => {
-        if (notes.length > 0) {
-          focusManager.setSelectedIndex(0)
-          await loadNoteContent(notes[0])
-        }
-      })
-
-      const unlisten = await listen('open-preferences', async () => {
-        await settingsActions.openSettingsPane()
-      })
-
-      const unlistenCacheRefresh = await listen('cache-refreshed', async () => {
-        await refreshUI()
-      })
-
-      const unlistenFirstRun = await listen('first-run-detected', () => {
-        isFirstRun = true
-      })
-
-      // Database loading progress event listeners - MUST be set up before initialization
-      const unlistenDbLoadingStart = await listen<string>(
-        'db-loading-start',
-        (event) => {
-          progressManager.start(event.payload)
-        }
-      )
-
-      const unlistenDbLoadingProgress = await listen<string>(
-        'db-loading-progress',
-        (event) => {
-          progressManager.updateProgress(event.payload)
-        }
-      )
-
-      const unlistenDbLoadingComplete = await listen(
-        'db-loading-complete',
-        () => {
-          progressManager.complete()
-        }
-      )
-
-      const unlistenDbLoadingError = await listen<string>(
-        'db-loading-error',
-        (event) => {
-          progressManager.setError(event.payload)
-        }
-      )
-
-      const configExists = await configService.exists()
-      if (!configExists) {
-        await settingsActions.openSettingsPane()
-      } else {
-        const result = await noteService.initializeDatabase()
-        if (!result.success) {
-          console.error('Failed to initialize notes:', result.error)
-        }
-
-        focusManager.focusSearch()
-        const notes = await searchManager.searchImmediate('')
-        if (notes.length > 0) {
-          focusManager.setSelectedIndex(0)
-          await loadNoteContent(notes[0])
-        }
-      }
+      setupSearchCompleteCallback()
+      const listeners = await setupEventListeners()
+      await initializeNotesAndUI()
 
       const cleanupEffects = setupReactiveEffects()
 
-      return () => {
-        searchManager.abort()
-        if (contentRequestController) {
-          contentRequestController.abort()
-          contentRequestController = null
-        }
-        cleanupEffects()
-        unlisten()
-        unlistenCacheRefresh()
-        unlistenFirstRun()
-        unlistenDbLoadingStart()
-        unlistenDbLoadingProgress()
-        unlistenDbLoadingComplete()
-        unlistenDbLoadingError()
-        configManager.cleanup()
-      }
+      return createCleanupFunction(listeners, cleanupEffects)
     },
   }
 }

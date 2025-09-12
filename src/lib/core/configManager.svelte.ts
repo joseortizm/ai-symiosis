@@ -1,4 +1,3 @@
-
 import { listen } from '@tauri-apps/api/event'
 import { configService } from '../services/configService.svelte'
 import type {
@@ -279,6 +278,67 @@ export function createConfigManager(): ConfigManager {
     }
   }
 
+  async function loadAllConfigs(): Promise<{
+    generalConfig: GeneralConfig
+    interfaceConfig: InterfaceConfig
+    editorConfig: EditorConfig
+    shortcutsConfig: ShortcutsConfig
+    preferencesConfig: PreferencesConfig
+  }> {
+    const [
+      generalConfig,
+      interfaceConfig,
+      editorConfig,
+      shortcutsConfig,
+      preferencesConfig,
+    ] = await Promise.all([
+      configService.getGeneralConfig(),
+      configService.getInterfaceConfig(),
+      configService.getEditorConfig(),
+      configService.getShortcutsConfig(),
+      configService.getPreferencesConfig(),
+    ])
+
+    return {
+      generalConfig,
+      interfaceConfig,
+      editorConfig,
+      shortcutsConfig,
+      preferencesConfig,
+    }
+  }
+
+  function updateStateWithConfigs(configs: {
+    generalConfig: GeneralConfig
+    interfaceConfig: InterfaceConfig
+    editorConfig: EditorConfig
+    shortcutsConfig: ShortcutsConfig
+    preferencesConfig: PreferencesConfig
+  }): void {
+    state.general = configs.generalConfig
+    state.interface = configs.interfaceConfig
+    state.editor = configs.editorConfig
+    state.shortcuts = configs.shortcutsConfig
+    state.preferences = configs.preferencesConfig
+  }
+
+  async function setupThemes(interfaceConfig: InterfaceConfig): Promise<void> {
+    applyInterfaceConfig(interfaceConfig)
+    await loadTheme(interfaceConfig.ui_theme)
+    await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
+    await loadHighlightJSTheme(interfaceConfig.md_render_code_theme)
+    state.isThemeInitialized = true
+  }
+
+  async function setupConfigListener(): Promise<void> {
+    unlistenConfigChanged = await listen<ConfigChanged>(
+      'config-updated',
+      (event) => {
+        updateConfigState(event.payload)
+      }
+    )
+  }
+
   async function initialize(): Promise<void> {
     if (state.isInitialized) {
       return
@@ -288,41 +348,12 @@ export function createConfigManager(): ConfigManager {
     state.error = null
 
     try {
-      const [
-        generalConfig,
-        interfaceConfig,
-        editorConfig,
-        shortcutsConfig,
-        preferencesConfig,
-      ] = await Promise.all([
-        configService.getGeneralConfig(),
-        configService.getInterfaceConfig(),
-        configService.getEditorConfig(),
-        configService.getShortcutsConfig(),
-        configService.getPreferencesConfig(),
-      ])
-
+      const configs = await loadAllConfigs()
       await fetchAvailableThemes()
 
-      state.general = generalConfig
-      state.interface = interfaceConfig
-      state.editor = editorConfig
-      state.shortcuts = shortcutsConfig
-      state.preferences = preferencesConfig
-
-      applyInterfaceConfig(interfaceConfig)
-      await loadTheme(interfaceConfig.ui_theme)
-      await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
-      await loadHighlightJSTheme(interfaceConfig.md_render_code_theme)
-      state.isThemeInitialized = true
-
-      // Listen for config changes
-      unlistenConfigChanged = await listen<ConfigChanged>(
-        'config-updated',
-        (event) => {
-          updateConfigState(event.payload)
-        }
-      )
+      updateStateWithConfigs(configs)
+      await setupThemes(configs.interfaceConfig)
+      await setupConfigListener()
 
       state.isInitialized = true
     } catch (e) {
@@ -334,39 +365,23 @@ export function createConfigManager(): ConfigManager {
     }
   }
 
+  async function refreshConfigsAndThemes(): Promise<void> {
+    await configService.refreshCache()
+
+    const configs = await loadAllConfigs()
+    updateStateWithConfigs(configs)
+
+    if (state.isThemeInitialized) {
+      await setupThemes(configs.interfaceConfig)
+    }
+  }
+
   async function forceRefresh(): Promise<void> {
     state.isLoading = true
     state.error = null
 
     try {
-      await configService.refreshCache()
-
-      const [
-        generalConfig,
-        interfaceConfig,
-        editorConfig,
-        shortcutsConfig,
-        preferencesConfig,
-      ] = await Promise.all([
-        configService.getGeneralConfig(),
-        configService.getInterfaceConfig(),
-        configService.getEditorConfig(),
-        configService.getShortcutsConfig(),
-        configService.getPreferencesConfig(),
-      ])
-
-      state.general = generalConfig
-      state.interface = interfaceConfig
-      state.editor = editorConfig
-      state.shortcuts = shortcutsConfig
-      state.preferences = preferencesConfig
-
-      if (state.isThemeInitialized) {
-        applyInterfaceConfig(interfaceConfig)
-        await loadTheme(interfaceConfig.ui_theme)
-        await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
-        await loadHighlightJSTheme(interfaceConfig.md_render_code_theme)
-      }
+      await refreshConfigsAndThemes()
     } catch (e) {
       const error = `Failed to refresh config: ${e}`
       state.error = error

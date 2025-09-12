@@ -174,18 +174,22 @@ export function createContentNavigationManager(
     allHeaders: Element[],
     contentElement: HTMLElement
   ): void {
-    // Clear all existing header styling
+    clearHeaderStyling(allHeaders)
+    clearContentStyling(contentElement)
+    state.collapsedSections.clear()
+  }
+
+  function clearHeaderStyling(allHeaders: Element[]): void {
     allHeaders.forEach((header) => {
       header.classList.remove('header-expanded', 'header-collapsed')
     })
+  }
 
-    // Clear all content styling
+  function clearContentStyling(contentElement: HTMLElement): void {
     const allElements = Array.from(contentElement.querySelectorAll('*'))
     allElements.forEach((el) => {
       el.classList.remove('content-collapsed')
     })
-
-    state.collapsedSections.clear()
   }
 
   function isHeaderInCurrentPath(
@@ -211,20 +215,29 @@ export function createContentNavigationManager(
     isCurrentPath: boolean
   ): void {
     if (isCurrentPath) {
-      // This header is in the path to current - expand it
-      header.classList.add('header-expanded')
+      expandHeaderInPath(header)
     } else {
-      // This header is not in the current path - collapse it
-      header.classList.add('header-collapsed')
-      // Hide its content (but keep sub-headers visible for structure)
-      const content = getContentBetweenHeaders(header)
-      content.forEach((el) => {
-        if (!el.matches('h1, h2, h3, h4, h5, h6')) {
-          el.classList.add('content-collapsed')
-        }
-      })
-      state.collapsedSections.add(header)
+      collapseHeaderOutsidePath(header)
     }
+  }
+
+  function expandHeaderInPath(header: Element): void {
+    header.classList.add('header-expanded')
+  }
+
+  function collapseHeaderOutsidePath(header: Element): void {
+    header.classList.add('header-collapsed')
+    hideHeaderContent(header)
+    state.collapsedSections.add(header)
+  }
+
+  function hideHeaderContent(header: Element): void {
+    const content = getContentBetweenHeaders(header)
+    content.forEach((el) => {
+      if (!el.matches('h1, h2, h3, h4, h5, h6')) {
+        el.classList.add('content-collapsed')
+      }
+    })
   }
 
   function shouldUpdateAccordion(): boolean {
@@ -247,10 +260,15 @@ export function createContentNavigationManager(
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return
 
+    performAccordionUpdate(contentElement, currentHeader)
+  }
+
+  function performAccordionUpdate(
+    contentElement: HTMLElement,
+    currentHeader: Element
+  ): void {
     const allHeaders = getAccordionHeaders(contentElement)
-
     clearAccordionStyling(allHeaders, contentElement)
-
     processHeaderAccordionStates(allHeaders, currentHeader)
   }
 
@@ -284,51 +302,31 @@ export function createContentNavigationManager(
   function scrollToElement(element: Element): void {
     const mode = determineNavigationMode()
     setCurrentElementStyle(element, mode)
+    performElementScroll(element)
+  }
 
+  function performElementScroll(element: Element): void {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-        inline: 'nearest',
-      })
+      scrollToElementFallback(element)
       return
     }
 
-    const elementRect = element.getBoundingClientRect()
-    const containerRect = contentElement.getBoundingClientRect()
-    const containerHeight = contentElement.clientHeight
-    const targetPosition = containerHeight * 0.25 // 3/4 up = 1/4 down from top
+    scrollToElementWithinContainer(element, contentElement)
+  }
 
-    const scrollTop =
-      contentElement.scrollTop +
-      (elementRect.top - containerRect.top) -
-      targetPosition
-
-    contentElement.scrollTo({
-      top: scrollTop,
+  function scrollToElementFallback(element: Element): void {
+    element.scrollIntoView({
       behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest',
     })
   }
 
-  function scrollToCodeBlock(element: Element): void {
-    if (state.codeBlockElement) {
-      state.codeBlockElement.classList.remove('codeblock-current')
-    }
-
-    state.codeBlockElement = element
-    element.classList.add('codeblock-current')
-
-    const contentElement = deps.focusManager.noteContentElement
-    if (!contentElement) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-        inline: 'nearest',
-      })
-      return
-    }
-
+  function scrollToElementWithinContainer(
+    element: Element,
+    contentElement: HTMLElement
+  ): void {
     const elementRect = element.getBoundingClientRect()
     const containerRect = contentElement.getBoundingClientRect()
     const containerHeight = contentElement.clientHeight
@@ -343,6 +341,20 @@ export function createContentNavigationManager(
       top: scrollTop,
       behavior: 'smooth',
     })
+  }
+
+  function scrollToCodeBlock(element: Element): void {
+    updateCodeBlockElementState(element)
+    performElementScroll(element)
+  }
+
+  function updateCodeBlockElementState(element: Element): void {
+    if (state.codeBlockElement) {
+      state.codeBlockElement.classList.remove('codeblock-current')
+    }
+
+    state.codeBlockElement = element
+    element.classList.add('codeblock-current')
   }
 
   function navigateGeneric(
@@ -418,37 +430,17 @@ export function createContentNavigationManager(
   }
 
   function scrollToLink(element: Element): void {
+    updateLinkElementState(element)
+    performElementScroll(element)
+  }
+
+  function updateLinkElementState(element: Element): void {
     if (state.linkElement) {
       state.linkElement.classList.remove('link-current')
     }
 
     state.linkElement = element
     element.classList.add('link-current')
-
-    const contentElement = deps.focusManager.noteContentElement
-    if (!contentElement) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-        inline: 'nearest',
-      })
-      return
-    }
-
-    const elementRect = element.getBoundingClientRect()
-    const containerRect = contentElement.getBoundingClientRect()
-    const containerHeight = contentElement.clientHeight
-    const targetPosition = containerHeight * 0.25
-
-    const scrollTop =
-      contentElement.scrollTop +
-      (elementRect.top - containerRect.top) -
-      targetPosition
-
-    contentElement.scrollTo({
-      top: scrollTop,
-      behavior: 'smooth',
-    })
   }
 
   function navigateLinkNext(): void {
@@ -502,47 +494,71 @@ export function createContentNavigationManager(
 
   function handleSectionNavigation(href: string): void {
     const sectionName = href.substring(1)
-
     const contentElement = deps.focusManager.noteContentElement
+
     if (!contentElement) {
-      import('../utils/errorNotification').then(({ errorNotification }) => {
-        errorNotification.trigger('Content not available for navigation')
-      })
+      showErrorNotification('Content not available for navigation')
       return
     }
 
+    const targetHeader = findTargetHeader(contentElement, sectionName)
+    if (targetHeader) {
+      navigateToFoundHeader(targetHeader)
+    } else {
+      showErrorNotification(`Section not found: ${sectionName}`)
+    }
+  }
+
+  function findTargetHeader(
+    contentElement: HTMLElement,
+    sectionName: string
+  ): Element | null {
     const headers = Array.from(
       contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
     )
 
-    let targetHeader = headers.find((header) => {
+    const exactMatch = findExactHeaderMatch(headers, sectionName)
+    if (exactMatch) return exactMatch
+
+    return findPartialHeaderMatch(headers, sectionName) || null
+  }
+
+  function findExactHeaderMatch(
+    headers: Element[],
+    sectionName: string
+  ): Element | undefined {
+    return headers.find((header) => {
       const headerText = (header.textContent || '').trim().toLowerCase()
       return headerText === sectionName.toLowerCase()
     })
+  }
 
-    if (!targetHeader) {
-      targetHeader = headers.find((header) => {
-        const headerText = (header.textContent || '').trim().toLowerCase()
-        return (
-          headerText.includes(sectionName.toLowerCase()) ||
-          sectionName.toLowerCase().includes(headerText)
-        )
-      })
+  function findPartialHeaderMatch(
+    headers: Element[],
+    sectionName: string
+  ): Element | undefined {
+    return headers.find((header) => {
+      const headerText = (header.textContent || '').trim().toLowerCase()
+      return (
+        headerText.includes(sectionName.toLowerCase()) ||
+        sectionName.toLowerCase().includes(headerText)
+      )
+    })
+  }
+
+  function navigateToFoundHeader(targetHeader: Element): void {
+    const headerElements = getHeaderElementsWithFallback()
+    const headerIndex = headerElements.indexOf(targetHeader)
+    if (headerIndex >= 0) {
+      state.currentIndex = headerIndex
+      state.navigationMode = 'headers'
+      scrollToElement(targetHeader)
     }
+  }
 
-    if (targetHeader) {
-      const headerElements = getHeaderElementsWithFallback()
-      const headerIndex = headerElements.indexOf(targetHeader)
-      if (headerIndex >= 0) {
-        state.currentIndex = headerIndex
-        state.navigationMode = 'headers'
-        scrollToElement(targetHeader)
-        return
-      }
-    }
-
+  function showErrorNotification(message: string): void {
     import('../utils/errorNotification').then(({ errorNotification }) => {
-      errorNotification.trigger(`Section not found: ${sectionName}`)
+      errorNotification.trigger(message)
     })
   }
 
@@ -550,62 +566,66 @@ export function createContentNavigationManager(
     import('@tauri-apps/plugin-opener').then(({ openPath }) => {
       openPath(href).catch((error) => {
         console.error('Failed to open file:', error)
-        import('../utils/errorNotification').then(({ errorNotification }) => {
-          errorNotification.trigger(`Failed to open file: ${href}`)
-        })
+        showErrorNotification(`Failed to open file: ${href}`)
       })
     })
   }
 
   function handleUrlOpening(href: string): void {
+    if (!validateUrl(href)) {
+      showErrorNotification(`Malformed URL: ${href}`)
+      return
+    }
+
+    openValidUrl(href)
+  }
+
+  function validateUrl(href: string): boolean {
     try {
       // eslint-disable-next-line svelte/prefer-svelte-reactivity
       new URL(href)
-
-      import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
-        openUrl(href).catch((error) => {
-          console.error('Failed to open URL:', error)
-          import('../utils/errorNotification').then(({ errorNotification }) => {
-            errorNotification.trigger(`Failed to open link: ${href}`)
-          })
-        })
-      })
+      return true
     } catch {
-      import('../utils/errorNotification').then(({ errorNotification }) => {
-        errorNotification.trigger(`Malformed URL: ${href}`)
-      })
+      return false
     }
   }
 
-  function handleUnsupportedLinkFormat(href: string): void {
-    import('../utils/errorNotification').then(({ errorNotification }) => {
-      errorNotification.trigger(`Unsupported link format: ${href}`)
+  function openValidUrl(href: string): void {
+    import('@tauri-apps/plugin-opener').then(({ openUrl }) => {
+      openUrl(href).catch((error) => {
+        console.error('Failed to open URL:', error)
+        showErrorNotification(`Failed to open link: ${href}`)
+      })
     })
+  }
+
+  function handleUnsupportedLinkFormat(href: string): void {
+    showErrorNotification(`Unsupported link format: ${href}`)
   }
 
   function openCurrentLink(): void {
     const href = validateLinkForOpening()
     if (!href) return
 
-    // Handle #section navigation
+    processLinkByType(href)
+  }
+
+  function processLinkByType(href: string): void {
     if (isSection(href)) {
       handleSectionNavigation(href)
       return
     }
 
-    // Handle file paths
     if (isFilePath(href)) {
       handleFilePathOpening(href)
       return
     }
 
-    // Handle URLs
     if (isUrl(href)) {
       handleUrlOpening(href)
       return
     }
 
-    // Fallback for unrecognized link types
     handleUnsupportedLinkFormat(href)
   }
 
@@ -667,31 +687,48 @@ export function createContentNavigationManager(
   }
 
   async function copyCurrentSection(): Promise<boolean> {
-    let textToCopy = ''
+    const textToCopy = extractTextFromCurrentElement()
+    if (!textToCopy.trim()) return false
 
+    return await writeToClipboard(textToCopy)
+  }
+
+  function extractTextFromCurrentElement(): string {
     if (state.codeBlockElement) {
-      textToCopy = state.codeBlockElement.textContent || ''
-    } else if (state.currentElement && state.navigationMode === 'highlights') {
-      textToCopy = getFormattedText(state.currentElement)
-    } else if (state.currentElement && state.navigationMode === 'headers') {
-      const headerText = state.currentElement.textContent || ''
-      const content = getContentBetweenHeaders(state.currentElement)
-      const contentTexts = content
-        .map((el) => getFormattedText(el))
-        .filter((text) => text.trim())
-      textToCopy = [headerText, ...contentTexts].join('\n\n')
+      return state.codeBlockElement.textContent || ''
     }
 
-    if (textToCopy.trim()) {
-      try {
-        await navigator.clipboard.writeText(textToCopy)
-        return true
-      } catch (error) {
-        console.warn('Failed to copy to clipboard:', error)
-      }
+    if (state.currentElement && state.navigationMode === 'highlights') {
+      return getFormattedText(state.currentElement)
     }
 
-    return false
+    if (state.currentElement && state.navigationMode === 'headers') {
+      return extractHeaderSectionText()
+    }
+
+    return ''
+  }
+
+  function extractHeaderSectionText(): string {
+    if (!state.currentElement) return ''
+
+    const headerText = state.currentElement.textContent || ''
+    const content = getContentBetweenHeaders(state.currentElement)
+    const contentTexts = content
+      .map((el) => getFormattedText(el))
+      .filter((text) => text.trim())
+
+    return [headerText, ...contentTexts].join('\n\n')
+  }
+
+  async function writeToClipboard(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch (error) {
+      console.warn('Failed to copy to clipboard:', error)
+      return false
+    }
   }
 
   function clearLinkNavigationIfActive(): EscapeAction | null {
@@ -748,17 +785,6 @@ export function createContentNavigationManager(
     return null
   }
 
-  function clearSearchIfHighlightsHidden(
-    searchState: ReturnType<typeof evaluateSearchState>
-  ): EscapeAction | null {
-    if (searchState.hasQuery && state.highlightVisibility === 'hidden') {
-      deps.searchManager.clearSearch()
-      showHighlights() // Reset highlights for next search
-      return 'search_cleared'
-    }
-    return null
-  }
-
   function clearPartialSearchInput(
     searchState: ReturnType<typeof evaluateSearchState>
   ): EscapeAction | null {
@@ -771,90 +797,143 @@ export function createContentNavigationManager(
   }
 
   function handleEscape(): EscapeAction {
-    // Priority 1: Clear link navigation if actively navigating links
+    return processEscapeSequence()
+  }
+
+  function processEscapeSequence(): EscapeAction {
+    const navigationResults = clearActiveNavigationStates()
+    if (navigationResults) return navigationResults
+
+    return handleSearchStateEscapeSequence()
+  }
+
+  function clearActiveNavigationStates(): EscapeAction | null {
     const linkResult = clearLinkNavigationIfActive()
     if (linkResult) return linkResult
 
-    // Priority 2: Clear code block navigation if navigating code blocks
     const codeBlockResult = clearCodeBlockNavigationIfActive()
     if (codeBlockResult) return codeBlockResult
 
-    // Priority 3: Clear highlights immediately if actively navigating highlights
     const highlightNavResult = clearHighlightNavigationIfActive()
     if (highlightNavResult) return highlightNavResult
 
-    // Priority 4: Clear active header navigation
     const headerNavResult = clearHeaderNavigationIfActive()
     if (headerNavResult) return headerNavResult
 
-    // Evaluate search state for remaining priorities
+    return null
+  }
+
+  function handleSearchStateEscapeSequence(): EscapeAction {
     const searchState = evaluateSearchState()
 
     const visibleHighlightsResult =
       clearVisibleHighlightsIfQueryExists(searchState)
     if (visibleHighlightsResult) return visibleHighlightsResult
 
-    // Priority 4: Clear search if highlights hidden but query exists
-    const hiddenHighlightsResult = clearSearchIfHighlightsHidden(searchState)
+    const hiddenHighlightsResult = clearSearchIfHiddenHighlights(searchState)
     if (hiddenHighlightsResult) return hiddenHighlightsResult
 
-    // Priority 5: Clear search if searchInput has less than 3 characters (typed but not committed)
     const partialSearchResult = clearPartialSearchInput(searchState)
     if (partialSearchResult) return partialSearchResult
 
-    // Priority 6: Focus search (default case)
     return 'focus_search'
   }
 
+  function clearSearchIfHiddenHighlights(
+    searchState: ReturnType<typeof evaluateSearchState>
+  ): EscapeAction | null {
+    if (searchState.hasQuery && state.highlightVisibility === 'hidden') {
+      deps.searchManager.clearSearch()
+      showHighlights()
+      return 'search_cleared'
+    }
+    return null
+  }
+
   function getCurrentHeaderText(): string {
-    function toMarkdown(header: Element): string {
-      const level = parseInt(header.tagName[1], 10)
-      const content = htmlToMarkdown(header)
-      return `${'#'.repeat(level)} ${content}`
-    }
+    const header = determineCurrentHeader()
+    return header ? convertHeaderToMarkdown(header) : ''
+  }
 
-    let header: Element | null = null
+  function convertHeaderToMarkdown(header: Element): string {
+    const level = parseInt(header.tagName[1], 10)
+    const content = htmlToMarkdown(header)
+    return `${'#'.repeat(level)} ${content}`
+  }
 
+  function determineCurrentHeader(): Element | null {
+    const navigationBasedHeader = getHeaderFromNavigationState()
+    if (navigationBasedHeader) return navigationBasedHeader
+
+    return getHeaderFromViewport()
+  }
+
+  function getHeaderFromNavigationState(): Element | null {
     if (state.navigationMode === 'headers' && state.currentElement) {
-      header = state.currentElement
-    } else if (state.navigationMode === 'highlights' && state.currentElement) {
-      const contentElement = deps.focusManager.noteContentElement
-      if (contentElement) {
-        const headers = Array.from(
-          contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
-        )
-        for (const h of headers) {
-          const pos = h.compareDocumentPosition(state.currentElement)
-          if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
-            header = h
-          } else {
-            break
-          }
-        }
+      return state.currentElement
+    }
+
+    if (state.navigationMode === 'highlights' && state.currentElement) {
+      return getNearestHeaderFromHighlight()
+    }
+
+    return null
+  }
+
+  function getNearestHeaderFromHighlight(): Element | null {
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement || !state.currentElement) return null
+
+    const headers = Array.from(
+      contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    )
+
+    for (const h of headers) {
+      const pos = h.compareDocumentPosition(state.currentElement)
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return h
       }
     }
 
-    if (!header) {
-      const contentElement = deps.focusManager.noteContentElement
-      if (!contentElement) return ''
-      const rect = contentElement.getBoundingClientRect()
-      const headers = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    return null
+  }
 
-      let firstVisibleHeader: Element | null = null
-      let lastPassedHeader: Element | null = null
+  function getHeaderFromViewport(): Element | null {
+    const contentElement = deps.focusManager.noteContentElement
+    if (!contentElement) return null
 
-      for (const h of headers) {
-        const r = h.getBoundingClientRect()
-        const isVisible =
-          r.top >= rect.top && r.top <= rect.top + (rect.height || 600)
-        if (isVisible && !firstVisibleHeader) firstVisibleHeader = h
-        else if (r.top < rect.top) lastPassedHeader = h
+    const rect = contentElement.getBoundingClientRect()
+    const headers = Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+
+    const { firstVisibleHeader, lastPassedHeader } = analyzeHeaderVisibility(
+      headers,
+      rect
+    )
+
+    return firstVisibleHeader || lastPassedHeader
+  }
+
+  function analyzeHeaderVisibility(
+    headers: Element[],
+    containerRect: DOMRect
+  ): { firstVisibleHeader: Element | null; lastPassedHeader: Element | null } {
+    let firstVisibleHeader: Element | null = null
+    let lastPassedHeader: Element | null = null
+
+    for (const h of headers) {
+      const r = h.getBoundingClientRect()
+      const isVisible =
+        r.top >= containerRect.top &&
+        r.top <= containerRect.top + (containerRect.height || 600)
+
+      if (isVisible && !firstVisibleHeader) {
+        firstVisibleHeader = h
+      } else if (r.top < containerRect.top) {
+        lastPassedHeader = h
       }
-
-      header = firstVisibleHeader || lastPassedHeader
     }
 
-    return header ? toMarkdown(header) : ''
+    return { firstVisibleHeader, lastPassedHeader }
   }
 
   function navigateToHeader(headerText: string): boolean {

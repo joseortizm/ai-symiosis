@@ -4,6 +4,8 @@
  * Maps key combinations to business logic functions across different UI contexts.
  */
 
+import type { ShortcutsConfig } from '../../services/configService.svelte'
+
 export interface KeyboardActionDeps {
   focusManager: ReturnType<
     typeof import('../../core/focusManager.svelte').createFocusManager
@@ -248,69 +250,82 @@ export function createKeyboardActions(
     },
   }
 
+  function createSearchInputMappings(shortcuts: ShortcutsConfig): KeyMappings {
+    return {
+      [shortcuts.edit_note]: 'editing.enterEdit',
+      [shortcuts.create_note]: 'notes.createNote',
+      [shortcuts.rename_note]: 'notes.renameNote',
+      [shortcuts.open_external]: 'notes.openExternal',
+      [shortcuts.open_folder]: 'notes.openFolder',
+      [shortcuts.refresh_cache]: 'notes.refreshCache',
+      [shortcuts.delete_note]: 'notes.deleteNote',
+      [shortcuts.scroll_up]: 'scrolling.scrollUpBy',
+      [shortcuts.scroll_down]: 'scrolling.scrollDownBy',
+      ArrowUp: 'navigation.moveUp',
+      ArrowDown: 'navigation.moveDown',
+      [shortcuts.up]: 'navigation.moveUp',
+      [shortcuts.down]: 'navigation.moveDown',
+      [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
+      [shortcuts.navigate_next]: 'navigation.navigateNext',
+      [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
+      [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
+      [shortcuts.navigate_link_previous]: 'navigation.navigateLinkPrevious',
+      [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
+      [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
+      Escape: 'search.handleEscape',
+      Tab: 'navigation.handleTab',
+      [shortcuts.open_settings]: 'settings.openSettings',
+      [shortcuts.version_explorer]: 'settings.openVersionExplorer',
+      [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
+    }
+  }
+
+  function createEditModeMappings(shortcuts: ShortcutsConfig): KeyMappings {
+    return {
+      Escape: 'editing.smartExitEdit',
+      [shortcuts.save_and_exit]: 'editing.saveAndExit',
+      [shortcuts.open_settings]: 'settings.openSettings',
+      [shortcuts.version_explorer]: 'settings.openVersionExplorer',
+      [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
+    }
+  }
+
+  function createNoteContentMappings(shortcuts: ShortcutsConfig): KeyMappings {
+    return {
+      Escape: 'navigation.focusSearch',
+      [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
+      [shortcuts.navigate_next]: 'navigation.navigateNext',
+      [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
+      [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
+      [shortcuts.navigate_link_previous]: 'navigation.navigateLinkPrevious',
+      [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
+      [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
+      [shortcuts.version_explorer]: 'settings.openVersionExplorer',
+      [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
+    }
+  }
+
+  function createDefaultMappings(shortcuts: ShortcutsConfig): KeyMappings {
+    return {
+      ArrowUp: 'navigation.moveUp',
+      ArrowDown: 'navigation.moveDown',
+      Enter: 'editing.enterEdit',
+      [shortcuts.create_note]: 'notes.createNote',
+      [shortcuts.delete_note]: 'notes.deleteNote',
+      Escape: 'navigation.focusSearch',
+      [shortcuts.open_settings]: 'settings.openSettings',
+      [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
+    }
+  }
+
   function getKeyMappings(): Record<string, KeyMappings> {
     const shortcuts = deps.configManager.shortcuts
 
     return {
-      searchInput: {
-        [shortcuts.edit_note]: 'editing.enterEdit',
-        [shortcuts.create_note]: 'notes.createNote',
-        [shortcuts.rename_note]: 'notes.renameNote',
-        [shortcuts.open_external]: 'notes.openExternal',
-        [shortcuts.open_folder]: 'notes.openFolder',
-        [shortcuts.refresh_cache]: 'notes.refreshCache',
-        [shortcuts.delete_note]: 'notes.deleteNote',
-        [shortcuts.scroll_up]: 'scrolling.scrollUpBy',
-        [shortcuts.scroll_down]: 'scrolling.scrollDownBy',
-        ArrowUp: 'navigation.moveUp',
-        ArrowDown: 'navigation.moveDown',
-        [shortcuts.up]: 'navigation.moveUp',
-        [shortcuts.down]: 'navigation.moveDown',
-        [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
-        [shortcuts.navigate_next]: 'navigation.navigateNext',
-        [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
-        [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
-        [shortcuts.navigate_link_previous]: 'navigation.navigateLinkPrevious',
-        [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
-        [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
-        Escape: 'search.handleEscape',
-        Tab: 'navigation.handleTab',
-        [shortcuts.open_settings]: 'settings.openSettings',
-        [shortcuts.version_explorer]: 'settings.openVersionExplorer',
-        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
-      },
-
-      editMode: {
-        Escape: 'editing.smartExitEdit',
-        [shortcuts.save_and_exit]: 'editing.saveAndExit',
-        [shortcuts.open_settings]: 'settings.openSettings',
-        [shortcuts.version_explorer]: 'settings.openVersionExplorer',
-        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
-      },
-
-      noteContent: {
-        Escape: 'navigation.focusSearch',
-        [shortcuts.navigate_previous]: 'navigation.navigatePrevious',
-        [shortcuts.navigate_next]: 'navigation.navigateNext',
-        [shortcuts.navigate_code_previous]: 'navigation.navigateCodePrevious',
-        [shortcuts.navigate_code_next]: 'navigation.navigateCodeNext',
-        [shortcuts.navigate_link_previous]: 'navigation.navigateLinkPrevious',
-        [shortcuts.navigate_link_next]: 'navigation.navigateLinkNext',
-        [shortcuts.copy_current_section]: 'navigation.copyCurrentSection',
-        [shortcuts.version_explorer]: 'settings.openVersionExplorer',
-        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
-      },
-
-      default: {
-        ArrowUp: 'navigation.moveUp',
-        ArrowDown: 'navigation.moveDown',
-        Enter: 'editing.enterEdit',
-        [shortcuts.create_note]: 'notes.createNote',
-        [shortcuts.delete_note]: 'notes.deleteNote',
-        Escape: 'navigation.focusSearch',
-        [shortcuts.open_settings]: 'settings.openSettings',
-        [shortcuts.recently_deleted]: 'settings.openRecentlyDeleted',
-      },
+      searchInput: createSearchInputMappings(shortcuts),
+      editMode: createEditModeMappings(shortcuts),
+      noteContent: createNoteContentMappings(shortcuts),
+      default: createDefaultMappings(shortcuts),
     }
   }
 
