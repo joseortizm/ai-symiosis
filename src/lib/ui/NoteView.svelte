@@ -163,13 +163,9 @@ Shows highlighted content or renders the CodeMirror editor.
     border-radius: 8px !important;
   }
   :global(.link-current) {
-    border: 2px solid #98c379 !important;
-    box-shadow: 0 0 8px rgba(152, 195, 121, 0.6) !important;
-    border-radius: 4px !important;
-    padding: 0.2em 0.4em !important;
-    margin: 0 0.1em !important;
-    display: inline-block !important;
-    background-color: rgba(152, 195, 121, 0.2) !important;
+    box-shadow: -7px 0 0 rgba(254, 145, 0, 1) !important;
+    background-color: rgba(152, 195, 121, 0.12) !important;
+    padding: 4px 8px 4px 4px !important;
   }
   :global(.header-expanded) {
     opacity: 1;
