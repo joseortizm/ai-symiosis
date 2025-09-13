@@ -12,6 +12,8 @@ Focused component handling CodeMirror initialization and content editing.
   import { indentWithTab } from '@codemirror/commands'
   import { indentUnit } from '@codemirror/language'
   import { EditorState } from '@codemirror/state'
+  import type { Text } from '@codemirror/state'
+  import type { ViewUpdate } from '@codemirror/view'
   import {
     codeFolding,
     foldState,
@@ -154,12 +156,11 @@ Focused component handling CodeMirror initialization and content editing.
     })
   }
 
-  function extractEditorView(cm: unknown): any {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (cm as any).cm6 || cm
+  function extractEditorView(cm: unknown): EditorView {
+    return (cm as { cm6?: EditorView }).cm6 || (cm as EditorView)
   }
 
-  function performFoldToggle(view: any): void {
+  function performFoldToggle(view: EditorView): void {
     const state = view.state
     const beforeFolds = state.field(foldState, false)?.size || 0
     unfoldCode(view)
@@ -192,7 +193,7 @@ Focused component handling CodeMirror initialization and content editing.
     })
   }
 
-  function performSensibleFoldAll(view: any): void {
+  function performSensibleFoldAll(view: EditorView): void {
     const state = view.state
     const foldRanges = collectFoldableRanges(state)
 
@@ -201,7 +202,9 @@ Focused component handling CodeMirror initialization and content editing.
     }
   }
 
-  function collectFoldableRanges(state: any): { from: number; to: number }[] {
+  function collectFoldableRanges(
+    state: EditorState
+  ): { from: number; to: number }[] {
     const foldRanges: { from: number; to: number }[] = []
 
     syntaxTree(state).iterate({
@@ -218,7 +221,11 @@ Focused component handling CodeMirror initialization and content editing.
     return foldRanges
   }
 
-  function isFoldableMarkdownNode(node: any): boolean {
+  function isFoldableMarkdownNode(node: {
+    name: string
+    from: number
+    to: number
+  }): boolean {
     const foldableNodeTypes = [
       'ATXHeading1',
       'ATXHeading2',
@@ -239,7 +246,7 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function applyFoldRanges(
-    view: any,
+    view: EditorView,
     foldRanges: { from: number; to: number }[]
   ): void {
     view.dispatch({
@@ -352,7 +359,7 @@ Focused component handling CodeMirror initialization and content editing.
     })
   }
 
-  function handleDocumentChange(update: any): void {
+  function handleDocumentChange(update: ViewUpdate): void {
     const newValue = update.state.doc.toString()
     lastPropsValue = newValue
     onContentChange?.(newValue)
@@ -624,7 +631,7 @@ Focused component handling CodeMirror initialization and content editing.
   }
 
   function calculateCursorPosition(
-    doc: any,
+    doc: Text,
     line: number,
     column: number
   ): number {
