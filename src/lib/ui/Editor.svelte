@@ -441,6 +441,14 @@ Focused component handling CodeMirror initialization and content editing.
       { key: 'Ctrl-Shift-]', run: unfoldCode },
       { key: 'Ctrl-Alt-[', run: foldAll },
       { key: 'Ctrl-Alt-]', run: unfoldAll },
+      {
+        key: 'Ctrl-s',
+        run: (): boolean => {
+          captureExitPosition()
+          onSave()
+          return true
+        },
+      },
     ])
 
     const escapeKeymap =
@@ -707,7 +715,13 @@ Focused component handling CodeMirror initialization and content editing.
   <div class="edit-footer">
     <h3>Editing: {filename}</h3>
     <div class="edit-controls">
-      <button onclick={onSave} class="save-btn">Save (Ctrl+S)</button>
+      <button
+        onclick={() => {
+          captureExitPosition()
+          onSave()
+        }}
+        class="save-btn">Save (Ctrl+S)</button
+      >
       <button
         onclick={() => {
           captureExitPosition()
