@@ -31,6 +31,9 @@ export interface KeyboardActionDeps {
   recentlyDeletedManager: ReturnType<
     typeof import('../../core/recentlyDeletedManager.svelte').createRecentlyDeletedManager
   >
+  editorManager: ReturnType<
+    typeof import('../../core/editorManager.svelte').createEditorManager
+  >
   noteActions: ReturnType<typeof import('./note.svelte').createNoteActions>
   settingsActions: ReturnType<
     typeof import('./settings.svelte').createSettingsActions
@@ -179,6 +182,9 @@ export function createKeyboardActions(
         }
       },
       saveAndExit: async ({ actions }: ActionContext) => {
+        actions.editorManager.captureExitPosition(
+          actions.editorManager.setExitHeaderText
+        )
         await actions.appCoordinator.saveAndExitNote()
       },
     },

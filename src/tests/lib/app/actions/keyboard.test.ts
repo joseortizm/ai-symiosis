@@ -96,6 +96,11 @@ describe('keyboard actions', () => {
         isVisible: false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
+      editorManager: {
+        captureExitPosition: vi.fn(),
+        setExitHeaderText: vi.fn(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       appCoordinator: {
         loadNoteContent: vi.fn(),
         exitEditMode: vi.fn(),

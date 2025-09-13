@@ -458,6 +458,7 @@ export function createAppCoordinator(
     dialogManager,
     versionExplorerManager,
     recentlyDeletedManager,
+    editorManager,
     noteActions,
     settingsActions,
     noteService,

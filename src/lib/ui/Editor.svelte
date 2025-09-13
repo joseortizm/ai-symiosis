@@ -442,14 +442,6 @@ Focused component handling CodeMirror initialization and content editing.
       { key: 'Ctrl-Shift-]', run: unfoldCode },
       { key: 'Ctrl-Alt-[', run: foldAll },
       { key: 'Ctrl-Alt-]', run: unfoldAll },
-      {
-        key: 'Ctrl-s',
-        run: (): boolean => {
-          captureExitPosition()
-          onSave()
-          return true
-        },
-      },
     ])
 
     const escapeKeymap =
