@@ -2,62 +2,22 @@
  * Service Layer - Config Service
  * Application configuration settings and the settings pane state.
  * Handles configuration loading, saving, and reactive settings panel visibility.
+ *
+ * TODO: We are not really following the architecture as found in the other services
+ * (noteService/versionService) as we are also handling:
+ * 1. Settings panel UI state (should move to App layer)
+ * 2. DOM theme loading (should move to Core layer)
+ * Ok, for now.
  */
 
 import { invoke } from '@tauri-apps/api/core'
-
-export interface GeneralConfig {
-  [key: string]: unknown
-}
-
-export interface InterfaceConfig {
-  ui_theme: string
-  font_family: string
-  font_size: number
-  editor_font_family: string
-  editor_font_size: number
-  markdown_render_theme: string
-  md_render_code_theme: string
-  always_on_top: boolean
-}
-
-export interface EditorConfig {
-  mode: string
-  theme: string
-  word_wrap: boolean
-  tab_size: number
-  expand_tabs: boolean
-  show_line_numbers: boolean
-}
-
-export interface ShortcutsConfig {
-  create_note: string
-  rename_note: string
-  delete_note: string
-  edit_note: string
-  save_and_exit: string
-  open_external: string
-  open_folder: string
-  refresh_cache: string
-  scroll_up: string
-  scroll_down: string
-  up: string
-  down: string
-  navigate_previous: string
-  navigate_next: string
-  navigate_code_previous: string
-  navigate_code_next: string
-  navigate_link_previous: string
-  navigate_link_next: string
-  copy_current_section: string
-  open_settings: string
-  version_explorer: string
-  recently_deleted: string
-}
-
-export interface PreferencesConfig {
-  max_search_results: number
-}
+import type {
+  GeneralConfig,
+  InterfaceConfig,
+  EditorConfig,
+  ShortcutsConfig,
+  PreferencesConfig,
+} from '../types/config'
 
 interface ConfigServiceState {
   content: string
@@ -91,6 +51,9 @@ export interface ConfigService {
     ui_themes: string[]
     markdown_themes: string[]
   }>
+  loadTheme(theme: string, validUIThemes?: string[]): Promise<void>
+  loadMarkdownTheme(theme: string): Promise<void>
+  loadHighlightJSTheme(theme: string): Promise<void>
 }
 
 export function createConfigService(): ConfigService {
@@ -339,6 +302,111 @@ export function createConfigService(): ConfigService {
 
     get lastSaved(): number {
       return state.lastSaved
+    },
+
+    async loadTheme(
+      theme: string,
+      validUIThemes: string[] = []
+    ): Promise<void> {
+      try {
+        const existingLink = document.head.querySelector('link[data-ui-theme]')
+        if (existingLink) {
+          existingLink.remove()
+        }
+
+        if (validUIThemes.length > 0 && !validUIThemes.includes(theme)) {
+          console.warn(
+            `Unknown UI theme: ${theme}. Using gruvbox-dark as default.`
+          )
+          theme = 'gruvbox-dark'
+        }
+
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = `/css/ui-themes/ui-${theme}.css`
+        link.setAttribute('data-ui-theme', theme)
+
+        document.head.appendChild(link)
+
+        await new Promise<void>((resolve) => {
+          link.onload = () => resolve()
+          link.onerror = () => resolve()
+        })
+      } catch (e) {
+        console.error('Failed to load UI theme:', e)
+      }
+    },
+
+    async loadMarkdownTheme(theme: string): Promise<void> {
+      try {
+        const existingLink = document.head.querySelector(
+          'link[data-markdown-theme]'
+        )
+        if (existingLink) {
+          existingLink.remove()
+        }
+
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = `/css/md_render_themes/${theme}.css`
+        link.setAttribute('data-markdown-theme', theme)
+
+        document.head.appendChild(link)
+
+        await new Promise<void>((resolve) => {
+          link.onload = () => resolve()
+          link.onerror = () => resolve()
+        })
+      } catch (e) {
+        console.error('Failed to load markdown theme:', e)
+      }
+    },
+
+    async loadHighlightJSTheme(theme: string): Promise<void> {
+      try {
+        const existingLink = document.head.querySelector(
+          'link[data-highlight-theme]'
+        )
+        if (existingLink) {
+          existingLink.remove()
+        }
+
+        const getThemePath = (themeName: string): string => {
+          const base16Themes = [
+            'gruvbox-dark-hard',
+            'gruvbox-dark-medium',
+            'gruvbox-dark-soft',
+            'gruvbox-light-hard',
+            'gruvbox-light-medium',
+            'gruvbox-light-soft',
+            'base16-',
+          ]
+          const isBase16Theme = base16Themes.some((prefix) =>
+            themeName.startsWith(prefix)
+          )
+          if (isBase16Theme) {
+            return `base16/${themeName}.css`
+          }
+          return `${themeName}.css`
+        }
+
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = `/highlight-js-themes/${getThemePath(theme)}`
+        link.setAttribute('data-highlight-theme', theme)
+
+        document.head.appendChild(link)
+
+        await new Promise<void>((resolve) => {
+          link.onload = () => resolve()
+          link.onerror = () => {
+            console.warn(`Failed to load highlight.js theme: ${theme}`)
+            resolve()
+          }
+        })
+      } catch (e) {
+        console.error('Failed to load highlight.js theme:', e)
+      }
     },
   }
 }

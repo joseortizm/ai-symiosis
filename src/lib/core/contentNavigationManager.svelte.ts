@@ -903,7 +903,9 @@ export function createContentNavigationManager(
     if (!contentElement) return null
 
     const rect = contentElement.getBoundingClientRect()
-    const headers = Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+    const headers = Array.from(
+      contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    )
 
     const { firstVisibleHeader, lastPassedHeader } = analyzeHeaderVisibility(
       headers,

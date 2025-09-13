@@ -4,7 +4,7 @@
  * Maps key combinations to business logic functions across different UI contexts.
  */
 
-import type { ShortcutsConfig } from '../../services/configService.svelte'
+import type { ShortcutsConfig } from '../../types/config'
 
 export interface KeyboardActionDeps {
   focusManager: ReturnType<

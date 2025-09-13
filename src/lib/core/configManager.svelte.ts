@@ -6,7 +6,7 @@ import type {
   EditorConfig,
   ShortcutsConfig,
   PreferencesConfig,
-} from '../services/configService.svelte'
+} from '../types/config'
 
 interface ConfigState {
   notesDirectory: string
@@ -142,112 +142,6 @@ export function createConfigManager(): ConfigManager {
     )
   }
 
-  async function loadTheme(theme: string): Promise<void> {
-    try {
-      const existingLink = document.head.querySelector('link[data-ui-theme]')
-      if (existingLink) {
-        existingLink.remove()
-      }
-
-      if (validUIThemes.length > 0 && !validUIThemes.includes(theme)) {
-        console.warn(
-          `Unknown UI theme: ${theme}. Using gruvbox-dark as default.`
-        )
-        theme = 'gruvbox-dark'
-      }
-
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = `/css/ui-themes/ui-${theme}.css`
-      link.setAttribute('data-ui-theme', theme)
-
-      document.head.appendChild(link)
-
-      await new Promise<void>((resolve) => {
-        link.onload = () => resolve()
-        link.onerror = () => resolve()
-      })
-    } catch (e) {
-      console.error('Failed to load UI theme:', e)
-    }
-  }
-
-  async function loadMarkdownTheme(theme: string): Promise<void> {
-    try {
-      const existingLink = document.head.querySelector(
-        'link[data-markdown-theme]'
-      )
-      if (existingLink) {
-        existingLink.remove()
-      }
-
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = `/css/md_render_themes/${theme}.css`
-      link.setAttribute('data-markdown-theme', theme)
-
-      document.head.appendChild(link)
-
-      await new Promise<void>((resolve) => {
-        link.onload = () => resolve()
-        link.onerror = () => resolve()
-      })
-    } catch (e) {
-      console.error('Failed to load markdown theme:', e)
-    }
-  }
-
-  async function loadHighlightJSTheme(theme: string): Promise<void> {
-    try {
-      const existingLink = document.head.querySelector(
-        'link[data-highlight-theme]'
-      )
-      if (existingLink) {
-        existingLink.remove()
-      }
-
-      // Map theme names to their file paths in static directory
-      const getThemePath = (themeName: string): string => {
-        // Base16 themes are in a subdirectory
-        const base16Themes = [
-          'gruvbox-dark-hard',
-          'gruvbox-dark-medium',
-          'gruvbox-dark-soft',
-          'gruvbox-light-hard',
-          'gruvbox-light-medium',
-          'gruvbox-light-soft',
-          'base16-',
-        ]
-
-        const isBase16Theme = base16Themes.some((prefix) =>
-          themeName.startsWith(prefix)
-        )
-
-        if (isBase16Theme) {
-          return `base16/${themeName}.css`
-        }
-        return `${themeName}.css`
-      }
-
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = `/highlight-js-themes/${getThemePath(theme)}`
-      link.setAttribute('data-highlight-theme', theme)
-
-      document.head.appendChild(link)
-
-      await new Promise<void>((resolve) => {
-        link.onload = () => resolve()
-        link.onerror = () => {
-          console.warn(`Failed to load highlight.js theme: ${theme}`)
-          resolve()
-        }
-      })
-    } catch (e) {
-      console.error('Failed to load highlight.js theme:', e)
-    }
-  }
-
   function updateConfigState(config: ConfigChanged): void {
     const previousUITheme = state.interface.ui_theme
     const previousMarkdownTheme = state.interface.markdown_render_theme
@@ -267,13 +161,15 @@ export function createConfigManager(): ConfigManager {
       applyInterfaceConfig(config.interface)
 
       if (config.interface.ui_theme !== previousUITheme) {
-        loadTheme(config.interface.ui_theme)
+        configService.loadTheme(config.interface.ui_theme, validUIThemes)
       }
       if (config.interface.markdown_render_theme !== previousMarkdownTheme) {
-        loadMarkdownTheme(config.interface.markdown_render_theme)
+        configService.loadMarkdownTheme(config.interface.markdown_render_theme)
       }
       if (config.interface.md_render_code_theme !== previousCodeTheme) {
-        loadHighlightJSTheme(config.interface.md_render_code_theme)
+        configService.loadHighlightJSTheme(
+          config.interface.md_render_code_theme
+        )
       }
     }
   }
@@ -324,9 +220,11 @@ export function createConfigManager(): ConfigManager {
 
   async function setupThemes(interfaceConfig: InterfaceConfig): Promise<void> {
     applyInterfaceConfig(interfaceConfig)
-    await loadTheme(interfaceConfig.ui_theme)
-    await loadMarkdownTheme(interfaceConfig.markdown_render_theme)
-    await loadHighlightJSTheme(interfaceConfig.md_render_code_theme)
+    await configService.loadTheme(interfaceConfig.ui_theme, validUIThemes)
+    await configService.loadMarkdownTheme(interfaceConfig.markdown_render_theme)
+    await configService.loadHighlightJSTheme(
+      interfaceConfig.md_render_code_theme
+    )
     state.isThemeInitialized = true
   }
 
@@ -482,8 +380,8 @@ export function createConfigManager(): ConfigManager {
     initialize,
     cleanup,
     forceRefresh,
-    loadTheme,
-    loadMarkdownTheme,
-    loadHighlightJSTheme,
+    loadTheme: (theme: string) => configService.loadTheme(theme, validUIThemes),
+    loadMarkdownTheme: configService.loadMarkdownTheme,
+    loadHighlightJSTheme: configService.loadHighlightJSTheme,
   }
 }
