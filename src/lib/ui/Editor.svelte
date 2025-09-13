@@ -64,13 +64,12 @@ Focused component handling CodeMirror initialization and content editing.
   }: Props = $props()
 
   // Get reactive config state
-  const { configManager } = getContext<AppManagers>('managers')
+  const { configManager, editorManager } = getContext<AppManagers>('managers')
 
   let editorContainer: HTMLElement
   let editorView: EditorView | null = null
   let initialValue = $state(value)
   let lastPropsValue = $state(value)
-  let exitCaptured = $state(false)
 
   // Reactive config values
   const keyBindingMode = $derived(configManager.editor.mode || 'basic')
@@ -293,6 +292,7 @@ Focused component handling CodeMirror initialization and content editing.
     if (editorView) {
       editorView.destroy()
       editorView = null
+      editorManager.setEditorView(null)
     }
   }
 
@@ -330,6 +330,7 @@ Focused component handling CodeMirror initialization and content editing.
 
   function finalizeEditorSetup(newEditorView: EditorView): void {
     editorView = newEditorView
+    editorManager.setEditorView(newEditorView)
     scrollToHeader()
   }
 
@@ -490,75 +491,8 @@ Focused component handling CodeMirror initialization and content editing.
     createFallbackEditor()
   }
 
-  function findNearestHeaderAtCursor(): string {
-    if (!editorView) return ''
-
-    const cursorInfo = getCursorInformation()
-    return findHeaderAboveCursor(cursorInfo.lines, cursorInfo.cursorLine)
-  }
-
-  function getCursorInformation(): { lines: string[]; cursorLine: number } {
-    const doc = editorView!.state.doc
-    const cursorPos = editorView!.state.selection.main.head
-    const fullText = doc.toString()
-    const lines = fullText.split('\n')
-    const cursorLine = calculateCursorLine(lines, cursorPos)
-
-    return { lines, cursorLine }
-  }
-
-  function calculateCursorLine(lines: string[], cursorPos: number): number {
-    let charCount = 0
-
-    for (let i = 0; i < lines.length; i++) {
-      if (charCount + lines[i].length >= cursorPos) {
-        return i
-      }
-      charCount += lines[i].length + 1
-    }
-
-    return 0
-  }
-
-  function findHeaderAboveCursor(lines: string[], cursorLine: number): string {
-    for (let i = cursorLine; i >= 0; i--) {
-      const line = lines[i].trim()
-      if (isHeaderLine(line)) {
-        return line
-      }
-    }
-
-    return ''
-  }
-
-  function isHeaderLine(line: string): boolean {
-    return line.match(/^#{1,6}\s+/) !== null
-  }
-
   function captureExitPosition(): void {
-    if (editorView && !exitCaptured) {
-      exitCaptured = true
-      if (onExitHeaderCapture) {
-        try {
-          const headerText = findNearestHeaderAtCursor()
-          onExitHeaderCapture(headerText)
-        } catch (error) {
-          console.warn('Error in onExitHeaderCapture callback:', error)
-        }
-      }
-
-      if (onExitCursorCapture) {
-        try {
-          const pos = editorView.state.selection.main.head
-          const line = editorView.state.doc.lineAt(pos)
-          const lineNumber = line.number
-          const column = pos - line.from + 1
-          onExitCursorCapture(lineNumber, column)
-        } catch (error) {
-          console.warn('Error in onExitCursorCapture callback:', error)
-        }
-      }
-    }
+    editorManager.captureExitPosition(onExitHeaderCapture, onExitCursorCapture)
   }
 
   function scrollToHeader(): void {
@@ -697,6 +631,7 @@ Focused component handling CodeMirror initialization and content editing.
       if (editorView) {
         editorView.destroy()
         editorView = null
+        editorManager.setEditorView(null)
       }
 
       if (fallbackInputHandler && editorContainer) {

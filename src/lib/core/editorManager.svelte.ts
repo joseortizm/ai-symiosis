@@ -5,6 +5,7 @@
  */
 
 import type { createNoteService } from '../services/noteService.svelte'
+import type { EditorView } from 'codemirror'
 
 interface EditorState {
   isEditMode: boolean
@@ -13,6 +14,8 @@ interface EditorState {
   nearestHeaderText: string
   editingNoteName: string | null
   exitHeaderText: string
+  exitCaptured: boolean
+  editorView: EditorView | null
 }
 
 interface SaveResult {
@@ -42,6 +45,11 @@ export interface EditorManager {
   updateContent(newContent: string): void
   saveNote(): Promise<SaveResult>
   setExitHeaderText(headerText: string): void
+  setEditorView(editorView: EditorView | null): void
+  captureExitPosition(
+    onExitHeaderCapture?: ((headerText: string) => void) | null,
+    onExitCursorCapture?: ((line: number, column: number) => void) | null
+  ): void
 }
 
 export function createEditorManager(deps: EditorManagerDeps): EditorManager {
@@ -52,6 +60,8 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     nearestHeaderText: '',
     editingNoteName: null,
     exitHeaderText: '',
+    exitCaptured: false,
+    editorView: null,
   })
 
   async function enterEditMode(
@@ -172,6 +182,8 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     state.nearestHeaderText = ''
     state.editingNoteName = null
     state.exitHeaderText = ''
+    state.exitCaptured = false
+    state.editorView = null
     return exitHeader
   }
 
@@ -181,6 +193,84 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
 
   function updateContent(newContent: string): void {
     state.editContent = newContent
+  }
+
+  function setEditorView(editorView: EditorView | null): void {
+    state.editorView = editorView
+  }
+
+  function findNearestHeaderAtCursor(): string {
+    if (!state.editorView) return ''
+
+    const cursorInfo = getCursorInformation()
+    return findHeaderAboveCursor(cursorInfo.lines, cursorInfo.cursorLine)
+  }
+
+  function getCursorInformation(): { lines: string[]; cursorLine: number } {
+    const doc = state.editorView!.state.doc
+    const cursorPos = state.editorView!.state.selection.main.head
+    const fullText = doc.toString()
+    const lines = fullText.split('\n')
+    const cursorLine = calculateCursorLine(lines, cursorPos)
+
+    return { lines, cursorLine }
+  }
+
+  function calculateCursorLine(lines: string[], cursorPos: number): number {
+    let charCount = 0
+
+    for (let i = 0; i < lines.length; i++) {
+      if (charCount + lines[i].length >= cursorPos) {
+        return i
+      }
+      charCount += lines[i].length + 1
+    }
+
+    return 0
+  }
+
+  function findHeaderAboveCursor(lines: string[], cursorLine: number): string {
+    for (let i = cursorLine; i >= 0; i--) {
+      const line = lines[i].trim()
+      if (isHeaderLine(line)) {
+        return line
+      }
+    }
+
+    return ''
+  }
+
+  function isHeaderLine(line: string): boolean {
+    return line.match(/^#{1,6}\s+/) !== null
+  }
+
+  function captureExitPosition(
+    onExitHeaderCapture?: ((headerText: string) => void) | null,
+    onExitCursorCapture?: ((line: number, column: number) => void) | null
+  ): void {
+    if (state.editorView && !state.exitCaptured) {
+      state.exitCaptured = true
+      if (onExitHeaderCapture) {
+        try {
+          const headerText = findNearestHeaderAtCursor()
+          onExitHeaderCapture(headerText)
+        } catch (error) {
+          console.warn('Error in onExitHeaderCapture callback:', error)
+        }
+      }
+
+      if (onExitCursorCapture) {
+        try {
+          const pos = state.editorView.state.selection.main.head
+          const line = state.editorView.state.doc.lineAt(pos)
+          const lineNumber = line.number
+          const column = pos - line.from + 1
+          onExitCursorCapture(lineNumber, column)
+        } catch (error) {
+          console.warn('Error in onExitCursorCapture callback:', error)
+        }
+      }
+    }
   }
 
   async function saveNote(): Promise<SaveResult> {
@@ -238,5 +328,7 @@ export function createEditorManager(deps: EditorManagerDeps): EditorManager {
     updateContent,
     saveNote,
     setExitHeaderText,
+    setEditorView,
+    captureExitPosition,
   }
 }
