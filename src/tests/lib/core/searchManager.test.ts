@@ -64,7 +64,7 @@ describe('searchManager', () => {
       const notes = ['immediate.md']
       mockNoteService.search.mockResolvedValueOnce(notes)
 
-      const result = await searchManager.searchImmediate('immediate')
+      const result = await searchManager.executeSearch('immediate')
 
       expect(mockNoteService.search).toHaveBeenCalledWith('immediate')
       expect(result).toEqual(notes)
@@ -86,8 +86,8 @@ describe('searchManager', () => {
       const recentNotes = ['recent1.md', 'recent2.md']
       mockNoteService.search.mockResolvedValueOnce(recentNotes)
 
-      // Trigger initial load by calling refreshSearch with empty string
-      await searchManager.refreshSearch('')
+      // Trigger initial load by calling executeSearch with empty string
+      await searchManager.executeSearch('')
 
       expect(mockNoteService.search).toHaveBeenCalledWith('')
       expect(searchManager.filteredNotes).toEqual(recentNotes)
@@ -190,11 +190,11 @@ describe('searchManager', () => {
       expect(searchManager.searchInput).toBe('test input')
     })
 
-    it('should provide refreshSearch method', async () => {
+    it('should provide executeSearch method', async () => {
       const notes = ['refresh.md', 'test.md']
       mockNoteService.search.mockResolvedValueOnce(notes)
 
-      const result = await searchManager.refreshSearch('refresh query')
+      const result = await searchManager.executeSearch('refresh query')
 
       expect(mockNoteService.search).toHaveBeenCalledWith('refresh query')
       expect(result).toEqual(notes)

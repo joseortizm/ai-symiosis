@@ -32,8 +32,7 @@ interface SearchManager {
   setSearchInput(value: string): void
   setFilteredNotes(notes: string[]): void
   clearSearch(): void
-  searchImmediate(query: string): Promise<string[]>
-  refreshSearch(searchInput: string): Promise<string[]>
+  executeSearch(query: string): Promise<string[]>
   setSearchCompleteCallback(callback: (notes: string[]) => void): void
   abort(): void
 }
@@ -180,13 +179,9 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
       onSearchCompleteCallback = callback
     },
 
-    async searchImmediate(query: string): Promise<string[]> {
+    async executeSearch(query: string): Promise<string[]> {
       await performSearch(query)
       return state.filteredNotes
-    },
-    async refreshSearch(searchInput: string): Promise<string[]> {
-      const results = await this.searchImmediate(searchInput)
-      return results
     },
 
     abort(): void {

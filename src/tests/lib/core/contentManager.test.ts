@@ -19,7 +19,7 @@ describe('contentManager (factory-based - TDD)', () => {
       },
       searchManager: {
         query: 'test query',
-        refreshSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
+        executeSearch: vi.fn().mockResolvedValue(['note1.md', 'note2.md']),
       },
       focusManager: {
         noteContentElement: null,
@@ -70,14 +70,14 @@ describe('contentManager (factory-based - TDD)', () => {
     expect(mockDeps.noteService.getContent).toHaveBeenCalledWith(noteName)
   })
 
-  it('should use injected refreshSearch function', async () => {
+  it('should use injected executeSearch function', async () => {
     if (!contentManager) return // Skip if factory not implemented yet
 
     const noteName = 'test.md'
     const searchInput = 'test'
     await contentManager.refreshAfterSave(noteName, searchInput)
 
-    expect(mockDeps.searchManager.refreshSearch).toHaveBeenCalledWith(
+    expect(mockDeps.searchManager.executeSearch).toHaveBeenCalledWith(
       searchInput
     )
   })

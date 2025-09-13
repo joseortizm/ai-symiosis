@@ -11,7 +11,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 // Mock all managers and services
 const mockSearchManager = {
-  searchImmediate: vi.fn(),
+  executeSearch: vi.fn(),
   setSearchInput: vi.fn(),
   setFilteredNotes: vi.fn(),
   searchInput: '',
@@ -155,7 +155,7 @@ describe('appCoordinator Integration Tests', () => {
         success: true,
         noteName: expectedFileName,
       })
-      mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes)
+      mockSearchManager.executeSearch.mockResolvedValue(updatedNotes)
       mockSearchManager.filteredNotes = updatedNotes
 
       // Simulate user opening create dialog and typing
@@ -166,7 +166,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Verify the complete workflow
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName)
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('')
+      expect(mockSearchManager.executeSearch).toHaveBeenCalledWith('')
       expect(mockDialogManager.closeCreateDialog).toHaveBeenCalled()
       expect(mockFocusManager.focusSearch).toHaveBeenCalled()
 
@@ -189,7 +189,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Verify service was called but UI coordination didn't happen
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName)
-      expect(mockSearchManager.searchImmediate).not.toHaveBeenCalled()
+      expect(mockSearchManager.executeSearch).not.toHaveBeenCalled()
       expect(mockDialogManager.closeCreateDialog).not.toHaveBeenCalled()
       expect(mockFocusManager.focusSearch).not.toHaveBeenCalled()
     })
@@ -223,14 +223,14 @@ describe('appCoordinator Integration Tests', () => {
       mockNoteService.delete.mockResolvedValue({
         success: true,
       })
-      mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes)
+      mockSearchManager.executeSearch.mockResolvedValue(updatedNotes)
 
       // Execute deletion workflow
       await appCoordinator.actions.deleteNote()
 
       // Verify the complete workflow
       expect(mockNoteService.delete).toHaveBeenCalledWith(noteToDelete)
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('')
+      expect(mockSearchManager.executeSearch).toHaveBeenCalledWith('')
       expect(mockDialogManager.closeDeleteDialog).toHaveBeenCalled()
       expect(mockFocusManager.focusSearch).toHaveBeenCalled()
     })
@@ -248,7 +248,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Verify service was called but UI coordination didn't happen
       expect(mockNoteService.delete).toHaveBeenCalledWith(noteToDelete)
-      expect(mockSearchManager.searchImmediate).not.toHaveBeenCalled()
+      expect(mockSearchManager.executeSearch).not.toHaveBeenCalled()
       expect(mockDialogManager.closeDeleteDialog).not.toHaveBeenCalled()
       expect(mockFocusManager.focusSearch).not.toHaveBeenCalled()
     })
@@ -292,7 +292,7 @@ describe('appCoordinator Integration Tests', () => {
         success: true,
         newName: expectedNewName,
       })
-      mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes)
+      mockSearchManager.executeSearch.mockResolvedValue(updatedNotes)
 
       // Simulate user typing new name
       mockDialogManager.newNoteNameForRename = newName
@@ -302,7 +302,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Verify the complete workflow
       expect(mockNoteService.rename).toHaveBeenCalledWith(oldName, newName)
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('existing')
+      expect(mockSearchManager.executeSearch).toHaveBeenCalledWith('existing')
       expect(mockDialogManager.closeRenameDialog).toHaveBeenCalled()
 
       // Verify renamed note is selected
@@ -325,7 +325,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Verify service was called but UI coordination didn't happen
       expect(mockNoteService.rename).toHaveBeenCalledWith(oldName, newName)
-      expect(mockSearchManager.searchImmediate).not.toHaveBeenCalled()
+      expect(mockSearchManager.executeSearch).not.toHaveBeenCalled()
       expect(mockDialogManager.closeRenameDialog).not.toHaveBeenCalled()
     })
 
@@ -366,20 +366,20 @@ describe('appCoordinator Integration Tests', () => {
       mockConfigService.save.mockResolvedValue({
         success: true,
       })
-      mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes)
+      mockSearchManager.executeSearch.mockResolvedValue(updatedNotes)
 
       // Execute save workflow (simulating SettingsPane.handleSave)
       const result = await mockConfigService.save()
 
       if (result.success) {
-        const notes = await mockSearchManager.searchImmediate('')
+        const notes = await mockSearchManager.executeSearch('')
         // This would be called by SettingsPane.onRefresh callback
         appCoordinator.updateFilteredNotes(notes)
       }
 
       // Verify the workflow
       expect(mockConfigService.save).toHaveBeenCalled()
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('')
+      expect(mockSearchManager.executeSearch).toHaveBeenCalledWith('')
     })
 
     it('should handle settings save failure gracefully', async () => {
@@ -392,7 +392,7 @@ describe('appCoordinator Integration Tests', () => {
       const result = await mockConfigService.save()
 
       expect(result.success).toBe(false)
-      expect(mockSearchManager.searchImmediate).not.toHaveBeenCalled()
+      expect(mockSearchManager.executeSearch).not.toHaveBeenCalled()
     })
   })
 
@@ -403,7 +403,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Mock successful deletion
       mockNoteService.delete.mockResolvedValue({ success: true })
-      mockSearchManager.searchImmediate.mockResolvedValue([])
+      mockSearchManager.executeSearch.mockResolvedValue([])
 
       // Simulate the keyboard handler calling deleteNote after double delete press
       // const _keyboardActions = appCoordinator.keyboardActions
@@ -424,7 +424,7 @@ describe('appCoordinator Integration Tests', () => {
         success: true,
         noteName: expectedFileName,
       })
-      mockSearchManager.searchImmediate.mockResolvedValue([expectedFileName])
+      mockSearchManager.executeSearch.mockResolvedValue([expectedFileName])
 
       // This would be called by keyboard handler for Ctrl+Enter with the note name parameter
       await appCoordinator.actions.createNote(noteName)
@@ -445,7 +445,7 @@ describe('appCoordinator Integration Tests', () => {
         success: true,
         noteName: expectedFileName,
       })
-      mockSearchManager.searchImmediate.mockResolvedValue(updatedNotes)
+      mockSearchManager.executeSearch.mockResolvedValue(updatedNotes)
 
       mockDialogManager.newNoteName = noteName
 
@@ -453,7 +453,7 @@ describe('appCoordinator Integration Tests', () => {
 
       // Verify all managers were coordinated properly
       expect(mockNoteService.create).toHaveBeenCalledWith(noteName) // Service handles data
-      expect(mockSearchManager.searchImmediate).toHaveBeenCalledWith('') // Search refreshes
+      expect(mockSearchManager.executeSearch).toHaveBeenCalledWith('') // Search refreshes
       expect(mockDialogManager.closeCreateDialog).toHaveBeenCalled() // Dialog closes
       expect(mockFocusManager.focusSearch).toHaveBeenCalled() // Focus returns
       // Note: editorManager.enterEditMode() is called but we don't mock it in this test

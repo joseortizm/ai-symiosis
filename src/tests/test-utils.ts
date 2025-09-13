@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 export const mockInvoke = vi.fn()
 
 export const mockSearchManager = {
-  searchImmediate: vi.fn().mockResolvedValue([]),
+  executeSearch: vi.fn().mockResolvedValue([]),
   setSearchInput: vi.fn(),
   setFilteredNotes: vi.fn(),
   areHighlightsCleared: false,
@@ -23,5 +23,5 @@ export const mockDialogManager = {
 export const resetAllMocks = () => {
   vi.clearAllMocks()
   mockInvoke.mockClear()
-  mockSearchManager.searchImmediate.mockResolvedValue([])
+  mockSearchManager.executeSearch.mockResolvedValue([])
 }

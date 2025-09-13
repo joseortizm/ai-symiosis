@@ -14,7 +14,7 @@ const mockSearchManager = {
   setFilteredNotes: vi.fn((notes) => {
     mockSearchManager.filteredNotes = notes
   }),
-  searchImmediate: vi.fn(),
+  executeSearch: vi.fn(),
   clearSearch: vi.fn(),
 }
 

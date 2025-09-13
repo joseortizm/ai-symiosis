@@ -12,7 +12,7 @@ export interface ContentManagerDeps {
   }
   searchManager: {
     readonly query: string
-    refreshSearch(query: string): Promise<string[]>
+    executeSearch(query: string): Promise<string[]>
   }
   focusManager: {
     readonly noteContentElement: HTMLElement | null
@@ -81,7 +81,7 @@ export function createContentManager(deps: ContentManagerDeps): ContentManager {
     noteName: string,
     searchInput: string
   ): Promise<RefreshAfterSaveResult> {
-    const searchResults = await deps.searchManager.refreshSearch(searchInput)
+    const searchResults = await deps.searchManager.executeSearch(searchInput)
     const content = await refreshContent(noteName)
 
     return {

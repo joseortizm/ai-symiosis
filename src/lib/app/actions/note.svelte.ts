@@ -49,7 +49,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     const result = await noteService.create(inputNoteName)
 
     if (result.success) {
-      await searchManager.searchImmediate('')
+      await searchManager.executeSearch('')
 
       const noteIndex = searchManager.filteredNotes.findIndex(
         (note: string) => note === result.noteName
@@ -72,7 +72,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     const result = await noteService.delete(selectedNote)
 
     if (result.success) {
-      await searchManager.searchImmediate(searchManager.searchInput)
+      await searchManager.executeSearch(searchManager.searchInput)
       dialogManager.closeDeleteDialog()
       await tick()
       focusManager.focusSearch()
@@ -90,7 +90,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
     const result = await noteService.rename(selectedNote, inputNewName)
 
     if (result.success) {
-      await searchManager.searchImmediate(searchManager.searchInput)
+      await searchManager.executeSearch(searchManager.searchInput)
 
       const noteIndex = searchManager.filteredNotes.findIndex(
         (note: string) => note === result.newName

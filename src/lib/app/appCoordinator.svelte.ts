@@ -391,7 +391,7 @@ export function createAppCoordinator(
       }
 
       focusManager.focusSearch()
-      const notes = await searchManager.searchImmediate('')
+      const notes = await searchManager.executeSearch('')
       if (notes.length > 0) {
         focusManager.setSelectedIndex(0)
         await loadNoteContent(notes[0])
@@ -430,7 +430,7 @@ export function createAppCoordinator(
   }
 
   async function refreshUI(): Promise<void> {
-    await searchManager.refreshSearch('')
+    await searchManager.executeSearch('')
     contentManager.setNoteContent('')
     focusManager.setSelectedIndex(0)
   }
@@ -442,7 +442,7 @@ export function createAppCoordinator(
     const result = await configService.save()
 
     if (result.success) {
-      await searchManager.refreshSearch('')
+      await searchManager.executeSearch('')
       focusManager.focusSearch()
     }
 
