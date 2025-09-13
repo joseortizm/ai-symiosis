@@ -77,12 +77,30 @@ pub fn setup_notes_watcher(
     app_handle: AppHandle,
     app_state: Arc<crate::core::state::AppState>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let canonical_notes_dir = setup_canonical_notes_directory()?;
+    let debounced_watcher = Arc::new(DebouncedWatcher::new(500));
+    let (mut watcher, rx) = create_watcher_and_channel()?;
+
+    watcher.watch(&canonical_notes_dir, RecursiveMode::Recursive)?;
+    log("WATCHER_SETUP", "File watcher started successfully", None);
+
+    spawn_watcher_event_loop(
+        app_handle,
+        app_state,
+        debounced_watcher,
+        canonical_notes_dir,
+        rx,
+        watcher,
+    );
+
+    Ok(())
+}
+
+fn setup_canonical_notes_directory() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let notes_dir = get_config_notes_dir();
 
-    // Ensure directory exists before resolving symlinks
     std::fs::create_dir_all(&notes_dir)?;
 
-    // Resolve canonical path with proper error handling
     let canonical_notes_dir = notes_dir.canonicalize().map_err(|e| {
         log(
             "WATCHER_ERROR",
@@ -92,7 +110,6 @@ pub fn setup_notes_watcher(
         e
     })?;
 
-    // Validate that canonical path is still reasonable (security check)
     if !canonical_notes_dir.exists() || !canonical_notes_dir.is_dir() {
         return Err(format!(
             "Canonical notes directory is invalid: {}",
@@ -111,19 +128,22 @@ pub fn setup_notes_watcher(
         None,
     );
 
-    let debounced_watcher = Arc::new(DebouncedWatcher::new(500));
+    Ok(canonical_notes_dir)
+}
 
-    let (mut watcher, rx) = create_watcher_and_channel()?;
-
-    // Watch canonical path to ensure event paths match
-    watcher.watch(&canonical_notes_dir, RecursiveMode::Recursive)?;
-
-    log("WATCHER_SETUP", "File watcher started successfully", None);
-
+fn spawn_watcher_event_loop(
+    app_handle: AppHandle,
+    app_state: Arc<crate::core::state::AppState>,
+    debounced_watcher: Arc<DebouncedWatcher>,
+    canonical_notes_dir: PathBuf,
+    rx: mpsc::Receiver<Event>,
+    watcher: RecommendedWatcher,
+) {
     let app_handle_clone = app_handle.clone();
     let debounced_watcher_clone = debounced_watcher.clone();
     let app_state_clone = app_state.clone();
     let canonical_notes_dir_for_processing = canonical_notes_dir.clone();
+
     thread::spawn(move || {
         let _watcher = watcher;
 
@@ -131,68 +151,13 @@ pub fn setup_notes_watcher(
             match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                     if involves_note_files(&event) {
-                        #[cfg(debug_assertions)]
-                        log(
-                            "WATCHER_EVENT",
-                            &format!("File event: {:?} | Paths: {:?}", event.kind, event.paths),
-                            None,
+                        handle_file_system_event(
+                            &event,
+                            &app_state_clone,
+                            &debounced_watcher_clone,
+                            &app_handle_clone,
+                            &canonical_notes_dir_for_processing,
                         );
-                        let prog_op_in_progress = app_state_clone
-                            .programmatic_operation_in_progress()
-                            .load(Ordering::Relaxed);
-
-                        #[cfg(debug_assertions)]
-                        if prog_op_in_progress {
-                            log(
-                                "WATCHER_EVENT",
-                                "⏸️  Skipping - programmatic operation in progress",
-                                None,
-                            );
-                        }
-
-                        if !prog_op_in_progress {
-                            let should_process = event
-                                .paths
-                                .iter()
-                                .any(|path| debounced_watcher_clone.should_process_event(path));
-
-                            #[cfg(debug_assertions)]
-                            log(
-                                "WATCHER_EVENT",
-                                if should_process {
-                                    "✅ Processing event"
-                                } else {
-                                    "⏭️  Skipping - debounced"
-                                },
-                                None,
-                            );
-
-                            if should_process {
-                                let app_handle_for_refresh = app_handle_clone.clone();
-                                let paths_to_update = event.paths.clone();
-                                let app_state_for_task = app_state.clone();
-                                let canonical_dir = canonical_notes_dir_for_processing.clone();
-
-                                tauri::async_runtime::spawn(async move {
-                                    #[cfg(debug_assertions)]
-                                    log(
-                                        "WATCHER_PROCESS",
-                                        &format!(
-                                            "🔄 Processing {} file paths",
-                                            paths_to_update.len()
-                                        ),
-                                        None,
-                                    );
-
-                                    process_file_paths(
-                                        &paths_to_update,
-                                        &canonical_dir,
-                                        &app_state_for_task,
-                                    );
-                                    emit_cache_refresh_notification(&app_handle_for_refresh);
-                                });
-                            }
-                        }
                     }
                 }
                 _ => {}
@@ -201,8 +166,80 @@ pub fn setup_notes_watcher(
             handle_periodic_cleanup(&debounced_watcher_clone);
         }
     });
+}
 
-    Ok(())
+fn handle_file_system_event(
+    event: &Event,
+    app_state: &Arc<crate::core::state::AppState>,
+    debounced_watcher: &Arc<DebouncedWatcher>,
+    app_handle: &AppHandle,
+    canonical_notes_dir: &PathBuf,
+) {
+    #[cfg(debug_assertions)]
+    log(
+        "WATCHER_EVENT",
+        &format!("File event: {:?} | Paths: {:?}", event.kind, event.paths),
+        None,
+    );
+
+    let prog_op_in_progress = app_state
+        .programmatic_operation_in_progress()
+        .load(Ordering::Relaxed);
+
+    #[cfg(debug_assertions)]
+    if prog_op_in_progress {
+        log(
+            "WATCHER_EVENT",
+            "⏸️  Skipping - programmatic operation in progress",
+            None,
+        );
+    }
+
+    if !prog_op_in_progress {
+        let should_process = event
+            .paths
+            .iter()
+            .any(|path| debounced_watcher.should_process_event(path));
+
+        #[cfg(debug_assertions)]
+        log(
+            "WATCHER_EVENT",
+            if should_process {
+                "✅ Processing event"
+            } else {
+                "⏭️  Skipping - debounced"
+            },
+            None,
+        );
+
+        if should_process {
+            process_file_event_async(event, app_handle, app_state, canonical_notes_dir);
+        }
+    }
+}
+
+fn process_file_event_async(
+    event: &Event,
+    app_handle: &AppHandle,
+    app_state: &Arc<crate::core::state::AppState>,
+    canonical_notes_dir: &PathBuf,
+) {
+    let app_handle_for_refresh = app_handle.clone();
+    let paths_to_update = event.paths.clone();
+    let app_state_for_task = app_state.clone();
+    let canonical_dir = canonical_notes_dir.clone();
+
+    tauri::async_runtime::spawn(async move {
+        #[cfg(debug_assertions)]
+        log(
+            "WATCHER_PROCESS",
+            &format!("🔄 Processing {} file paths", paths_to_update.len()),
+            None,
+        );
+
+        process_file_paths(&paths_to_update, &canonical_dir, &app_state_for_task);
+        emit_cache_refresh_notification(&app_handle_for_refresh);
+    });
 }
 
 fn create_watcher_and_channel(

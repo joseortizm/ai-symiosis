@@ -424,6 +424,118 @@ fn create_rename_backup_with_target_check(
     }
 }
 
+fn ensure_parent_directory_exists(new_path: &std::path::PathBuf) -> AppResult<()> {
+    if let Some(parent) = new_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    Ok(())
+}
+
+fn perform_atomic_file_rename(
+    app_state: &tauri::State<crate::core::state::AppState>,
+    old_path: &std::path::PathBuf,
+    new_path: &std::path::PathBuf,
+) -> AppResult<()> {
+    super::notes::with_programmatic_flag(app_state, || {
+        fs::rename(old_path, new_path).map_err(AppError::from)
+    })
+}
+
+fn handle_successful_rename(
+    app_state: &tauri::State<crate::core::state::AppState>,
+    old_name: &str,
+    new_name: &str,
+    backup_path: std::path::PathBuf,
+) -> AppResult<()> {
+    match update_database_filename(app_state, old_name, new_name) {
+        Ok(_) => {
+            cleanup_backup_file(&backup_path);
+            log_successful_rename(old_name, new_name);
+            Ok(())
+        }
+        Err(e) => {
+            if let Err(_) = handle_database_recovery(
+                app_state,
+                &format!("rename '{}' -> '{}'", old_name, new_name),
+                &e,
+                "Note renamed but database rebuild failed",
+                "Database rebuild failed. Note was renamed but may not be searchable.",
+            ) {
+                return Err(AppError::DatabaseRebuild(format!(
+                    "Note renamed but database rebuild failed: {}",
+                    e
+                )));
+            }
+            cleanup_backup_file(&backup_path);
+            Ok(())
+        }
+    }
+}
+
+fn handle_failed_rename(
+    old_path: &std::path::PathBuf,
+    new_path: &std::path::PathBuf,
+    new_name: &str,
+    backup_path: std::path::PathBuf,
+    error: AppError,
+) -> AppResult<()> {
+    attempt_backup_restore(&backup_path, old_path);
+
+    if new_path.exists() {
+        Err(AppError::InvalidNoteName(format!(
+            "Note '{}' already exists",
+            new_name
+        )))
+    } else {
+        Err(AppError::FileWrite(format!(
+            "Failed to rename note: {}",
+            error
+        )))
+    }
+}
+
+fn update_database_filename(
+    app_state: &tauri::State<crate::core::state::AppState>,
+    old_name: &str,
+    new_name: &str,
+) -> AppResult<()> {
+    with_db(app_state, |conn| {
+        conn.execute(
+            "UPDATE notes SET filename = ?1 WHERE filename = ?2",
+            params![new_name, old_name],
+        )?;
+        Ok(())
+    })
+}
+
+fn cleanup_backup_file(backup_path: &std::path::PathBuf) {
+    if let Err(e) = fs::remove_file(backup_path) {
+        log(
+            "BACKUP_CLEANUP",
+            &format!("Failed to remove backup file: {:?}", backup_path),
+            Some(&e.to_string()),
+        );
+    }
+}
+
+fn log_successful_rename(old_name: &str, new_name: &str) {
+    log(
+        "FILE_OPERATION",
+        &format!("RENAME: {} -> {} | SUCCESS", old_name, new_name),
+        None,
+    );
+}
+
+fn attempt_backup_restore(backup_path: &std::path::PathBuf, old_path: &std::path::PathBuf) {
+    if let Err(restore_err) = fs::rename(backup_path, old_path) {
+        log(
+            "FILE_OPERATION",
+            "CRITICAL: Failed to restore backup after failed rename",
+            Some(&restore_err.to_string()),
+        );
+    }
+}
+
 fn perform_atomic_rename_with_database(
     old_path: &std::path::PathBuf,
     new_path: &std::path::PathBuf,
@@ -432,82 +544,14 @@ fn perform_atomic_rename_with_database(
     backup_path: std::path::PathBuf,
     app_state: &tauri::State<crate::core::state::AppState>,
 ) -> AppResult<()> {
-    if let Some(parent) = new_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
+    ensure_parent_directory_exists(new_path)?;
 
-    let rename_result = super::notes::with_programmatic_flag(app_state, || {
-        fs::rename(old_path, new_path).map_err(AppError::from)
-    });
+    let rename_result = perform_atomic_file_rename(app_state, old_path, new_path);
 
     match rename_result {
-        Ok(()) => {
-            match with_db(app_state, |conn| {
-                conn.execute(
-                    "UPDATE notes SET filename = ?1 WHERE filename = ?2",
-                    params![new_name, old_name],
-                )?;
-                Ok(())
-            }) {
-                Ok(_) => {
-                    if let Err(e) = fs::remove_file(&backup_path) {
-                        log(
-                            "BACKUP_CLEANUP",
-                            &format!("Failed to remove backup file: {:?}", backup_path),
-                            Some(&e.to_string()),
-                        );
-                    }
-
-                    log(
-                        "FILE_OPERATION",
-                        &format!("RENAME: {} -> {} | SUCCESS", old_name, new_name),
-                        None,
-                    );
-                }
-                Err(e) => {
-                    if let Err(_) = handle_database_recovery(
-                        app_state,
-                        &format!("rename '{}' -> '{}'", old_name, new_name),
-                        &e,
-                        "Note renamed but database rebuild failed",
-                        "Database rebuild failed. Note was renamed but may not be searchable.",
-                    ) {
-                        return Err(AppError::DatabaseRebuild(format!(
-                            "Note renamed but database rebuild failed: {}",
-                            e
-                        )));
-                    }
-                    if let Err(e) = fs::remove_file(&backup_path) {
-                        crate::logging::log(
-                            "BACKUP_CLEANUP",
-                            &format!("Failed to remove backup file: {:?}", backup_path),
-                            Some(&e.to_string()),
-                        );
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            if let Err(restore_err) = fs::rename(&backup_path, old_path) {
-                log(
-                    "FILE_OPERATION",
-                    "CRITICAL: Failed to restore backup after failed rename",
-                    Some(&restore_err.to_string()),
-                );
-            }
-
-            if new_path.exists() {
-                return Err(AppError::InvalidNoteName(format!(
-                    "Note '{}' already exists",
-                    new_name
-                )));
-            } else {
-                return Err(AppError::FileWrite(format!("Failed to rename note: {}", e)));
-            }
-        }
+        Ok(()) => handle_successful_rename(app_state, old_name, new_name, backup_path),
+        Err(e) => handle_failed_rename(old_path, new_path, new_name, backup_path, e),
     }
-
-    Ok(())
 }
 
 fn handle_database_only_rename(

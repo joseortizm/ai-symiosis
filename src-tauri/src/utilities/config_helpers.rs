@@ -193,99 +193,109 @@ fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {
     let mut config = InterfaceConfig::default();
 
     if let Some(section) = interface_section {
-        if let Some(theme) = section.get("ui_theme").and_then(|v| v.as_str()) {
-            let valid_themes = get_available_ui_themes();
-            if valid_themes.contains(&theme) {
-                config.ui_theme = theme.to_string();
-            } else {
-                log(
-                    "CONFIG_VALIDATION",
-                    &format!(
-                        "Warning: Invalid ui_theme '{}'. Using default '{}'.",
-                        theme, config.ui_theme
-                    ),
-                    None,
-                );
-            }
-        }
-
-        if let Some(font) = section.get("font_family").and_then(|v| v.as_str()) {
-            config.font_family = font.to_string();
-        }
-
-        if let Some(size) = section.get("font_size").and_then(|v| v.as_integer()) {
-            let size = size as u16;
-            if validate_font_size(size, "UI font size").is_ok() {
-                config.font_size = size;
-            } else {
-                log(
-                    "CONFIG_VALIDATION",
-                    &format!(
-                        "Warning: Invalid font_size {}. Using default {}.",
-                        size, config.font_size
-                    ),
-                    None,
-                );
-            }
-        }
-
-        if let Some(font) = section.get("editor_font_family").and_then(|v| v.as_str()) {
-            config.editor_font_family = font.to_string();
-        }
-
-        if let Some(size) = section.get("editor_font_size").and_then(|v| v.as_integer()) {
-            let size = size as u16;
-            if validate_font_size(size, "Editor font size").is_ok() {
-                config.editor_font_size = size;
-            } else {
-                log(
-                    "CONFIG_VALIDATION",
-                    &format!(
-                        "Warning: Invalid editor_font_size {}. Using default {}.",
-                        size, config.editor_font_size
-                    ),
-                    None,
-                );
-            }
-        }
-
-        if let Some(theme) = section
-            .get("markdown_render_theme")
-            .and_then(|v| v.as_str())
-        {
-            let valid_themes = get_available_markdown_themes();
-            if valid_themes.contains(&theme) {
-                config.markdown_render_theme = theme.to_string();
-            } else {
-                eprintln!(
-                    "Warning: Invalid markdown_render_theme '{}'. Using default '{}'.",
-                    theme, config.markdown_render_theme
-                );
-            }
-        }
-
-        if let Some(theme) = section.get("md_render_code_theme").and_then(|v| v.as_str()) {
-            let valid_themes = get_available_code_themes();
-            if valid_themes.contains(&theme) {
-                config.md_render_code_theme = theme.to_string();
-            } else {
-                eprintln!(
-                    "Warning: Invalid md_render_code_theme '{}'. Using default '{}'.",
-                    theme, config.md_render_code_theme
-                );
-            }
-        }
-
-        if let Some(always_top) = section.get("always_on_top").and_then(|v| v.as_bool()) {
-            config.always_on_top = always_top;
-        }
-
-        if let Some(decorations) = section.get("window_decorations").and_then(|v| v.as_bool()) {
-            config.window_decorations = decorations;
-        }
+        extract_theme_configuration(section, &mut config);
+        extract_font_configuration(section, &mut config);
+        extract_window_configuration(section, &mut config);
     }
 
     config
+}
+
+fn extract_theme_configuration(section: &toml::Value, config: &mut InterfaceConfig) {
+    if let Some(theme) = section.get("ui_theme").and_then(|v| v.as_str()) {
+        let valid_themes = get_available_ui_themes();
+        if valid_themes.contains(&theme) {
+            config.ui_theme = theme.to_string();
+        } else {
+            log(
+                "CONFIG_VALIDATION",
+                &format!(
+                    "Warning: Invalid ui_theme '{}'. Using default '{}'.",
+                    theme, config.ui_theme
+                ),
+                None,
+            );
+        }
+    }
+
+    if let Some(theme) = section
+        .get("markdown_render_theme")
+        .and_then(|v| v.as_str())
+    {
+        let valid_themes = get_available_markdown_themes();
+        if valid_themes.contains(&theme) {
+            config.markdown_render_theme = theme.to_string();
+        } else {
+            eprintln!(
+                "Warning: Invalid markdown_render_theme '{}'. Using default '{}'.",
+                theme, config.markdown_render_theme
+            );
+        }
+    }
+
+    if let Some(theme) = section.get("md_render_code_theme").and_then(|v| v.as_str()) {
+        let valid_themes = get_available_code_themes();
+        if valid_themes.contains(&theme) {
+            config.md_render_code_theme = theme.to_string();
+        } else {
+            eprintln!(
+                "Warning: Invalid md_render_code_theme '{}'. Using default '{}'.",
+                theme, config.md_render_code_theme
+            );
+        }
+    }
+}
+
+fn extract_font_configuration(section: &toml::Value, config: &mut InterfaceConfig) {
+    if let Some(font) = section.get("font_family").and_then(|v| v.as_str()) {
+        config.font_family = font.to_string();
+    }
+
+    if let Some(size) = section.get("font_size").and_then(|v| v.as_integer()) {
+        let size = size as u16;
+        if validate_font_size(size, "UI font size").is_ok() {
+            config.font_size = size;
+        } else {
+            log(
+                "CONFIG_VALIDATION",
+                &format!(
+                    "Warning: Invalid font_size {}. Using default {}.",
+                    size, config.font_size
+                ),
+                None,
+            );
+        }
+    }
+
+    if let Some(font) = section.get("editor_font_family").and_then(|v| v.as_str()) {
+        config.editor_font_family = font.to_string();
+    }
+
+    if let Some(size) = section.get("editor_font_size").and_then(|v| v.as_integer()) {
+        let size = size as u16;
+        if validate_font_size(size, "Editor font size").is_ok() {
+            config.editor_font_size = size;
+        } else {
+            log(
+                "CONFIG_VALIDATION",
+                &format!(
+                    "Warning: Invalid editor_font_size {}. Using default {}.",
+                    size, config.editor_font_size
+                ),
+                None,
+            );
+        }
+    }
+}
+
+fn extract_window_configuration(section: &toml::Value, config: &mut InterfaceConfig) {
+    if let Some(always_top) = section.get("always_on_top").and_then(|v| v.as_bool()) {
+        config.always_on_top = always_top;
+    }
+
+    if let Some(decorations) = section.get("window_decorations").and_then(|v| v.as_bool()) {
+        config.window_decorations = decorations;
+    }
 }
 
 fn extract_editor_config(value: &toml::Value) -> EditorConfig {

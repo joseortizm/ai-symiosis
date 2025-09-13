@@ -50,87 +50,9 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
     let mut ui_themes = Vec::new();
     let mut markdown_themes = Vec::new();
 
-    if let Some(resource_dir) = app.path().resource_dir().ok() {
-        let ui_themes_path = resource_dir.join("css/ui-themes");
-        if ui_themes_path.exists() {
-            if let Ok(entries) = fs::read_dir(&ui_themes_path) {
-                for entry in entries.filter_map(|e| e.ok()) {
-                    if let Some(filename) = entry.file_name().to_str() {
-                        if filename.starts_with("ui-") && filename.ends_with(".css") {
-                            let theme_name = filename
-                                .strip_prefix("ui-")
-                                .and_then(|s| s.strip_suffix(".css"))
-                                .unwrap_or(filename);
-                            ui_themes.push(theme_name.to_string());
-                        }
-                    }
-                }
-            }
-        }
-
-        let md_themes_path = resource_dir.join("css/md_render_themes");
-        if md_themes_path.exists() {
-            if let Ok(entries) = fs::read_dir(&md_themes_path) {
-                for entry in entries.filter_map(|e| e.ok()) {
-                    if let Some(filename) = entry.file_name().to_str() {
-                        if filename.ends_with(".css") {
-                            let theme_name = filename.strip_suffix(".css").unwrap_or(filename);
-                            markdown_themes.push(theme_name.to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback to scanning static directory (development builds)
-    if ui_themes.is_empty() || markdown_themes.is_empty() {
-        let static_ui_path = std::path::Path::new("./static/css/ui-themes");
-        let static_md_path = std::path::Path::new("./static/css/md_render_themes");
-
-        if ui_themes.is_empty() && static_ui_path.exists() {
-            if let Ok(entries) = fs::read_dir(static_ui_path) {
-                for entry in entries.filter_map(|e| e.ok()) {
-                    if let Some(filename) = entry.file_name().to_str() {
-                        if filename.starts_with("ui-") && filename.ends_with(".css") {
-                            let theme_name = filename
-                                .strip_prefix("ui-")
-                                .and_then(|s| s.strip_suffix(".css"))
-                                .unwrap_or(filename);
-                            ui_themes.push(theme_name.to_string());
-                        }
-                    }
-                }
-            }
-        }
-
-        if markdown_themes.is_empty() && static_md_path.exists() {
-            if let Ok(entries) = fs::read_dir(static_md_path) {
-                for entry in entries.filter_map(|e| e.ok()) {
-                    if let Some(filename) = entry.file_name().to_str() {
-                        if filename.ends_with(".css") {
-                            let theme_name = filename.strip_suffix(".css").unwrap_or(filename);
-                            markdown_themes.push(theme_name.to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Final fallback to known themes
-    if ui_themes.is_empty() {
-        ui_themes = get_available_ui_themes()
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-    }
-    if markdown_themes.is_empty() {
-        markdown_themes = get_available_markdown_themes()
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-    }
+    scan_resource_themes(&app, &mut ui_themes, &mut markdown_themes);
+    scan_static_themes(&mut ui_themes, &mut markdown_themes);
+    apply_theme_fallbacks(&mut ui_themes, &mut markdown_themes);
 
     ui_themes.sort();
     markdown_themes.sort();
@@ -139,6 +61,86 @@ pub async fn scan_available_themes(app: AppHandle) -> Result<serde_json::Value, 
         "ui_themes": ui_themes,
         "markdown_themes": markdown_themes
     }))
+}
+
+fn scan_resource_themes(
+    app: &AppHandle,
+    ui_themes: &mut Vec<String>,
+    markdown_themes: &mut Vec<String>,
+) {
+    if let Some(resource_dir) = app.path().resource_dir().ok() {
+        scan_ui_themes_in_directory(&resource_dir.join("css/ui-themes"), ui_themes);
+        scan_markdown_themes_in_directory(
+            &resource_dir.join("css/md_render_themes"),
+            markdown_themes,
+        );
+    }
+}
+
+fn scan_static_themes(ui_themes: &mut Vec<String>, markdown_themes: &mut Vec<String>) {
+    if ui_themes.is_empty() || markdown_themes.is_empty() {
+        let static_ui_path = std::path::Path::new("./static/css/ui-themes");
+        let static_md_path = std::path::Path::new("./static/css/md_render_themes");
+
+        if ui_themes.is_empty() {
+            scan_ui_themes_in_directory(static_ui_path, ui_themes);
+        }
+
+        if markdown_themes.is_empty() {
+            scan_markdown_themes_in_directory(static_md_path, markdown_themes);
+        }
+    }
+}
+
+fn scan_ui_themes_in_directory(themes_path: &std::path::Path, ui_themes: &mut Vec<String>) {
+    if themes_path.exists() {
+        if let Ok(entries) = fs::read_dir(themes_path) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                if let Some(filename) = entry.file_name().to_str() {
+                    if filename.starts_with("ui-") && filename.ends_with(".css") {
+                        let theme_name = filename
+                            .strip_prefix("ui-")
+                            .and_then(|s| s.strip_suffix(".css"))
+                            .unwrap_or(filename);
+                        ui_themes.push(theme_name.to_string());
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn scan_markdown_themes_in_directory(
+    themes_path: &std::path::Path,
+    markdown_themes: &mut Vec<String>,
+) {
+    if themes_path.exists() {
+        if let Ok(entries) = fs::read_dir(themes_path) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                if let Some(filename) = entry.file_name().to_str() {
+                    if filename.ends_with(".css") {
+                        let theme_name = filename.strip_suffix(".css").unwrap_or(filename);
+                        markdown_themes.push(theme_name.to_string());
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn apply_theme_fallbacks(ui_themes: &mut Vec<String>, markdown_themes: &mut Vec<String>) {
+    if ui_themes.is_empty() {
+        *ui_themes = get_available_ui_themes()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+    }
+    if markdown_themes.is_empty() {
+        *markdown_themes = get_available_markdown_themes()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+    }
 }
 
 #[tauri::command]

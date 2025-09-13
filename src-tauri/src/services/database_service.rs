@@ -8,6 +8,7 @@ use rusqlite::{params, Connection};
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    path::PathBuf,
     time::UNIX_EPOCH,
 };
 use tauri::{AppHandle, Emitter};
@@ -50,16 +51,8 @@ pub fn load_all_notes_into_sqlite(
     load_all_notes_into_sqlite_with_progress(app_state, conn, None)
 }
 
-pub fn load_all_notes_into_sqlite_with_progress(
-    _app_state: &AppState,
-    conn: &mut Connection,
-    app_handle: Option<&AppHandle>,
-) -> rusqlite::Result<()> {
-    // Note: This function is called from within rebuild context,
-    // so rebuild lock is already held by caller
-
+fn ensure_notes_directory_exists() -> rusqlite::Result<()> {
     let notes_dir = get_config_notes_dir();
-
     if !notes_dir.exists() {
         if let Err(e) = fs::create_dir_all(&notes_dir) {
             log(
@@ -67,10 +60,19 @@ pub fn load_all_notes_into_sqlite_with_progress(
                 "Failed to create notes directory",
                 Some(&e.to_string()),
             );
-            return Ok(());
+            return Err(rusqlite::Error::ToSqlConversionFailure(Box::new(
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to create notes directory: {}", e)
+                ),
+            )));
         }
     }
+    Ok(())
+}
 
+fn scan_filesystem_for_notes() -> rusqlite::Result<Vec<(String, PathBuf, i64)>> {
+    let notes_dir = get_config_notes_dir();
     let mut filesystem_files = Vec::new();
 
     for entry in WalkDir::new(&notes_dir).into_iter().filter_map(|e| e.ok()) {
@@ -100,78 +102,152 @@ pub fn load_all_notes_into_sqlite_with_progress(
     }
 
     filesystem_files.sort_by(|a, b| b.2.cmp(&a.2));
+    Ok(filesystem_files)
+}
 
+fn load_existing_database_files(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<String, (i64, bool)>> {
     let mut database_files = HashMap::new();
-    {
-        let mut stmt = conn.prepare("SELECT filename, modified, is_indexed FROM notes")?;
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)?,
-                row.get::<_, bool>(2).unwrap_or(false),
-            ))
-        })?;
+    let mut stmt = conn.prepare("SELECT filename, modified, is_indexed FROM notes")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, i64>(1)?,
+            row.get::<_, bool>(2).unwrap_or(false),
+        ))
+    })?;
 
-        for row in rows {
-            let (filename, modified, is_indexed) = row?;
-            database_files.insert(filename, (modified, is_indexed));
-        }
+    for row in rows {
+        let (filename, modified, is_indexed) = row?;
+        database_files.insert(filename, (modified, is_indexed));
     }
 
+    Ok(database_files)
+}
+
+fn sync_database_with_filesystem(
+    conn: &mut Connection,
+    filesystem_files: &[(String, PathBuf, i64)],
+    database_files: &HashMap<String, (i64, bool)>,
+    app_handle: Option<&AppHandle>,
+) -> rusqlite::Result<()> {
     let tx = conn.transaction()?;
 
+    remove_deleted_files_from_database(&tx, filesystem_files, database_files)?;
+    process_filesystem_files(&tx, filesystem_files, database_files, app_handle)?;
+
+    tx.commit()
+}
+
+fn remove_deleted_files_from_database(
+    tx: &rusqlite::Transaction,
+    filesystem_files: &[(String, PathBuf, i64)],
+    database_files: &HashMap<String, (i64, bool)>,
+) -> rusqlite::Result<()> {
     let filesystem_filenames: HashSet<_> =
         filesystem_files.iter().map(|(name, _, _)| name).collect();
+
     for filename in database_files.keys() {
         if !filesystem_filenames.contains(filename) {
             tx.execute("DELETE FROM notes WHERE filename = ?1", params![filename])?;
         }
     }
 
+    Ok(())
+}
+
+fn process_filesystem_files(
+    tx: &rusqlite::Transaction,
+    filesystem_files: &[(String, PathBuf, i64)],
+    database_files: &HashMap<String, (i64, bool)>,
+    app_handle: Option<&AppHandle>,
+) -> rusqlite::Result<()> {
     let total_files = filesystem_files.len();
 
     for (index, (filename, path, fs_modified)) in filesystem_files.iter().enumerate() {
-        if let Some(app) = app_handle {
-            if index == 0 || (index + 1) % 10 == 0 || index == total_files - 1 {
-                let progress_msg = format!("Loading {} of {} notes...", index + 1, total_files);
-                if let Err(e) = app.emit("db-loading-progress", progress_msg) {
-                    log(
-                        "UI_UPDATE",
-                        "Failed to emit db-loading-progress event",
-                        Some(&e.to_string()),
-                    );
-                }
-            }
-        }
+        emit_progress_if_needed(app_handle, index, total_files)?;
 
         let (db_modified, is_indexed) = database_files.get(filename).copied().unwrap_or((0, false));
 
         if *fs_modified != db_modified {
-            let content = fs::read_to_string(path).unwrap_or_default();
-
-            if index < IMMEDIATE_RENDER_COUNT {
-                let html_render = crate::utilities::note_renderer::render_note(filename, &content);
-                tx.execute(
-                    "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![filename, content, html_render, *fs_modified, true],
-                )?;
-            } else {
-                tx.execute(
-                    "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![filename, content, "", *fs_modified, false],
-                )?;
-            }
+            process_modified_file(tx, filename, path, *fs_modified, index)?;
         } else if !is_indexed && index < IMMEDIATE_RENDER_COUNT {
-            let content = fs::read_to_string(path).unwrap_or_default();
-            let html_render = crate::utilities::note_renderer::render_note(filename, &content);
-            tx.execute(
-                "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
-                params![filename, html_render, true],
-            )?;
+            update_unindexed_file(tx, filename, path)?;
         }
     }
 
-    tx.commit()
+    Ok(())
+}
+
+fn emit_progress_if_needed(
+    app_handle: Option<&AppHandle>,
+    index: usize,
+    total_files: usize,
+) -> rusqlite::Result<()> {
+    if let Some(app) = app_handle {
+        if index == 0 || (index + 1) % 10 == 0 || index == total_files - 1 {
+            let progress_msg = format!("Loading {} of {} notes...", index + 1, total_files);
+            if let Err(e) = app.emit("db-loading-progress", progress_msg) {
+                log(
+                    "UI_UPDATE",
+                    "Failed to emit db-loading-progress event",
+                    Some(&e.to_string()),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn process_modified_file(
+    tx: &rusqlite::Transaction,
+    filename: &str,
+    path: &PathBuf,
+    fs_modified: i64,
+    index: usize,
+) -> rusqlite::Result<()> {
+    let content = fs::read_to_string(path).unwrap_or_default();
+
+    if index < IMMEDIATE_RENDER_COUNT {
+        let html_render = crate::utilities::note_renderer::render_note(filename, &content);
+        tx.execute(
+            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![filename, content, html_render, fs_modified, true],
+        )?;
+    } else {
+        tx.execute(
+            "INSERT OR REPLACE INTO notes (filename, content, html_render, modified, is_indexed) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![filename, content, "", fs_modified, false],
+        )?;
+    }
+
+    Ok(())
+}
+
+fn update_unindexed_file(
+    tx: &rusqlite::Transaction,
+    filename: &str,
+    path: &PathBuf,
+) -> rusqlite::Result<()> {
+    let content = fs::read_to_string(path).unwrap_or_default();
+    let html_render = crate::utilities::note_renderer::render_note(filename, &content);
+    tx.execute(
+        "UPDATE notes SET html_render = ?2, is_indexed = ?3 WHERE filename = ?1",
+        params![filename, html_render, true],
+    )?;
+    Ok(())
+}
+
+pub fn load_all_notes_into_sqlite_with_progress(
+    _app_state: &AppState,
+    conn: &mut Connection,
+    app_handle: Option<&AppHandle>,
+) -> rusqlite::Result<()> {
+    ensure_notes_directory_exists()?;
+    let filesystem_files = scan_filesystem_for_notes()?;
+    let database_files = load_existing_database_files(conn)?;
+    sync_database_with_filesystem(conn, &filesystem_files, &database_files, app_handle)
 }
 
 pub fn recreate_database(app_state: &AppState) -> AppResult<()> {

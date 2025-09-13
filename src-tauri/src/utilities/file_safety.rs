@@ -100,143 +100,23 @@ pub fn create_versioned_backup(
 }
 
 pub fn safe_write_note(note_path: &PathBuf, content: &str) -> AppResult<()> {
-    // 1. Create backup if file exists (for rollback protection)
-    let rollback_backup_path = if note_path.exists() {
-        Some(create_versioned_backup(
-            note_path,
-            BackupType::Rollback,
-            None,
-        )?)
-    } else {
-        None
+    let rollback_backup_path = create_rollback_backup_if_exists(note_path)?;
+
+    let temp_path = match create_temp_file_with_content(content) {
+        Ok(path) => path,
+        Err(e) => {
+            create_save_failure_backup(note_path, content);
+            return Err(e);
+        }
     };
 
-    // 2. Create temp file in app data directory
-    let temp_dir = get_temp_dir()?;
-    fs::create_dir_all(&temp_dir)?;
-
-    // Generate unique temp filename using timestamp
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let temp_path = temp_dir.join(format!("write_temp_{}.md", timestamp));
-
-    // 3. Write content to temp file
-    if let Err(e) = fs::write(&temp_path, content) {
-        // Failed to write to temp file - create backup
-        create_save_failure_backup(note_path, content);
-        return Err(AppError::FileWrite(format!(
-            "Failed to write temp file: {}",
-            e
-        )));
-    }
-
-    // 4. Atomic rename to final location with rollback protection
-    if let Err(e) = fs::rename(&temp_path, note_path) {
-        // CRITICAL: Rename failed - attempt rollback to preserve original file
-        log(
-            "ATOMIC_WRITE_FAILURE",
-            &format!(
-                "Rename operation failed: {:?} -> {:?}",
-                temp_path, note_path
-            ),
-            Some(&e.to_string()),
-        );
-
-        if let Some(backup_path) = &rollback_backup_path {
-            // Original file existed - restore from backup
-            match fs::copy(backup_path, note_path) {
-                Ok(_bytes_copied) => {
-                    log(
-                        "ROLLBACK_SUCCESS",
-                        &format!(
-                            "Successfully restored original file from backup: {:?}",
-                            note_path
-                        ),
-                        None,
-                    );
-                }
-                Err(rollback_err) => {
-                    log(
-                        "ROLLBACK_CRITICAL_FAILURE",
-                        &format!(
-                            "CRITICAL: Failed to restore backup after rename failure: {:?} -> {:?}",
-                            backup_path, note_path
-                        ),
-                        Some(&rollback_err.to_string()),
-                    );
-                    // Original file may be lost - create failure backup with new content for manual recovery
-                    create_save_failure_backup(note_path, content);
-
-                    // Clean up temp file
-                    if let Err(cleanup_err) = fs::remove_file(&temp_path) {
-                        log(
-                            "TEMP_CLEANUP",
-                            &format!(
-                                "Failed to remove temp file after critical failure: {:?}",
-                                temp_path
-                            ),
-                            Some(&cleanup_err.to_string()),
-                        );
-                    }
-
-                    return Err(AppError::FileWrite(format!(
-                        "Critical failure: rename failed and rollback failed - original file may be lost: {}",
-                        e
-                    )));
-                }
-            }
-        } else {
-            // No original file to restore - just create failure backup with new content
-            create_save_failure_backup(note_path, content);
-        }
-
-        // Clean up temp file after rollback
-        if let Err(cleanup_err) = fs::remove_file(&temp_path) {
-            log(
-                "TEMP_CLEANUP",
-                &format!("Failed to remove temp file after rollback: {:?}", temp_path),
-                Some(&cleanup_err.to_string()),
-            );
-        }
-
-        return Err(AppError::FileWrite(format!(
-            "Failed to rename temp file (rollback completed): {}",
-            e
-        )));
-    }
-
-    // Log successful operation
-    log(
-        "FILE_OPERATION",
-        &format!(
-            "WRITE: {} | Size: {} bytes | SUCCESS",
-            note_path.display(),
-            content.len()
-        ),
-        None,
-    );
-
-    // 5. Verify content was written correctly
-    let written_content = fs::read_to_string(note_path)
-        .map_err(|e| format!("Failed to verify written content: {}", e))?;
-
-    if written_content != content {
-        let error_msg = format!(
-            "Content verification failed for '{}': expected {} bytes, found {} bytes",
-            note_path.display(),
-            content.len(),
-            written_content.len()
-        );
-        log(
-            "FILE_VERIFICATION",
-            "Content verification failed",
-            Some(&error_msg),
-        );
-        return Err(AppError::FileWrite(error_msg));
-    }
-
+    perform_atomic_write_with_rollback(
+        note_path,
+        &temp_path,
+        content,
+        rollback_backup_path.as_ref(),
+    )?;
+    verify_written_content(note_path, content)?;
     Ok(())
 }
 
@@ -341,6 +221,144 @@ fn generate_backup_filename(
     };
 
     format!("{}.{}.{}.md", base_name, backup_type.suffix(), timestamp)
+}
+
+fn create_rollback_backup_if_exists(note_path: &PathBuf) -> AppResult<Option<PathBuf>> {
+    if note_path.exists() {
+        Ok(Some(create_versioned_backup(
+            note_path,
+            BackupType::Rollback,
+            None,
+        )?))
+    } else {
+        Ok(None)
+    }
+}
+
+fn create_temp_file_with_content(content: &str) -> AppResult<PathBuf> {
+    let temp_dir = get_temp_dir()?;
+    fs::create_dir_all(&temp_dir)?;
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_path = temp_dir.join(format!("write_temp_{}.md", timestamp));
+
+    fs::write(&temp_path, content)
+        .map_err(|e| AppError::FileWrite(format!("Failed to write temp file: {}", e)))?;
+
+    Ok(temp_path)
+}
+
+fn perform_atomic_write_with_rollback(
+    note_path: &PathBuf,
+    temp_path: &PathBuf,
+    content: &str,
+    rollback_backup_path: Option<&PathBuf>,
+) -> AppResult<()> {
+    if let Err(e) = fs::rename(temp_path, note_path) {
+        log(
+            "ATOMIC_WRITE_FAILURE",
+            &format!(
+                "Rename operation failed: {:?} -> {:?}",
+                temp_path, note_path
+            ),
+            Some(&e.to_string()),
+        );
+
+        handle_rename_failure_with_rollback(temp_path, note_path, content, rollback_backup_path)?;
+        return Err(AppError::FileWrite(format!(
+            "Failed to rename temp file (rollback completed): {}",
+            e
+        )));
+    }
+
+    log(
+        "FILE_OPERATION",
+        &format!(
+            "WRITE: {} | Size: {} bytes | SUCCESS",
+            note_path.display(),
+            content.len()
+        ),
+        None,
+    );
+
+    Ok(())
+}
+
+fn handle_rename_failure_with_rollback(
+    temp_path: &PathBuf,
+    note_path: &PathBuf,
+    content: &str,
+    rollback_backup_path: Option<&PathBuf>,
+) -> AppResult<()> {
+    if let Some(backup_path) = rollback_backup_path {
+        match fs::copy(backup_path, note_path) {
+            Ok(_bytes_copied) => {
+                log(
+                    "ROLLBACK_SUCCESS",
+                    &format!(
+                        "Successfully restored original file from backup: {:?}",
+                        note_path
+                    ),
+                    None,
+                );
+            }
+            Err(rollback_err) => {
+                log(
+                    "ROLLBACK_CRITICAL_FAILURE",
+                    &format!(
+                        "CRITICAL: Failed to restore backup after rename failure: {:?} -> {:?}",
+                        backup_path, note_path
+                    ),
+                    Some(&rollback_err.to_string()),
+                );
+                create_save_failure_backup(note_path, content);
+                cleanup_temp_file(temp_path);
+                return Err(AppError::FileWrite(
+                    "Critical failure: rename failed and rollback failed - original file may be lost".to_string()
+                ));
+            }
+        }
+    } else {
+        create_save_failure_backup(note_path, content);
+    }
+
+    cleanup_temp_file(temp_path);
+    Ok(())
+}
+
+fn verify_written_content(note_path: &PathBuf, expected_content: &str) -> AppResult<()> {
+    let written_content = fs::read_to_string(note_path)
+        .map_err(|e| AppError::FileWrite(format!("Failed to verify written content: {}", e)))?;
+
+    if written_content != expected_content {
+        let error_msg = format!(
+            "Content verification failed for '{}': expected {} bytes, found {} bytes",
+            note_path.display(),
+            expected_content.len(),
+            written_content.len()
+        );
+        log(
+            "FILE_VERIFICATION",
+            "Content verification failed",
+            Some(&error_msg),
+        );
+        return Err(AppError::FileWrite(error_msg));
+    }
+
+    Ok(())
+}
+
+fn cleanup_temp_file(temp_path: &PathBuf) {
+    if let Err(cleanup_err) = fs::remove_file(temp_path) {
+        log(
+            "TEMP_CLEANUP",
+            &format!("Failed to remove temp file: {:?}", temp_path),
+            Some(&cleanup_err.to_string()),
+        );
+    }
 }
 
 fn create_save_failure_backup(note_path: &PathBuf, content: &str) {
