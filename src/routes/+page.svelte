@@ -103,7 +103,7 @@ Composes all UI components and provides keyboard event handling for the entire a
       cancelText="Cancel"
       onConfirm={(value) => actions.createNote(value)}
       onCancel={dialogManager.closeCreateDialog}
-      onInput={(value) => dialogManager.setNewNoteName(value)}
+      onInput={(value) => (dialogManager.newNoteName = value)}
     />
 
     <InputDialog
@@ -116,7 +116,7 @@ Composes all UI components and provides keyboard event handling for the entire a
       autoSelect={true}
       onConfirm={(value) => actions.renameNote(value)}
       onCancel={dialogManager.closeRenameDialog}
-      onInput={(value) => dialogManager.setNewNoteNameForRename(value)}
+      onInput={(value) => (dialogManager.newNoteNameForRename = value)}
     />
 
     <ConfirmationDialog

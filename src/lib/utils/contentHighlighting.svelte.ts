@@ -20,58 +20,27 @@ function escapeRegex(text: string): string {
 
 function cleanExpiredEntries(): void {
   const now = Date.now()
-  const expiredKeys = findExpiredCacheKeys(now)
-  removeExpiredKeys(expiredKeys)
-}
-
-function findExpiredCacheKeys(currentTime: number): string[] {
-  const expiredKeys: string[] = []
-
   for (const [key, entry] of highlightCache) {
-    if (isCacheEntryExpired(entry, currentTime)) {
-      expiredKeys.push(key)
+    if (now - entry.timestamp > CACHE_TTL) {
+      highlightCache.delete(key)
     }
-  }
-
-  return expiredKeys
-}
-
-function isCacheEntryExpired(entry: CacheEntry, currentTime: number): boolean {
-  return currentTime - entry.timestamp > CACHE_TTL
-}
-
-function removeExpiredKeys(keys: string[]): void {
-  for (const key of keys) {
-    highlightCache.delete(key)
   }
 }
 
 function evictLRUEntry(): void {
-  const lruKey = findLeastRecentlyUsedKey()
-  if (lruKey) {
-    highlightCache.delete(lruKey)
-  }
-}
-
-function findLeastRecentlyUsedKey(): string | null {
   let oldestKey: string | null = null
   let oldestAccess = Infinity
 
   for (const [key, entry] of highlightCache) {
-    if (isLessAccessedThanCurrent(entry, oldestAccess)) {
+    if (entry.accessCount < oldestAccess) {
       oldestAccess = entry.accessCount
       oldestKey = key
     }
   }
 
-  return oldestKey
-}
-
-function isLessAccessedThanCurrent(
-  entry: CacheEntry,
-  currentMinAccess: number
-): boolean {
-  return entry.accessCount < currentMinAccess
+  if (oldestKey) {
+    highlightCache.delete(oldestKey)
+  }
 }
 
 function highlightMatches(content: string, query: string): string {
@@ -79,66 +48,31 @@ function highlightMatches(content: string, query: string): string {
     return content
   }
 
-  const cached = getCachedHighlight(content, query)
-  if (cached) return cached
-
-  return generateAndCacheHighlight(content, query)
-}
-
-function getCachedHighlight(content: string, query: string): string | null {
-  const key = generateCacheKey(content, query)
+  const key = `${content.substring(0, 100)}:${query}`
   const cached = highlightCache.get(key)
 
   if (cached) {
-    updateCacheAccess(cached)
+    cached.accessCount++
+    cached.timestamp = Date.now()
     return cached.result
   }
 
-  return null
-}
+  cleanExpiredEntries()
+  if (highlightCache.size >= MAX_CACHE_SIZE) {
+    evictLRUEntry()
+  }
 
-function generateCacheKey(content: string, query: string): string {
-  return `${content.substring(0, 100)}:${query}`
-}
-
-function updateCacheAccess(entry: CacheEntry): void {
-  entry.accessCount++
-  entry.timestamp = Date.now()
-}
-
-function generateAndCacheHighlight(content: string, query: string): string {
-  const result = performHighlighting(content, query)
-  cacheHighlightResult(content, query, result)
-  return result
-}
-
-function performHighlighting(content: string, query: string): string {
   const escapedQuery = escapeRegex(query)
   const regex = new RegExp(`(${escapedQuery})`, 'gi')
-  return content.replace(regex, '<mark class="highlight">$1</mark>')
-}
-
-function cacheHighlightResult(
-  content: string,
-  query: string,
-  result: string
-): void {
-  maintainCacheSize()
-  const key = generateCacheKey(content, query)
+  const result = content.replace(regex, '<mark class="highlight">$1</mark>')
 
   highlightCache.set(key, {
     result,
     timestamp: Date.now(),
     accessCount: 1,
   })
-}
 
-function maintainCacheSize(): void {
-  cleanExpiredEntries()
-
-  if (highlightCache.size >= MAX_CACHE_SIZE) {
-    evictLRUEntry()
-  }
+  return result
 }
 
 export function getHighlightedContent(

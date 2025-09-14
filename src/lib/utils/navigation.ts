@@ -84,22 +84,6 @@ export function isFilePath(href: string): boolean {
   return fileExtensions.test(href)
 }
 
-export function getHighlightElements(contentElement: HTMLElement): Element[] {
-  return Array.from(contentElement.querySelectorAll('mark.highlight'))
-}
-
 export function getHeaderElements(contentElement: HTMLElement): Element[] {
-  return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
-}
-
-export function getCodeBlockElements(contentElement: HTMLElement): Element[] {
-  return Array.from(contentElement.querySelectorAll('pre > code'))
-}
-
-export function getLinkElements(contentElement: HTMLElement): Element[] {
-  return Array.from(contentElement.querySelectorAll('a[href]'))
-}
-
-export function getAccordionHeaders(contentElement: HTMLElement): Element[] {
   return Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6'))
 }

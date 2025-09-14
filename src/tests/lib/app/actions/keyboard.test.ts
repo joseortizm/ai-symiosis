@@ -66,7 +66,7 @@ describe('keyboard actions', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       dialogManager: {
-        showExitEditDialog: vi.fn(),
+        openUnsavedChangesDialog: vi.fn(),
         openDeleteDialog: vi.fn(),
         openCreateDialog: vi.fn(),
         openRenameDialog: vi.fn(),
@@ -336,13 +336,13 @@ describe('keyboard actions', () => {
       expect(mockDeps.appCoordinator.exitEditMode).toHaveBeenCalled()
     })
 
-    it('smartExitEdit should call showExitEditDialog when editor is dirty', () => {
+    it('smartExitEdit should call openUnsavedChangesDialog when editor is dirty', () => {
       const dirtyState = { ...mockState, isEditorDirty: true }
       const context: ActionContext = { state: dirtyState, actions: mockDeps }
 
       keyboardActions.actionRegistry.editing.smartExitEdit(context)
 
-      expect(mockDeps.dialogManager.showExitEditDialog).toHaveBeenCalled()
+      expect(mockDeps.dialogManager.openUnsavedChangesDialog).toHaveBeenCalled()
       expect(mockDeps.appCoordinator.exitEditMode).not.toHaveBeenCalled()
     })
 
@@ -353,7 +353,9 @@ describe('keyboard actions', () => {
       keyboardActions.actionRegistry.editing.smartExitEdit(context)
 
       expect(mockDeps.appCoordinator.exitEditMode).toHaveBeenCalled()
-      expect(mockDeps.dialogManager.showExitEditDialog).not.toHaveBeenCalled()
+      expect(
+        mockDeps.dialogManager.openUnsavedChangesDialog
+      ).not.toHaveBeenCalled()
     })
 
     it('saveAndExit should call appCoordinator.saveAndExitNote', async () => {

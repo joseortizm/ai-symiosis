@@ -51,7 +51,7 @@ describe('Keyboard Shortcut Isolation', () => {
         clearHighlights: vi.fn(),
       },
       dialogManager: {
-        showExitEditDialog: vi.fn(),
+        openUnsavedChangesDialog: vi.fn(),
         openDeleteDialog: vi.fn(),
         openCreateDialog: vi.fn(),
         openRenameDialog: vi.fn(),

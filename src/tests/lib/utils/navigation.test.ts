@@ -11,11 +11,7 @@ import {
   isUrl,
   isSection,
   isFilePath,
-  getHighlightElements,
   getHeaderElements,
-  getCodeBlockElements,
-  getLinkElements,
-  getAccordionHeaders,
 } from '../../../lib/utils/navigation'
 
 describe('navigation utility', () => {
@@ -330,25 +326,6 @@ describe('navigation utility', () => {
       `
     })
 
-    describe('getHighlightElements', () => {
-      it('should find all highlight elements', () => {
-        const highlights = getHighlightElements(container)
-
-        expect(highlights).toHaveLength(2)
-        expect(highlights[0].textContent).toBe('highlighted')
-        expect(highlights[1].textContent).toBe('Another highlight')
-      })
-
-      it('should return empty array when no highlights exist', () => {
-        const empty = document.createElement('div')
-        empty.innerHTML = '<p>No highlights here</p>'
-
-        const highlights = getHighlightElements(empty)
-
-        expect(highlights).toHaveLength(0)
-      })
-    })
-
     describe('getHeaderElements', () => {
       it('should find all header elements', () => {
         const headers = getHeaderElements(container)
@@ -359,71 +336,13 @@ describe('navigation utility', () => {
         expect(headers[2].tagName).toBe('H3')
       })
     })
-
-    describe('getCodeBlockElements', () => {
-      it('should find code blocks inside pre elements', () => {
-        const codeBlocks = getCodeBlockElements(container)
-
-        expect(codeBlocks).toHaveLength(1)
-        expect(codeBlocks[0].textContent).toBe("console.log('hello')")
-        expect(codeBlocks[0].className).toBe('language-js')
-      })
-
-      it('should not include inline code elements', () => {
-        const codeBlocks = getCodeBlockElements(container)
-
-        // Should not include the inline <code> element
-        expect(
-          codeBlocks.every((el) => el.parentElement?.tagName === 'PRE')
-        ).toBe(true)
-      })
-    })
-
-    describe('getLinkElements', () => {
-      it('should find all links with href attributes', () => {
-        const links = getLinkElements(container)
-
-        expect(links).toHaveLength(2)
-        expect(links[0].getAttribute('href')).toBe('https://example.com')
-        expect(links[1].getAttribute('href')).toBe('./file.txt')
-      })
-
-      it('should not include links without href', () => {
-        container.innerHTML += '<a>Link without href</a>'
-
-        const links = getLinkElements(container)
-
-        expect(links).toHaveLength(2) // Should still be 2, not 3
-      })
-    })
-
-    describe('getAccordionHeaders', () => {
-      it('should find all header elements for accordion', () => {
-        const accordionHeaders = getAccordionHeaders(container)
-
-        expect(accordionHeaders).toHaveLength(3)
-        expect(accordionHeaders[0].tagName).toBe('H1')
-        expect(accordionHeaders[1].tagName).toBe('H2')
-        expect(accordionHeaders[2].tagName).toBe('H3')
-      })
-
-      it('should be identical to getHeaderElements', () => {
-        const headers = getHeaderElements(container)
-        const accordionHeaders = getAccordionHeaders(container)
-
-        expect(accordionHeaders).toEqual(headers)
-      })
-    })
   })
 
   describe('edge cases', () => {
     it('should handle empty container', () => {
       const empty = document.createElement('div')
 
-      expect(getHighlightElements(empty)).toHaveLength(0)
       expect(getHeaderElements(empty)).toHaveLength(0)
-      expect(getCodeBlockElements(empty)).toHaveLength(0)
-      expect(getLinkElements(empty)).toHaveLength(0)
     })
 
     it('should handle malformed HTML gracefully', () => {
@@ -448,7 +367,6 @@ describe('navigation utility', () => {
       `
 
       expect(getHeaderElements(deep)).toHaveLength(1)
-      expect(getHighlightElements(deep)).toHaveLength(1)
     })
   })
 
@@ -459,28 +377,6 @@ describe('navigation utility', () => {
       const headers = getHeaderElements(empty)
 
       expect(headers).toEqual([])
-    })
-
-    it('getLinkElements when no anchors exist should return empty array', () => {
-      container.innerHTML = `
-        <div>No links here</div>
-        <p>Just regular content</p>
-      `
-
-      const links = getLinkElements(container)
-
-      expect(links).toEqual([])
-    })
-
-    it('getCodeBlockElements when no code blocks exist should return empty array', () => {
-      container.innerHTML = `
-        <div>No code blocks here</div>
-        <p>Just regular <code>inline code</code></p>
-      `
-
-      const codeBlocks = getCodeBlockElements(container)
-
-      expect(codeBlocks).toEqual([])
     })
 
     it('getContentBetweenHeaders when headers are missing should return empty array', () => {
@@ -494,18 +390,6 @@ describe('navigation utility', () => {
       const content = getContentBetweenHeaders(nonExistentHeader)
 
       expect(content).toEqual([])
-    })
-
-    it('getHighlightElements when no highlights exist should return empty array', () => {
-      container.innerHTML = `
-        <p>No highlights here</p>
-        <mark>This is not a highlight class</mark>
-        <span class="other-class">Other content</span>
-      `
-
-      const highlights = getHighlightElements(container)
-
-      expect(highlights).toEqual([])
     })
 
     it('getFormattedText on empty list should return empty string', () => {
@@ -561,10 +445,6 @@ describe('navigation utility', () => {
       const emptyDiv = document.createElement('div')
 
       expect(() => getHeaderElements(emptyDiv)).not.toThrow()
-      expect(() => getHighlightElements(emptyDiv)).not.toThrow()
-      expect(() => getLinkElements(emptyDiv)).not.toThrow()
-      expect(() => getCodeBlockElements(emptyDiv)).not.toThrow()
-      expect(() => getAccordionHeaders(emptyDiv)).not.toThrow()
     })
   })
 })

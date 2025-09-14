@@ -6,11 +6,7 @@ import {
   isUrl,
   isSection,
   isFilePath,
-  getHighlightElements,
   getHeaderElements,
-  getCodeBlockElements,
-  getLinkElements,
-  getAccordionHeaders,
 } from '../utils/navigation'
 
 interface NavigationState {
@@ -106,7 +102,7 @@ export function createContentNavigationManager(
   function getHighlightElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-    return getHighlightElements(contentElement)
+    return Array.from(contentElement.querySelectorAll('mark.highlight'))
   }
 
   function getHeaderElementsWithFallback(): Element[] {
@@ -118,13 +114,13 @@ export function createContentNavigationManager(
   function getCodeBlockElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-    return getCodeBlockElements(contentElement)
+    return Array.from(contentElement.querySelectorAll('pre > code'))
   }
 
   function getLinkElementsWithFallback(): Element[] {
     const contentElement = deps.focusManager.noteContentElement
     if (!contentElement) return []
-    return getLinkElements(contentElement)
+    return Array.from(contentElement.querySelectorAll('a[href]'))
   }
 
   function getCurrentNavigationElements(): Element[] {
@@ -267,7 +263,7 @@ export function createContentNavigationManager(
     contentElement: HTMLElement,
     currentHeader: Element
   ): void {
-    const allHeaders = getAccordionHeaders(contentElement)
+    const allHeaders = getHeaderElements(contentElement)
     clearAccordionStyling(allHeaders, contentElement)
     processHeaderAccordionStates(allHeaders, currentHeader)
   }

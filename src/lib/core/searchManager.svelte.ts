@@ -101,49 +101,22 @@ export function createSearchManager(deps: SearchManagerDeps): SearchManager {
 
   function setSearchInput(value: string): void {
     if (value !== state.searchInput) {
-      processSearchInputChange(value)
+      clearTimeout(state.searchTimeout)
+      state.requestController?.abort()
+      state.searchInput = value
+
+      if (value.length < 3) {
+        state.query = ''
+        state.searchTimeout = setTimeout(async () => {
+          await performSearch('')
+        }, 100)
+      } else {
+        state.searchTimeout = setTimeout(async () => {
+          state.query = state.searchInput
+          await performSearch(state.searchInput)
+        }, 100)
+      }
     }
-  }
-
-  function processSearchInputChange(value: string): void {
-    cleanupPreviousSearch()
-    updateSearchInputState(value)
-    scheduleSearchExecution(value)
-  }
-
-  function cleanupPreviousSearch(): void {
-    clearTimeout(state.searchTimeout)
-    state.requestController?.abort()
-  }
-
-  function updateSearchInputState(value: string): void {
-    state.searchInput = value
-  }
-
-  function scheduleSearchExecution(value: string): void {
-    if (isShortQuery(value)) {
-      scheduleEmptySearch()
-    } else {
-      scheduleFullTextSearch(value)
-    }
-  }
-
-  function isShortQuery(value: string): boolean {
-    return value.length < 3
-  }
-
-  function scheduleEmptySearch(): void {
-    state.query = ''
-    state.searchTimeout = setTimeout(async () => {
-      await performSearch('')
-    }, 100)
-  }
-
-  function scheduleFullTextSearch(_value: string): void {
-    state.searchTimeout = setTimeout(async () => {
-      state.query = state.searchInput
-      await performSearch(state.searchInput)
-    }, 100)
   }
 
   function setFilteredNotes(notes: string[]): void {

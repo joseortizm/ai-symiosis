@@ -62,7 +62,7 @@ Shows highlighted content or renders the CodeMirror editor.
         onContentChange={editorManager.updateContent}
         onSave={actions.saveAndExitNote}
         onExit={actions.exitEditMode}
-        onRequestExit={dialogManager.showExitEditDialog}
+        onRequestExit={dialogManager.openUnsavedChangesDialog}
         onExitHeaderCapture={editorManager.setExitHeaderText}
       />
     {:else}

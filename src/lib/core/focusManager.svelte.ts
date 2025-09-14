@@ -30,7 +30,6 @@ export interface FocusManager {
   scrollNoteContentUp(): void
   scrollNoteContentDown(): void
   scrollToSelectedInList(selectedIndex: number): void
-  scrollToIndex(selectedIndex: number): void
 }
 
 export function createFocusManager(): FocusManager {
@@ -50,10 +49,6 @@ export function createFocusManager(): FocusManager {
         selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       }
     }
-  }
-
-  function scrollToIndex(selectedIndex: number): void {
-    scrollToSelectedInList(selectedIndex)
   }
 
   return {
@@ -113,6 +108,5 @@ export function createFocusManager(): FocusManager {
       })
     },
     scrollToSelectedInList,
-    scrollToIndex,
   }
 }

@@ -167,7 +167,7 @@ describe('focusManager', () => {
         writable: true,
       })
 
-      focusManager.scrollToIndex(0)
+      focusManager.scrollToSelectedInList(0)
 
       expect(mockLi.querySelector).toHaveBeenCalledWith('button')
       expect(mockButton.scrollIntoView).toHaveBeenCalledWith({

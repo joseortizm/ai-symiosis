@@ -176,7 +176,7 @@ export function createKeyboardActions(
       },
       smartExitEdit: ({ state, actions }: ActionContext) => {
         if (state.isEditorDirty) {
-          actions.dialogManager.showExitEditDialog()
+          actions.dialogManager.openUnsavedChangesDialog()
         } else {
           actions.appCoordinator.exitEditMode()
         }

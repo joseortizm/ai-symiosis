@@ -194,7 +194,7 @@ describe('editorManager', () => {
     })
   })
 
-  describe('showExitEditDialog integration', () => {
+  describe('openUnsavedChangesDialog integration', () => {
     it('should work with dirty state', async () => {
       mockNoteService.getRawContent.mockResolvedValue('content')
       await editorManager.enterEditMode('test.md')

@@ -13,8 +13,8 @@ export interface DialogManager {
   readonly showRenameDialog: boolean
   readonly showDeleteDialog: boolean
   readonly showUnsavedChangesDialog: boolean
-  readonly newNoteName: string
-  readonly newNoteNameForRename: string
+  newNoteName: string
+  newNoteNameForRename: string
   readonly deleteKeyPressCount: number
   openCreateDialog(query?: string, highlightedContent?: string): void
   closeCreateDialog(): void
@@ -24,12 +24,9 @@ export interface DialogManager {
   closeDeleteDialog(): void
   openUnsavedChangesDialog(): void
   closeUnsavedChangesDialog(): void
-  showExitEditDialog(): void
   handleSaveAndExit(saveAndExitNote: () => Promise<void>): Promise<void>
   handleDiscardAndExit(exitEditMode: () => void): void
   handleDeleteKeyPress(onConfirmDelete: () => Promise<void>): void
-  setNewNoteName(value: string): void
-  setNewNoteNameForRename(value: string): void
 }
 
 export function createDialogManager(deps: DialogManagerDeps): DialogManager {
@@ -125,10 +122,6 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     deps.focusSearch()
   }
 
-  function showExitEditDialog(): void {
-    openUnsavedChangesDialog()
-  }
-
   async function handleSaveAndExit(
     saveAndExitNote: () => Promise<void>
   ): Promise<void> {
@@ -150,17 +143,9 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     closeDeleteDialog,
     openUnsavedChangesDialog,
     closeUnsavedChangesDialog,
-    showExitEditDialog,
     handleSaveAndExit,
     handleDiscardAndExit,
     handleDeleteKeyPress,
-
-    setNewNoteName(value: string): void {
-      newNoteName = value
-    },
-    setNewNoteNameForRename(value: string): void {
-      newNoteNameForRename = value
-    },
 
     get showCreateDialog(): boolean {
       return showCreateDialog
@@ -177,8 +162,14 @@ export function createDialogManager(deps: DialogManagerDeps): DialogManager {
     get newNoteName(): string {
       return newNoteName
     },
+    set newNoteName(value: string) {
+      newNoteName = value
+    },
     get newNoteNameForRename(): string {
       return newNoteNameForRename
+    },
+    set newNoteNameForRename(value: string) {
+      newNoteNameForRename = value
     },
     get deleteKeyPressCount(): number {
       return deleteKeyPressCount

@@ -7,7 +7,7 @@ interface AppEffectsDeps {
   getHideHighlights: () => boolean
   focusManager: {
     selectedIndex: number
-    scrollToIndex: (index: number) => void
+    scrollToSelectedInList: (index: number) => void
   }
   contentManager: {
     scrollToFirstMatch: () => void
@@ -26,7 +26,7 @@ export function setupAppEffects(deps: AppEffectsDeps): () => void {
   $effect(() => {
     const selectedIndex = focusManager.selectedIndex
     requestAnimationFrame(() => {
-      focusManager.scrollToIndex(selectedIndex)
+      focusManager.scrollToSelectedInList(selectedIndex)
     })
   })
 

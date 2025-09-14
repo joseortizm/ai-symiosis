@@ -36,8 +36,6 @@ const mockDialogManager = {
   closeDeleteDialog: vi.fn(),
   openRenameDialog: vi.fn(),
   closeRenameDialog: vi.fn(),
-  setNewNoteName: vi.fn(),
-  setNewNoteNameForRename: vi.fn(),
   handleDeleteKeyPress: vi.fn(),
 }
 
