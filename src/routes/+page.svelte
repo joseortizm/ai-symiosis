@@ -101,6 +101,7 @@ Composes all UI components and provides keyboard event handling for the entire a
       placeholder="Enter note name (extension will be .md)"
       confirmText="Create"
       cancelText="Cancel"
+      autoSelect={true}
       onConfirm={(value) => actions.createNote(value)}
       onCancel={dialogManager.closeCreateDialog}
       onInput={(value) => (dialogManager.newNoteName = value)}

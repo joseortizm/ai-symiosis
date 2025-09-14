@@ -208,8 +208,8 @@ export function createKeyboardActions(
           actions.dialogManager.openDeleteDialog()
         }
       },
-      createNote: ({ actions }: ActionContext) => {
-        actions.dialogManager.openCreateDialog()
+      createNote: ({ state, actions }: ActionContext) => {
+        actions.dialogManager.openCreateDialog(state.query)
       },
       renameNote: ({ state, actions }: ActionContext) => {
         if (state.selectedNote) {
