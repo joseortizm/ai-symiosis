@@ -5,7 +5,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core'
-import { errorNotification } from '../utils/errorNotification'
+import { errorNotification } from '../utils/notification'
 
 export function createNoteService() {
   const state = $state({

@@ -479,8 +479,8 @@ export function createContentNavigationManager(
     const href = state.linkElement.getAttribute('href')
 
     if (!href) {
-      import('../utils/errorNotification').then(({ errorNotification }) => {
-        errorNotification.trigger('Link has no URL')
+      import('../utils/notification').then(({ notification }) => {
+        notification.error('Link has no URL')
       })
       return null
     }
@@ -553,8 +553,8 @@ export function createContentNavigationManager(
   }
 
   function showErrorNotification(message: string): void {
-    import('../utils/errorNotification').then(({ errorNotification }) => {
-      errorNotification.trigger(message)
+    import('../utils/notification').then(({ notification }) => {
+      notification.error(message)
     })
   }
 

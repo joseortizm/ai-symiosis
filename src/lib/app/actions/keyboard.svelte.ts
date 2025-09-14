@@ -134,7 +134,14 @@ export function createKeyboardActions(
         actions.contentNavigationManager.navigateLinkPrevious()
       },
       copyCurrentSection: async ({ actions }: ActionContext) => {
-        await actions.contentNavigationManager.copyCurrentSection()
+        const success =
+          await actions.contentNavigationManager.copyCurrentSection()
+        const { notification } = await import('../../utils/notification')
+        if (success) {
+          await notification.success('Copied to clipboard')
+        } else {
+          await notification.error('Nothing to copy')
+        }
       },
       openCurrentLink: ({ actions }: ActionContext) => {
         actions.contentNavigationManager.openCurrentLink()

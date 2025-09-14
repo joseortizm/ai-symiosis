@@ -1,26 +1,31 @@
 <!--
-UI Layer - Error Notifications
-Elegant error toast notifications that slide in from the bottom right.
-Used to provide visual feedback when operations fail silently.
+UI Layer - Notifications
+Elegant toast notifications that slide in from the bottom right.
+Used to provide visual feedback for errors, success messages, and other info.
 -->
 
 <script lang="ts">
   import { getCurrentWindow } from '@tauri-apps/api/window'
-  import { errorNotification } from '../utils/errorNotification'
+  import { notification } from '../utils/notification'
 
   let message = $state('')
+  let type = $state<'error' | 'success' | 'info'>('error')
   let showMessage = $state(false)
   let fadeOut = $state(false)
   let fadeTimer: ReturnType<typeof setTimeout> | null = null
   let hideTimer: ReturnType<typeof setTimeout> | null = null
 
-  async function showError(errorMessage?: string): Promise<void> {
+  async function showNotification(
+    notificationMessage?: string,
+    notificationType: 'error' | 'success' | 'info' = 'error'
+  ): Promise<void> {
     // Clear any existing timers
     if (fadeTimer) clearTimeout(fadeTimer)
     if (hideTimer) clearTimeout(hideTimer)
 
-    if (errorMessage) {
-      message = errorMessage
+    if (notificationMessage) {
+      message = notificationMessage
+      type = notificationType
       showMessage = true
       fadeOut = false
     }
@@ -32,7 +37,7 @@ Used to provide visual feedback when operations fail silently.
     }
 
     // Start fade out animation after 6s, then hide after fade completes
-    if (errorMessage) {
+    if (notificationMessage) {
       fadeTimer = setTimeout(() => {
         fadeOut = true
         fadeTimer = null
@@ -46,20 +51,27 @@ Used to provide visual feedback when operations fail silently.
     }
   }
 
-  errorNotification.register(showError)
+  notification.register(showNotification)
 </script>
 
 {#if showMessage}
-  <div class="error-toast" class:fade-out={fadeOut}>
-    <div class="error-badge">
-      <div class="error-icon">×</div>
-      <div class="error-text">{message}</div>
+  <div class="notification-toast" class:fade-out={fadeOut}>
+    <div
+      class="notification-badge"
+      class:error={type === 'error'}
+      class:success={type === 'success'}
+      class:info={type === 'info'}
+    >
+      <div class="notification-icon">
+        {#if type === 'error'}×{:else if type === 'success'}✓{:else}i{/if}
+      </div>
+      <div class="notification-text">{message}</div>
     </div>
   </div>
 {/if}
 
 <style>
-  .error-toast {
+  .notification-toast {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -68,7 +80,7 @@ Used to provide visual feedback when operations fail silently.
     animation: slideInFromRight 0.3s ease-out;
   }
 
-  .error-badge {
+  .notification-badge {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -83,8 +95,7 @@ Used to provide visual feedback when operations fail silently.
     max-width: 300px;
   }
 
-  .error-icon {
-    background: var(--theme-accent-error, #ff4444);
+  .notification-icon {
     color: white;
     width: 18px;
     height: 18px;
@@ -97,7 +108,19 @@ Used to provide visual feedback when operations fail silently.
     flex-shrink: 0;
   }
 
-  .error-text {
+  .notification-badge.error .notification-icon {
+    background: var(--theme-accent-error, #ff4444);
+  }
+
+  .notification-badge.success .notification-icon {
+    background: var(--theme-accent-success, #44ff44);
+  }
+
+  .notification-badge.info .notification-icon {
+    background: var(--theme-accent-info, #4488ff);
+  }
+
+  .notification-text {
     color: var(--theme-text-secondary);
     font-size: 13px;
     font-family: var(--editor-font-family);
@@ -114,7 +137,7 @@ Used to provide visual feedback when operations fail silently.
     }
   }
 
-  .error-toast.fade-out {
+  .notification-toast.fade-out {
     animation: fadeOut 0.5s ease-out forwards;
   }
 
