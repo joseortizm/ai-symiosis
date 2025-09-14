@@ -13,10 +13,11 @@ Handles note selection state and integrates with keyboard navigation.
   } from '../app/appCoordinator.svelte'
   import { getHighlightedTitle } from '../utils/contentHighlighting.svelte'
 
-  const { focusManager, contentNavigationManager } =
+  const { focusManager, contentNavigationManager, configManager } =
     getContext<AppManagers>('managers')
   const appState = getContext<AppState>('state')
   const actions = getContext<AppActions>('actions')
+  const create_note_key = configManager.shortcuts.create_note
 
   let noteListElement = $state<HTMLElement | undefined>(undefined)
 
@@ -32,7 +33,7 @@ Handles note selection state and integrates with keyboard navigation.
     {#if appState.isLoading && appState.filteredNotes.length === 0}
       <div class="loading">Loading...</div>
     {:else if appState.filteredNotes.length === 0}
-      <div class="no-notes">No notes found</div>
+      <div class="no-notes">Press {create_note_key} to create the note.</div>
     {:else}
       <ul bind:this={noteListElement} tabindex="-1">
         {#each appState.filteredNotes as note, index (note)}

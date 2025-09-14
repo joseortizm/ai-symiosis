@@ -85,10 +85,7 @@ Shows highlighted content or renders the CodeMirror editor.
     {/if}
   {:else}
     <div class="no-selection">
-      <p>Select a note to preview its content</p>
-      <p class="help-text">
-        Press Enter to edit, Ctrl+F to show in enclosing folder.
-      </p>
+      <p>No selected note</p>
     </div>
   {/if}
 </div>
@@ -191,11 +188,6 @@ Shows highlighted content or renders the CodeMirror editor.
     color: #5c6370;
     font-style: italic;
     text-align: center;
-  }
-  .help-text {
-    font-size: 0.9em;
-    margin-top: 0.5em;
-    color: #4b5263;
   }
   .note-content::-webkit-scrollbar {
     width: 10px;
