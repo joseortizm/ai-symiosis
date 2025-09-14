@@ -93,6 +93,8 @@ Focused component handling CodeMirror initialization and content editing.
   // Use effect only for side effect (notification), not state updates
   $effect(() => {
     if (propsChanged) {
+      initialValue = value
+      lastPropsValue = value
       handleDirtyChange(false)
     }
   })
@@ -459,7 +461,8 @@ Focused component handling CodeMirror initialization and content editing.
                       return false
                     }
 
-                    const isDirty = value !== initialValue
+                    // For basic/emacs modes, check dirty state and show dialog if needed
+                    const isDirty = editorManager.isDirty
                     if (isDirty && onRequestExit) {
                       onRequestExit()
                     } else if (onExit) {
