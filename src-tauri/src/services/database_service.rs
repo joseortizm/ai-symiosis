@@ -63,7 +63,7 @@ fn ensure_notes_directory_exists() -> rusqlite::Result<()> {
             return Err(rusqlite::Error::ToSqlConversionFailure(Box::new(
                 std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to create notes directory: {}", e)
+                    format!("Failed to create notes directory: {}", e),
                 ),
             )));
         }
