@@ -24,6 +24,7 @@ Content preview, and keyboard navigation.
   const configManager = managers.configManager
 
   let dialogElement = $state<HTMLElement | undefined>(undefined)
+  let versionListElement = $state<HTMLElement | undefined>(undefined)
 
   // Get configured font settings
   const editorFontFamily = $derived(
@@ -115,6 +116,20 @@ Content preview, and keyboard navigation.
       setTimeout(() => dialogElement!.focus(), 10)
     }
   })
+
+  $effect(() => {
+    const selectedIndex = versionExplorer.selectedVersionIndex
+    if (versionListElement && selectedIndex >= 0) {
+      requestAnimationFrame(() => {
+        const selectedItem = versionListElement!.children[
+          selectedIndex
+        ] as HTMLElement
+        if (selectedItem) {
+          selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }
+      })
+    }
+  })
 </script>
 
 {#if show}
@@ -142,7 +157,7 @@ Content preview, and keyboard navigation.
               <p>No version history found for this note.</p>
             </div>
           {:else}
-            <div class="version-list">
+            <div class="version-list" bind:this={versionListElement}>
               {#each versionExplorer.versions as version, index (version.filename)}
                 {@const typeStyle = getBackupTypeStyle(version.backup_type)}
                 <div
