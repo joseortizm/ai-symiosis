@@ -123,6 +123,47 @@ Focused component handling CodeMirror initialization and content editing.
     })
   }
 
+  function createVimDialogTheme(): Extension {
+    return EditorViewBase.theme({
+      '.cm-vim-dialog, .cm-dialog, .cm-vim-panel': {
+        position: 'fixed !important',
+        top: '50% !important',
+        left: '50% !important',
+        transform: 'translate(-50%, -50%) !important',
+        zIndex: '1000 !important',
+        background: 'var(--cm-background, #282828) !important',
+        border: '2px solid var(--cm-accent, #665c54) !important',
+        borderRadius: '8px !important',
+        padding: '12px 16px !important',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6) !important',
+        minWidth: '300px !important',
+        maxWidth: '500px !important',
+        fontFamily: 'inherit !important',
+        fontSize: 'inherit !important',
+        color: 'var(--cm-foreground, #fbf1c7) !important',
+      },
+      '.cm-vim-dialog input, .cm-dialog input, .cm-vim-panel input': {
+        background: 'transparent !important',
+        border: 'none !important',
+        outline: 'none !important',
+        color: 'inherit !important',
+        fontFamily: 'inherit !important',
+        fontSize: 'inherit !important',
+        width: '100% !important',
+        marginLeft: '4px !important',
+      },
+      '.cm-vim-dialog-backdrop': {
+        position: 'fixed !important',
+        top: '0 !important',
+        left: '0 !important',
+        right: '0 !important',
+        bottom: '0 !important',
+        background: 'rgba(0, 0, 0, 0.3) !important',
+        zIndex: '999 !important',
+      },
+    })
+  }
+
   function getKeyMappingsMode(mode: string): Extension | null {
     switch (mode) {
       case 'vim':
@@ -408,6 +449,7 @@ Focused component handling CodeMirror initialization and content editing.
       codeFolding(),
       currentTheme,
       createFontExtension(editorFontFamily, editorFontSize),
+      createVimDialogTheme(),
       ...keymaps,
       updateListener,
     ].filter((ext): ext is Extension => Boolean(ext))
