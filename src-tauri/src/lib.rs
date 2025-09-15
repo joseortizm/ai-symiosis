@@ -127,13 +127,15 @@ fn handle_main_window_toggle(app_handle: tauri::AppHandle) {
     match app_handle.get_webview_window("main") {
         Some(window) => {
             if window.is_visible().unwrap_or(false) && window.is_focused().unwrap_or(false) {
-                let _ = window.hide();
+                // Hide with proper focus restoration
+                utilities::mac_focus::hide_app_and_restore_previous(window);
             } else if window.is_visible().unwrap_or(false) && !window.is_focused().unwrap_or(false)
             {
                 let _ = window.set_focus();
             } else {
-                let _ = window.show();
-                let _ = window.set_focus();
+                // Save current frontmost app, then show and activate
+                utilities::mac_focus::save_current_frontmost_app();
+                utilities::mac_focus::show_app(window);
             }
         }
         None => {
@@ -239,7 +241,10 @@ fn register_command_handlers(
         get_preferences_config,
         scan_available_themes,
         load_custom_theme_file,
-        validate_theme_path
+        validate_theme_path,
+        utilities::mac_focus::save_current_frontmost_app,
+        utilities::mac_focus::show_app,
+        utilities::mac_focus::hide_app_and_restore_previous
     ]
 }
 
