@@ -33,6 +33,9 @@ describe('keyboard actions', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       configManager: {
+        general: {
+          scroll_amount: 0.4,
+        },
         shortcuts: {
           edit_note: 'Enter',
           create_note: 'Ctrl+Enter',

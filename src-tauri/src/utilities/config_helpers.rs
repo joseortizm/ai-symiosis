@@ -184,8 +184,19 @@ fn extract_global_shortcut(value: &toml::Value) -> String {
     }
 }
 
-fn extract_general_config(_value: &toml::Value) -> GeneralConfig {
-    GeneralConfig::default()
+fn extract_general_config(value: &toml::Value) -> GeneralConfig {
+    let general_section = value.get("general");
+    let mut config = GeneralConfig::default();
+
+    if let Some(section) = general_section {
+        if let Some(scroll_amount) = section.get("scroll_amount") {
+            if let Some(amount) = scroll_amount.as_float() {
+                config.scroll_amount = amount;
+            }
+        }
+    }
+
+    config
 }
 
 fn extract_interface_config(value: &toml::Value) -> InterfaceConfig {

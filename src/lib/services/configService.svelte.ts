@@ -155,7 +155,7 @@ export function createConfigService(): ConfigService {
       return result
     } catch (e) {
       console.error('Failed to get general config:', e)
-      return {}
+      return { scroll_amount: 0.4 }
     }
   }
 

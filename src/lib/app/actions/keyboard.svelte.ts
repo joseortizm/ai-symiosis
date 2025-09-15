@@ -152,15 +152,17 @@ export function createKeyboardActions(
     },
 
     scrolling: {
-      scrollUpBy: ({ state }: ActionContext) => {
+      scrollUpBy: ({ state, actions }: ActionContext) => {
+        const scrollAmount = actions.configManager.general.scroll_amount
         state.noteContentElement?.scrollBy({
-          top: -(state.noteContentElement.clientHeight * 0.4), // 40% up
+          top: -(state.noteContentElement.clientHeight * scrollAmount),
           behavior: 'smooth',
         })
       },
-      scrollDownBy: ({ state }: ActionContext) => {
+      scrollDownBy: ({ state, actions }: ActionContext) => {
+        const scrollAmount = actions.configManager.general.scroll_amount
         state.noteContentElement?.scrollBy({
-          top: state.noteContentElement.clientHeight * 0.4, // 40% down
+          top: state.noteContentElement.clientHeight * scrollAmount,
           behavior: 'smooth',
         })
       },

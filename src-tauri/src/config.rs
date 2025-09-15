@@ -41,7 +41,10 @@ pub struct AppConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GeneralConfig {}
+pub struct GeneralConfig {
+    #[serde(default = "default_scroll_amount")]
+    pub scroll_amount: f64,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InterfaceConfig {
@@ -107,6 +110,10 @@ fn default_max_results() -> usize {
     crate::utilities::config_helpers::default_max_results()
 }
 
+fn default_scroll_amount() -> f64 {
+    0.4
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -123,7 +130,9 @@ impl Default for AppConfig {
 
 impl Default for GeneralConfig {
     fn default() -> Self {
-        Self {}
+        Self {
+            scroll_amount: default_scroll_amount(),
+        }
     }
 }
 

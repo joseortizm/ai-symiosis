@@ -51,7 +51,7 @@ describe('configManager', () => {
     it('should initialize successfully with config values', async () => {
       // Mock config service responses
       mockInvoke
-        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({
           ui_theme: 'gruvbox-dark',
           font_family: 'Inter, sans-serif',
@@ -100,7 +100,7 @@ describe('configManager', () => {
     it('should not re-initialize if already initialized', async () => {
       // First initialization
       mockInvoke
-        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({ ui_theme: 'gruvbox-dark' }) // getInterfaceConfig
         .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig
         .mockResolvedValueOnce({}) // getShortcutsConfig
@@ -131,7 +131,7 @@ describe('configManager', () => {
 
       // Initialize manager
       mockInvoke
-        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({ ui_theme: 'gruvbox-dark' }) // getInterfaceConfig
         .mockResolvedValueOnce({ mode: 'basic' }) // getEditorConfig
         .mockResolvedValueOnce({}) // getShortcutsConfig
@@ -143,7 +143,7 @@ describe('configManager', () => {
       const newConfig = {
         notes_directory: '/new/path',
         global_shortcut: 'Ctrl+Alt+N',
-        general: {},
+        general: { scroll_amount: 0.4 },
         interface: {
           ui_theme: 'one-dark',
           font_family: 'Arial',
@@ -183,7 +183,7 @@ describe('configManager', () => {
       // Mock refresh responses
       mockInvoke
         .mockResolvedValueOnce(undefined) // refresh_cache
-        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({ ui_theme: 'one-dark' }) // getInterfaceConfig
         .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig
         .mockResolvedValueOnce({}) // getShortcutsConfig
@@ -226,7 +226,7 @@ describe('configManager', () => {
   describe('theme management', () => {
     it('should provide current theme information', async () => {
       mockInvoke
-        .mockResolvedValueOnce({}) // getGeneralConfig
+        .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({
           ui_theme: 'one-dark',
           markdown_render_theme: 'light',
@@ -251,7 +251,7 @@ describe('configManager', () => {
     it('should handle mixed success/failure during initialization', async () => {
       // Mock partial success - some calls succeed, others fail
       mockInvoke
-        .mockResolvedValueOnce({}) // getGeneralConfig succeeds
+        .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig succeeds
         .mockResolvedValueOnce({
           ui_theme: 'gruvbox-dark',
           markdown_render_theme: 'dark_dimmed',

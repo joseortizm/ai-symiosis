@@ -66,6 +66,10 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 - `notes_directory` - Directory where notes are stored (default: `~/Documents/Notes`)
 - `global_shortcut` - Global keyboard shortcut to toggle app visibility (default: `"Ctrl+Shift+N"`)
 
+#### General Configuration (`[general]`)
+
+- `scroll_amount` - Scroll amount as a fraction of viewport height (default: `0.4`, which equals 40% of the visible area)
+
 #### Interface Configuration (`[interface]`)
 
 - `ui_theme` - Application UI theme (default: `"gruvbox-dark"`)
@@ -159,6 +163,7 @@ notes_directory = "/Users/username/Documents/Notes"
 global_shortcut = "Ctrl+Shift+N"
 
 [general]
+scroll_amount = 0.4
 
 [interface]
 ui_theme = "gruvbox-dark"

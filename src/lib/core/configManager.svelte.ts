@@ -59,7 +59,7 @@ export function createConfigManager(): ConfigManager {
   const state = $state<ConfigState>({
     notesDirectory: '',
     globalShortcut: 'Ctrl+Shift+N',
-    general: {},
+    general: { scroll_amount: 0.4 },
     interface: {
       ui_theme: 'gruvbox-dark',
       font_family: 'Inter, sans-serif',

@@ -1,4 +1,5 @@
 export interface GeneralConfig {
+  scroll_amount: number
   [key: string]: unknown
 }
 
