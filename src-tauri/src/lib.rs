@@ -12,10 +12,13 @@ mod watcher;
 
 use commands::*;
 use config::{load_config_with_first_run_info, parse_shortcut};
+use core::errors::AppError;
 use core::state::AppState;
 use logging::log;
 use services::database_service;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::OnceLock;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -23,6 +26,9 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use watcher::setup_notes_watcher;
+
+static DOCK_VISIBLE: AtomicBool = AtomicBool::new(false);
+static DOCK_MENU_ITEM: OnceLock<MenuItem<tauri::Wry>> = OnceLock::new();
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -281,6 +287,50 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
                 let _ = window.emit("open-preferences", ());
             }
         }
+        "toggle_dock" => {
+            #[cfg(target_os = "macos")]
+            {
+                let current_visible = DOCK_VISIBLE.load(Ordering::Relaxed);
+                let new_visible = !current_visible;
+
+                let activation_policy = if new_visible {
+                    tauri::ActivationPolicy::Regular
+                } else {
+                    tauri::ActivationPolicy::Accessory
+                };
+
+                match app.set_activation_policy(activation_policy) {
+                    Ok(_) => {
+                        DOCK_VISIBLE.store(new_visible, Ordering::Relaxed);
+
+                        let new_text = if new_visible {
+                            "Hide from Dock"
+                        } else {
+                            "Show in Dock"
+                        };
+
+                        if let Some(dock_item) = DOCK_MENU_ITEM.get() {
+                            if let Err(e) = dock_item.set_text(new_text) {
+                                log(
+                                    "DOCK_TOGGLE",
+                                    "Failed to update menu item text",
+                                    Some(&AppError::from(e).to_string()),
+                                );
+                            }
+                        } else {
+                            log("DOCK_TOGGLE", "Dock menu item reference not found", None);
+                        }
+                    }
+                    Err(e) => {
+                        log(
+                            "DOCK_TOGGLE",
+                            "Failed to set activation policy",
+                            Some(&AppError::from(e).to_string()),
+                        );
+                    }
+                }
+            }
+        }
         "quit" => {
             std::process::exit(0);
         }
@@ -323,6 +373,20 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let refresh_item =
         MenuItem::with_id(app, "refresh", "Refresh Notes Cache", true, None::<&str>)?;
     let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let dock_text = if DOCK_VISIBLE.load(Ordering::Relaxed) {
+        "Hide from Dock"
+    } else {
+        "Show in Dock"
+    };
+    let dock_item = MenuItem::with_id(app, "toggle_dock", dock_text, true, None::<&str>)?;
+
+    if let Err(_) = DOCK_MENU_ITEM.set(dock_item.clone()) {
+        log(
+            "TRAY_SETUP",
+            "Failed to store dock menu item reference",
+            None,
+        );
+    }
     let separator = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
@@ -333,6 +397,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             &separator,
             &refresh_item,
             &settings_item,
+            &dock_item,
             &separator,
             &quit_item,
         ],
