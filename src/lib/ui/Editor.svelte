@@ -9,7 +9,11 @@ Focused component handling CodeMirror initialization and content editing.
   import { EditorView, basicSetup } from 'codemirror'
   import type { Extension } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
-  import { indentWithTab } from '@codemirror/commands'
+  import {
+    indentWithTab,
+    cursorLineUp,
+    cursorLineDown,
+  } from '@codemirror/commands'
   import { indentUnit } from '@codemirror/language'
   import { EditorState } from '@codemirror/state'
   import type { Text } from '@codemirror/state'
@@ -138,6 +142,23 @@ Focused component handling CodeMirror initialization and content editing.
     defineBasicVimFoldingActions()
     defineAdvancedVimFoldingActions()
     mapVimFoldingKeys()
+  }
+
+  function setupVimVisualLineNavigation(): void {
+    if (!configManager.editor.word_wrap) return
+
+    Vim.defineAction('visualLineUp', (cm: unknown) => {
+      const view = extractEditorView(cm)
+      visualLineUp(view)
+    })
+
+    Vim.defineAction('visualLineDown', (cm: unknown) => {
+      const view = extractEditorView(cm)
+      visualLineDown(view)
+    })
+
+    Vim.mapCommand('j', 'action', 'visualLineDown', undefined, {})
+    Vim.mapCommand('k', 'action', 'visualLineUp', undefined, {})
   }
 
   function defineBasicVimFoldingActions(): void {
@@ -318,6 +339,7 @@ Focused component handling CodeMirror initialization and content editing.
   function setupVimModeIfNeeded(): void {
     if (keyBindingMode === 'vim') {
       setupVimFoldingCommands()
+      setupVimVisualLineNavigation()
     }
   }
 
@@ -421,6 +443,50 @@ Focused component handling CodeMirror initialization and content editing.
     return extensions
   }
 
+  function visualLineUp(view: EditorView): boolean {
+    const { state } = view
+    const { main } = state.selection
+
+    const coords = view.coordsAtPos(main.head)
+    if (!coords) return cursorLineUp(view)
+
+    const targetY = coords.top - view.defaultLineHeight
+    const targetPos = view.posAtCoords({ x: coords.left, y: targetY })
+
+    if (targetPos === null || targetPos === main.head) {
+      return cursorLineUp(view)
+    }
+
+    view.dispatch({
+      selection: { anchor: targetPos, head: targetPos },
+      scrollIntoView: true,
+    })
+
+    return true
+  }
+
+  function visualLineDown(view: EditorView): boolean {
+    const { state } = view
+    const { main } = state.selection
+
+    const coords = view.coordsAtPos(main.head)
+    if (!coords) return cursorLineDown(view)
+
+    const targetY = coords.bottom + view.defaultLineHeight
+    const targetPos = view.posAtCoords({ x: coords.left, y: targetY })
+
+    if (targetPos === null || targetPos === main.head) {
+      return cursorLineDown(view)
+    }
+
+    view.dispatch({
+      selection: { anchor: targetPos, head: targetPos },
+      scrollIntoView: true,
+    })
+
+    return true
+  }
+
   function createKeymaps(): Extension[] {
     const insertSpaces = (view: EditorView): boolean => {
       const tabSize = configManager.editor.tab_size || 2
@@ -437,14 +503,24 @@ Focused component handling CodeMirror initialization and content editing.
       ? { key: 'Tab', run: insertSpaces }
       : indentWithTab
 
-    const customKeymap = keymap.of([
+    const baseKeybindings = [
       tabBinding,
       // Folding shortcuts for all modes
       { key: 'Ctrl-Shift-[', run: foldCode },
       { key: 'Ctrl-Shift-]', run: unfoldCode },
       { key: 'Ctrl-Alt-[', run: foldAll },
       { key: 'Ctrl-Alt-]', run: unfoldAll },
-    ])
+    ]
+
+    // Add visual line navigation for non-vim modes when word wrap is enabled
+    if (keyBindingMode !== 'vim' && configManager.editor.word_wrap) {
+      baseKeybindings.push(
+        { key: 'ArrowUp', run: visualLineUp },
+        { key: 'ArrowDown', run: visualLineDown }
+      )
+    }
+
+    const customKeymap = keymap.of(baseKeybindings)
 
     const escapeKeymap =
       onExit || onRequestExit
