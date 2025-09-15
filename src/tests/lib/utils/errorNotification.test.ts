@@ -4,7 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { errorNotification } from '../../../lib/utils/errorNotification'
+import { errorNotification } from '../../../lib/utils/notification'
 
 describe('errorNotification utility', () => {
   let mockNotificationFn: ReturnType<typeof vi.fn>
@@ -29,7 +29,7 @@ describe('errorNotification utility', () => {
       // Test that the new function is registered by triggering
       errorNotification.trigger('test')
 
-      expect(newFn).toHaveBeenCalledWith('test')
+      expect(newFn).toHaveBeenCalledWith('test', 'error')
       expect(mockNotificationFn).not.toHaveBeenCalled()
     })
 
@@ -43,10 +43,10 @@ describe('errorNotification utility', () => {
       errorNotification.register(secondFn)
       await errorNotification.trigger('second')
 
-      expect(firstFn).toHaveBeenCalledWith('first')
-      expect(firstFn).not.toHaveBeenCalledWith('second')
-      expect(secondFn).toHaveBeenCalledWith('second')
-      expect(secondFn).not.toHaveBeenCalledWith('first')
+      expect(firstFn).toHaveBeenCalledWith('first', 'error')
+      expect(firstFn).not.toHaveBeenCalledWith('second', 'error')
+      expect(secondFn).toHaveBeenCalledWith('second', 'error')
+      expect(secondFn).not.toHaveBeenCalledWith('first', 'error')
     })
   })
 
@@ -56,7 +56,10 @@ describe('errorNotification utility', () => {
 
       await errorNotification.trigger('Test error message')
 
-      expect(mockNotificationFn).toHaveBeenCalledWith('Test error message')
+      expect(mockNotificationFn).toHaveBeenCalledWith(
+        'Test error message',
+        'error'
+      )
     })
 
     it('should call registered notification function without message', async () => {
@@ -64,7 +67,7 @@ describe('errorNotification utility', () => {
 
       await errorNotification.trigger()
 
-      expect(mockNotificationFn).toHaveBeenCalledWith(undefined)
+      expect(mockNotificationFn).toHaveBeenCalledWith(undefined, 'error')
     })
 
     it('should handle notification function that throws error', async () => {
@@ -72,9 +75,9 @@ describe('errorNotification utility', () => {
 
       await errorNotification.trigger('Test message')
 
-      expect(mockNotificationFn).toHaveBeenCalledWith('Test message')
+      expect(mockNotificationFn).toHaveBeenCalledWith('Test message', 'error')
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Error notification failed:',
+        'Notification failed:',
         new Error('Notification failed')
       )
     })
@@ -95,7 +98,7 @@ describe('errorNotification utility', () => {
       const triggerPromise = errorNotification.trigger('Async test')
 
       // Notification shouldn't be resolved yet
-      expect(mockNotificationFn).toHaveBeenCalledWith('Async test')
+      expect(mockNotificationFn).toHaveBeenCalledWith('Async test', 'error')
 
       // Resolve the notification
       resolveNotification!()
@@ -117,9 +120,9 @@ describe('errorNotification utility', () => {
       await Promise.all(triggers)
 
       expect(mockNotificationFn).toHaveBeenCalledTimes(3)
-      expect(mockNotificationFn).toHaveBeenCalledWith('Error 1')
-      expect(mockNotificationFn).toHaveBeenCalledWith('Error 2')
-      expect(mockNotificationFn).toHaveBeenCalledWith('Error 3')
+      expect(mockNotificationFn).toHaveBeenCalledWith('Error 1', 'error')
+      expect(mockNotificationFn).toHaveBeenCalledWith('Error 2', 'error')
+      expect(mockNotificationFn).toHaveBeenCalledWith('Error 3', 'error')
     })
   })
 
@@ -131,7 +134,7 @@ describe('errorNotification utility', () => {
       // Should not throw even if function doesn't return a promise
       await errorNotification.trigger('Sync test')
 
-      expect(syncFn).toHaveBeenCalledWith('Sync test')
+      expect(syncFn).toHaveBeenCalledWith('Sync test', 'error')
     })
 
     it('should handle notification function throwing synchronously', async () => {
@@ -142,9 +145,9 @@ describe('errorNotification utility', () => {
 
       await errorNotification.trigger('Sync error test')
 
-      expect(throwingFn).toHaveBeenCalledWith('Sync error test')
+      expect(throwingFn).toHaveBeenCalledWith('Sync error test', 'error')
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Error notification failed:',
+        'Notification failed:',
         new Error('Sync error')
       )
     })
@@ -155,7 +158,7 @@ describe('errorNotification utility', () => {
       await errorNotification.trigger('Test')
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Error notification failed:',
+        'Notification failed:',
         'String error'
       )
     })

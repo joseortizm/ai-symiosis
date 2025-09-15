@@ -884,14 +884,20 @@ export function createContentNavigationManager(
       contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
     )
 
+    if (headers.length === 0) return null
+
+    let nearestHeader: Element | null = null
+
     for (const h of headers) {
       const pos = h.compareDocumentPosition(state.currentElement)
       if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
-        return h
+        nearestHeader = h
+      } else {
+        break
       }
     }
 
-    return null
+    return nearestHeader || headers[0]
   }
 
   function getHeaderFromViewport(): Element | null {
