@@ -51,8 +51,12 @@ export interface ConfigService {
     ui_themes: string[]
     markdown_themes: string[]
   }>
-  loadTheme(theme: string, validUIThemes?: string[]): Promise<void>
-  loadMarkdownTheme(theme: string): Promise<void>
+  loadTheme(
+    theme: string,
+    validUIThemes?: string[],
+    customPath?: string
+  ): Promise<void>
+  loadMarkdownTheme(theme: string, customPath?: string): Promise<void>
   loadHighlightJSTheme(theme: string): Promise<void>
 }
 
@@ -306,12 +310,34 @@ export function createConfigService(): ConfigService {
 
     async loadTheme(
       theme: string,
-      validUIThemes: string[] = []
+      validUIThemes: string[] = [],
+      customPath?: string
     ): Promise<void> {
       try {
         const existingLink = document.head.querySelector('link[data-ui-theme]')
+        const existingStyle = document.head.querySelector(
+          'style[data-ui-theme]'
+        )
         if (existingLink) {
           existingLink.remove()
+        }
+        if (existingStyle) {
+          existingStyle.remove()
+        }
+
+        if (customPath) {
+          try {
+            const cssContent = await invoke<string>('load_custom_theme_file', {
+              path: customPath,
+            })
+            const style = document.createElement('style')
+            style.textContent = cssContent
+            style.setAttribute('data-ui-theme', 'custom')
+            document.head.appendChild(style)
+            return
+          } catch (error) {
+            console.error('Failed to load custom UI theme:', error)
+          }
         }
 
         if (validUIThemes.length > 0 && !validUIThemes.includes(theme)) {
@@ -337,13 +363,34 @@ export function createConfigService(): ConfigService {
       }
     },
 
-    async loadMarkdownTheme(theme: string): Promise<void> {
+    async loadMarkdownTheme(theme: string, customPath?: string): Promise<void> {
       try {
         const existingLink = document.head.querySelector(
           'link[data-markdown-theme]'
         )
+        const existingStyle = document.head.querySelector(
+          'style[data-markdown-theme]'
+        )
         if (existingLink) {
           existingLink.remove()
+        }
+        if (existingStyle) {
+          existingStyle.remove()
+        }
+
+        if (customPath) {
+          try {
+            const cssContent = await invoke<string>('load_custom_theme_file', {
+              path: customPath,
+            })
+            const style = document.createElement('style')
+            style.textContent = cssContent
+            style.setAttribute('data-markdown-theme', 'custom')
+            document.head.appendChild(style)
+            return
+          } catch (error) {
+            console.error('Failed to load custom markdown theme:', error)
+          }
         }
 
         const link = document.createElement('link')

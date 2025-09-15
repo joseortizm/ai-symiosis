@@ -296,6 +296,17 @@ fn extract_window_configuration(section: &toml::Value, config: &mut InterfaceCon
     if let Some(decorations) = section.get("window_decorations").and_then(|v| v.as_bool()) {
         config.window_decorations = decorations;
     }
+
+    if let Some(custom_ui_path) = section.get("custom_ui_theme_path").and_then(|v| v.as_str()) {
+        config.custom_ui_theme_path = Some(custom_ui_path.to_string());
+    }
+
+    if let Some(custom_md_path) = section
+        .get("custom_markdown_theme_path")
+        .and_then(|v| v.as_str())
+    {
+        config.custom_markdown_theme_path = Some(custom_md_path.to_string());
+    }
 }
 
 fn extract_editor_config(value: &toml::Value) -> EditorConfig {

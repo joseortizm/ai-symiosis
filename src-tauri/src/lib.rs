@@ -231,7 +231,9 @@ fn register_command_handlers(
         get_editor_config,
         get_shortcuts_config,
         get_preferences_config,
-        scan_available_themes
+        scan_available_themes,
+        load_custom_theme_file,
+        validate_theme_path
     ]
 }
 

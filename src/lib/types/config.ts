@@ -11,6 +11,8 @@ export interface InterfaceConfig {
   markdown_render_theme: string
   md_render_code_theme: string
   always_on_top: boolean
+  custom_ui_theme_path?: string
+  custom_markdown_theme_path?: string
 }
 
 export interface EditorConfig {

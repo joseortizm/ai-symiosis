@@ -55,6 +55,10 @@ pub struct InterfaceConfig {
     pub always_on_top: bool,
     #[serde(default = "default_window_decorations")]
     pub window_decorations: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_ui_theme_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_markdown_theme_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -135,6 +139,8 @@ impl Default for InterfaceConfig {
             md_render_code_theme: "gruvbox-dark-medium".to_string(),
             always_on_top: false,
             window_decorations: default_window_decorations(),
+            custom_ui_theme_path: None,
+            custom_markdown_theme_path: None,
         }
     }
 }

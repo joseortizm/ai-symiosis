@@ -76,6 +76,23 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 - `markdown_render_theme` - Theme for rendered markdown content (default: `"dark_dimmed"`)
 - `md_render_code_theme` - Syntax highlighting theme for code blocks (default: `"gruvbox-dark-medium"`)
 
+**Custom Theme Paths:** *(requires restart)*
+- `custom_ui_theme_path` - Path to custom UI theme CSS file (optional)
+- `custom_markdown_theme_path` - Path to custom markdown theme CSS file (optional)
+
+When custom theme paths are provided, they take precedence over the theme names. If a custom file fails to load, the app falls back to the specified theme name. Both options require an application restart to take effect.
+
+**Example custom theme usage:**
+```toml
+[interface]
+ui_theme = "gruvbox-dark"                              # Fallback theme
+custom_ui_theme_path = "/Users/username/my-theme.css"  # Custom override
+markdown_render_theme = "dark_dimmed"                  # Fallback theme
+custom_markdown_theme_path = "/Users/username/my-md-theme.css"  # Custom override
+```
+
+Note: Custom theme files must be absolute paths and have a `.css` extension.
+
 **Available Code Highlighting Themes:**
 
 *Gruvbox Variants:*

@@ -50,8 +50,8 @@ export interface ConfigManager {
   initialize(): Promise<void>
   cleanup(): void
   forceRefresh(): Promise<void>
-  loadTheme(theme: string): Promise<void>
-  loadMarkdownTheme(theme: string): Promise<void>
+  loadTheme(theme: string, customPath?: string): Promise<void>
+  loadMarkdownTheme(theme: string, customPath?: string): Promise<void>
   loadHighlightJSTheme(theme: string): Promise<void>
 }
 
@@ -160,11 +160,26 @@ export function createConfigManager(): ConfigManager {
       // Always apply interface config (fonts, etc.) when config changes
       applyInterfaceConfig(config.interface)
 
-      if (config.interface.ui_theme !== previousUITheme) {
-        configService.loadTheme(config.interface.ui_theme, validUIThemes)
+      if (
+        config.interface.ui_theme !== previousUITheme ||
+        config.interface.custom_ui_theme_path !==
+          state.interface.custom_ui_theme_path
+      ) {
+        configService.loadTheme(
+          config.interface.ui_theme,
+          validUIThemes,
+          config.interface.custom_ui_theme_path
+        )
       }
-      if (config.interface.markdown_render_theme !== previousMarkdownTheme) {
-        configService.loadMarkdownTheme(config.interface.markdown_render_theme)
+      if (
+        config.interface.markdown_render_theme !== previousMarkdownTheme ||
+        config.interface.custom_markdown_theme_path !==
+          state.interface.custom_markdown_theme_path
+      ) {
+        configService.loadMarkdownTheme(
+          config.interface.markdown_render_theme,
+          config.interface.custom_markdown_theme_path
+        )
       }
       if (config.interface.md_render_code_theme !== previousCodeTheme) {
         configService.loadHighlightJSTheme(
@@ -220,8 +235,15 @@ export function createConfigManager(): ConfigManager {
 
   async function setupThemes(interfaceConfig: InterfaceConfig): Promise<void> {
     applyInterfaceConfig(interfaceConfig)
-    await configService.loadTheme(interfaceConfig.ui_theme, validUIThemes)
-    await configService.loadMarkdownTheme(interfaceConfig.markdown_render_theme)
+    await configService.loadTheme(
+      interfaceConfig.ui_theme,
+      validUIThemes,
+      interfaceConfig.custom_ui_theme_path
+    )
+    await configService.loadMarkdownTheme(
+      interfaceConfig.markdown_render_theme,
+      interfaceConfig.custom_markdown_theme_path
+    )
     await configService.loadHighlightJSTheme(
       interfaceConfig.md_render_code_theme
     )
@@ -295,17 +317,27 @@ export function createConfigManager(): ConfigManager {
       unlistenConfigChanged = null
     }
 
-    // Remove theme links
+    // Remove theme links and styles
     const markdownThemeLink = document.head.querySelector(
       'link[data-markdown-theme]'
+    )
+    const markdownThemeStyle = document.head.querySelector(
+      'style[data-markdown-theme]'
     )
     if (markdownThemeLink) {
       markdownThemeLink.remove()
     }
+    if (markdownThemeStyle) {
+      markdownThemeStyle.remove()
+    }
 
     const uiThemeLink = document.head.querySelector('link[data-ui-theme]')
+    const uiThemeStyle = document.head.querySelector('style[data-ui-theme]')
     if (uiThemeLink) {
       uiThemeLink.remove()
+    }
+    if (uiThemeStyle) {
+      uiThemeStyle.remove()
     }
 
     const highlightThemeLink = document.head.querySelector(
@@ -380,8 +412,10 @@ export function createConfigManager(): ConfigManager {
     initialize,
     cleanup,
     forceRefresh,
-    loadTheme: (theme: string) => configService.loadTheme(theme, validUIThemes),
-    loadMarkdownTheme: configService.loadMarkdownTheme,
+    loadTheme: (theme: string, customPath?: string) =>
+      configService.loadTheme(theme, validUIThemes, customPath),
+    loadMarkdownTheme: (theme: string, customPath?: string) =>
+      configService.loadMarkdownTheme(theme, customPath),
     loadHighlightJSTheme: configService.loadHighlightJSTheme,
   }
 }
