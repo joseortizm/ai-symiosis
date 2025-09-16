@@ -1,12 +1,12 @@
 /**
- * Error Notification Utility Tests
- * Tests for global error notification system registration and triggering.
+ * Notification Utility Tests
+ * Tests for global notification system registration and triggering.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { errorNotification } from '../../../lib/utils/notification'
+import { notification } from '../../../lib/utils/notification'
 
-describe('errorNotification utility', () => {
+describe('notification utility', () => {
   let mockNotificationFn: ReturnType<typeof vi.fn>
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>
 
@@ -14,7 +14,7 @@ describe('errorNotification utility', () => {
     mockNotificationFn = vi.fn()
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     // Reset internal state by registering a new function
-    errorNotification.register(mockNotificationFn)
+    notification.register(mockNotificationFn)
   })
 
   afterEach(() => {
@@ -24,10 +24,10 @@ describe('errorNotification utility', () => {
   describe('register', () => {
     it('should register notification function', () => {
       const newFn = vi.fn()
-      errorNotification.register(newFn)
+      notification.register(newFn)
 
       // Test that the new function is registered by triggering
-      errorNotification.trigger('test')
+      notification.error('test')
 
       expect(newFn).toHaveBeenCalledWith('test', 'error')
       expect(mockNotificationFn).not.toHaveBeenCalled()
@@ -37,11 +37,11 @@ describe('errorNotification utility', () => {
       const firstFn = vi.fn().mockResolvedValue(undefined)
       const secondFn = vi.fn().mockResolvedValue(undefined)
 
-      errorNotification.register(firstFn)
-      await errorNotification.trigger('first')
+      notification.register(firstFn)
+      await notification.error('first')
 
-      errorNotification.register(secondFn)
-      await errorNotification.trigger('second')
+      notification.register(secondFn)
+      await notification.error('second')
 
       expect(firstFn).toHaveBeenCalledWith('first', 'error')
       expect(firstFn).not.toHaveBeenCalledWith('second', 'error')
@@ -54,7 +54,7 @@ describe('errorNotification utility', () => {
     it('should call registered notification function with message', async () => {
       mockNotificationFn.mockResolvedValue(undefined)
 
-      await errorNotification.trigger('Test error message')
+      await notification.error('Test error message')
 
       expect(mockNotificationFn).toHaveBeenCalledWith(
         'Test error message',
@@ -65,7 +65,7 @@ describe('errorNotification utility', () => {
     it('should call registered notification function without message', async () => {
       mockNotificationFn.mockResolvedValue(undefined)
 
-      await errorNotification.trigger()
+      await notification.error()
 
       expect(mockNotificationFn).toHaveBeenCalledWith(undefined, 'error')
     })
@@ -73,7 +73,7 @@ describe('errorNotification utility', () => {
     it('should handle notification function that throws error', async () => {
       mockNotificationFn.mockRejectedValue(new Error('Notification failed'))
 
-      await errorNotification.trigger('Test message')
+      await notification.error('Test message')
 
       expect(mockNotificationFn).toHaveBeenCalledWith('Test message', 'error')
       expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -95,7 +95,7 @@ describe('errorNotification utility', () => {
       })
       mockNotificationFn.mockReturnValue(notificationPromise)
 
-      const triggerPromise = errorNotification.trigger('Async test')
+      const triggerPromise = notification.error('Async test')
 
       // Notification shouldn't be resolved yet
       expect(mockNotificationFn).toHaveBeenCalledWith('Async test', 'error')
@@ -112,9 +112,9 @@ describe('errorNotification utility', () => {
       mockNotificationFn.mockResolvedValue(undefined)
 
       const triggers = [
-        errorNotification.trigger('Error 1'),
-        errorNotification.trigger('Error 2'),
-        errorNotification.trigger('Error 3'),
+        notification.error('Error 1'),
+        notification.error('Error 2'),
+        notification.error('Error 3'),
       ]
 
       await Promise.all(triggers)
@@ -129,10 +129,10 @@ describe('errorNotification utility', () => {
   describe('error handling edge cases', () => {
     it('should handle notification function that returns non-promise', async () => {
       const syncFn = vi.fn().mockReturnValue('not a promise')
-      errorNotification.register(syncFn)
+      notification.register(syncFn)
 
       // Should not throw even if function doesn't return a promise
-      await errorNotification.trigger('Sync test')
+      await notification.error('Sync test')
 
       expect(syncFn).toHaveBeenCalledWith('Sync test', 'error')
     })
@@ -141,9 +141,9 @@ describe('errorNotification utility', () => {
       const throwingFn = vi.fn().mockImplementation(() => {
         throw new Error('Sync error')
       })
-      errorNotification.register(throwingFn)
+      notification.register(throwingFn)
 
-      await errorNotification.trigger('Sync error test')
+      await notification.error('Sync error test')
 
       expect(throwingFn).toHaveBeenCalledWith('Sync error test', 'error')
       expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -155,7 +155,7 @@ describe('errorNotification utility', () => {
     it('should handle string error from notification function', async () => {
       mockNotificationFn.mockRejectedValue('String error')
 
-      await errorNotification.trigger('Test')
+      await notification.error('Test')
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         'Notification failed:',

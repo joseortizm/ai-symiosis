@@ -49,8 +49,3 @@ export const notification = {
   info,
 }
 
-// Backward compatibility
-export const errorNotification = {
-  register,
-  trigger: error,
-}
