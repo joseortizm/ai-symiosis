@@ -69,14 +69,19 @@ Used for note creation and renaming operations throughout the application.
     }
   }
 
+  let hasAutoSelected = $state(false)
+
   $effect(() => {
     if (show && inputElement) {
       setTimeout(() => {
         inputElement!.focus()
-        if (autoSelect) {
+        if (autoSelect && !hasAutoSelected) {
           inputElement!.select()
+          hasAutoSelected = true
         }
       }, 10)
+    } else if (!show) {
+      hasAutoSelected = false
     }
   })
 
