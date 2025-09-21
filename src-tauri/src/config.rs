@@ -142,7 +142,7 @@ impl Default for InterfaceConfig {
             font_size: 14,
             editor_font_family: "JetBrains Mono, Consolas, monospace".to_string(),
             editor_font_size: 14,
-            markdown_render_theme: "dark_dimmed".to_string(),
+            markdown_render_theme: "modern_dark".to_string(),
             md_render_code_theme: "gruvbox-dark-medium".to_string(),
             always_on_top: false,
             window_decorations: default_window_decorations(),

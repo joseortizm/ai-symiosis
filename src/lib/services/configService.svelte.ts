@@ -171,7 +171,7 @@ export function createConfigService(): ConfigService {
         font_size: 14,
         editor_font_family: 'JetBrains Mono, Consolas, monospace',
         editor_font_size: 14,
-        markdown_render_theme: 'dark_dimmed',
+        markdown_render_theme: 'modern_dark',
         md_render_code_theme: 'gruvbox-dark-medium',
         always_on_top: false,
       }
@@ -290,16 +290,7 @@ export function createConfigService(): ConfigService {
         console.error('Failed to scan available themes:', error)
         return {
           ui_themes: ['gruvbox-dark', 'one-dark'],
-          markdown_themes: [
-            'light',
-            'dark',
-            'dark_dimmed',
-            'auto',
-            'modern_dark',
-            'article',
-            'gruvbox',
-            'dark_high_contrast',
-          ],
+          markdown_themes: ['modern_dark', 'article', 'gruvbox'],
         }
       }
     },

@@ -29,16 +29,7 @@ pub fn get_available_ui_themes() -> Vec<&'static str> {
 }
 
 pub fn get_available_markdown_themes() -> Vec<&'static str> {
-    vec![
-        "light",
-        "dark",
-        "dark_dimmed",
-        "auto",
-        "modern_dark",
-        "article",
-        "gruvbox",
-        "dark_high_contrast",
-    ]
+    vec!["modern_dark", "article", "gruvbox"]
 }
 
 pub fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {

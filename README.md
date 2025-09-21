@@ -77,7 +77,7 @@ Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On
 - `font_size` - UI font size in pixels (default: `14`)
 - `editor_font_family` - Editor font family (default: `"JetBrains Mono, Consolas, monospace"`)
 - `editor_font_size` - Editor font size in pixels (default: `14`)
-- `markdown_render_theme` - Theme for rendered markdown content (default: `"dark_dimmed"`)
+- `markdown_render_theme` - Theme for rendered markdown content (default: `"modern_dark"`)
 - `md_render_code_theme` - Syntax highlighting theme for code blocks (default: `"gruvbox-dark-medium"`)
 
 **Custom Theme Paths:** *(requires restart)*
@@ -91,7 +91,7 @@ When custom theme paths are provided, they take precedence over the theme names.
 [interface]
 ui_theme = "gruvbox-dark"                              # Fallback theme
 custom_ui_theme_path = "/Users/username/my-theme.css"  # Custom override
-markdown_render_theme = "dark_dimmed"                  # Fallback theme
+markdown_render_theme = "modern_dark"                  # Fallback theme
 custom_markdown_theme_path = "/Users/username/my-md-theme.css"  # Custom override
 ```
 
@@ -171,7 +171,7 @@ font_family = "Inter, sans-serif"
 font_size = 14
 editor_font_family = "JetBrains Mono, Consolas, monospace"
 editor_font_size = 14
-markdown_render_theme = "dark_dimmed"
+markdown_render_theme = "modern_dark"
 md_render_code_theme = "gruvbox-dark-medium"
 always_on_top = false
 window_decorations = true
