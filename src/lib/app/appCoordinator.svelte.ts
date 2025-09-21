@@ -207,6 +207,7 @@ export function createAppCoordinator(
           cancelable: true,
         })
         document.dispatchEvent(event)
+        isFirstRun = false
       }, 300)
     }
   }
