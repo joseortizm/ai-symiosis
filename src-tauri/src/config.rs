@@ -58,9 +58,7 @@ pub struct InterfaceConfig {
     pub always_on_top: bool,
     #[serde(default = "default_window_decorations")]
     pub window_decorations: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_ui_theme_path: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_markdown_theme_path: Option<String>,
 }
 
@@ -261,8 +259,22 @@ pub fn save_config(config: &AppConfig) -> AppResult<()> {
         fs::create_dir_all(parent)?;
     }
 
-    let toml_content = toml::to_string_pretty(config)
+    let mut toml_content = toml::to_string_pretty(config)
         .map_err(|e| AppError::ConfigSave(format!("Failed to serialize config: {}", e)))?;
+
+    // Add commented examples for None values
+    if config.interface.custom_ui_theme_path.is_none() {
+        toml_content = toml_content.replace(
+            "[interface]",
+            "[interface]\n# custom_ui_theme_path = \"path/to/custom/ui_theme.css\"",
+        );
+    }
+    if config.interface.custom_markdown_theme_path.is_none() {
+        toml_content = toml_content.replace(
+            "# custom_ui_theme_path = \"path/to/custom/ui_theme.css\"",
+            "# custom_ui_theme_path = \"path/to/custom/ui_theme.css\"\n# custom_markdown_theme_path = \"path/to/custom/markdown_theme.css\""
+        );
+    }
 
     fs::write(&config_path, toml_content)?;
 
