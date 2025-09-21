@@ -138,7 +138,7 @@ Features simple file list, keyboard navigation, and recovery.
             <p>No recently deleted files found.</p>
           </div>
         {:else}
-          {#each files as file, index (file.filename)}
+          {#each files as file, index (file.backup_filename)}
             <div
               class="file-item {index === selectedIndex ? 'selected' : ''}"
               onclick={() => handleFileClick(index)}
