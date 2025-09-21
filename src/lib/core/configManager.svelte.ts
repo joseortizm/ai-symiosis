@@ -66,7 +66,7 @@ export function createConfigManager(): ConfigManager {
       font_size: 14,
       editor_font_family: 'JetBrains Mono, Consolas, monospace',
       editor_font_size: 14,
-      markdown_render_theme: 'modern_dark',
+      markdown_render_theme: 'modern-dark',
       md_render_code_theme: 'gruvbox-dark-medium',
       always_on_top: false,
     },

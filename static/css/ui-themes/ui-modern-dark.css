@@ -1,0 +1,18 @@
+/* Modern Dark UI Theme */
+:root {
+  --theme-bg-primary: #16181b;
+  --theme-bg-secondary: #1b1e22;
+  --theme-bg-tertiary: #1e2126;
+  --theme-text-primary: #f5f4f2;
+  --theme-text-secondary: #e7e4df;
+  --theme-text-muted: #d0cbc5;
+  --theme-accent: #91a8ff;
+  --theme-accent-hover: #b2c3ff;
+  --theme-highlight: #f0c78a;
+  --theme-highlight-bg: rgba(240, 199, 138, 0.2);
+  --theme-warning: #ff6b6b;
+  --theme-success: #51cf66;
+  --theme-border: #2a2e36;
+  --theme-border-focus: #6c82e7;
+  --theme-shadow-focus: rgba(108, 130, 231, 0.2);
+}

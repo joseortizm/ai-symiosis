@@ -13,7 +13,7 @@ fn test_default_config_values() {
     assert_eq!(config.preferences.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.interface.markdown_render_theme, "modern_dark");
+    assert_eq!(config.interface.markdown_render_theme, "modern-dark");
     // notes_directory should be ~/Documents/Notes or ./notes fallback
     assert!(config.notes_directory.contains("Notes") || config.notes_directory == "./notes");
 }
@@ -70,7 +70,7 @@ notes_directory = "/tmp/test"
     assert_eq!(config.preferences.max_search_results, 100);
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.interface.markdown_render_theme, "modern_dark");
+    assert_eq!(config.interface.markdown_render_theme, "modern-dark");
 }
 
 #[test]
@@ -92,7 +92,7 @@ max_search_results = 50
     assert_eq!(config.global_shortcut, "Alt+Space");
     // Missing fields should use defaults
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.interface.markdown_render_theme, "modern_dark");
+    assert_eq!(config.interface.markdown_render_theme, "modern-dark");
 }
 
 #[test]
@@ -198,7 +198,7 @@ notes_directory = "/custom/notes"
     assert_eq!(config.global_shortcut, "Ctrl+Shift+N");
     assert_eq!(config.preferences.max_search_results, 100);
     assert_eq!(config.editor.mode, "basic");
-    assert_eq!(config.interface.markdown_render_theme, "modern_dark");
+    assert_eq!(config.interface.markdown_render_theme, "modern-dark");
 }
 
 #[test]
@@ -383,7 +383,7 @@ font_family = "Inter, sans-serif"
 font_size = 16
 editor_font_family = "JetBrains Mono"
 editor_font_size = 15
-markdown_render_theme = "modern_dark"
+markdown_render_theme = "modern-dark"
 md_render_code_theme = "github-dark"
 always_on_top = false
 
@@ -424,7 +424,7 @@ max_search_results = 250
     assert_eq!(config.interface.ui_theme, "gruvbox-dark");
     assert_eq!(config.interface.font_size, 16);
     assert_eq!(config.interface.editor_font_size, 15);
-    assert_eq!(config.interface.markdown_render_theme, "modern_dark");
+    assert_eq!(config.interface.markdown_render_theme, "modern-dark");
     assert_eq!(config.editor.mode, "vim");
     assert_eq!(config.editor.theme, "nord");
     assert_eq!(config.editor.word_wrap, false);

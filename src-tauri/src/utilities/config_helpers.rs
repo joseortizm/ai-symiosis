@@ -25,11 +25,11 @@ pub fn default_window_decorations() -> bool {
 }
 
 pub fn get_available_ui_themes() -> Vec<&'static str> {
-    vec!["gruvbox-dark", "one-dark"]
+    vec!["gruvbox-dark", "one-dark", "modern-dark"]
 }
 
 pub fn get_available_markdown_themes() -> Vec<&'static str> {
-    vec!["modern_dark", "article", "gruvbox"]
+    vec!["modern-dark", "article", "gruvbox-dark"]
 }
 
 pub fn parse_shortcut(shortcut_str: &str) -> Option<Shortcut> {

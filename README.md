@@ -98,10 +98,10 @@ custom_markdown_theme_path = "/Users/username/my-md-theme.css"  # Custom overrid
 Note: Custom theme files must be absolute paths and have a `.css` extension.
 
 **Available UI Themes:**
-`gruvbox-dark`, `one-dark`
+`gruvbox-dark`, `one-dark`, `modern-dark`
 
 **Available Markdown Render Themes:**
-`modern_dark`, `article`, `gruvbox`
+`modern-dark`, `article`, `gruvbox-dark`
 
 **Available Code Highlighting Themes:**
 

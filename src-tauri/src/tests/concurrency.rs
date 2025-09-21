@@ -48,7 +48,7 @@ fn test_concurrent_validation() {
             config.preferences.max_search_results = 100;
             config.global_shortcut = "Ctrl+Shift+N".to_string();
             config.editor.mode = "basic".to_string();
-            config.interface.markdown_render_theme = "modern_dark".to_string();
+            config.interface.markdown_render_theme = "modern-dark".to_string();
             config
         },
         {
@@ -57,7 +57,7 @@ fn test_concurrent_validation() {
             config.preferences.max_search_results = 50;
             config.global_shortcut = "Alt+Space".to_string();
             config.editor.mode = "vim".to_string();
-            config.interface.markdown_render_theme = "gruvbox".to_string();
+            config.interface.markdown_render_theme = "gruvbox-dark".to_string();
             config
         },
         {

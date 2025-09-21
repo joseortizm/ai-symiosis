@@ -39,7 +39,7 @@ describe('configManager', () => {
       expect(manager.preferences.max_search_results).toBe(100)
       expect(manager.globalShortcut).toBe('Ctrl+Shift+N')
       expect(manager.editor.mode).toBe('basic')
-      expect(manager.interface.markdown_render_theme).toBe('modern_dark')
+      expect(manager.interface.markdown_render_theme).toBe('modern-dark')
       expect(manager.isLoading).toBe(false)
       expect(manager.error).toBe(null)
       expect(manager.isInitialized).toBe(false)
@@ -58,7 +58,7 @@ describe('configManager', () => {
           font_size: 14,
           editor_font_family: 'JetBrains Mono, Consolas, monospace',
           editor_font_size: 14,
-          markdown_render_theme: 'modern_dark',
+          markdown_render_theme: 'modern-dark',
           md_render_code_theme: 'gruvbox-dark-medium',
           always_on_top: false,
         }) // getInterfaceConfig
@@ -75,7 +75,7 @@ describe('configManager', () => {
       await manager.initialize()
 
       expect(manager.editor.mode).toBe('vim')
-      expect(manager.interface.markdown_render_theme).toBe('modern_dark')
+      expect(manager.interface.markdown_render_theme).toBe('modern-dark')
       expect(manager.isInitialized).toBe(true)
       expect(manager.isThemeInitialized).toBe(true)
       expect(manager.isLoading).toBe(false)
@@ -94,7 +94,7 @@ describe('configManager', () => {
 
       // Should have default values from configService
       expect(manager.editor.mode).toBe('basic')
-      expect(manager.interface.markdown_render_theme).toBe('modern_dark')
+      expect(manager.interface.markdown_render_theme).toBe('modern-dark')
     })
 
     it('should not re-initialize if already initialized', async () => {
@@ -150,7 +150,7 @@ describe('configManager', () => {
           font_size: 16,
           editor_font_family: 'Monaco',
           editor_font_size: 12,
-          markdown_render_theme: 'modern_dark',
+          markdown_render_theme: 'modern-dark',
           md_render_code_theme: 'atom-one-dark',
           always_on_top: false,
         },
@@ -171,7 +171,7 @@ describe('configManager', () => {
       expect(manager.preferences.max_search_results).toBe(50)
       expect(manager.globalShortcut).toBe('Ctrl+Alt+N')
       expect(manager.editor.mode).toBe('vim')
-      expect(manager.interface.markdown_render_theme).toBe('modern_dark')
+      expect(manager.interface.markdown_render_theme).toBe('modern-dark')
     })
   })
 
@@ -229,7 +229,7 @@ describe('configManager', () => {
         .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({
           ui_theme: 'one-dark',
-          markdown_render_theme: 'modern_dark',
+          markdown_render_theme: 'modern-dark',
           md_render_code_theme: 'atom-one-dark',
           font_family: 'Inter, sans-serif',
           font_size: 14,
@@ -244,7 +244,7 @@ describe('configManager', () => {
       await manager.initialize()
 
       expect(manager.currentUITheme).toBe('one-dark')
-      expect(manager.currentMarkdownTheme).toBe('modern_dark')
+      expect(manager.currentMarkdownTheme).toBe('modern-dark')
       expect(manager.currentCodeTheme).toBe('atom-one-dark')
     })
 
@@ -254,7 +254,7 @@ describe('configManager', () => {
         .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig succeeds
         .mockResolvedValueOnce({
           ui_theme: 'gruvbox-dark',
-          markdown_render_theme: 'modern_dark',
+          markdown_render_theme: 'modern-dark',
           md_render_code_theme: 'gruvbox-dark-medium',
           font_family: 'Inter, sans-serif',
           font_size: 14,
@@ -270,7 +270,7 @@ describe('configManager', () => {
 
       // Should have mix of actual and default values
       expect(manager.editor.mode).toBe('vim') // Successfully fetched
-      expect(manager.interface.markdown_render_theme).toBe('modern_dark') // From successful getInterfaceConfig
+      expect(manager.interface.markdown_render_theme).toBe('modern-dark') // From successful getInterfaceConfig
     })
   })
 })
