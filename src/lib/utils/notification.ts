@@ -48,4 +48,3 @@ export const notification = {
   success,
   info,
 }
-

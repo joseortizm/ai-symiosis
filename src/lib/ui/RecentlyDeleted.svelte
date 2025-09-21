@@ -43,6 +43,7 @@ Features simple file list, keyboard navigation, and recovery.
   const configManager = managers.configManager
 
   let dialogElement = $state<HTMLElement | undefined>(undefined)
+  let fileListElement = $state<HTMLElement | undefined>(undefined)
 
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
@@ -102,6 +103,19 @@ Features simple file list, keyboard navigation, and recovery.
       setTimeout(() => dialogElement!.focus(), 10)
     }
   })
+
+  $effect(() => {
+    if (fileListElement && selectedIndex >= 0 && files.length > 0) {
+      requestAnimationFrame(() => {
+        const selectedItem = fileListElement!.children[
+          selectedIndex
+        ] as HTMLElement
+        if (selectedItem) {
+          selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }
+      })
+    }
+  })
 </script>
 
 {#if show}
@@ -118,7 +132,7 @@ Features simple file list, keyboard navigation, and recovery.
     >
       <h3>Recently Deleted Files</h3>
 
-      <div class="file-list">
+      <div class="file-list" bind:this={fileListElement}>
         {#if files.length === 0}
           <div class="empty-state">
             <p>No recently deleted files found.</p>
