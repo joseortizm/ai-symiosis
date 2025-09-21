@@ -97,6 +97,12 @@ custom_markdown_theme_path = "/Users/username/my-md-theme.css"  # Custom overrid
 
 Note: Custom theme files must be absolute paths and have a `.css` extension.
 
+**Available UI Themes:**
+`gruvbox-dark`, `one-dark`
+
+**Available Markdown Render Themes:**
+`modern_dark`, `article`, `gruvbox`
+
 **Available Code Highlighting Themes:**
 
 *Gruvbox Variants:*
@@ -107,9 +113,6 @@ Note: Custom theme files must be absolute paths and have a `.css` extension.
 
 *Popular Light Themes:*
 `atom-one-light`, `github`, `vs`, `xcode`, `tokyo-night-light`
-
-*Base16 Classics:*
-`base16-tomorrow-night`, `base16-ocean`, `base16-solarized-dark`, `base16-solarized-light`, `base16-monokai`, `base16-dracula`
 
 **Window Settings:**
 - `always_on_top` - Keep window always on top (default: `false`) *(requires restart)*

@@ -61,12 +61,6 @@ pub fn validate_interface_config(interface: &InterfaceConfig) -> AppResult<()> {
         "vs",
         "xcode",
         "tokyo-night-light",
-        "base16-tomorrow-night",
-        "base16-ocean",
-        "base16-solarized-dark",
-        "base16-solarized-light",
-        "base16-monokai",
-        "base16-dracula",
     ];
     if !valid_md_code_themes.contains(&interface.md_render_code_theme.as_str()) {
         return Err(AppError::ConfigLoad(format!(

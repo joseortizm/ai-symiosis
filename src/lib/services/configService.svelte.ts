@@ -410,19 +410,16 @@ export function createConfigService(): ConfigService {
         }
 
         const getThemePath = (themeName: string): string => {
-          const base16Themes = [
+          const gruvboxThemes = [
             'gruvbox-dark-hard',
             'gruvbox-dark-medium',
             'gruvbox-dark-soft',
             'gruvbox-light-hard',
             'gruvbox-light-medium',
             'gruvbox-light-soft',
-            'base16-',
           ]
-          const isBase16Theme = base16Themes.some((prefix) =>
-            themeName.startsWith(prefix)
-          )
-          if (isBase16Theme) {
+          const isGruvboxTheme = gruvboxThemes.includes(themeName)
+          if (isGruvboxTheme) {
             return `base16/${themeName}.css`
           }
           return `${themeName}.css`

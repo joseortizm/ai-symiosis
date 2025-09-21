@@ -384,7 +384,7 @@ font_size = 16
 editor_font_family = "JetBrains Mono"
 editor_font_size = 15
 markdown_render_theme = "modern_dark"
-md_render_code_theme = "base16-ocean"
+md_render_code_theme = "github-dark"
 always_on_top = false
 
 [editor]

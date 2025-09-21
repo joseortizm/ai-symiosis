@@ -92,12 +92,6 @@ pub fn get_available_code_themes() -> Vec<&'static str> {
         "vs",
         "xcode",
         "tokyo-night-light",
-        "base16-tomorrow-night",
-        "base16-ocean",
-        "base16-solarized-dark",
-        "base16-solarized-light",
-        "base16-monokai",
-        "base16-dracula",
     ]
 }
 
