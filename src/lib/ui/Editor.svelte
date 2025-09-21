@@ -198,8 +198,12 @@ Focused component handling CodeMirror initialization and content editing.
       visualLineDown(view)
     })
 
-    Vim.mapCommand('j', 'action', 'visualLineDown', undefined, {})
-    Vim.mapCommand('k', 'action', 'visualLineUp', undefined, {})
+    Vim.mapCommand('j', 'action', 'visualLineDown', undefined, {
+      context: 'normal',
+    })
+    Vim.mapCommand('k', 'action', 'visualLineUp', undefined, {
+      context: 'normal',
+    })
   }
 
   function defineBasicVimFoldingActions(): void {
