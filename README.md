@@ -5,13 +5,15 @@
 
 # Symiosis
 
-> [!Warning]
-> This app is in a very early alpha state. Please back up your notes regularly. Use at your own risk.
-
-> [!Note]
-> Only tested on Mac for now. Feel free to try on Windows & Linux and report (or fix!) issues.
-
 Symiosis is a desktop note-taking application inspired by Notational Velocity.
+
+## Status
+
+**Early Release (α)**
+
+- The app is functional and ready to use, but things may change as improvements are made. Some features might not work perfectly yet.
+- Note versions are kept and care has been taken to avoid data loss. Still, since this is a new project, **I recommend keeping regular backups**.
+- Currently tested officially on macOS. Contributions / feedback for Windows & Linux support are appreciated.
 
 ## Features
 
@@ -252,10 +254,6 @@ If you're developing Symiosis and want to keep your development data separate fr
    - Production builds ignore the dev config and always use the regular config location
 
 4. **To disable development mode**, simply delete or rename the dev config file for your platform.
-
-This approach keeps your development and personal notes completely separate without requiring environment variables or additional configuration.
-
-Have fun 🙂
 
 ## License
 
