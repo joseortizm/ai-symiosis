@@ -177,7 +177,15 @@ fn test_concurrent_path_operations() {
                 let db_path = get_database_path().expect("Should get database path");
 
                 // All should return consistent, valid paths
-                assert!(config_path.to_string_lossy().contains(".symiosis"));
+                let path_str = config_path.to_string_lossy();
+                #[cfg(target_os = "windows")]
+                assert!(
+                    path_str.contains("symiosis")
+                        && (path_str.contains("AppData")
+                            || path_str.contains("symiosis/config.toml"))
+                );
+                #[cfg(not(target_os = "windows"))]
+                assert!(path_str.contains(".config/symiosis"));
                 assert!(notes_dir.contains("Notes") || notes_dir == "./notes");
                 assert!(db_path.to_string_lossy().contains("symiosis"));
 

@@ -29,9 +29,18 @@ fn test_get_default_notes_dir() {
 #[test]
 fn test_get_config_path() {
     let config_path = get_config_path();
-    // Should be ~/.symiosis/config.toml or .symiosis/config.toml
+    // Should be platform-appropriate config path
     let path_str = config_path.to_string_lossy();
-    assert!(path_str.contains(".symiosis"));
+
+    #[cfg(target_os = "windows")]
+    assert!(
+        path_str.contains("symiosis")
+            && (path_str.contains("AppData") || path_str.contains("symiosis/config.toml"))
+    );
+
+    #[cfg(not(target_os = "windows"))]
+    assert!(path_str.contains(".config/symiosis"));
+
     assert!(path_str.ends_with("config.toml"));
 }
 
@@ -110,7 +119,7 @@ fn test_shortcut_parsing() {
 
 #[test]
 fn test_load_config_behavior() {
-    // load_config() reads from fixed path ~/.symiosis/config.toml
+    // load_config() reads from platform-appropriate config path
     // If file doesn't exist or parsing fails, it returns defaults
     // We can't easily test file reading without affecting the actual config,
     // but we can test that it doesn't crash and returns reasonable values

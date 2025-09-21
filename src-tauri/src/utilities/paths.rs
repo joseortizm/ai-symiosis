@@ -54,7 +54,10 @@ pub fn get_default_notes_dir() -> String {
     if let Some(home_dir) = home::home_dir() {
         #[cfg(debug_assertions)]
         {
-            let dev_config_path = home_dir.join(".symiosis-dev").join("config.toml");
+            let dev_config_path = home_dir
+                .join(".config")
+                .join("symiosis-dev")
+                .join("config.toml");
             if dev_config_path.exists() {
                 return home_dir
                     .join("Documents")
@@ -72,6 +75,25 @@ pub fn get_default_notes_dir() -> String {
     } else {
         "./notes".to_string()
     }
+}
+
+fn get_config_dir() -> Option<PathBuf> {
+    if let Some(home_dir) = home::home_dir() {
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                return Some(PathBuf::from(appdata));
+            }
+            return Some(home_dir.join("AppData").join("Roaming"));
+        }
+
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
+        return Some(home_dir.join(".config"));
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+        return Some(home_dir.join(".config"));
+    }
+    None
 }
 
 pub fn get_config_path() -> PathBuf {
@@ -100,18 +122,22 @@ pub fn get_config_path() -> PathBuf {
 
     #[cfg(debug_assertions)]
     {
-        if let Some(home_dir) = home::home_dir() {
-            let dev_config_path = home_dir.join(".symiosis-dev").join("config.toml");
+        if let Some(config_dir) = get_config_dir() {
+            let dev_config_path = config_dir.join("symiosis-dev").join("config.toml");
             if dev_config_path.exists() {
                 return dev_config_path;
             }
         }
     }
 
-    if let Some(home_dir) = home::home_dir() {
-        home_dir.join(".symiosis").join("config.toml")
+    if let Some(config_dir) = get_config_dir() {
+        config_dir.join("symiosis").join("config.toml")
     } else {
-        PathBuf::from(".symiosis/config.toml")
+        #[cfg(target_os = "windows")]
+        return PathBuf::from("symiosis/config.toml");
+
+        #[cfg(not(target_os = "windows"))]
+        return PathBuf::from(".config/symiosis/config.toml");
     }
 }
 

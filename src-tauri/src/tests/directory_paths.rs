@@ -47,9 +47,19 @@ fn test_get_config_path_structure() {
     let config_path = get_config_path();
 
     assert!(config_path.is_absolute(), "Config path should be absolute");
+    let path_str = config_path.to_string_lossy();
+
+    #[cfg(target_os = "windows")]
     assert!(
-        config_path.to_string_lossy().contains(".symiosis"),
-        "Config path should contain '.symiosis'"
+        path_str.contains("symiosis")
+            && (path_str.contains("AppData") || path_str.contains("symiosis/config.toml")),
+        "Config path should contain 'symiosis' and be in AppData or fallback location on Windows"
+    );
+
+    #[cfg(not(target_os = "windows"))]
+    assert!(
+        path_str.contains(".config/symiosis"),
+        "Config path should contain '.config/symiosis' on Unix-like systems"
     );
     assert!(
         config_path.to_string_lossy().ends_with("config.toml"),
@@ -261,7 +271,7 @@ fn test_real_filesystem_integration() {
     );
 
     // Test file creation in a similar structure to what our app would create
-    let test_config_dir = temp_dir.join(".symiosis");
+    let test_config_dir = temp_dir.join(".config").join("symiosis");
     let test_notes_dir = temp_dir.join("Documents").join("Notes");
     let test_data_dir = temp_dir.join("symiosis");
 

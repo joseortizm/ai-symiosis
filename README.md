@@ -57,7 +57,11 @@ Usual keys like arrows etc. will also work.
 
 ## Configuration
 
-Symiosis uses a TOML configuration file located at `~/.symiosis/config.toml`. On first run, a default configuration file is created automatically with sensible defaults.
+Symiosis uses a TOML configuration file located at:
+- **Linux/macOS**: `~/.config/symiosis/config.toml`
+- **Windows**: `%APPDATA%\symiosis\config.toml`
+
+On first run, a default configuration file is created automatically with sensible defaults.
 
 ### Configuration Options
 
@@ -222,9 +226,17 @@ max_search_results = 100
 If you're developing Symiosis and want to keep your development data separate from your personal notes, you can enable development mode:
 
 1. **Create a development config file:**
+
+   **Linux/macOS:**
    ```bash
-   mkdir -p ~/.symiosis-dev
-   cp ~/.symiosis/config.toml ~/.symiosis-dev/config.toml
+   mkdir -p ~/.config/symiosis-dev
+   cp ~/.config/symiosis/config.toml ~/.config/symiosis-dev/config.toml
+   ```
+
+   **Windows:**
+   ```cmd
+   mkdir "%APPDATA%\symiosis-dev"
+   copy "%APPDATA%\symiosis\config.toml" "%APPDATA%\symiosis-dev\config.toml"
    ```
 
 2. **Update the development config** to use a separate notes directory:
@@ -233,11 +245,13 @@ If you're developing Symiosis and want to keep your development data separate fr
    ```
 
 3. **Development builds automatically detect the dev config:**
-   - When running `pnpm tauri dev`, Symiosis will automatically use `~/.symiosis-dev/config.toml` if it exists
+   - When running `pnpm tauri dev`, Symiosis will automatically use the platform-appropriate dev config if it exists:
+     - **Linux/macOS**: `~/.config/symiosis-dev/config.toml`
+     - **Windows**: `%APPDATA%\symiosis-dev\config.toml`
    - This separates your development data from your personal notes
-   - Production builds ignore the dev config and always use `~/.symiosis/config.toml`
+   - Production builds ignore the dev config and always use the regular config location
 
-4. **To disable development mode**, simply delete or rename the `~/.symiosis-dev/config.toml` file.
+4. **To disable development mode**, simply delete or rename the dev config file for your platform.
 
 This approach keeps your development and personal notes completely separate without requiring environment variables or additional configuration.
 
