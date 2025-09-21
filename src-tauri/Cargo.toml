@@ -1,7 +1,7 @@
 [package]
 name = "Symiosis"
-version = "0.3.0"
-description = "Notes application inspired by Notational Velocity"
+version = "0.3.1"
+description = "Notational Velocity inspired notes app with instant search, in place markdown rendering, and vim/emacs editing modes."
 authors = ["Dionysis Athinaios"]
 edition = "2021"
 
