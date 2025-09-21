@@ -289,7 +289,7 @@ export function createConfigService(): ConfigService {
       } catch (error) {
         console.error('Failed to scan available themes:', error)
         return {
-          ui_themes: ['gruvbox-dark', 'one-dark', 'modern-dark'],
+          ui_themes: ['gruvbox-dark', 'article', 'modern-dark'],
           markdown_themes: ['modern-dark', 'article', 'gruvbox-dark'],
         }
       }

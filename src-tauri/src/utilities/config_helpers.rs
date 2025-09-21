@@ -25,7 +25,7 @@ pub fn default_window_decorations() -> bool {
 }
 
 pub fn get_available_ui_themes() -> Vec<&'static str> {
-    vec!["gruvbox-dark", "one-dark", "modern-dark"]
+    vec!["gruvbox-dark", "article", "modern-dark"]
 }
 
 pub fn get_available_markdown_themes() -> Vec<&'static str> {

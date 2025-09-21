@@ -121,7 +121,7 @@ export function createConfigManager(): ConfigManager {
       validUIThemes = themes.ui_themes
     } catch (error) {
       console.warn('Failed to fetch available themes, using defaults:', error)
-      validUIThemes = ['gruvbox-dark', 'one-dark']
+      validUIThemes = ['gruvbox-dark', 'article']
     }
   }
 

@@ -317,7 +317,7 @@ fn test_load_config_mixed_sections_some_empty() {
 notes_directory = "/test/notes"
 
 [interface]
-ui_theme = "one-dark"
+ui_theme = "article"
 
 [editor]
 # Editor section exists but is empty - should use all defaults
@@ -333,7 +333,7 @@ create_note = "Alt+Enter"
 
     // Specified values should be preserved
     assert_eq!(config.notes_directory, "/test/notes");
-    assert_eq!(config.interface.ui_theme, "one-dark");
+    assert_eq!(config.interface.ui_theme, "article");
     assert_eq!(config.preferences.max_search_results, 50);
     assert_eq!(config.shortcuts.create_note, "Alt+Enter");
 

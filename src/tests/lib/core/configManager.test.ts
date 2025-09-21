@@ -145,7 +145,7 @@ describe('configManager', () => {
         global_shortcut: 'Ctrl+Alt+N',
         general: { scroll_amount: 0.4 },
         interface: {
-          ui_theme: 'one-dark',
+          ui_theme: 'article',
           font_family: 'Arial',
           font_size: 16,
           editor_font_family: 'Monaco',
@@ -156,7 +156,7 @@ describe('configManager', () => {
         },
         editor: {
           mode: 'vim',
-          theme: 'one-dark',
+          theme: 'gruvbox-dark',
           word_wrap: true,
           tab_size: 2,
           show_line_numbers: true,
@@ -184,7 +184,7 @@ describe('configManager', () => {
       mockInvoke
         .mockResolvedValueOnce(undefined) // refresh_cache
         .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
-        .mockResolvedValueOnce({ ui_theme: 'one-dark' }) // getInterfaceConfig
+        .mockResolvedValueOnce({ ui_theme: 'article' }) // getInterfaceConfig
         .mockResolvedValueOnce({ mode: 'vim' }) // getEditorConfig
         .mockResolvedValueOnce({}) // getShortcutsConfig
         .mockResolvedValueOnce({}) // getPreferencesConfig
@@ -192,7 +192,7 @@ describe('configManager', () => {
       await manager.forceRefresh()
 
       expect(manager.editor.mode).toBe('vim')
-      expect(manager.interface.ui_theme).toBe('one-dark')
+      expect(manager.interface.ui_theme).toBe('article')
       expect(manager.error).toBe(null)
     })
 
@@ -228,7 +228,7 @@ describe('configManager', () => {
       mockInvoke
         .mockResolvedValueOnce({ scroll_amount: 0.4 }) // getGeneralConfig
         .mockResolvedValueOnce({
-          ui_theme: 'one-dark',
+          ui_theme: 'article',
           markdown_render_theme: 'modern-dark',
           md_render_code_theme: 'atom-one-dark',
           font_family: 'Inter, sans-serif',
@@ -243,7 +243,7 @@ describe('configManager', () => {
 
       await manager.initialize()
 
-      expect(manager.currentUITheme).toBe('one-dark')
+      expect(manager.currentUITheme).toBe('article')
       expect(manager.currentMarkdownTheme).toBe('modern-dark')
       expect(manager.currentCodeTheme).toBe('atom-one-dark')
     })

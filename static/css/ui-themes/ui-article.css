@@ -1,0 +1,18 @@
+/* Article UI Theme - Warm Sepia Tones */
+:root {
+  --theme-bg-primary: #f3ece1;
+  --theme-bg-secondary: #f9f6f1;
+  --theme-bg-tertiary: #f9f4e8;
+  --theme-text-primary: #2d2b28;
+  --theme-text-secondary: #2b2a28;
+  --theme-text-muted: #6b6259;
+  --theme-accent: #b85c38;
+  --theme-accent-hover: #e2b091;
+  --theme-highlight: #5b3c11;
+  --theme-highlight-bg: rgba(232, 225, 215, 0.8);
+  --theme-warning: #d63031;
+  --theme-success: #6c5ce7;
+  --theme-border: #d7cfc2;
+  --theme-border-focus: #cbb79c;
+  --theme-shadow-focus: rgba(203, 183, 156, 0.3);
+}
