@@ -1,0 +1,16 @@
+/* Article UI Theme - Warm Sepia Tones */
+:root {
+  --theme-bg-primary: #f3ece1;
+  --theme-bg-secondary: #f9f6f1;
+  --theme-bg-tertiary: #d5c9b7;
+  --theme-text-primary: #2d2b28;
+  --theme-text-secondary: #2b2a28;
+  --theme-text-muted: #6b6259;
+  --theme-accent: #b85c38;
+  --theme-border: #5a524a;
+  --theme-border-focus: #4a3f35;
+  --theme-success: #51cf66;
+  --theme-warning: #d63031;
+  --theme-highlight: var(--theme-text-secondary);
+  --theme-list-divider: #2b2a28;
+}

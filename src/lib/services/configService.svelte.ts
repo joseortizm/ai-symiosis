@@ -340,7 +340,7 @@ export function createConfigService(): ConfigService {
 
         const link = document.createElement('link')
         link.rel = 'stylesheet'
-        link.href = `/css/ui-themes/ui-${theme}.css`
+        link.href = `/css/ui-themes/${theme}.css`
         link.setAttribute('data-ui-theme', theme)
 
         document.head.appendChild(link)

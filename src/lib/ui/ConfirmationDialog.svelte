@@ -161,7 +161,8 @@ Used for exit-edit-with-unsaved-changes confirmations.
   }
 
   .confirm-btn:hover {
-    background-color: var(--theme-accent-hover);
+    background-color: var(--theme-accent);
+    filter: brightness(1.1);
   }
 
   .confirm-btn.danger {

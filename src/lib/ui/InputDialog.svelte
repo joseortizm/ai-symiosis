@@ -218,7 +218,8 @@ Used for note creation and renaming operations throughout the application.
   }
 
   .confirm-btn:hover:not(:disabled) {
-    background-color: var(--theme-accent-hover);
+    background-color: var(--theme-accent);
+    filter: brightness(1.1);
   }
 
   .confirm-btn:disabled {

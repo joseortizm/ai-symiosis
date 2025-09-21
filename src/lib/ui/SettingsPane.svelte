@@ -199,7 +199,8 @@ Uses Editor component for syntax highlighting of configuration files.
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--theme-accent-hover);
+    background-color: var(--theme-accent);
+    filter: brightness(1.1);
   }
 
   .btn-primary:disabled {

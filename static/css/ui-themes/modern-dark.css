@@ -7,12 +7,10 @@
   --theme-text-secondary: #e7e4df;
   --theme-text-muted: #d0cbc5;
   --theme-accent: #91a8ff;
-  --theme-accent-hover: #b2c3ff;
-  --theme-highlight: #f0c78a;
-  --theme-highlight-bg: rgba(240, 199, 138, 0.2);
-  --theme-warning: #ff6b6b;
-  --theme-success: #51cf66;
   --theme-border: #2a2e36;
-  --theme-border-focus: #6c82e7;
-  --theme-shadow-focus: rgba(108, 130, 231, 0.2);
+  --theme-border-focus: #B8C2E0;
+  --theme-success: #51cf66;
+  --theme-warning: #ff6b6b;
+  --theme-highlight: #B8C2E0;
+  --theme-list-divider: var(--theme-bg-secondary);
 }

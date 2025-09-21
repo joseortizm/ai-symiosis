@@ -7,12 +7,10 @@
   --theme-text-secondary: #d5c4a1;
   --theme-text-muted: #928374;
   --theme-accent: #83a598;
-  --theme-accent-hover: #8ec07c;
-  --theme-highlight: #fe8019;
-  --theme-highlight-bg: rgba(254, 128, 25, 0.2);
-  --theme-warning: #fb4934;
-  --theme-success: #b8bb26;
   --theme-border: #504945;
   --theme-border-focus: #83a598;
-  --theme-shadow-focus: rgba(131, 165, 152, 0.2);
+  --theme-success: #b8bb26;
+  --theme-warning: #fb4934;
+  --theme-highlight: #fe8019;
+  --theme-list-divider: var(--theme-bg-secondary);
 }

@@ -320,7 +320,8 @@ Features simple file list, keyboard navigation, and recovery.
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--theme-accent-hover);
+    background-color: var(--theme-accent);
+    filter: brightness(1.1);
   }
 
   .btn-primary:disabled {

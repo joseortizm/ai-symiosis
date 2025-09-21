@@ -88,19 +88,23 @@ Handles note selection state and integrates with keyboard navigation.
   }
   li {
     margin: 0;
+    margin-bottom: -5px;
     contain: layout;
   }
   button {
     width: 100%;
+    height: calc(0.6em * 2 + 1em + 15px);
     padding: 0.6em 1em;
     cursor: pointer;
     border: none;
-    border-bottom: 1px solid var(--theme-bg-secondary);
+    border-bottom: 1px solid var(--theme-list-divider);
     background: none;
     color: var(--theme-text-primary);
     text-align: left;
     font-size: 0.95em;
     contain: layout;
+    display: flex;
+    align-items: center;
   }
   .selected {
     background-color: var(--theme-bg-tertiary) !important;
