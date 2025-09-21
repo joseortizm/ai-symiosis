@@ -256,3 +256,10 @@ If you're developing Symiosis and want to keep your development data separate fr
 This approach keeps your development and personal notes completely separate without requiring environment variables or additional configuration.
 
 Have fun 🙂
+
+## License
+
+This project is licensed under the GNU General Public License v2.0 (GPL-2.0).
+
+See [LICENSE](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html) for the full license text.
+
