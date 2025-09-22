@@ -138,6 +138,7 @@ export function createAppCoordinator(
 
   let contentRequestController: AbortController | null = null
   let contentRequestSequence = 0
+  let currentLoadedNote: string | null = null
 
   let isFirstRun = false
 
@@ -274,13 +275,19 @@ export function createAppCoordinator(
 
     const currentSequence = ++contentRequestSequence
 
-    contentNavigationManager.resetNavigation()
+    // Only reset navigation when switching to a different note
+    const isNoteSwitching = currentLoadedNote !== note
+    if (isNoteSwitching) {
+      contentNavigationManager.resetNavigation()
+    }
 
     if (!note) {
+      currentLoadedNote = null
       handleEmptyNote(currentSequence)
       return
     }
 
+    currentLoadedNote = note
     const controller = setupNewContentRequest()
 
     try {
