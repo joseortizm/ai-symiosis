@@ -118,6 +118,7 @@ export function createNoteActions(deps: NoteActionDeps): NoteActions {
       return
     }
 
+    searchManager.clearSearch()
     await refreshSearchAfterSave()
   }
 
