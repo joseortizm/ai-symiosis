@@ -75,7 +75,6 @@ Shows highlighted content or renders the CodeMirror editor.
         tabindex="-1"
         onfocus={() => focusManager.setNoteContentFocused(true)}
         onblur={() => focusManager.setNoteContentFocused(false)}
-        ondblclick={actions.enterEditMode}
         onclick={handleLinkClick}
       >
         <div class="markdown-body">
