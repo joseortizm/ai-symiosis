@@ -1,11 +1,8 @@
-
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/aac06ba3-0a2f-443b-991e-d9d54b0a9ba2" width="20%" height="20%" alt="app-icon" />
-</div>
-
 # Symiosis
 
 Symiosis is a desktop note-taking application inspired by Notational Velocity that combines instant search with beautiful markdown rendering. It's designed for a keyboard-driven workflow with Vim-centric defaults, but you can customize shortcuts to your taste. The built-in code editor supports vim, emacs, and basic editing modes so you can comfortably edit notes in place.
+
+![](resources/symiosis.gif)
 
 ## Status
 
